@@ -39,7 +39,7 @@ export default function Edit() {
                     />
 
                     <Form
-                        {...destroy.form(property)}
+                        action={destroy.url(property)} method="delete"
                         onSubmit={() =>
                             confirm(
                                 'Are you sure you want to archive this property?',
@@ -54,7 +54,7 @@ export default function Edit() {
 
                 <div className="max-w-2xl">
                     <Form
-                        {...update.form(property)}
+                        action={update.url(property)} method="put"
                         className="space-y-6"
                     >
                         {({ processing, errors }) => (
