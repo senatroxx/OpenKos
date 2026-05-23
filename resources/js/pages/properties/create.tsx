@@ -1,12 +1,10 @@
 import { Form, Head } from '@inertiajs/react';
-import PropertyController from '@/actions/App/Http/Controllers/PropertyController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-import properties from '@/routes/properties';
+import properties, { store } from '@/routes/properties';
 
 export default function Create() {
     return (
@@ -21,7 +19,7 @@ export default function Create() {
 
                 <div className="max-w-2xl">
                     <Form
-                        {...PropertyController.store.form()}
+                        {...store.form()}
                         className="space-y-6"
                     >
                         {({ processing, errors }) => (
