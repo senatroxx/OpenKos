@@ -7,6 +7,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\Contracts\PasskeyUser;
@@ -46,5 +48,20 @@ class User extends Authenticatable implements PasskeyUser
     public function isStaff(): bool
     {
         return $this->hasRole(Role::Staff->value);
+    }
+
+    public function tenant(): HasOne
+    {
+        return $this->hasOne(Tenant::class);
+    }
+
+    public function properties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class)->withTimestamps();
+    }
+
+    public function hasTenantProfile(): bool
+    {
+        return $this->tenant()->exists();
     }
 }
