@@ -16,6 +16,8 @@ class InstallCommand extends Command
 
     public function handle(): int
     {
+        $this->call('migrate', ['--force' => true]);
+
         if (User::exists()) {
             $this->error('Users already exist. Installation has already been completed.');
 
@@ -27,8 +29,6 @@ class InstallCommand extends Command
         $email = $this->ask('What is the owner\'s email address?');
 
         $password = $this->secret('Choose a password for the owner account');
-
-        $this->call('migrate', ['--force' => true]);
 
         $this->call('db:seed', [
             '--class' => 'Database\Seeders\RoleAndPermissionSeeder',
