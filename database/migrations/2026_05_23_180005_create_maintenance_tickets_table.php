@@ -15,7 +15,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('status')->default('reported');
             $table->string('priority')->default('medium');
-            $table->foreignId('assigned_to')->nullable()->constrained('users');
+            $table->foreignId('assigned_to')->nullable()->constrained('users')->nullOnDelete();
             $table->decimal('cost', 12, 2)->nullable();
             $table->timestamp('resolved_at')->nullable();
             $table->text('resolution_notes')->nullable();
