@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('reference_number')->nullable();
             $table->text('notes')->nullable();
             $table->string('status')->default('pending');
-            $table->foreignId('confirmed_by')->nullable()->constrained('users');
+            $table->foreignId('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
             $table->index('status');
             $table->index('payment_date');
