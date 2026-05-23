@@ -23,6 +23,16 @@ describe('Property', function () {
         expect($property->slug)->toBe('kos-melati');
     });
 
+    it('appends suffix when slug already exists', function () {
+        $first = Property::factory()->create(['name' => 'Kos Melati']);
+        $second = Property::factory()->create(['name' => 'Kos Melati']);
+        $third = Property::factory()->create(['name' => 'Kos Melati']);
+
+        expect($first->slug)->toBe('kos-melati');
+        expect($second->slug)->toBe('kos-melati-1');
+        expect($third->slug)->toBe('kos-melati-2');
+    });
+
     it('belongs to many users', function () {
         $property = Property::factory()->create();
         $user = User::factory()->create();
