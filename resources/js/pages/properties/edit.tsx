@@ -1,12 +1,10 @@
 import { Form, Head, usePage } from '@inertiajs/react';
-import PropertyController from '@/actions/App/Http/Controllers/PropertyController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
-import properties from '@/routes/properties';
+import properties, { destroy, update } from '@/routes/properties';
 import type { Auth } from '@/types';
 
 type Property = {
@@ -41,7 +39,7 @@ export default function Edit() {
                     />
 
                     <Form
-                        {...PropertyController.destroy.form(property)}
+                        {...destroy.form(property)}
                         onSubmit={() =>
                             confirm(
                                 'Are you sure you want to archive this property?',
@@ -56,7 +54,7 @@ export default function Edit() {
 
                 <div className="max-w-2xl">
                     <Form
-                        {...PropertyController.update.form(property)}
+                        {...update.form(property)}
                         className="space-y-6"
                     >
                         {({ processing, errors }) => (
