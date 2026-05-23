@@ -1,0 +1,5 @@
+packages:
+  - '.'
+
+publicHoistPattern:
+  - '@inertiajs/core'
