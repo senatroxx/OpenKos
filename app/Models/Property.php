@@ -37,7 +37,13 @@ class Property extends Model
     {
         static::creating(function (Property $property) {
             if (empty($property->slug)) {
-                $property->slug = Str::slug($property->name);
+                $base = Str::slug($property->name);
+                $slug = $base;
+                $counter = 1;
+                while (static::withTrashed()->where('slug', $slug)->exists()) {
+                    $slug = $base.'-'.$counter++;
+                }
+                $property->slug = $slug;
             }
         });
     }
