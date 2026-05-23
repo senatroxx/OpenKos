@@ -19,7 +19,7 @@ export default function Create() {
 
                 <div className="max-w-2xl">
                     <Form
-                        {...store.form()}
+                        action={store.url()} method="post"
                         className="space-y-6"
                     >
                         {({ processing, errors }) => (
