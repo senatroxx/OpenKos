@@ -34,72 +34,74 @@ export default function Index({ properties: data }: PageProps) {
         <>
             <Head title="Properties" />
 
-            <div className="flex items-center justify-between">
-                <Heading
-                    title="Properties"
-                    description="Manage your properties"
-                />
+            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                    <Heading
+                        title="Properties"
+                        description="Manage your properties"
+                    />
 
-                <Button asChild>
-                    <Link href={properties.create()}>New Property</Link>
-                </Button>
-            </div>
+                    <Button asChild>
+                        <Link href={properties.create()}>New Property</Link>
+                    </Button>
+                </div>
 
-            <div className="mt-6 space-y-4">
-                {data.data.length === 0 && (
-                    <Card>
-                        <CardContent className="flex flex-col items-center gap-4 py-12">
-                            <p className="text-sm text-muted-foreground">
-                                No properties yet.
-                            </p>
-
-                            <Button asChild>
-                                <Link href={properties.create()}>
-                                    Create your first property
-                                </Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {data.data.map((property) => (
-                    <Card key={property.id}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                            <div className="flex items-center gap-3">
-                                <CardTitle className="text-base">
-                                    {property.name}
-                                </CardTitle>
-
-                                {property.is_active ? (
-                                    <Badge
-                                        variant="default"
-                                        className="bg-green-600"
-                                    >
-                                        Active
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="secondary">
-                                        Archived
-                                    </Badge>
-                                )}
-                            </div>
-
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href={properties.edit(property)}>
-                                    Edit
-                                </Link>
-                            </Button>
-                        </CardHeader>
-
-                        <CardContent>
-                            {property.city && (
+                <div className="space-y-4">
+                    {data.data.length === 0 && (
+                        <Card>
+                            <CardContent className="flex flex-col items-center gap-4 py-12">
                                 <p className="text-sm text-muted-foreground">
-                                    {property.city}
+                                    No properties yet.
                                 </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                ))}
+
+                                <Button asChild>
+                                    <Link href={properties.create()}>
+                                        Create your first property
+                                    </Link>
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {data.data.map((property) => (
+                        <Card key={property.id}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                                <div className="flex items-center gap-3">
+                                    <CardTitle className="text-base">
+                                        {property.name}
+                                    </CardTitle>
+
+                                    {property.is_active ? (
+                                        <Badge
+                                            variant="default"
+                                            className="bg-green-600"
+                                        >
+                                            Active
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="secondary">
+                                            Archived
+                                        </Badge>
+                                    )}
+                                </div>
+
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href={properties.edit(property)}>
+                                        Edit
+                                    </Link>
+                                </Button>
+                            </CardHeader>
+
+                            <CardContent>
+                                {property.city && (
+                                    <p className="text-sm text-muted-foreground">
+                                        {property.city}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             </div>
         </>
     );
