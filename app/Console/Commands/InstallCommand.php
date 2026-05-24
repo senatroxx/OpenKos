@@ -56,13 +56,15 @@ class InstallCommand extends Command
             '--force' => true,
         ]);
 
-        Setting::create([
-            'site_name' => $siteName,
-            'country_code' => $country,
-            'locale' => $country === 'ID' ? 'id' : config('app.locale'),
-            'currency' => $country === 'ID' ? 'IDR' : 'USD',
-            'timezone' => $country === 'ID' ? 'Asia/Jakarta' : config('app.timezone'),
-        ]);
+        $setting = Setting::get();
+        $setting->site_name = $siteName;
+        $setting->country_code = $country;
+        $setting->locale = $country === 'ID' ? 'id' : config('app.locale');
+        $setting->currency = $country === 'ID' ? 'IDR' : 'USD';
+        $setting->timezone = $country === 'ID' ? 'Asia/Jakarta' : config('app.timezone');
+        $setting->save();
+
+        $this->updateAppNameInEnv($siteName);
 
         $user = User::create([
             'name' => $name,
@@ -77,6 +79,20 @@ class InstallCommand extends Command
         $this->warn("Owner account created: {$name} ({$email})");
 
         return self::SUCCESS;
+    }
+
+    protected function updateAppNameInEnv(string $siteName): void
+    {
+        $envPath = base_path('.env');
+
+        if (! file_exists($envPath)) {
+            return;
+        }
+
+        $env = File::get($envPath);
+        $escaped = str_replace('"', '\"', $siteName);
+        $env = preg_replace('/^APP_NAME=.*/m', "APP_NAME=\"{$escaped}\"", $env);
+        File::put($envPath, $env);
     }
 
     protected function setupEnvironment(): void
