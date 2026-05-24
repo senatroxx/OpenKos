@@ -66,6 +66,7 @@ describe('CRUD', function () {
         $this->actingAs($user)->post(route('properties.rooms.store', $property), [
             'name' => 'Room 101',
             'base_price' => 1_000_000,
+            'capacity' => 1,
         ]);
 
         $room = Room::first();
@@ -81,7 +82,7 @@ describe('CRUD', function () {
 
         $this->actingAs($user)
             ->post(route('properties.rooms.store', $property), [])
-            ->assertSessionHasErrors(['name', 'base_price']);
+            ->assertSessionHasErrors(['name', 'base_price', 'capacity']);
     });
 
     it('updates a room', function () {
@@ -93,6 +94,7 @@ describe('CRUD', function () {
             ->put(route('properties.rooms.update', [$property, $room]), [
                 'name' => 'Room 102',
                 'base_price' => 1_500_000,
+                'capacity' => 2,
             ]);
 
         $room->refresh();
