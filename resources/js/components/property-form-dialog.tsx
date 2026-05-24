@@ -72,7 +72,7 @@ export default function PropertyFormSheet({
     }));
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet key={property?.id ?? 'new'} open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
