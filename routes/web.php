@@ -14,7 +14,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             'index', 'store', 'update', 'destroy',
         ]);
 
-        Route::resource('properties.rooms', RoomController::class)->only([
+        Route::resource('properties.rooms', RoomController::class)->scoped()->only([
             'index', 'store', 'update', 'destroy',
         ]);
     });
