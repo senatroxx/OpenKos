@@ -1,11 +1,14 @@
 <?php
 
+use App\Models\City;
 use App\Models\Property;
+use App\Models\Region;
 use App\Models\User;
+use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 
 uses()->beforeEach(function () {
-    $this->seed(RoleAndPermissionSeeder::class);
+    $this->seed([RoleAndPermissionSeeder::class, RegionAndCitySeeder::class]);
 });
 
 describe('authorization', function () {
@@ -62,17 +65,21 @@ describe('CRUD', function () {
 
     it('creates a property', function () {
         $user = User::factory()->owner()->create();
+        $region = Region::where('name', 'DKI Jakarta')->first();
+        $city = City::where('name', 'Kota Jakarta Selatan')->first();
 
         $this->actingAs($user)->post(route('properties.store'), [
             'name' => 'Kos Melati',
-            'city' => 'Jakarta',
+            'region_id' => $region->id,
+            'city_id' => $city->id,
         ]);
 
-        $property = Property::first();
+        $property = Property::with('region', 'city')->first();
 
         expect($property)->not->toBeNull();
         expect($property->name)->toBe('Kos Melati');
-        expect($property->city)->toBe('Jakarta');
+        expect($property->region->name)->toBe('DKI Jakarta');
+        expect($property->city->name)->toBe('Kota Jakarta Selatan');
     });
 
     it('validates required fields on create', function () {
