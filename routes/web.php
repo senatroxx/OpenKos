@@ -9,7 +9,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
     Route::middleware('permission:properties.manage')->group(function () {
-        Route::resource('properties', PropertyController::class);
+        Route::resource('properties', PropertyController::class)->only([
+            'index', 'store', 'update', 'destroy',
+        ]);
     });
 });
 

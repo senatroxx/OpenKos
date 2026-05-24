@@ -63,11 +63,6 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function create(): Response
-    {
-        return Inertia::render('properties/create');
-    }
-
     public function store(StorePropertyRequest $request): RedirectResponse
     {
         $property = Property::create($request->validated());
@@ -75,13 +70,6 @@ class PropertyController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property created.')]);
 
         return to_route('properties.index');
-    }
-
-    public function edit(Property $property): Response
-    {
-        return Inertia::render('properties/edit', [
-            'property' => $property,
-        ]);
     }
 
     public function update(UpdatePropertyRequest $request, Property $property): RedirectResponse
