@@ -1,0 +1,184 @@
+import { router } from '@inertiajs/react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import properties from '@/routes/properties';
+
+type Property = {
+    id: number;
+    name: string;
+    address: string | null;
+    city: string | null;
+    province: string | null;
+    postal_code: string | null;
+    phone: string | null;
+    is_active: boolean;
+    rooms_count: number;
+    occupied_rooms_count: number;
+    tenants_count: number;
+};
+
+export default function PropertyDetailSheet({
+    property,
+    open,
+    onOpenChange,
+    onEdit,
+}: {
+    property?: Property | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onEdit: () => void;
+}) {
+    function archive() {
+        if (!property) return;
+
+        if (confirm('Are you sure you want to archive this property?')) {
+            router.delete(properties.destroy.url(property), {
+                onSuccess: () => onOpenChange(false),
+            });
+        }
+    }
+
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent className="sm:max-w-lg">
+                <SheetHeader>
+                    <SheetTitle>{property?.name}</SheetTitle>
+                    <SheetDescription>
+                        {property?.city ?? 'Property details'}
+                    </SheetDescription>
+                </SheetHeader>
+
+                {property && (
+                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
+                        <div className="space-y-5">
+                            <div className="flex items-center gap-2">
+                                <span>Status:</span>
+                                {property.is_active ? (
+                                    <Badge
+                                        variant="default"
+                                        className="bg-green-600"
+                                    >
+                                        Active
+                                    </Badge>
+                                ) : (
+                                    <Badge variant="secondary">
+                                        Archived
+                                    </Badge>
+                                )}
+                            </div>
+
+                            {property.address && (
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                                        Address
+                                    </p>
+                                    <p className="mt-1 text-sm">
+                                        {property.address}
+                                    </p>
+                                    {(property.city ||
+                                        property.province ||
+                                        property.postal_code) && (
+                                        <p className="text-sm text-muted-foreground">
+                                            {[
+                                                property.city,
+                                                property.province,
+                                                property.postal_code,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(', ')}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {(property.city &&
+                                !property.address) && (
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                                        City
+                                    </p>
+                                    <p className="mt-1 text-sm">
+                                        {property.city}
+                                    </p>
+                                </div>
+                            )}
+
+                            {property.phone && (
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                                        Phone
+                                    </p>
+                                    <p className="mt-1 text-sm">
+                                        {property.phone}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground uppercase">
+                                    Statistics
+                                </p>
+                                <div className="mt-1 grid grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-2xl font-semibold tabular-nums">
+                                            {property.rooms_count}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Total Rooms
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-semibold tabular-nums">
+                                            {property.occupied_rooms_count}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Occupied
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-2xl font-semibold tabular-nums">
+                                            {property.tenants_count}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Tenants
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                            >
+                                Close
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={archive}
+                            >
+                                Archive
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    onOpenChange(false);
+                                    onEdit();
+                                }}
+                            >
+                                Edit
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </SheetContent>
+        </Sheet>
+    );
+}

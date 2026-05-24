@@ -20,7 +20,6 @@ class StorePropertyRequest extends FormRequest
             'province' => ['nullable', 'string', 'max:255'],
             'postal_code' => ['nullable', 'string', 'max:20'],
             'phone' => ['nullable', 'string', 'max:50'],
-            'email' => ['nullable', 'email', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
             'is_active' => ['nullable', 'boolean'],
         ];

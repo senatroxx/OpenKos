@@ -21,7 +21,6 @@ class PropertyFactory extends Factory
             'province' => fake()->state(),
             'postal_code' => fake()->postcode(),
             'phone' => fake()->phoneNumber(),
-            'email' => fake()->email(),
             'description' => fake()->sentence(),
             'is_active' => true,
         ];
