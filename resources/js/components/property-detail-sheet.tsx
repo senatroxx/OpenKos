@@ -36,7 +36,9 @@ export default function PropertyDetailSheet({
     onEdit: () => void;
 }) {
     function archive() {
-        if (!property) return;
+        if (!property) {
+return;
+}
 
         if (confirm('Are you sure you want to archive this property?')) {
             router.delete(properties.destroy.url(property), {
