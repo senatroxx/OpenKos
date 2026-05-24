@@ -11,12 +11,12 @@ import {
     X,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import EmptyState from '@/components/empty-state';
 import Heading from '@/components/heading';
 import PropertyDetailSheet from '@/components/property-detail-sheet';
 import PropertyFormSheet from '@/components/property-form-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -232,9 +232,7 @@ export default function Index({
                             <button
                                 onClick={() => {
                                     if (debounceRef.current) {
-                                        clearTimeout(
-                                            debounceRef.current,
-                                        );
+                                        clearTimeout(debounceRef.current);
                                     }
 
                                     setSearchValue('');
@@ -273,17 +271,11 @@ export default function Index({
                 </div>
 
                 {data.data.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center gap-4 py-12">
-                            <p className="text-sm text-muted-foreground">
-                                No properties yet.
-                            </p>
-
-                            <Button onClick={openCreate}>
-                                Create your first property
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <EmptyState
+                        message="No properties yet."
+                        createLabel="Create your first property"
+                        onCreate={openCreate}
+                    />
                 ) : (
                     <div className="overflow-x-auto rounded-lg border">
                         <table className="w-full text-sm">
@@ -413,18 +405,18 @@ export default function Index({
                                 </p>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground text-xs">
+                                    <span className="text-xs text-muted-foreground">
                                         Per page
                                     </span>
                                     <select
-                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         value={currentPerPage}
-                            onChange={(e) =>
-                                applyFilters({
-                                    per_page: e.target.value,
-                                    page: '',
-                                })
-                            }
+                                        onChange={(e) =>
+                                            applyFilters({
+                                                per_page: e.target.value,
+                                                page: '',
+                                            })
+                                        }
                                     >
                                         {[10, 15, 25, 50].map((n) => (
                                             <option key={n} value={n}>
