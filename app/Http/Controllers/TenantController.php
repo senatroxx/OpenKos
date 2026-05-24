@@ -22,7 +22,7 @@ class TenantController extends Controller
         $status = $request->query('status', '');
         $perPage = (int) $request->query('per_page', 15);
 
-        $sortable = ['name', 'phone', 'email'];
+        $sortable = ['name', 'phone'];
         $perPageOptions = [10, 15, 25, 50];
 
         if (! in_array($sort, $sortable)) {
@@ -47,7 +47,6 @@ class TenantController extends Controller
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(phone)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhere(DB::raw('lower(email)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(id_card_number)'), 'like', '%'.mb_strtolower($search).'%');
             }))
             ->orderBy($sort, $direction)

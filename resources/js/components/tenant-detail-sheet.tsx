@@ -34,7 +34,6 @@ type Tenant = {
     id: number;
     name: string;
     phone: string | null;
-    email: string | null;
     id_card_number: string | null;
     emergency_contact_name: string | null;
     emergency_contact_phone: string | null;
@@ -150,19 +149,11 @@ export default function TenantDetailSheet({
                             </div>
 
                             {/* Contact Information */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Phone
-                                    </p>
-                                    <p className="mt-1 text-sm">{tenant.phone ?? '—'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Email
-                                    </p>
-                                    <p className="mt-1 text-sm">{tenant.email ?? '—'}</p>
-                                </div>
+                            <div>
+                                <p className="text-xs font-medium text-muted-foreground uppercase">
+                                    Phone
+                                </p>
+                                <p className="mt-1 text-sm">{tenant.phone ?? '—'}</p>
                             </div>
 
                             <div>
