@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ChevronDown,
     ChevronUp,
@@ -13,10 +13,11 @@ import {
 import { useRef, useState } from 'react';
 import EmptyState from '@/components/empty-state';
 import Heading from '@/components/heading';
-import PropertyDetailSheet from '@/components/property-detail-sheet';
-import PropertyFormSheet from '@/components/property-form-dialog';
+import RoomDetailSheet from '@/components/room-detail-sheet';
+import RoomFormSheet from '@/components/room-form-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -26,18 +27,24 @@ import {
 import { Input } from '@/components/ui/input';
 import properties from '@/routes/properties';
 
+type Room = {
+    id: number;
+    name: string;
+    floor: string | null;
+    description: string | null;
+    base_price: string;
+    size_sqm: string | null;
+    capacity: number;
+    status: string;
+    notes: string | null;
+    active_leases: number;
+};
+
 type Property = {
     id: number;
     name: string;
-    address: string | null;
+    slug: string;
     city: string | null;
-    province: string | null;
-    postal_code: string | null;
-    phone: string | null;
-    is_active: boolean;
-    rooms_count: number;
-    occupied_rooms_count: number;
-    tenants_count: number;
 };
 
 type PaginationLinks = {
@@ -47,8 +54,9 @@ type PaginationLinks = {
 };
 
 type PageProps = {
-    properties: {
-        data: Property[];
+    property: Property;
+    rooms: {
+        data: Room[];
         current_page: number;
         last_page: number;
         total: number;
@@ -64,16 +72,36 @@ type PageProps = {
     per_page?: number;
 };
 
-const SORTABLE = [
-    'name',
-    'city',
-    'rooms_count',
-    'occupied_rooms_count',
-    'tenants_count',
-] as const;
+const SORTABLE = ['name', 'floor', 'base_price', 'size_sqm', 'status', 'capacity'] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+    available: 'Available',
+    occupied: 'Occupied',
+    maintenance: 'Maintenance',
+    unavailable: 'Unavailable',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+    available: 'bg-green-600',
+    occupied: 'bg-blue-600',
+    maintenance: 'bg-amber-500',
+    unavailable: 'bg-gray-400',
+};
+
+function formatPrice(cents: string): string {
+    const num = Number.parseFloat(cents);
+
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(num);
+}
 
 export default function Index({
-    properties: data,
+    property,
+    rooms: data,
     sort: currentSort = 'name',
     direction: currentDirection = 'asc',
     search: currentSearch = '',
@@ -81,45 +109,43 @@ export default function Index({
     per_page: currentPerPage = 15,
 }: PageProps) {
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingProperty, setEditingProperty] = useState<Property | null>(
-        null,
-    );
+    const [editingRoom, setEditingRoom] = useState<Room | null>(null);
 
     const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingProperty, setViewingProperty] = useState<Property | null>(
-        null,
-    );
+    const [viewingRoom, setViewingRoom] = useState<Room | null>(null);
 
     const [searchValue, setSearchValue] = useState(currentSearch);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const routePrefix = properties.rooms.index.url(property);
+
     function openCreate() {
-        setEditingProperty(null);
+        setEditingRoom(null);
         setDialogOpen(true);
     }
 
-    function openEdit(property: Property) {
-        setEditingProperty(property);
+    function openEdit(room: Room) {
+        setEditingRoom(room);
         setDialogOpen(true);
     }
 
-    function openDetail(property: Property) {
-        setViewingProperty(property);
+    function openDetail(room: Room) {
+        setViewingRoom(room);
         setDetailOpen(true);
     }
 
     function editFromDetail() {
-        if (!viewingProperty) {
+        if (!viewingRoom) {
             return;
         }
 
-        setEditingProperty(viewingProperty);
+        setEditingRoom(viewingRoom);
         setDialogOpen(true);
     }
 
-    function archive(property: Property) {
-        if (confirm('Are you sure you want to archive this property?')) {
-            router.delete(properties.destroy.url(property));
+    function destroy(room: Room) {
+        if (confirm('Are you sure you want to delete this room?')) {
+            router.delete(properties.rooms.destroy.url({ property: property.id, room: room.id }));
         }
     }
 
@@ -139,7 +165,7 @@ export default function Index({
             }
         });
 
-        router.get(properties.index(), params, {
+        router.get(routePrefix, params, {
             preserveState: true,
             replace: true,
         });
@@ -171,7 +197,7 @@ export default function Index({
                 params.status = currentStatus;
             }
 
-            router.get(properties.index(), params, {
+            router.get(routePrefix, params, {
                 preserveState: true,
                 replace: true,
             });
@@ -180,9 +206,7 @@ export default function Index({
 
     function toggleSort(column: string) {
         const direction =
-            currentSort === column && currentDirection === 'asc'
-                ? 'desc'
-                : 'asc';
+            currentSort === column && currentDirection === 'asc' ? 'desc' : 'asc';
 
         applyFilters({ sort: column, direction, page: '' });
     }
@@ -193,9 +217,7 @@ export default function Index({
 
     function SortIcon({ column }: { column: string }) {
         if (currentSort !== column) {
-            return (
-                <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
-            );
+            return <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />;
         }
 
         return currentDirection === 'asc' ? (
@@ -207,23 +229,31 @@ export default function Index({
 
     return (
         <>
-            <Head title="Properties" />
+            <Head title={`Rooms - ${property.name}`} />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                    <Heading
-                        title="Properties"
-                        description="Manage your properties"
-                    />
+                    <div>
+                        <Heading
+                            title={property.name}
+                            description="Manage rooms for this property"
+                        />
+                        <Link
+                            href={properties.index()}
+                            className="mt-1 inline-block text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            &larr; Back to properties
+                        </Link>
+                    </div>
 
-                    <Button onClick={openCreate}>New Property</Button>
+                    <Button onClick={openCreate}>New Room</Button>
                 </div>
 
                 <div className="flex items-center gap-4">
                     <div className="relative flex-1">
                         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search by name or city..."
+                            placeholder="Search by name or floor..."
                             className="pl-9"
                             value={searchValue}
                             onChange={(e) => handleSearchChange(e.target.value)}
@@ -236,10 +266,7 @@ export default function Index({
                                     }
 
                                     setSearchValue('');
-                                    applyFilters({
-                                        search: '',
-                                        page: '',
-                                    });
+                                    applyFilters({ search: '', page: '' });
                                 }}
                                 className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
@@ -249,31 +276,25 @@ export default function Index({
                     </div>
 
                     <div className="flex items-center gap-1 rounded-lg border p-1">
-                        {(['', 'active', 'archived'] as const).map((value) => (
-                            <Button
-                                key={value}
-                                variant={
-                                    currentStatus === value
-                                        ? 'default'
-                                        : 'ghost'
-                                }
-                                size="sm"
-                                onClick={() => setStatusFilter(value)}
-                            >
-                                {value === ''
-                                    ? 'All'
-                                    : value === 'active'
-                                      ? 'Active'
-                                      : 'Archived'}
-                            </Button>
-                        ))}
+                        {(['', 'available', 'occupied', 'maintenance', 'unavailable'] as const).map(
+                            (value) => (
+                                <Button
+                                    key={value}
+                                    variant={currentStatus === value ? 'default' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setStatusFilter(value)}
+                                >
+                                    {value === '' ? 'All' : STATUS_LABELS[value]}
+                                </Button>
+                            ),
+                        )}
                     </div>
                 </div>
 
                 {data.data.length === 0 ? (
                     <EmptyState
-                        message="No properties yet."
-                        createLabel="Create your first property"
+                        message="No rooms yet."
+                        createLabel="Create your first room"
                         onCreate={openCreate}
                     />
                 ) : (
@@ -289,66 +310,53 @@ export default function Index({
                                         >
                                             {col === 'name'
                                                 ? 'Name'
-                                                : col === 'city'
-                                                  ? 'City'
-                                                  : col === 'rooms_count'
-                                                    ? 'Total Rooms'
-                                                    : col ===
-                                                        'occupied_rooms_count'
-                                                      ? 'Occupied'
-                                                      : 'Tenants'}
+                                                : col === 'floor'
+                                                  ? 'Floor'
+                                                  : col === 'base_price'
+                                                    ? 'Price'
+                                                    : col === 'size_sqm'
+                                                      ? 'Size'
+                                                      : col === 'status'
+                                                        ? 'Status'
+                                                        : 'Capacity'}
                                             <SortIcon column={col} />
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 font-medium">
-                                        Status
-                                    </th>
                                     <th className="w-12 px-4 py-3" />
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.data.map((property) => (
+                                {data.data.map((room) => (
                                     <tr
-                                        key={property.id}
+                                        key={room.id}
                                         className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
-                                        onClick={() => openDetail(property)}
+                                        onClick={() => openDetail(room)}
                                     >
-                                        <td className="px-4 py-3 font-medium">
-                                            {property.name}
-                                        </td>
+                                        <td className="px-4 py-3 font-medium">{room.name}</td>
                                         <td className="px-4 py-3 text-muted-foreground">
-                                            {property.city ?? '—'}
+                                            {room.floor ?? '—'}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {property.rooms_count}
+                                            {formatPrice(room.base_price)}
                                         </td>
-                                        <td className="px-4 py-3 tabular-nums">
-                                            {property.occupied_rooms_count}
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums">
-                                            {property.tenants_count}
+                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                            {room.size_sqm ? `${room.size_sqm} m²` : '—'}
                                         </td>
                                         <td className="px-4 py-3">
-                                            {property.is_active ? (
-                                                <Badge
-                                                    variant="default"
-                                                    className="bg-green-600"
-                                                >
-                                                    Active
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary">
-                                                    Archived
-                                                </Badge>
-                                            )}
+                                            <Badge
+                                                className={`${STATUS_COLORS[room.status] ?? 'bg-gray-400'} text-white`}
+                                            >
+                                                {STATUS_LABELS[room.status] ?? room.status}
+                                            </Badge>
                                         </td>
+                                        <td className="px-4 py-3 tabular-nums">{room.capacity}</td>
                                         <td className="px-4 py-3">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger
                                                     asChild
-                                                    onClick={(
-                                                        e: React.MouseEvent,
-                                                    ) => e.stopPropagation()}
+                                                    onClick={(e: React.MouseEvent) =>
+                                                        e.stopPropagation()
+                                                    }
                                                 >
                                                     <Button
                                                         variant="ghost"
@@ -360,34 +368,28 @@ export default function Index({
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent
                                                     align="end"
-                                                    onClick={(
-                                                        e: React.MouseEvent,
-                                                    ) => e.stopPropagation()}
+                                                    onClick={(e: React.MouseEvent) =>
+                                                        e.stopPropagation()
+                                                    }
                                                 >
                                                     <DropdownMenuItem
-                                                        onClick={() =>
-                                                            openDetail(property)
-                                                        }
+                                                        onClick={() => openDetail(room)}
                                                     >
                                                         <Eye className="size-4" />
                                                         View
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
-                                                        onClick={() =>
-                                                            openEdit(property)
-                                                        }
+                                                        onClick={() => openEdit(room)}
                                                     >
                                                         <Pencil className="size-4" />
                                                         Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         variant="destructive"
-                                                        onClick={() =>
-                                                            archive(property)
-                                                        }
+                                                        onClick={() => destroy(room)}
                                                     >
                                                         <Trash2 className="size-4" />
-                                                        Archive
+                                                        Delete
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
@@ -400,16 +402,13 @@ export default function Index({
                         <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
                             <div className="flex items-center gap-4">
                                 <p className="text-muted-foreground">
-                                    Showing {data.from} to {data.to} of{' '}
-                                    {data.total} properties
+                                    Showing {data.from} to {data.to} of {data.total} rooms
                                 </p>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">
-                                        Per page
-                                    </span>
+                                    <span className="text-muted-foreground text-xs">Per page</span>
                                     <select
-                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                         value={currentPerPage}
                                         onChange={(e) =>
                                             applyFilters({
@@ -432,29 +431,19 @@ export default function Index({
                                     variant="outline"
                                     size="sm"
                                     disabled={data.current_page === 1}
-                                    onClick={() =>
-                                        goToPage(data.current_page - 1)
-                                    }
+                                    onClick={() => goToPage(data.current_page - 1)}
                                 >
                                     Previous
                                 </Button>
 
                                 {data.links
-                                    .filter(
-                                        (link) => !isNaN(Number(link.label)),
-                                    )
+                                    .filter((link) => !isNaN(Number(link.label)))
                                     .map((link) => (
                                         <Button
                                             key={link.label}
-                                            variant={
-                                                link.active
-                                                    ? 'default'
-                                                    : 'outline'
-                                            }
+                                            variant={link.active ? 'default' : 'outline'}
                                             size="sm"
-                                            onClick={() =>
-                                                goToPage(Number(link.label))
-                                            }
+                                            onClick={() => goToPage(Number(link.label))}
                                         >
                                             {link.label}
                                         </Button>
@@ -463,12 +452,8 @@ export default function Index({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={
-                                        data.current_page === data.last_page
-                                    }
-                                    onClick={() =>
-                                        goToPage(data.current_page + 1)
-                                    }
+                                    disabled={data.current_page === data.last_page}
+                                    onClick={() => goToPage(data.current_page + 1)}
                                 >
                                     Next
                                 </Button>
@@ -478,15 +463,17 @@ export default function Index({
                 )}
             </div>
 
-            <PropertyDetailSheet
-                property={viewingProperty}
+            <RoomDetailSheet
+                room={viewingRoom}
+                property={property}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
                 onEdit={editFromDetail}
             />
 
-            <PropertyFormSheet
-                property={editingProperty}
+            <RoomFormSheet
+                room={editingRoom}
+                property={property}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
             />
@@ -499,6 +486,9 @@ Index.layout = {
         {
             title: 'Properties',
             href: properties.index(),
+        },
+        {
+            title: 'Rooms',
         },
     ],
 };
