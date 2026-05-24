@@ -18,7 +18,6 @@ class TenantFactory extends Factory
         return [
             'name' => fake()->name(),
             'phone' => fake()->phoneNumber(),
-            'email' => fake()->email(),
             'id_card_number' => fake()->numerify('################'),
             'is_active' => true,
         ];

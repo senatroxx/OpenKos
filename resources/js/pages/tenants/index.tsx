@@ -50,7 +50,6 @@ type Tenant = {
     id: number;
     name: string;
     phone: string | null;
-    email: string | null;
     id_card_number: string | null;
     emergency_contact_name: string | null;
     emergency_contact_phone: string | null;
@@ -85,7 +84,7 @@ type PageProps = {
     per_page?: number;
 };
 
-const SORTABLE = ['name', 'phone', 'email'] as const;
+const SORTABLE = ['name', 'phone'] as const;
 
 export default function Index({
     tenants: data,
@@ -234,7 +233,7 @@ export default function Index({
                     <div className="relative flex-1">
                         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search by name, phone, email, or ID card..."
+                            placeholder="Search by name, phone, or ID card..."
                             className="pl-9"
                             value={searchValue}
                             onChange={(e) => handleSearchChange(e.target.value)}
@@ -302,11 +301,7 @@ export default function Index({
                                             className="cursor-pointer px-4 py-3 font-medium select-none hover:text-foreground"
                                             onClick={() => toggleSort(col)}
                                         >
-                                            {col === 'name'
-                                                ? 'Name'
-                                                : col === 'phone'
-                                                  ? 'Phone'
-                                                  : 'Email'}
+                                            {col === 'name' ? 'Name' : 'Phone'}
                                             <SortIcon column={col} />
                                         </th>
                                     ))}
@@ -332,9 +327,7 @@ export default function Index({
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {tenant.phone ?? '—'}
                                         </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {tenant.email ?? '—'}
-                                        </td>
+
                                         <td className="px-4 py-3">
                                             {tenant.active_leases_count > 0 ? (
                                                 <Badge className="bg-green-600">
