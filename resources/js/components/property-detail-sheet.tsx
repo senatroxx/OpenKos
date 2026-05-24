@@ -14,14 +14,16 @@ type Property = {
     id: number;
     name: string;
     address: string | null;
-    city: string | null;
-    province: string | null;
+    region_id: number | null;
+    city_id: number | null;
     postal_code: string | null;
     phone: string | null;
     is_active: boolean;
     rooms_count: number;
     occupied_rooms_count: number;
     tenants_count: number;
+    region?: { id: number; name: string } | null;
+    city?: { id: number; name: string } | null;
 };
 
 export default function PropertyDetailSheet({
@@ -47,13 +49,17 @@ export default function PropertyDetailSheet({
         }
     }
 
+    const locationLabel = [property?.city?.name, property?.region?.name, property?.postal_code]
+        .filter(Boolean)
+        .join(', ');
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>{property?.name}</SheetTitle>
                     <SheetDescription>
-                        {property?.city ?? 'Property details'}
+                        {property?.city?.name ?? 'Property details'}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -82,29 +88,21 @@ export default function PropertyDetailSheet({
                                     <p className="mt-1 text-sm">
                                         {property.address}
                                     </p>
-                                    {(property.city ||
-                                        property.province ||
-                                        property.postal_code) && (
+                                    {locationLabel && (
                                         <p className="text-sm text-muted-foreground">
-                                            {[
-                                                property.city,
-                                                property.province,
-                                                property.postal_code,
-                                            ]
-                                                .filter(Boolean)
-                                                .join(', ')}
+                                            {locationLabel}
                                         </p>
                                     )}
                                 </div>
                             )}
 
-                            {property.city && !property.address && (
+                            {!property.address && property.city && (
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
                                         City
                                     </p>
                                     <p className="mt-1 text-sm">
-                                        {property.city}
+                                        {property.city.name}
                                     </p>
                                 </div>
                             )}

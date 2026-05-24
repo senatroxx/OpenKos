@@ -30,14 +30,16 @@ type Property = {
     id: number;
     name: string;
     address: string | null;
-    city: string | null;
-    province: string | null;
+    region_id: number | null;
+    city_id: number | null;
     postal_code: string | null;
     phone: string | null;
     is_active: boolean;
     rooms_count: number;
     occupied_rooms_count: number;
     tenants_count: number;
+    region?: { id: number; name: string } | null;
+    city?: { id: number; name: string } | null;
 };
 
 type PaginationLinks = {
@@ -223,7 +225,7 @@ export default function Index({
                     <div className="relative flex-1">
                         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                            placeholder="Search by name or city..."
+                            placeholder="Search by name, province, or city..."
                             className="pl-9"
                             value={searchValue}
                             onChange={(e) => handleSearchChange(e.target.value)}
@@ -317,7 +319,7 @@ export default function Index({
                                             {property.name}
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
-                                            {property.city ?? '—'}
+                                            {property.city?.name ?? '—'}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
                                             {property.rooms_count}
