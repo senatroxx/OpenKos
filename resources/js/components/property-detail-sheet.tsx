@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -177,6 +177,16 @@ return;
                             >
                                 Edit
                             </Button>
+                        </div>
+
+                        <div>
+                            <Link
+                                href={properties.rooms.index(property)}
+                                className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => onOpenChange(false)}
+                            >
+                                Manage Rooms ({property.rooms_count})
+                            </Link>
                         </div>
                     </div>
                 )}
