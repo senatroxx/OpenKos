@@ -6,13 +6,15 @@ use App\Enums\Role;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Env;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role as SpatieRole;
 
 class InstallCommand extends Command
 {
-    protected $signature = 'app:install';
+    protected $signature = 'app:install {--fresh : Wipe all tables before migrating}';
 
     protected $description = 'Setup the initial owner account for OpenKOS';
 
@@ -20,7 +22,14 @@ class InstallCommand extends Command
     {
         $this->setupEnvironment();
 
-        $this->call('migrate', ['--force' => true]);
+        $migrateArgs = ['--force' => true];
+
+        if ($this->option('fresh')) {
+            $migrateArgs = ['--force' => true];
+            $this->call('migrate:fresh', $migrateArgs);
+        } else {
+            $this->call('migrate', $migrateArgs);
+        }
 
         if (User::exists()) {
             $this->error('Users already exist. Installation has already been completed.');
@@ -82,6 +91,8 @@ class InstallCommand extends Command
             $this->call('key:generate', ['--force' => true]);
 
             $this->setupDatabase($envPath);
+
+            $this->reloadDatabaseConfig($envPath);
         }
     }
 
@@ -124,5 +135,36 @@ class InstallCommand extends Command
 
         File::put($envPath, $env);
         $this->info("Database configured for {$connection}.");
+    }
+
+    /**
+     * Re-read the .env file and reconfigure the database connection
+     * so that migrate runs against the newly configured database.
+     */
+    protected function reloadDatabaseConfig(string $envPath): void
+    {
+        $values = [];
+
+        foreach (file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+            if (str_starts_with($line, '#')) {
+                continue;
+            }
+
+            if (str_contains($line, '=')) {
+                [$key, $value] = explode('=', $line, 2);
+                $values[trim($key)] = trim($value);
+            }
+        }
+
+        $connection = $values['DB_CONNECTION'] ?? config('database.default');
+
+        config(['database.default' => $connection]);
+        config(["database.connections.{$connection}.host" => $values['DB_HOST'] ?? '']);
+        config(["database.connections.{$connection}.port" => $values['DB_PORT'] ?? '']);
+        config(["database.connections.{$connection}.database" => $values['DB_DATABASE'] ?? '']);
+        config(["database.connections.{$connection}.username" => $values['DB_USERNAME'] ?? '']);
+        config(["database.connections.{$connection}.password" => $values['DB_PASSWORD'] ?? '']);
+
+        DB::purge($connection);
     }
 }
