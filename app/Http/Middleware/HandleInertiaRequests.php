@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -38,6 +39,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'setting' => fn () => Setting::get(),
             'auth' => [
                 'user' => $request->user(),
                 'role' => $request->user()?->getRoleNames()->first(),
