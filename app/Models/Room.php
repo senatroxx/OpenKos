@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RoomStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -30,6 +31,7 @@ class Room extends Model
             'base_price' => 'decimal:2',
             'size_sqm' => 'decimal:2',
             'capacity' => 'integer',
+            'status' => RoomStatus::class,
         ];
     }
 
