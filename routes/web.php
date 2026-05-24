@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\TenantController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -15,6 +16,12 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         ]);
 
         Route::resource('properties.rooms', RoomController::class)->scoped()->only([
+            'index', 'store', 'update', 'destroy',
+        ]);
+    });
+
+    Route::middleware('permission:tenants.manage')->group(function () {
+        Route::resource('tenants', TenantController::class)->only([
             'index', 'store', 'update', 'destroy',
         ]);
     });
