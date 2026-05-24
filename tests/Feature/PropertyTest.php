@@ -60,15 +60,6 @@ describe('CRUD', function () {
             );
     });
 
-    it('renders the create form', function () {
-        $user = User::factory()->owner()->create();
-
-        $this->actingAs($user)
-            ->get(route('properties.create'))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page->component('properties/create'));
-    });
-
     it('creates a property', function () {
         $user = User::factory()->owner()->create();
 
@@ -92,24 +83,11 @@ describe('CRUD', function () {
             ->assertSessionHasErrors('name');
     });
 
-    it('renders the edit form', function () {
-        $user = User::factory()->owner()->create();
-        $property = Property::factory()->create();
-
-        $this->actingAs($user)
-            ->get(route('properties.edit', $property))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('properties/edit')
-                ->has('property')
-            );
-    });
-
     it('updates a property', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create(['name' => 'Kos Melati']);
 
-        $this->actingAs($user)->from(route('properties.edit', $property))
+        $this->actingAs($user)
             ->put(route('properties.update', $property), [
                 'name' => 'Kos Mawar',
             ]);
