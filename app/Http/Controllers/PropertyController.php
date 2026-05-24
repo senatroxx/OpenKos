@@ -95,7 +95,7 @@ class PropertyController extends Controller
 
     public function destroy(Property $property): RedirectResponse
     {
-        $property->delete();
+        $property->update(['is_active' => false]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
 
