@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Enums\Role;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,14 @@ class InstallCommand extends Command
             return self::FAILURE;
         }
 
+        $siteName = $this->ask('What is the name of this installation?', 'OpenKOS');
+
+        $country = $this->choice(
+            'What country is this installation for?',
+            ['ID' => 'Indonesia', 'XX' => 'Other'],
+            'ID',
+        );
+
         $name = $this->ask('What is the owner\'s name?');
 
         $email = $this->ask('What is the owner\'s email address?');
@@ -33,6 +42,14 @@ class InstallCommand extends Command
         $this->call('db:seed', [
             '--class' => 'Database\Seeders\RoleAndPermissionSeeder',
             '--force' => true,
+        ]);
+
+        Setting::create([
+            'site_name' => $siteName,
+            'country_code' => $country,
+            'locale' => $country === 'ID' ? 'id' : config('app.locale'),
+            'currency' => $country === 'ID' ? 'IDR' : 'USD',
+            'timezone' => $country === 'ID' ? 'Asia/Jakarta' : config('app.timezone'),
         ]);
 
         $user = User::create([
