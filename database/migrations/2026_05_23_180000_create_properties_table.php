@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('province')->nullable();
             $table->string('postal_code')->nullable();
             $table->string('phone')->nullable();
-            $table->string('email')->nullable();
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
