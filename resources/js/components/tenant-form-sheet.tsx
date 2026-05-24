@@ -16,7 +16,6 @@ type Tenant = {
     id: number;
     name: string;
     phone: string | null;
-    email: string | null;
     id_card_number: string | null;
     emergency_contact_name: string | null;
     emergency_contact_phone: string | null;
@@ -67,29 +66,15 @@ export default function TenantFormSheet({
                                     <InputError message={errors.name} />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="phone">Phone</Label>
-                                        <Input
-                                            id="phone"
-                                            name="phone"
-                                            defaultValue={tenant?.phone ?? ''}
-                                            placeholder="e.g. 081234567890"
-                                        />
-                                        <InputError message={errors.phone} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="email">Email</Label>
-                                        <Input
-                                            id="email"
-                                            name="email"
-                                            type="email"
-                                            defaultValue={tenant?.email ?? ''}
-                                            placeholder="e.g. budi@example.com"
-                                        />
-                                        <InputError message={errors.email} />
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="phone">Phone</Label>
+                                    <Input
+                                        id="phone"
+                                        name="phone"
+                                        defaultValue={tenant?.phone ?? ''}
+                                        placeholder="e.g. 081234567890"
+                                    />
+                                    <InputError message={errors.phone} />
                                 </div>
 
                                 <div className="grid gap-2">

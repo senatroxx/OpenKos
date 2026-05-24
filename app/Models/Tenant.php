@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'user_id',
     'name',
     'phone',
-    'email',
     'id_card_number',
     'emergency_contact_name',
     'emergency_contact_phone',
