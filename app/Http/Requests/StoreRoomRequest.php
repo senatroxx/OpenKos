@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\RoomStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class StoreRoomRequest extends FormRequest
@@ -15,7 +16,12 @@ class StoreRoomRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('rooms')->where(fn ($q) => $q->where('property_id', $this->route('property')->id)),
+            ],
             'floor' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
             'base_price' => ['required', 'numeric', 'min:0'],
