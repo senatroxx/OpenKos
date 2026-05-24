@@ -37,8 +37,8 @@ export default function PropertyDetailSheet({
 }) {
     function archive() {
         if (!property) {
-return;
-}
+            return;
+        }
 
         if (confirm('Are you sure you want to archive this property?')) {
             router.delete(properties.destroy.url(property), {
@@ -58,7 +58,7 @@ return;
                 </SheetHeader>
 
                 {property && (
-                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-5">
                             <div className="flex items-center gap-2">
                                 <span>Status:</span>
@@ -70,9 +70,7 @@ return;
                                         Active
                                     </Badge>
                                 ) : (
-                                    <Badge variant="secondary">
-                                        Archived
-                                    </Badge>
+                                    <Badge variant="secondary">Archived</Badge>
                                 )}
                             </div>
 
@@ -100,8 +98,7 @@ return;
                                 </div>
                             )}
 
-                            {(property.city &&
-                                !property.address) && (
+                            {property.city && !property.address && (
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
                                         City
@@ -156,6 +153,18 @@ return;
                             </div>
                         </div>
 
+                        <div>
+                            <Link
+                                href={properties.rooms.index.url(property)}
+                                className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => onOpenChange(false)}
+                            >
+                                Manage Rooms ({property.rooms_count})
+                            </Link>
+                        </div>
+
+                        <div className="flex-1"></div>
+
                         <div className="flex items-center justify-end gap-4">
                             <Button
                                 variant="outline"
@@ -163,10 +172,7 @@ return;
                             >
                                 Close
                             </Button>
-                            <Button
-                                variant="destructive"
-                                onClick={archive}
-                            >
+                            <Button variant="destructive" onClick={archive}>
                                 Archive
                             </Button>
                             <Button
@@ -177,16 +183,6 @@ return;
                             >
                                 Edit
                             </Button>
-                        </div>
-
-                        <div>
-                            <Link
-                                href={properties.rooms.index(property)}
-                                className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-                                onClick={() => onOpenChange(false)}
-                            >
-                                Manage Rooms ({property.rooms_count})
-                            </Link>
                         </div>
                     </div>
                 )}

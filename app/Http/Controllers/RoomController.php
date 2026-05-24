@@ -40,7 +40,7 @@ class RoomController extends Controller
 
         $rooms = $property->rooms()
             ->withCount([
-                'leases as active_leases' => fn (Builder $q) => $q->whereNull('ended_at'),
+                'leases as active_leases' => fn (Builder $q) => $q->whereNull('end_date'),
             ])
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')

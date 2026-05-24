@@ -11,12 +11,13 @@ import {
     X,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import EmptyState from '@/components/empty-state';
 import Heading from '@/components/heading';
 import RoomDetailSheet from '@/components/room-detail-sheet';
 import RoomFormSheet from '@/components/room-form-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -116,7 +117,7 @@ export default function Index({
     const [searchValue, setSearchValue] = useState(currentSearch);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const routePrefix = properties.rooms.index(property);
+    const routePrefix = properties.rooms.index.url(property);
 
     function openCreate() {
         setEditingRoom(null);
@@ -291,13 +292,11 @@ export default function Index({
                 </div>
 
                 {data.data.length === 0 ? (
-                    <Card>
-                        <CardContent className="flex flex-col items-center gap-4 py-12">
-                            <p className="text-sm text-muted-foreground">No rooms yet.</p>
-
-                            <Button onClick={openCreate}>Create your first room</Button>
-                        </CardContent>
-                    </Card>
+                    <EmptyState
+                        message="No rooms yet."
+                        createLabel="Create your first room"
+                        onCreate={openCreate}
+                    />
                 ) : (
                     <div className="overflow-x-auto rounded-lg border">
                         <table className="w-full text-sm">
@@ -489,7 +488,7 @@ Index.layout = {
             href: properties.index(),
         },
         {
-            title: property.name,
+            title: 'Rooms',
         },
     ],
 };
