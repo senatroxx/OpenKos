@@ -10,7 +10,7 @@ import {
     Trash2,
     X,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Heading from '@/components/heading';
 import PropertyDetailSheet from '@/components/property-detail-sheet';
 import PropertyFormSheet from '@/components/property-form-dialog';
@@ -149,23 +149,34 @@ export default function Index({
         applyFilters({ status, page: '' });
     }
 
-    useEffect(() => {
+    function handleSearchChange(value: string) {
+        setSearchValue(value);
+
         if (debounceRef.current) {
             clearTimeout(debounceRef.current);
         }
 
         debounceRef.current = setTimeout(() => {
-            if (searchValue !== currentSearch) {
-                applyFilters({ page: '' });
-            }
-        }, 300);
+            const params: Record<string, string> = {
+                sort: currentSort,
+                direction: currentDirection,
+                per_page: String(currentPerPage),
+            };
 
-        return () => {
-            if (debounceRef.current) {
-                clearTimeout(debounceRef.current);
+            if (value) {
+                params.search = value;
             }
-        };
-    }, [searchValue]);
+
+            if (currentStatus) {
+                params.status = currentStatus;
+            }
+
+            router.get(properties.index(), params, {
+                preserveState: true,
+                replace: true,
+            });
+        }, 300);
+    }
 
     function toggleSort(column: string) {
         const direction =
@@ -220,6 +231,12 @@ export default function Index({
                         {searchValue && (
                             <button
                                 onClick={() => {
+                                    if (debounceRef.current) {
+                                        clearTimeout(
+                                            debounceRef.current,
+                                        );
+                                    }
+
                                     setSearchValue('');
                                     applyFilters({
                                         search: '',
@@ -402,12 +419,9 @@ export default function Index({
                                     <select
                                         className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                         value={currentPerPage}
-                                        onChange={(e) =>
-                                            applyFilters({
-                                                per_page: e.target.value,
-                                                page: '',
-                                            })
-                                        }
+                            onChange={(e) =>
+                                handleSearchChange(e.target.value)
+                            }
                                     >
                                         {[10, 15, 25, 50].map((n) => (
                                             <option key={n} value={n}>

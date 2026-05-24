@@ -10,7 +10,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import properties, { store, update } from '@/routes/properties';
+import { store, update } from '@/routes/properties';
 
 type Property = {
     id: number;
