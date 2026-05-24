@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\RoomStatus;
 use App\Models\Property;
 use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,8 +23,23 @@ class RoomFactory extends Factory
             'base_price' => fake()->numberBetween(500_000, 3_000_000),
             'size_sqm' => fake()->randomFloat(2, 12, 30),
             'capacity' => 1,
-            'status' => 'available',
+            'status' => RoomStatus::Available,
             'notes' => null,
         ];
+    }
+
+    public function occupied(): static
+    {
+        return $this->state(['status' => RoomStatus::Occupied]);
+    }
+
+    public function maintenance(): static
+    {
+        return $this->state(['status' => RoomStatus::Maintenance]);
+    }
+
+    public function unavailable(): static
+    {
+        return $this->state(['status' => RoomStatus::Unavailable]);
     }
 }
