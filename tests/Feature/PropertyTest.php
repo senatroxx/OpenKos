@@ -97,13 +97,14 @@ describe('CRUD', function () {
         expect($property->name)->toBe('Kos Mawar');
     });
 
-    it('archives a property via soft delete', function () {
+    it('archives a property by setting is_active to false', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
 
         $this->actingAs($user)->delete(route('properties.destroy', $property));
 
-        expect(Property::count())->toBe(0);
-        expect(Property::withTrashed()->count())->toBe(1);
+        $property->refresh();
+
+        expect($property->is_active)->toBeFalse();
     });
 });
