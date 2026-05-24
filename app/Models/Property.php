@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -15,17 +16,18 @@ use Illuminate\Support\Str;
     'name',
     'slug',
     'address',
-    'city',
-    'province',
+    'region_id',
+    'city_id',
     'postal_code',
     'phone',
-
     'description',
     'is_active',
 ])]
 class Property extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $with = ['region', 'city'];
 
     protected function casts(): array
     {
@@ -47,6 +49,16 @@ class Property extends Model
                 $property->slug = $slug;
             }
         });
+    }
+
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
     }
 
     public function rooms(): HasMany

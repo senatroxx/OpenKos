@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\RoomStatus;
 use App\Http\Requests\StorePropertyRequest;
 use App\Http\Requests\UpdatePropertyRequest;
+use App\Models\City;
 use App\Models\Property;
+use App\Models\Region;
+use App\Models\Setting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,16 +48,28 @@ class PropertyController extends Controller
                 'leases as tenants_count' => fn (Builder $q) => $q->selectRaw('count(distinct tenant_id)'),
             ])
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhere(DB::raw('lower(city)'), 'like', '%'.mb_strtolower($search).'%');
+                $q->where(DB::raw('lower(properties.name)'), 'like', '%'.mb_strtolower($search).'%')
+                    ->orWhereHas('region', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
+                    ->orWhereHas('city', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
             }))
             ->when($status === 'active', fn (Builder $q) => $q->where('is_active', true))
             ->when($status === 'archived', fn (Builder $q) => $q->where('is_active', false))
-            ->orderBy($sort, $direction)
+            ->when($sort === 'city', fn (Builder $q) => $q->orderBy(
+                City::select('name')->whereColumn('cities.id', 'properties.city_id'),
+                $direction,
+            ))
+            ->when($sort !== 'city', fn (Builder $q) => $q->orderBy($sort, $direction))
             ->paginate($perPage);
+
+        $countryCode = Setting::get()->country_code;
+        $regions = Region::where('country_code', $countryCode)
+            ->with('cities')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('properties/index', [
             'properties' => $properties,
+            'regions' => $regions,
             'search' => $search,
             'status' => $status,
             'sort' => $sort,

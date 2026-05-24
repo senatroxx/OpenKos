@@ -1,0 +1,154 @@
+[
+  {
+    "id": 11,
+    "province": "Aceh (NAD)"
+  }, 
+  {
+    "id": 12,
+    "province": "Sumatera Utara"
+  },
+  {
+    "id": 13,
+    "province": "Sumatera Barat"
+  }, 
+  {
+    "id": 14,
+    "province": "Riau"
+  },
+  {
+    "id": 15,
+    "province": "Jambi"
+  }, 
+  {
+    "id": 16,
+    "province": "Sumatera Selatan"
+  }, 
+  {
+    "id": 17,
+    "province": "Bengkulu"
+  }, 
+  {
+    "id": 18,
+    "province": "Lampung"
+  }, 
+  {
+    "id": 19,
+    "province": "Kepulauan Bangka Belitung"
+  }, 
+  {
+    "id": 21,
+    "province": "Kepulauan Riau"
+  }, 
+  {
+    "id": 31,
+    "province": "DKI Jakarta"
+  }, 
+  {
+    "id": 32,
+    "province": "Jawa Barat"
+  }, 
+  {
+    "id": 33,
+    "province": "Jawa Tengah"
+  }, 
+  {
+    "id": 34,
+    "province": "DI Yogyakarta"
+  }, 
+  {
+    "id": 35,
+    "province": "Jawa Timur"
+  }, 
+  {
+    "id": 36,
+    "province": "Banten"
+  }, 
+  {
+    "id": 51,
+    "province": "Bali"
+  }, 
+  {
+    "id": 52,
+    "province": "Nusa Tenggara Barat"
+  }, 
+  {
+    "id": 53,
+    "province": "Nusa Tenggara Timur"
+  }, 
+  {
+    "id": 61,
+    "province": "Kalimantan Barat"
+  }, 
+  {
+    "id": 62,
+    "province": "Kalimantan Tengah"
+  }, 
+  {
+    "id": 63,
+    "province": "Kalimantan Selatan"
+  }, 
+  {
+    "id": 64,
+    "province": "Kalimantan Timur"
+  }, 
+  {
+    "id": 65,
+    "province": "Kalimantan Utara"
+  }, 
+  {
+    "id": 71,
+    "province": "Sulawesi Utara"
+  }, 
+  {
+    "id": 72,
+    "province": "Sulawesi Tengah"
+  }, 
+  {
+    "id": 73,
+    "province": "Sulawesi Selatan"
+  }, 
+  {
+    "id": 74,
+    "province": "Sulawesi Tenggara"
+  }, 
+  {
+    "id": 75,
+    "province": "Gorontalo"
+  }, 
+  {
+    "id": 76,
+    "province": "Sulawesi Barat"
+  }, 
+  {
+    "id": 81,
+    "province": "Maluku"
+  }, 
+  {
+    "id": 82,
+    "province": "Maluku Utara"
+  }, 
+  {
+    "id": 91,
+    "province": "Papua"
+  }, 
+  {
+    "id": 92,
+    "province": "Papua Barat"
+  }, 
+  {
+    "id": 93,
+    "province": "Papua Selatan"
+  },
+  {
+    "id": 94,
+    "province": "Papua Tengah"
+  },
+  {
+    "id": 95,
+    "province": "Papua Pegunungan"
+  }, 
+  {
+    "id": 96,
+    "province": "Papua Barat Daya"
+  }
+]
