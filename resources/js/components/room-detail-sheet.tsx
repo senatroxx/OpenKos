@@ -1,4 +1,3 @@
-import { router } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,8 +7,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import properties from '@/routes/properties';
-
 const STATUS_LABELS: Record<string, string> = {
     available: 'Available',
     occupied: 'Occupied',
@@ -24,6 +21,27 @@ const STATUS_COLORS: Record<string, string> = {
     unavailable: 'bg-gray-400',
 };
 
+type TenantInfo = {
+    id: number;
+    name: string;
+    phone: string | null;
+};
+
+type LeaseInfo = {
+    id: number;
+    start_date: string;
+    end_date: string | null;
+    monthly_rent: string;
+    deposit_amount: string;
+    deposit_paid_at: string | null;
+    deposit_refund_amount: string | null;
+    deposit_refunded_at: string | null;
+    rent_due_day: number;
+    status: string;
+    notes: string | null;
+    tenant: TenantInfo | null;
+};
+
 type Room = {
     id: number;
     name: string;
@@ -35,6 +53,7 @@ type Room = {
     status: string;
     notes: string | null;
     active_leases: number;
+    leases: LeaseInfo[];
 };
 
 type Property = {
@@ -61,24 +80,21 @@ export default function RoomDetailSheet({
     open,
     onOpenChange,
     onEdit,
+    onAssignTenant,
+    onMoveOut,
+    onMoveRoom,
 }: {
     room?: Room | null;
     property: Property | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
+    onAssignTenant?: () => void;
+    onMoveOut?: () => void;
+    onMoveRoom?: () => void;
 }) {
-    function destroy() {
-        if (!room || !property) {
-            return;
-        }
-
-        if (confirm('Are you sure you want to delete this room?')) {
-            router.delete(properties.rooms.destroy.url({ property: property.id, room: room.id }), {
-                onSuccess: () => onOpenChange(false),
-            });
-        }
-    }
+    const activeLease = room?.leases?.[0];
+    const isOccupied = activeLease !== undefined && room?.active_leases > 0;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -101,6 +117,43 @@ export default function RoomDetailSheet({
                                     {STATUS_LABELS[room.status] ?? room.status}
                                 </Badge>
                             </div>
+
+                            {/* Active Tenant Card */}
+                            {isOccupied && activeLease && (
+                                <div className="rounded-lg border bg-muted/30 p-4">
+                                    <p className="mb-2 text-xs font-medium text-muted-foreground uppercase">
+                                        Current Tenant
+                                    </p>
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium">
+                                            {activeLease.tenant?.name ?? 'Unknown'}
+                                        </p>
+                                        {activeLease.tenant?.phone && (
+                                            <p className="text-sm text-muted-foreground">
+                                                {activeLease.tenant.phone}
+                                            </p>
+                                        )}
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Rent:</span>
+                                            <span className="tabular-nums font-medium">
+                                                {formatPrice(activeLease.monthly_rent)}/mo
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Deposit:</span>
+                                            <span className="tabular-nums">
+                                                {formatPrice(activeLease.deposit_amount)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Due Day:</span>
+                                            <span className="tabular-nums">
+                                                {activeLease.rent_due_day}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {room.description && (
                                 <div>
@@ -150,20 +203,46 @@ export default function RoomDetailSheet({
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
                                         Notes
                                     </p>
-                                    <p className="mt-1 text-sm whitespace-pre-wrap">
-                                        {room.notes}
-                                    </p>
+                                    <p className="mt-1 text-sm whitespace-pre-wrap">{room.notes}</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-4">
+                        <div className="flex flex-wrap items-center justify-end gap-4">
                             <Button variant="outline" onClick={() => onOpenChange(false)}>
                                 Close
                             </Button>
-                            <Button variant="destructive" onClick={destroy}>
-                                Delete
-                            </Button>
+                            {isOccupied && onMoveOut && (
+                                <Button variant="destructive" onClick={onMoveOut}>
+                                    Move Out Tenant
+                                </Button>
+                            )}
+                            {isOccupied && onMoveRoom && (
+                                <Button variant="outline" onClick={onMoveRoom}>
+                                    Move Room
+                                </Button>
+                            )}
+                            {!isOccupied && onAssignTenant && (
+                                <Button onClick={onAssignTenant}>
+                                    Assign Tenant
+                                </Button>
+                            )}
+                            {room && property && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        onOpenChange(false);
+                                        router.get(
+                                            properties.rooms.leases.index.url({
+                                                property: property.id,
+                                                room: room.id,
+                                            }),
+                                        );
+                                    }}
+                                >
+                                    Lease History
+                                </Button>
+                            )}
                             <Button
                                 onClick={() => {
                                     onOpenChange(false);
