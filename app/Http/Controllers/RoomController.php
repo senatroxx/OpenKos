@@ -6,6 +6,7 @@ use App\Http\Requests\StoreRoomRequest;
 use App\Http\Requests\UpdateRoomRequest;
 use App\Models\Property;
 use App\Models\Room;
+use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,8 +41,9 @@ class RoomController extends Controller
 
         $rooms = $property->rooms()
             ->withCount([
-                'leases as active_leases' => fn (Builder $q) => $q->whereNull('end_date'),
+                'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
             ])
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenant:id,name,phone')])
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(floor)'), 'like', '%'.mb_strtolower($search).'%');
@@ -50,9 +52,23 @@ class RoomController extends Controller
             ->orderBy($sort, $direction)
             ->paginate($perPage);
 
+        $tenantsList = Tenant::where('is_active', '1')
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone']);
+
+        $availableRooms = $property->rooms()
+            ->with('property.city')
+            ->whereNull('deleted_at')
+            ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'property_id']);
+
         return Inertia::render('properties/rooms/index', [
-            'property' => $property->only('id', 'name', 'slug', 'city'),
+            'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
             'rooms' => $rooms,
+            'tenants' => $tenantsList,
+            'availableRooms' => $availableRooms,
             'search' => $search,
             'status' => $status,
             'sort' => $sort,
