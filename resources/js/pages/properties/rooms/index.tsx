@@ -3,8 +3,10 @@ import {
     ChevronDown,
     ChevronUp,
     ChevronsUpDown,
+    DoorOpen,
     EllipsisVertical,
     Eye,
+    Move,
     Pencil,
     Search,
     Trash2,
@@ -13,6 +15,9 @@ import {
 import { useRef, useState } from 'react';
 import EmptyState from '@/components/empty-state';
 import Heading from '@/components/heading';
+import LeaseFormSheet from '@/components/lease-form-sheet';
+import MoveOutSheet from '@/components/move-out-sheet';
+import MoveRoomSheet from '@/components/move-room-sheet';
 import RoomDetailSheet from '@/components/room-detail-sheet';
 import RoomFormSheet from '@/components/room-form-sheet';
 import { Badge } from '@/components/ui/badge';
@@ -22,10 +27,32 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import properties from '@/routes/properties';
+
+type TenantInfo = {
+    id: number;
+    name: string;
+    phone: string | null;
+};
+
+type LeaseInfo = {
+    id: number;
+    start_date: string;
+    end_date: string | null;
+    monthly_rent: string;
+    deposit_amount: string;
+    deposit_paid_at: string | null;
+    deposit_refund_amount: string | null;
+    deposit_refunded_at: string | null;
+    rent_due_day: number;
+    status: string;
+    notes: string | null;
+    tenant: TenantInfo | null;
+};
 
 type Room = {
     id: number;
@@ -38,6 +65,7 @@ type Room = {
     status: string;
     notes: string | null;
     active_leases: number;
+    leases: LeaseInfo[];
 };
 
 type Property = {
@@ -65,6 +93,8 @@ type PageProps = {
         to: number | null;
         links: PaginationLinks[];
     };
+    tenants: { id: number; name: string; phone: string }[];
+    availableRooms: { id: number; name: string; property_id: number; property: { id: number; name: string; city: { name: string } | null } | null }[];
     sort?: string;
     direction?: string;
     search?: string;
@@ -102,6 +132,7 @@ function formatPrice(cents: string): string {
 export default function Index({
     property,
     rooms: data,
+    availableRooms: _availableRooms,
     sort: currentSort = 'name',
     direction: currentDirection = 'asc',
     search: currentSearch = '',
@@ -113,6 +144,20 @@ export default function Index({
 
     const [detailOpen, setDetailOpen] = useState(false);
     const [viewingRoom, setViewingRoom] = useState<Room | null>(null);
+
+    const [leaseFormOpen, setLeaseFormOpen] = useState(false);
+    const [assignRoom, setAssignRoom] = useState<Room | null>(null);
+
+    const [moveOpen, setMoveOpen] = useState(false);
+    const [moveLease, setMoveLease] = useState<LeaseInfo | null>(null);
+    const [moveFromRoom, setMoveFromRoom] = useState<Room | null>(null);
+
+    const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
+        id: number;
+        tenant: { id: number; name: string; phone: string | null } | null;
+        room: { id: number; name: string; property_id: number; property: { id: number; name: string; city: { name: string } | null } | null } | null;
+    } | null>(null);
+    const [moveOutOpen, setMoveOutOpen] = useState(false);
 
     const [searchValue, setSearchValue] = useState(currentSearch);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -141,6 +186,60 @@ export default function Index({
 
         setEditingRoom(viewingRoom);
         setDialogOpen(true);
+    }
+
+    function openAssignTenant() {
+        if (!viewingRoom) {
+            return;
+        }
+
+        setAssignRoom(viewingRoom);
+        setDetailOpen(false);
+        setLeaseFormOpen(true);
+    }
+
+    function openMoveRoom() {
+        if (!viewingRoom) {
+            return;
+        }
+
+        const lease = viewingRoom.leases?.[0];
+
+        if (lease) {
+            setMoveFromRoom(viewingRoom);
+            setMoveLease(lease);
+            setDetailOpen(false);
+            setMoveOpen(true);
+        }
+    }
+
+    function openMoveOut() {
+        if (!viewingRoom) {
+            return;
+        }
+
+        const lease = viewingRoom.leases?.[0];
+
+        if (!lease) {
+            return;
+        }
+
+        setMoveOutLeaseData({
+            id: lease.id,
+            tenant: lease.tenant,
+            room: {
+                id: viewingRoom.id,
+                name: viewingRoom.name,
+                property_id: property.id,
+                property: {
+                    id: property.id,
+                    name: property.name,
+                    city: property.city ? { name: property.city } : null,
+                },
+            },
+        });
+        setDetailOpen(false);
+        setMoveOutOpen(true);
     }
 
     function destroy(room: Room) {
@@ -225,6 +324,10 @@ export default function Index({
         ) : (
             <ChevronDown className="ml-1 inline size-3.5" />
         );
+    }
+
+    function getFilteredRoomsForMove(currentRoomId: number): { id: number; name: string }[] {
+        return _availableRooms.filter((r) => r.id !== currentRoomId);
     }
 
     return (
@@ -322,80 +425,135 @@ export default function Index({
                                             <SortIcon column={col} />
                                         </th>
                                     ))}
+                                    <th className="px-4 py-3 font-medium">Tenant</th>
                                     <th className="w-12 px-4 py-3" />
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.data.map((room) => (
-                                    <tr
-                                        key={room.id}
-                                        className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
-                                        onClick={() => openDetail(room)}
-                                    >
-                                        <td className="px-4 py-3 font-medium">{room.name}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {room.floor ?? '—'}
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums">
-                                            {formatPrice(room.base_price)}
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                                            {room.size_sqm ? `${room.size_sqm} m²` : '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge
-                                                className={`${STATUS_COLORS[room.status] ?? 'bg-gray-400'} text-white`}
-                                            >
-                                                {STATUS_LABELS[room.status] ?? room.status}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums">{room.capacity}</td>
-                                        <td className="px-4 py-3">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger
-                                                    asChild
-                                                    onClick={(e: React.MouseEvent) =>
-                                                        e.stopPropagation()
-                                                    }
+                                {data.data.map((room) => {
+                                    const activeLease = room.leases?.[0];
+                                    const hasActiveLease = room.active_leases > 0 && activeLease;
+
+                                    return (
+                                        <tr
+                                            key={room.id}
+                                            className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
+                                            onClick={() => openDetail(room)}
+                                        >
+                                            <td className="px-4 py-3 font-medium">{room.name}</td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {room.floor ?? '—'}
+                                            </td>
+                                            <td className="px-4 py-3 tabular-nums">
+                                                {formatPrice(room.base_price)}
+                                            </td>
+                                            <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                                {room.size_sqm ? `${room.size_sqm} m²` : '—'}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <Badge
+                                                    className={`${STATUS_COLORS[room.status] ?? 'bg-gray-400'} text-white`}
                                                 >
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-8"
+                                                    {STATUS_LABELS[room.status] ?? room.status}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-4 py-3 tabular-nums">{room.capacity}</td>
+                                            <td className="px-4 py-3">
+                                                {hasActiveLease ? (
+                                                    <span className="text-sm">
+                                                        {activeLease.tenant?.name ?? 'Occupied'}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">
+                                                        —
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                        onClick={(e: React.MouseEvent) =>
+                                                            e.stopPropagation()
+                                                        }
                                                     >
-                                                        <EllipsisVertical className="size-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent
-                                                    align="end"
-                                                    onClick={(e: React.MouseEvent) =>
-                                                        e.stopPropagation()
-                                                    }
-                                                >
-                                                    <DropdownMenuItem
-                                                        onClick={() => openDetail(room)}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="size-8"
+                                                        >
+                                                            <EllipsisVertical className="size-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                        align="end"
+                                                        onClick={(e: React.MouseEvent) =>
+                                                            e.stopPropagation()
+                                                        }
                                                     >
-                                                        <Eye className="size-4" />
-                                                        View
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => openEdit(room)}
-                                                    >
-                                                        <Pencil className="size-4" />
-                                                        Edit
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        variant="destructive"
-                                                        onClick={() => destroy(room)}
-                                                    >
-                                                        <Trash2 className="size-4" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </td>
-                                    </tr>
-                                ))}
+                                                        <DropdownMenuItem
+                                                            onClick={() => openDetail(room)}
+                                                        >
+                                                            <Eye className="size-4" />
+                                                            View
+                                                        </DropdownMenuItem>
+                                                        {hasActiveLease && (
+                                                            <>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setViewingRoom(room);
+                                                                        setDetailOpen(false);
+                                                                        const lease =
+                                                                            room.leases?.[0];
+
+                                                                        if (lease) {
+                                                                            setMoveFromRoom(
+                                                                                room,
+                                                                            );
+                                                                            setMoveLease(lease);
+                                                                            setMoveOpen(true);
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Move className="size-4" />
+                                                                    Move Room
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                            </>
+                                                        )}
+                                                        {!hasActiveLease && (
+                                                            <>
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        setAssignRoom(room);
+                                                                        setLeaseFormOpen(true);
+                                                                    }}
+                                                                >
+                                                                    <DoorOpen className="size-4" />
+                                                                    Assign Tenant
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuSeparator />
+                                                            </>
+                                                        )}
+                                                        <DropdownMenuItem
+                                                            onClick={() => openEdit(room)}
+                                                        >
+                                                            <Pencil className="size-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            onClick={() => destroy(room)}
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
 
@@ -469,6 +627,9 @@ export default function Index({
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
                 onEdit={editFromDetail}
+                onAssignTenant={openAssignTenant}
+                onMoveOut={openMoveOut}
+                onMoveRoom={openMoveRoom}
             />
 
             <RoomFormSheet
@@ -476,6 +637,33 @@ export default function Index({
                 property={property}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
+            />
+
+            {assignRoom && (
+                <LeaseFormSheet
+                    room={assignRoom}
+                    property={property}
+                    open={leaseFormOpen}
+                    onOpenChange={setLeaseFormOpen}
+                />
+            )}
+
+            {moveLease && moveFromRoom && (
+                <MoveRoomSheet
+                    property={property}
+                    currentRoom={moveFromRoom}
+                    availableRooms={getFilteredRoomsForMove(moveFromRoom.id)}
+                    lease={moveLease}
+                    open={moveOpen}
+                    onOpenChange={setMoveOpen}
+                />
+            )}
+
+            <MoveOutSheet
+                lease={moveOutLeaseData}
+                availableRooms={_availableRooms}
+                open={moveOutOpen}
+                onOpenChange={setMoveOutOpen}
             />
         </>
     );
