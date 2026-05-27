@@ -14,8 +14,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import properties from '@/routes/properties';
 import leases from '@/routes/leases';
+import properties from '@/routes/properties';
 import tenants from '@/routes/tenants';
 import type { NavItem } from '@/types';
 

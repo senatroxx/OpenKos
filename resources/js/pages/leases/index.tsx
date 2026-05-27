@@ -27,17 +27,17 @@ import {
     CommandList,
 } from '@/components/ui/command';
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import leases from '@/routes/leases';
 
 type TenantInfo = {
@@ -163,13 +163,19 @@ export default function Index({
 
     const propertyFilterRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const applyFiltersRef = useRef<(overrides: Record<string, string>) => void>(() => {});
+
+    useEffect(() => {
+        applyFiltersRef.current = applyFilters;
+    });
+
     useEffect(() => {
         if (propertyFilterRef.current) {
             clearTimeout(propertyFilterRef.current);
         }
 
         propertyFilterRef.current = setTimeout(() => {
-            applyFilters({});
+            applyFiltersRef.current({});
         }, 300);
 
         return () => {
