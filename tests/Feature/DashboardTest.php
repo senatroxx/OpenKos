@@ -1,9 +1,7 @@
 <?php
 
-use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Room;
-use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -20,18 +18,12 @@ function createPropertyWithRooms(array $roomConfigs): Property
     foreach ($roomConfigs as $config) {
         $factory = Room::factory();
 
-        if ($config['state'] !== 'available') {
-            $factory = $factory->{$config['state']}();
+        $state = $config['state'] ?? 'available';
+        if ($state !== 'available') {
+            $factory = $factory->{$state}();
         }
 
-        $room = $factory->create(['property_id' => $property->id]);
-
-        if (($config['with_active_lease'] ?? false)) {
-            Lease::factory()->create([
-                'room_id' => $room->id,
-                'tenant_id' => Tenant::factory()->create()->id,
-            ]);
-        }
+        $factory->create(['property_id' => $property->id]);
     }
 
     return $property;
@@ -41,9 +33,9 @@ test('dashboard returns occupancy stats matching seeded data', function () {
     $user = User::factory()->owner()->create();
 
     $property = createPropertyWithRooms([
-        ['state' => 'occupied', 'with_active_lease' => true],
-        ['state' => 'occupied', 'with_active_lease' => true],
-        ['state' => 'occupied', 'with_active_lease' => true],
+        ['state' => 'occupied'],
+        ['state' => 'occupied'],
+        ['state' => 'occupied'],
         ['state' => 'available'],
         ['state' => 'available'],
         ['state' => 'maintenance'],
@@ -71,18 +63,43 @@ test('dashboard returns occupancy stats matching seeded data', function () {
         );
 });
 
+test('dashboard counts occupied rooms from room status, not lease presence', function () {
+    $user = User::factory()->owner()->create();
+
+    $property = createPropertyWithRooms([
+        ['state' => 'occupied'],
+        ['state' => 'available'],
+        ['state' => 'available'],
+    ]);
+
+    // Room marked occupied even without a lease — still counted as occupied
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.total_rooms', 3)
+            ->where('stats.occupied_rooms', 1)
+            ->where('stats.available_rooms', 2)
+            ->where('stats.maintenance_rooms', 0)
+            ->where('stats.unavailable_rooms', 0)
+            ->where('stats.occupancy_percentage', 33)
+            ->where('stats.properties.0.occupied_rooms', 1)
+            ->where('stats.properties.0.available_rooms', 2)
+        );
+});
+
 test('dashboard returns correct stats for multiple properties', function () {
     $user = User::factory()->owner()->create();
 
-    $propertyA = createPropertyWithRooms([
-        ['state' => 'occupied', 'with_active_lease' => true],
+    createPropertyWithRooms([
+        ['state' => 'occupied'],
         ['state' => 'available'],
         ['state' => 'maintenance'],
     ]);
 
-    $propertyB = createPropertyWithRooms([
-        ['state' => 'occupied', 'with_active_lease' => true],
-        ['state' => 'occupied', 'with_active_lease' => true],
+    createPropertyWithRooms([
+        ['state' => 'occupied'],
+        ['state' => 'occupied'],
         ['state' => 'available'],
     ]);
 
@@ -120,7 +137,7 @@ test('dashboard does not count unavailable rooms as available', function () {
     $user = User::factory()->owner()->create();
 
     $property = createPropertyWithRooms([
-        ['state' => 'occupied', 'with_active_lease' => true],
+        ['state' => 'occupied'],
         ['state' => 'available'],
         ['state' => 'available'],
         ['state' => 'unavailable'],
