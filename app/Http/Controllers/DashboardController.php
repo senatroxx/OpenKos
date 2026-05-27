@@ -16,7 +16,7 @@ class DashboardController extends Controller
             ->withCount([
                 'rooms',
                 'rooms as occupied_rooms_count' => fn (Builder $q) => $q
-                    ->whereHas('leases', fn (Builder $q) => $q->where('status', 'active')),
+                    ->where('status', RoomStatus::Occupied),
                 'rooms as maintenance_rooms_count' => fn (Builder $q) => $q
                     ->where('status', RoomStatus::Maintenance),
                 'rooms as unavailable_rooms_count' => fn (Builder $q) => $q
