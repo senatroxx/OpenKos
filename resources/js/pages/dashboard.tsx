@@ -46,7 +46,7 @@ export default function Dashboard({ stats }: { stats: Stats }) {
                     />
                     <StatCard
                         label="Occupancy Rate"
-                        value={`${stats.occupancy_percentage}%`}
+                        value={stats.occupancy_percentage}
                         bgColor="bg-indigo-50 dark:bg-indigo-950/20"
                         isPercentage
                     />
@@ -87,7 +87,7 @@ function StatCard({
                 {label}
             </p>
             <p className={`mt-2 text-3xl font-bold tabular-nums ${isPercentage ? 'text-indigo-600 dark:text-indigo-400' : ''}`}>
-                {value}
+                {isPercentage ? `${value}%` : value}
             </p>
             {isPercentage && (
                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-indigo-200 dark:bg-indigo-900/40">
