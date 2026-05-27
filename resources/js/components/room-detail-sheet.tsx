@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import {
     Sheet,
     SheetContent,
-    SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
@@ -24,6 +23,27 @@ const STATUS_COLORS: Record<string, string> = {
     unavailable: 'bg-gray-400',
 };
 
+type TenantInfo = {
+    id: number;
+    name: string;
+    phone: string | null;
+};
+
+type LeaseInfo = {
+    id: number;
+    start_date: string;
+    end_date: string | null;
+    monthly_rent: string;
+    deposit_amount: string;
+    deposit_paid_at: string | null;
+    deposit_refund_amount: string | null;
+    deposit_refunded_at: string | null;
+    rent_due_day: number;
+    status: string;
+    notes: string | null;
+    tenant: TenantInfo | null;
+};
+
 type Room = {
     id: number;
     name: string;
@@ -35,6 +55,7 @@ type Room = {
     status: string;
     notes: string | null;
     active_leases: number;
+    leases: LeaseInfo[];
 };
 
 type Property = {
@@ -55,122 +76,191 @@ function formatPrice(cents: string): string {
     }).format(num);
 }
 
+const DUE_DAY_LABELS: Record<number, string> = {
+    1: '1st',
+    5: '5th',
+    10: '10th',
+    15: '15th',
+    20: '20th',
+    25: '25th',
+    31: 'Last day',
+};
+
 export default function RoomDetailSheet({
     room,
     property,
     open,
     onOpenChange,
     onEdit,
+    onAssignTenant,
+    onMoveOut,
+    onMoveRoom,
 }: {
     room?: Room | null;
     property: Property | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
+    onAssignTenant?: () => void;
+    onMoveOut?: () => void;
+    onMoveRoom?: () => void;
 }) {
-    function destroy() {
-        if (!room || !property) {
-            return;
-        }
-
-        if (confirm('Are you sure you want to delete this room?')) {
-            router.delete(properties.rooms.destroy.url({ property: property.id, room: room.id }), {
-                onSuccess: () => onOpenChange(false),
-            });
-        }
-    }
+    const activeLease = room?.leases?.[0];
+    const isOccupied = activeLease !== undefined && (room?.active_leases ?? 0) > 0;
+    const tenantName = activeLease?.tenant?.name ?? '—';
+    const phone = activeLease?.tenant?.phone;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>{room?.name}</SheetTitle>
-                    <SheetDescription>
-                        {room?.floor ? `Floor ${room.floor}` : 'Room details'}
-                    </SheetDescription>
                 </SheetHeader>
 
                 {room && (
                     <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
-                        <div className="space-y-5">
-                            <div className="flex items-center gap-2">
-                                <span>Status:</span>
+                        <div className="space-y-6">
+                            {/* Status */}
+                            <section>
+                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    Status
+                                </h3>
                                 <Badge
                                     className={`${STATUS_COLORS[room.status] ?? 'bg-gray-400'} text-white`}
                                 >
                                     {STATUS_LABELS[room.status] ?? room.status}
                                 </Badge>
-                            </div>
+                            </section>
 
-                            {room.description && (
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Description
-                                    </p>
-                                    <p className="mt-1 text-sm">{room.description}</p>
+                            {/* Room Details */}
+                            <section>
+                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    Room Details
+                                </h3>
+                                <div className="space-y-2 rounded-lg border p-4">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Floor</span>
+                                        <span>{room.floor ?? '—'}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Size</span>
+                                        <span className="tabular-nums">
+                                            {room.size_sqm ? `${room.size_sqm} m²` : '—'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Capacity</span>
+                                        <span className="tabular-nums">{room.capacity}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Base price</span>
+                                        <span className="tabular-nums">{formatPrice(room.base_price)}</span>
+                                    </div>
                                 </div>
+                            </section>
+
+                            {/* Current Occupancy */}
+                            {isOccupied && activeLease && (
+                                <section>
+                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                        Current Occupancy
+                                    </h3>
+                                    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-muted-foreground">Tenant</span>
+                                            <div className="text-right">
+                                                <p className="text-sm font-medium">{tenantName}</p>
+                                                {phone && (
+                                                    <p className="text-xs text-muted-foreground">{phone}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Monthly rent</span>
+                                            <span className="tabular-nums font-medium">
+                                                {formatPrice(activeLease.monthly_rent)}/mo
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Deposit</span>
+                                            <span className="tabular-nums">
+                                                {formatPrice(activeLease.deposit_amount)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Due day</span>
+                                            <span className="tabular-nums">
+                                                {DUE_DAY_LABELS[activeLease.rent_due_day] ?? activeLease.rent_due_day}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </section>
                             )}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Price
+                            {/* Description */}
+                            {room.description && (
+                                <section>
+                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                        Description
+                                    </h3>
+                                    <p className="text-sm whitespace-pre-wrap rounded-lg border p-4">
+                                        {room.description}
                                     </p>
-                                    <p className="mt-1 text-sm tabular-nums">
-                                        {formatPrice(room.base_price)}
-                                    </p>
-                                </div>
+                                </section>
+                            )}
 
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Size
-                                    </p>
-                                    <p className="mt-1 text-sm tabular-nums">
-                                        {room.size_sqm ? `${room.size_sqm} m²` : '—'}
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Floor
-                                    </p>
-                                    <p className="mt-1 text-sm">{room.floor ?? '—'}</p>
-                                </div>
-
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Capacity
-                                    </p>
-                                    <p className="mt-1 text-sm tabular-nums">{room.capacity}</p>
-                                </div>
-                            </div>
-
+                            {/* Notes */}
                             {room.notes && (
-                                <div>
-                                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                                <section>
+                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                         Notes
-                                    </p>
-                                    <p className="mt-1 text-sm whitespace-pre-wrap">
+                                    </h3>
+                                    <p className="text-sm whitespace-pre-wrap rounded-lg border p-4">
                                         {room.notes}
                                     </p>
-                                </div>
+                                </section>
                             )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-4">
-                            <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        <div className="flex flex-wrap items-center justify-end gap-4">
+                            {onEdit && (
+                                <Button variant="outline" onClick={onEdit}>
+                                    Edit
+                                </Button>
+                            )}
+                            {isOccupied && onMoveOut && (
+                                <Button variant="destructive" onClick={onMoveOut}>
+                                    Move Out Tenant
+                                </Button>
+                            )}
+                            {isOccupied && onMoveRoom && (
+                                <Button variant="outline" onClick={onMoveRoom}>
+                                    Move Room
+                                </Button>
+                            )}
+                            {!isOccupied && onAssignTenant && (
+                                <Button onClick={onAssignTenant}>
+                                    Assign Tenant
+                                </Button>
+                            )}
+                            {room && property && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        onOpenChange(false);
+                                        router.get(
+                                            properties.rooms.leases.index.url({
+                                                property: property.id,
+                                                room: room.id,
+                                            }),
+                                        );
+                                    }}
+                                >
+                                    Lease History
+                                </Button>
+                            )}
+                            <Button variant="ghost" onClick={() => onOpenChange(false)}>
                                 Close
-                            </Button>
-                            <Button variant="destructive" onClick={destroy}>
-                                Delete
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    onOpenChange(false);
-                                    onEdit();
-                                }}
-                            >
-                                Edit
                             </Button>
                         </div>
                     </div>

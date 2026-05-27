@@ -3,6 +3,7 @@ import {
     ChevronDown,
     ChevronUp,
     ChevronsUpDown,
+    DoorOpen,
     EllipsisVertical,
     Eye,
     Pencil,
@@ -11,8 +12,10 @@ import {
     X,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import AssignRoomSheet from '@/components/assign-room-sheet';
 import EmptyState from '@/components/empty-state';
 import Heading from '@/components/heading';
+import MoveOutSheet from '@/components/move-out-sheet';
 import TenantDetailSheet from '@/components/tenant-detail-sheet';
 import TenantFormSheet from '@/components/tenant-form-sheet';
 import { Badge } from '@/components/ui/badge';
@@ -26,15 +29,26 @@ import {
 import { Input } from '@/components/ui/input';
 import tenants from '@/routes/tenants';
 
+type Property = {
+    id: number;
+    name: string;
+};
+
 type Room = {
     id: number;
     name: string;
     floor: string | null;
 };
 
-type Property = {
+type AvailableRoom = {
     id: number;
     name: string;
+    property_id: number;
+    property: { id: number; name: string; city: { name: string } | null } | null;
+};
+
+type RoomWithProperty = Room & {
+    property: Property | null;
 };
 
 type Lease = {
@@ -42,8 +56,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     monthly_rent: string;
-    room: Room | null;
-    property: Property | null;
+    room: RoomWithProperty | null;
 };
 
 type Tenant = {
@@ -77,6 +90,7 @@ type PageProps = {
         to: number | null;
         links: PaginationLinks[];
     };
+    availableRooms: AvailableRoom[];
     sort?: string;
     direction?: string;
     search?: string;
@@ -88,6 +102,7 @@ const SORTABLE = ['name', 'phone'] as const;
 
 export default function Index({
     tenants: data,
+    availableRooms: _availableRooms,
     sort: currentSort = 'name',
     direction: currentDirection = 'asc',
     search: currentSearch = '',
@@ -99,6 +114,12 @@ export default function Index({
 
     const [detailOpen, setDetailOpen] = useState(false);
     const [viewingTenant, setViewingTenant] = useState<Tenant | null>(null);
+
+    const [assignRoomOpen, setAssignRoomOpen] = useState(false);
+    const [assignTenant, setAssignTenant] = useState<Tenant | null>(null);
+
+    const [moveOutOpen, setMoveOutOpen] = useState(false);
+    const [moveOutTenant, setMoveOutTenant] = useState<Tenant | null>(null);
 
     const [searchValue, setSearchValue] = useState(currentSearch);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -125,6 +146,26 @@ export default function Index({
 
         setEditingTenant(viewingTenant);
         setDialogOpen(true);
+    }
+
+    function openAssignRoom() {
+        if (!viewingTenant) {
+            return;
+        }
+
+        setAssignTenant(viewingTenant);
+        setDetailOpen(false);
+        setAssignRoomOpen(true);
+    }
+
+    function openMoveOut() {
+        if (!viewingTenant) {
+            return;
+        }
+
+        setMoveOutTenant(viewingTenant);
+        setDetailOpen(false);
+        setMoveOutOpen(true);
     }
 
     function archive(tenant: Tenant) {
@@ -390,6 +431,17 @@ export default function Index({
                                                         <Eye className="size-4" />
                                                         View
                                                     </DropdownMenuItem>
+                                                    {!tenant.deleted_at && tenant.active_leases_count === 0 && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setAssignTenant(tenant);
+                                                                setAssignRoomOpen(true);
+                                                            }}
+                                                        >
+                                                            <DoorOpen className="size-4" />
+                                                            Assign to Room
+                                                        </DropdownMenuItem>
+                                                    )}
                                                     {!tenant.deleted_at && (
                                                         <DropdownMenuItem
                                                             onClick={() =>
@@ -505,12 +557,42 @@ export default function Index({
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
                 onEdit={editFromDetail}
+                onAssignToRoom={openAssignRoom}
+                onMoveOut={openMoveOut}
             />
 
             <TenantFormSheet
                 tenant={editingTenant}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
+            />
+
+            {assignTenant && (
+                <AssignRoomSheet
+                    tenant={assignTenant}
+                    availableRooms={_availableRooms}
+                    open={assignRoomOpen}
+                    onOpenChange={setAssignRoomOpen}
+                />
+            )}
+
+            <MoveOutSheet
+                lease={
+                    moveOutTenant
+                        ? {
+                            id: moveOutTenant.leases?.[0]?.id ?? 0,
+                            tenant: {
+                                id: moveOutTenant.id,
+                                name: moveOutTenant.name,
+                                phone: moveOutTenant.phone,
+                            },
+                            room: moveOutTenant.leases?.[0]?.room ?? null,
+                        }
+                        : null
+                }
+                availableRooms={_availableRooms}
+                open={moveOutOpen}
+                onOpenChange={setMoveOutOpen}
             />
         </>
     );

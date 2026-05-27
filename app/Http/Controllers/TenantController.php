@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTenantRequest;
 use App\Http\Requests\UpdateTenantRequest;
+use App\Models\Lease;
+use App\Models\Room;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -38,10 +40,10 @@ class TenantController extends Controller
         }
 
         $tenants = Tenant::query()
-            ->with(['leases' => fn ($q) => $q->whereNull('end_date'), 'leases.room.property'])
-            ->withCount(['leases as active_leases_count' => fn (Builder $q) => $q->whereNull('end_date')])
-            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', true))
-            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', false))
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property'])])
+            ->withCount(['leases as active_leases_count' => fn (Builder $q) => $q->where('status', 'active')])
+            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', '1'))
+            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', '0'))
             ->when($status === 'archived', fn (Builder $q) => $q->onlyTrashed())
             ->when(! $status || $status === 'active' || $status === 'inactive', fn (Builder $q) => $q->whereNull('deleted_at'))
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
@@ -52,14 +54,65 @@ class TenantController extends Controller
             ->orderBy($sort, $direction)
             ->paginate($perPage);
 
+        $availableRooms = Room::query()
+            ->with('property.city')
+            ->whereNull('deleted_at')
+            ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+            ->orderBy('name')
+            ->get(['id', 'name', 'property_id']);
+
         return Inertia::render('tenants/index', [
             'tenants' => $tenants,
+            'availableRooms' => $availableRooms,
             'search' => $search,
             'status' => $status,
             'sort' => $sort,
             'direction' => $direction,
             'per_page' => $perPage,
         ]);
+    }
+
+    public function assignRoom(Request $request, Tenant $tenant): RedirectResponse
+    {
+        $validated = $request->validate([
+            'room_id' => ['required', 'integer', 'exists:rooms,id'],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after:start_date'],
+            'monthly_rent' => ['nullable', 'numeric', 'min:0'],
+            'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposit_paid_at' => ['nullable', 'date'],
+            'rent_due_day' => ['nullable', 'integer', 'between:1,31'],
+            'notes' => ['nullable', 'string', 'max:65535'],
+        ]);
+
+        $room = Room::findOrFail($validated['room_id']);
+
+        $hasActiveLease = Lease::query()
+            ->where('room_id', $room->id)
+            ->where('status', 'active')
+            ->exists();
+
+        if ($hasActiveLease) {
+            return back()->withErrors(['room_id' => __('Room already has an active lease.')]);
+        }
+
+        $room->leases()->create([
+            'tenant_id' => $tenant->id,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'] ?? null,
+            'monthly_rent' => $validated['monthly_rent'] ?? $room->base_price,
+            'deposit_amount' => $validated['deposit_amount'] ?? 0,
+            'deposit_paid_at' => $validated['deposit_paid_at'] ?? null,
+            'deposit_refund_amount' => null,
+            'deposit_refunded_at' => null,
+            'rent_due_day' => $validated['rent_due_day'] ?? 1,
+            'status' => 'active',
+            'notes' => $validated['notes'] ?? null,
+        ]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant assigned to room.')]);
+
+        return to_route('tenants.index');
     }
 
     public function store(StoreTenantRequest $request): RedirectResponse

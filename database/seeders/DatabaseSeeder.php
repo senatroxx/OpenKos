@@ -10,6 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RoleAndPermissionSeeder::class);
         $this->call(RegionAndCitySeeder::class);
+        $this->call(TenantSeeder::class);
         $this->call(PropertyAndRoomSeeder::class);
     }
 }
