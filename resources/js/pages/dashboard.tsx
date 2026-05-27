@@ -8,6 +8,7 @@ type PropertyStats = {
     occupied_rooms: number;
     available_rooms: number;
     maintenance_rooms: number;
+    unavailable_rooms: number;
     occupancy_percentage: number;
 };
 
@@ -16,6 +17,7 @@ type Stats = {
     occupied_rooms: number;
     available_rooms: number;
     maintenance_rooms: number;
+    unavailable_rooms: number;
     occupancy_percentage: number;
     properties: PropertyStats[];
 };
