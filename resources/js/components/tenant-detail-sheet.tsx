@@ -10,15 +10,16 @@ import {
 } from '@/components/ui/sheet';
 import tenants from '@/routes/tenants';
 
+type Property = {
+    id: number;
+    name: string;
+};
+
 type Room = {
     id: number;
     name: string;
     floor: string | null;
-};
-
-type Property = {
-    id: number;
-    name: string;
+    property: Property | null;
 };
 
 type Lease = {
@@ -27,7 +28,6 @@ type Lease = {
     end_date: string | null;
     monthly_rent: string;
     room: Room | null;
-    property: Property | null;
 };
 
 type Tenant = {
@@ -68,11 +68,15 @@ export default function TenantDetailSheet({
     open,
     onOpenChange,
     onEdit,
+    onAssignToRoom,
+    onMoveOut,
 }: {
     tenant?: Tenant | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
+    onAssignToRoom?: () => void;
+    onMoveOut?: () => void;
 }) {
     function archive() {
         if (!tenant) {
@@ -128,7 +132,7 @@ export default function TenantDetailSheet({
                                                 {activeLease.room?.name ?? 'Unknown Room'}
                                             </span>
                                             <span className="text-sm text-muted-foreground">
-                                                {activeLease.property?.name ?? 'Unknown Property'}
+                                                {activeLease.room?.property?.name ?? 'Unknown Property'}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -202,7 +206,17 @@ export default function TenantDetailSheet({
                             </Button>
                             {!isArchived && (
                                 <>
-                                    <Button variant="destructive" onClick={archive}>
+                                    {!activeLease && onAssignToRoom && (
+                                        <Button onClick={onAssignToRoom}>
+                                            Assign to Room
+                                        </Button>
+                                    )}
+                                    {activeLease && onMoveOut && (
+                                        <Button variant="destructive" onClick={onMoveOut}>
+                                            Move Out
+                                        </Button>
+                                    )}
+                                    <Button variant="outline" onClick={archive}>
                                         Archive
                                     </Button>
                                     <Button

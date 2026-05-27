@@ -62,9 +62,7 @@ export default function PropertyFormSheet({
         label: r.name,
     }));
 
-    const selectedRegion = regions.find(
-        (r) => r.id === selectedRegionId,
-    );
+    const selectedRegion = regions.find((r) => r.id === selectedRegionId);
 
     const cityOptions = (selectedRegion?.cities ?? []).map((c) => ({
         value: c.id,
@@ -72,7 +70,11 @@ export default function PropertyFormSheet({
     }));
 
     return (
-        <Sheet key={property?.id ?? 'new'} open={open} onOpenChange={onOpenChange}>
+        <Sheet
+            key={property?.id ?? 'new'}
+            open={open}
+            onOpenChange={onOpenChange}
+        >
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
@@ -106,15 +108,11 @@ export default function PropertyFormSheet({
                                     <textarea
                                         id="address"
                                         name="address"
-                                        defaultValue={
-                                            property?.address ?? ''
-                                        }
+                                        defaultValue={property?.address ?? ''}
                                         placeholder="Property address"
-                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     />
-                                    <InputError
-                                        message={errors.address}
-                                    />
+                                    <InputError message={errors.address} />
                                 </div>
 
                                 <input
@@ -135,7 +133,9 @@ export default function PropertyFormSheet({
                                             options={regionOptions}
                                             value={selectedRegionId}
                                             onChange={(val) => {
-                                                setSelectedRegionId(val as number | null);
+                                                setSelectedRegionId(
+                                                    val as number | null,
+                                                );
                                                 setSelectedCityId(null);
                                             }}
                                             placeholder="Select province..."
@@ -152,7 +152,9 @@ export default function PropertyFormSheet({
                                             options={cityOptions}
                                             value={selectedCityId}
                                             onChange={(val) => {
-                                                setSelectedCityId(val as number | null);
+                                                setSelectedCityId(
+                                                    val as number | null,
+                                                );
                                             }}
                                             placeholder={
                                                 selectedRegionId
@@ -163,9 +165,7 @@ export default function PropertyFormSheet({
                                             emptyText="No city found."
                                             disabled={!selectedRegionId}
                                         />
-                                        <InputError
-                                            message={errors.city_id}
-                                        />
+                                        <InputError message={errors.city_id} />
                                     </div>
                                     <div className="grid gap-2">
                                         <Label htmlFor="postal_code">
@@ -191,14 +191,10 @@ export default function PropertyFormSheet({
                                         id="phone"
                                         name="phone"
                                         type="tel"
-                                        defaultValue={
-                                            property?.phone ?? ''
-                                        }
+                                        defaultValue={property?.phone ?? ''}
                                         placeholder="Phone number"
                                     />
-                                    <InputError
-                                        message={errors.phone}
-                                    />
+                                    <InputError message={errors.phone} />
                                 </div>
 
                                 <div className="flex items-center justify-end gap-4 pt-2">

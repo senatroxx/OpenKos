@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, Building2, FolderGit2, LayoutGrid, Users } from 'lucide-react';
+import { BookOpen, Building2, FileText, FolderGit2, LayoutGrid, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -14,6 +14,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import leases from '@/routes/leases';
 import properties from '@/routes/properties';
 import tenants from '@/routes/tenants';
 import type { NavItem } from '@/types';
@@ -33,6 +34,11 @@ const mainNavItems: NavItem[] = [
         title: 'Tenants',
         href: tenants.index(),
         icon: Users,
+    },
+    {
+        title: 'Leases',
+        href: leases.index(),
+        icon: FileText,
     },
 ];
 

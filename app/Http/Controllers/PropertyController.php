@@ -52,8 +52,8 @@ class PropertyController extends Controller
                     ->orWhereHas('region', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
                     ->orWhereHas('city', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
             }))
-            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', true))
-            ->when($status === 'archived', fn (Builder $q) => $q->where('is_active', false))
+            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', '1'))
+            ->when($status === 'archived', fn (Builder $q) => $q->where('is_active', '0'))
             ->when($sort === 'city', fn (Builder $q) => $q->orderBy(
                 City::select('name')->whereColumn('cities.id', 'properties.city_id'),
                 $direction,
