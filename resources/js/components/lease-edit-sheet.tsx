@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,13 +69,9 @@ export default function LeaseEditSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [dueDay, setDueDay] = useState('1');
-
-    useEffect(() => {
-        if (lease) {
-            setDueDay(String(lease.rent_due_day));
-        }
-    }, [lease]);
+    const [dueDay, setDueDay] = useState(() =>
+        lease ? String(lease.rent_due_day) : '1',
+    );
 
     const noDeposit = Number.parseFloat(lease?.deposit_amount ?? '0') === 0;
 
@@ -84,7 +80,9 @@ export default function LeaseEditSheet({
     }
 
     function formatDate(date: string | null): string {
-        if (!date) return '—';
+        if (!date) {
+            return '—';
+        }
 
         return new Date(date).toLocaleDateString('id-ID', {
             year: 'numeric',
@@ -123,11 +121,11 @@ export default function LeaseEditSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">Room</span>
-                                            <span className="font-medium">{lease.room.name}</span>
+                                            <span className="font-medium">{lease.room?.name}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">Property</span>
-                                            <span className="font-medium">{lease.room.property?.name ?? '—'}</span>
+                                            <span className="font-medium">{lease.room?.property?.name ?? '—'}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">Start date</span>
@@ -235,7 +233,7 @@ export default function LeaseEditSheet({
                                             name="notes"
                                             defaultValue={lease.notes ?? ''}
                                             placeholder="Additional notes"
-                                            className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                         />
                                         <InputError message={errors.notes} />
                                     </div>
