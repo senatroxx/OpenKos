@@ -23,7 +23,7 @@ class RoleController extends Controller
         $direction = $request->query('direction', 'asc');
         $perPage = (int) $request->query('per_page', 15);
 
-        $sortable = ['name', 'label', 'users_count', 'permissions'];
+        $sortable = ['name', 'label', 'users_count'];
         $perPageOptions = [10, 15, 25, 50];
 
         if (! in_array($sort, $sortable)) {
