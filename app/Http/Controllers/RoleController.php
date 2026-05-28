@@ -143,9 +143,9 @@ class RoleController extends Controller
                 'color' => $validated['color'] ?? $role->color,
                 'is_active' => $validated['is_active'] ?? $role->is_active,
             ]);
-        }
 
-        $role->syncPermissions($validated['permissions'] ?? []);
+            $role->syncPermissions($validated['permissions'] ?? []);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role updated.')]);
 
