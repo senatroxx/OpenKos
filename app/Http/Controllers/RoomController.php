@@ -56,6 +56,10 @@ class RoomController extends Controller
 
         $tenantsList = Tenant::whereRaw('is_active is true')
             ->whereNull('deleted_at')
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'leases.room.property.users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->orderBy('name')
             ->get(['id', 'name', 'phone']);
 

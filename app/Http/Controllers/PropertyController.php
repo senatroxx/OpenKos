@@ -93,6 +93,8 @@ class PropertyController extends Controller
 
     public function update(UpdatePropertyRequest $request, Property $property): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $property->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property updated.')]);
@@ -102,6 +104,8 @@ class PropertyController extends Controller
 
     public function destroy(Property $property): RedirectResponse
     {
+        abort_unless(request()->user()->canAccessProperty($property), 403);
+
         Property::query()->whereKey($property->id)->update(['is_active' => DB::raw('false')]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
