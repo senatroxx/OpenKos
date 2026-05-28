@@ -1,15 +1,17 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import {
     Check,
     ChevronDown,
     ChevronUp,
     ChevronsUpDown,
+    Copy,
     EllipsisVertical,
     Eye,
     KeyRound,
     Pencil,
     Search,
     ShieldOff,
+    Trash2,
     UserPlus,
     X,
 } from 'lucide-react';
@@ -28,6 +30,14 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -58,10 +68,12 @@ import users, {
 
 type Property = { id: number; name: string };
 type RoleOption = { value: string; label: string };
+type UserRole = { name: string; label: string };
 type ManagedUser = {
     id: number;
     name: string;
     email: string;
+    roles: UserRole[];
     role: string | null;
     properties: Property[];
     is_active: boolean;
@@ -360,7 +372,7 @@ export default function Index({
                                             <SortIcon column={column} />
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 font-medium">Role</th>
+                                    <th className="px-4 py-3 font-medium">Roles</th>
                                     <th className="px-4 py-3 font-medium">Assigned Properties</th>
                                     <th className="px-4 py-3 font-medium">Status</th>
                                     <th className="w-12 px-4 py-3" />
@@ -377,9 +389,17 @@ export default function Index({
                                         <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
                                         <td className="px-4 py-3 text-muted-foreground">{formatDate(user.last_login_at)}</td>
                                         <td className="px-4 py-3">
-                                            <Badge variant="outline">
-                                                {roleLabel(user.role, roles)}
-                                            </Badge>
+                                            <div className="flex flex-wrap gap-1">
+                                                {user.roles.length > 0 ? (
+                                                    user.roles.map((r) => (
+                                                        <Badge key={r.name} variant="outline">
+                                                            {r.label}
+                                                        </Badge>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-muted-foreground text-sm">No roles</span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {user.properties.length > 0
@@ -540,6 +560,9 @@ function UserFormSheet({
     const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>(
         () => user?.properties.map((property) => property.id) ?? [],
     );
+    const [selectedRoles, setSelectedRoles] = useState<string[]>(
+        () => user?.roles.map((r) => r.name) ?? [],
+    );
 
     const previousUserIdRef = useRef(user?.id);
 
@@ -547,6 +570,9 @@ function UserFormSheet({
         previousUserIdRef.current = user?.id;
         setSelectedPropertyIds(
             user?.properties.map((property) => property.id) ?? [],
+        );
+        setSelectedRoles(
+            user?.roles.map((r) => r.name) ?? [],
         );
     }
 
@@ -561,13 +587,19 @@ function UserFormSheet({
         );
     }
 
+    function toggleRole(roleName: string, checked: boolean) {
+        setSelectedRoles((current) =>
+            checked ? [...current, roleName] : current.filter((r) => r !== roleName),
+        );
+    }
+
     return (
         <Sheet key={user?.id ?? 'new'} open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>{isEdit ? 'Edit User' : 'Invite User'}</SheetTitle>
                     <SheetDescription>
-                        {isEdit ? 'Update access and property assignments' : 'Invite an admin or staff member'}
+                        {isEdit ? 'Update access and property assignments' : 'Invite a team member'}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -587,22 +619,27 @@ function UserFormSheet({
                                     <InputError message={errors.email} />
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="role">Role</Label>
-                                    <select
-                                        id="role"
-                                        name="role"
-                                        className="rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
-                                        defaultValue={canEditRole ? (user?.role ?? 'admin') : 'admin'}
-                                        disabled={!canEditRole}
-                                    >
-                                        {roles.map((role) => (
-                                            <option key={role.value} value={role.value}>
-                                                {role.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError message={errors.role} />
+                                <div className="grid gap-3">
+                                    <Label>Roles</Label>
+                                    <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
+                                        {canEditRole ? (
+                                            roles.map((role) => (
+                                                <label key={role.value} className="flex items-center gap-2 text-sm">
+                                                    <Checkbox
+                                                        checked={selectedRoles.includes(role.value)}
+                                                        onCheckedChange={(checked) => toggleRole(role.value, checked === true)}
+                                                    />
+                                                    {role.label}
+                                                </label>
+                                            ))
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground">Owner</p>
+                                        )}
+                                    </div>
+                                    {selectedRoles.map((roleName) => (
+                                        <input key={roleName} type="hidden" name="roles[]" value={roleName} />
+                                    ))}
+                                    <InputError message={errors.roles} />
                                 </div>
 
                                 <input type="hidden" name="is_active" value={user?.is_active === false ? '0' : '1'} />
@@ -692,8 +729,18 @@ function UserDetailSheet({
                                         <span className="text-sm">{user.email}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Role</span>
-                                        <Badge variant="outline">{roleLabel(user.role, roles)}</Badge>
+                                        <span className="text-sm text-muted-foreground">Roles</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {user.roles.length > 0 ? (
+                                                user.roles.map((r) => (
+                                                    <Badge key={r.name} variant="outline">
+                                                        {r.label}
+                                                    </Badge>
+                                                ))
+                                            ) : (
+                                                <span className="text-sm text-muted-foreground">None</span>
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">Email verified</span>

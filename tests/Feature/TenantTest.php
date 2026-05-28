@@ -13,7 +13,7 @@ describe('authorization', function () {
         $this->get(route('tenants.index'))->assertRedirect('login');
     });
 
-    it('returns 403 for users without tenants.manage permission', function () {
+    it('returns 403 for users without tenants.view permission', function () {
         $user = User::factory()->create();
 
         $this->actingAs($user)
