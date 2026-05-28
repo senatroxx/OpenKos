@@ -18,6 +18,8 @@ class RoomController extends Controller
 {
     public function index(Request $request, Property $property): Response
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $sort = $request->query('sort', 'name');
         $direction = $request->query('direction', 'asc');
         $search = $request->query('search', '');
@@ -52,7 +54,7 @@ class RoomController extends Controller
             ->orderBy($sort, $direction)
             ->paginate($perPage);
 
-        $tenantsList = Tenant::where('is_active', '1')
+        $tenantsList = Tenant::whereRaw('is_active is true')
             ->whereNull('deleted_at')
             ->orderBy('name')
             ->get(['id', 'name', 'phone']);
@@ -79,6 +81,8 @@ class RoomController extends Controller
 
     public function store(StoreRoomRequest $request, Property $property): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $property->rooms()->create($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Room created.')]);
@@ -88,6 +92,8 @@ class RoomController extends Controller
 
     public function update(UpdateRoomRequest $request, Property $property, Room $room): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $room->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Room updated.')]);
@@ -97,6 +103,8 @@ class RoomController extends Controller
 
     public function destroy(Property $property, Room $room): RedirectResponse
     {
+        abort_unless(request()->user()->canAccessProperty($property), 403);
+
         $room->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Room deleted.')]);

@@ -42,6 +42,10 @@ class PropertyController extends Controller
         }
 
         $properties = Property::query()
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->withCount([
                 'rooms',
                 'rooms as occupied_rooms_count' => fn (Builder $q) => $q->where('status', RoomStatus::Occupied),
@@ -52,8 +56,8 @@ class PropertyController extends Controller
                     ->orWhereHas('region', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
                     ->orWhereHas('city', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
             }))
-            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', '1'))
-            ->when($status === 'archived', fn (Builder $q) => $q->where('is_active', '0'))
+            ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
+            ->when($status === 'archived', fn (Builder $q) => $q->whereRaw('is_active is false'))
             ->when($sort === 'city', fn (Builder $q) => $q->orderBy(
                 City::select('name')->whereColumn('cities.id', 'properties.city_id'),
                 $direction,
@@ -98,7 +102,7 @@ class PropertyController extends Controller
 
     public function destroy(Property $property): RedirectResponse
     {
-        $property->update(['is_active' => false]);
+        Property::query()->whereKey($property->id)->update(['is_active' => DB::raw('false')]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
 

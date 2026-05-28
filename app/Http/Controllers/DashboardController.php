@@ -5,14 +5,19 @@ namespace App\Http\Controllers;
 use App\Enums\RoomStatus;
 use App\Models\Property;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $properties = Property::query()
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->withCount([
                 'rooms',
                 'rooms as occupied_rooms_count' => fn (Builder $q) => $q

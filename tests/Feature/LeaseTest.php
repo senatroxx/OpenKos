@@ -44,6 +44,7 @@ describe('authorization', function () {
     it('allows admin to access leases', function () {
         [$property, $room] = createPropertyWithRoom();
         $user = User::factory()->admin()->create();
+        $user->properties()->sync([$property->id]);
 
         $this->actingAs($user)
             ->get(route('properties.rooms.leases.index', [$property, $room]))
