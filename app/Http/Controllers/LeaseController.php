@@ -178,6 +178,8 @@ class LeaseController extends Controller
 
     public function moveOut(Request $request, Lease $lease): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($lease->room->property), 403);
+
         $validated = $request->validate([
             'move_out_date' => ['required', 'date'],
             'reason' => ['nullable', 'string', 'max:255'],
@@ -187,6 +189,21 @@ class LeaseController extends Controller
             'move_to_another_room' => ['nullable', 'boolean'],
             'target_room_id' => ['nullable', 'integer', 'exists:rooms,id'],
         ]);
+
+        if ($validated['move_to_another_room'] ?? false) {
+            $targetRoom = Room::findOrFail($validated['target_room_id']);
+
+            abort_unless($request->user()->canAccessProperty($targetRoom->property), 403);
+
+            $hasActiveLease = Lease::query()
+                ->where('room_id', $targetRoom->id)
+                ->where('status', 'active')
+                ->exists();
+
+            if ($hasActiveLease) {
+                return back()->withErrors(['target_room_id' => __('Target room already has an active lease.')]);
+            }
+        }
 
         $depositRefundAmount = ($validated['deposit_returned'] ?? false)
             ? ($validated['deposit_refund_amount'] ?? $lease->deposit_amount)
@@ -203,17 +220,6 @@ class LeaseController extends Controller
         ]);
 
         if ($validated['move_to_another_room'] ?? false) {
-            $targetRoom = Room::findOrFail($validated['target_room_id']);
-
-            $hasActiveLease = Lease::query()
-                ->where('room_id', $targetRoom->id)
-                ->where('status', 'active')
-                ->exists();
-
-            if ($hasActiveLease) {
-                return back()->withErrors(['target_room_id' => __('Target room already has an active lease.')]);
-            }
-
             $targetRoom->leases()->create([
                 'tenant_id' => $lease->tenant_id,
                 'start_date' => $validated['move_out_date'],

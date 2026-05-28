@@ -146,13 +146,17 @@ export default function Index({
         ...roles,
     ];
 
+    const [formKey, setFormKey] = useState(0);
+
     function openInvite() {
         setEditingUser(null);
+        setFormKey((k) => k + 1);
         setFormOpen(true);
     }
 
     function openEdit(user: ManagedUser) {
         setEditingUser(user);
+        setFormKey((k) => k + 1);
         setFormOpen(true);
     }
 
@@ -494,6 +498,7 @@ export default function Index({
             </div>
 
             <UserFormSheet
+                key={formKey}
                 user={editingUser}
                 open={formOpen}
                 onOpenChange={setFormOpen}
@@ -535,6 +540,16 @@ function UserFormSheet({
     const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>(
         () => user?.properties.map((property) => property.id) ?? [],
     );
+
+    const previousUserIdRef = useRef(user?.id);
+
+    if (previousUserIdRef.current !== user?.id) {
+        previousUserIdRef.current = user?.id;
+        setSelectedPropertyIds(
+            user?.properties.map((property) => property.id) ?? [],
+        );
+    }
+
     const canEditRole = user?.role !== 'owner';
     const formProps = isEdit
         ? { action: update.url(user!), method: 'put' as const }
