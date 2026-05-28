@@ -28,6 +28,7 @@ describe('authorization', function () {
     it('allows admin to access rooms', function () {
         $user = User::factory()->admin()->create();
         $property = Property::factory()->create();
+        $user->properties()->sync([$property->id]);
 
         $this->actingAs($user)
             ->get(route('properties.rooms.index', $property))
