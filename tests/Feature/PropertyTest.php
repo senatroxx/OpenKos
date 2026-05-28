@@ -16,7 +16,7 @@ describe('authorization', function () {
         $this->get(route('properties.index'))->assertRedirect('login');
     });
 
-    it('returns 403 for users without properties.manage permission', function () {
+    it('returns 403 for users without properties.view permission', function () {
         $user = User::factory()->create();
 
         $this->actingAs($user)

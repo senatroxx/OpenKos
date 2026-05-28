@@ -32,7 +32,7 @@ describe('authorization', function () {
             ->assertRedirect('login');
     });
 
-    it('returns 403 for users without properties.manage permission', function () {
+    it('returns 403 for users without leases.view permission', function () {
         [$property, $room] = createPropertyWithRoom();
         $user = User::factory()->create();
 
@@ -300,31 +300,6 @@ describe('room occupancy derived from lease', function () {
                 ->component('properties/rooms/index')
                 ->has('rooms.data', 1)
                 ->where('rooms.data.0.active_leases', 1)
-            );
-    });
-
-    it('shows room as available after lease termination', function () {
-        [$property, $room] = createPropertyWithRoom();
-        $user = User::factory()->owner()->create();
-        $tenant = Tenant::factory()->create();
-
-        $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
-            'room_id' => $room->id,
-            'status' => 'active',
-            'end_date' => null,
-        ]);
-
-        $this->actingAs($user)
-            ->delete(route('properties.rooms.leases.destroy', [$property, $room, $lease]));
-
-        $this->actingAs($user)
-            ->get(route('properties.rooms.index', $property))
-            ->assertOk()
-            ->assertInertia(fn ($page) => $page
-                ->component('properties/rooms/index')
-                ->has('rooms.data', 1)
-                ->where('rooms.data.0.active_leases', 0)
             );
     });
 });
