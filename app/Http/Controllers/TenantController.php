@@ -96,6 +96,8 @@ class TenantController extends Controller
 
         $room = Room::findOrFail($validated['room_id']);
 
+        abort_unless($request->user()->canAccessProperty($room->property), 403);
+
         $hasActiveLease = Lease::query()
             ->where('room_id', $room->id)
             ->where('status', 'active')

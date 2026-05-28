@@ -256,9 +256,9 @@ class LeaseController extends Controller
             'target_room_id' => ['required', 'integer', 'exists:rooms,id'],
         ]);
 
-        $targetRoom = Room::where('id', $request->target_room_id)
-            ->where('property_id', $property->id)
-            ->firstOrFail();
+        $targetRoom = Room::findOrFail($request->target_room_id);
+
+        abort_unless($request->user()->canAccessProperty($targetRoom->property), 403);
 
         $hasActiveLease = Lease::query()
             ->where('room_id', $targetRoom->id)
