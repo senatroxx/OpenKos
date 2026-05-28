@@ -18,6 +18,8 @@ class LeaseController extends Controller
 {
     public function index(Property $property, Room $room): Response
     {
+        abort_unless(request()->user()->canAccessProperty($property), 403);
+
         $room->load('property.city');
 
         $leases = $room->leases()
@@ -72,6 +74,10 @@ class LeaseController extends Controller
 
         $leases = Lease::query()
             ->with(['tenant:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'room.property.users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->whereHas('tenant', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
                     ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
@@ -87,12 +93,20 @@ class LeaseController extends Controller
 
         $availableRooms = Room::query()
             ->with('property.city')
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'property.users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->whereNull('deleted_at')
             ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
             ->orderBy('name')
             ->get(['id', 'name', 'property_id']);
 
         $allProperties = Property::query()
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -110,6 +124,8 @@ class LeaseController extends Controller
 
     public function store(StoreLeaseRequest $request, Property $property, Room $room): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $request->ensureRoomAvailable($room);
 
         $lease = $room->leases()->create([
@@ -135,6 +151,8 @@ class LeaseController extends Controller
 
     public function update(UpdateLeaseRequest $request, Property $property, Room $room, Lease $lease): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $lease->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease updated.')]);
@@ -144,6 +162,8 @@ class LeaseController extends Controller
 
     public function destroy(Property $property, Room $room, Lease $lease): RedirectResponse
     {
+        abort_unless(request()->user()->canAccessProperty($property), 403);
+
         $lease->update([
             'end_date' => now(),
             'status' => 'terminated',
@@ -158,6 +178,8 @@ class LeaseController extends Controller
 
     public function moveOut(Request $request, Lease $lease): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($lease->room->property), 403);
+
         $validated = $request->validate([
             'move_out_date' => ['required', 'date'],
             'reason' => ['nullable', 'string', 'max:255'],
@@ -167,6 +189,21 @@ class LeaseController extends Controller
             'move_to_another_room' => ['nullable', 'boolean'],
             'target_room_id' => ['nullable', 'integer', 'exists:rooms,id'],
         ]);
+
+        if ($validated['move_to_another_room'] ?? false) {
+            $targetRoom = Room::findOrFail($validated['target_room_id']);
+
+            abort_unless($request->user()->canAccessProperty($targetRoom->property), 403);
+
+            $hasActiveLease = Lease::query()
+                ->where('room_id', $targetRoom->id)
+                ->where('status', 'active')
+                ->exists();
+
+            if ($hasActiveLease) {
+                return back()->withErrors(['target_room_id' => __('Target room already has an active lease.')]);
+            }
+        }
 
         $depositRefundAmount = ($validated['deposit_returned'] ?? false)
             ? ($validated['deposit_refund_amount'] ?? $lease->deposit_amount)
@@ -183,17 +220,6 @@ class LeaseController extends Controller
         ]);
 
         if ($validated['move_to_another_room'] ?? false) {
-            $targetRoom = Room::findOrFail($validated['target_room_id']);
-
-            $hasActiveLease = Lease::query()
-                ->where('room_id', $targetRoom->id)
-                ->where('status', 'active')
-                ->exists();
-
-            if ($hasActiveLease) {
-                return back()->withErrors(['target_room_id' => __('Target room already has an active lease.')]);
-            }
-
             $targetRoom->leases()->create([
                 'tenant_id' => $lease->tenant_id,
                 'start_date' => $validated['move_out_date'],
@@ -224,13 +250,15 @@ class LeaseController extends Controller
 
     public function move(Request $request, Property $property, Room $room, Lease $lease): RedirectResponse
     {
+        abort_unless($request->user()->canAccessProperty($property), 403);
+
         $request->validate([
             'target_room_id' => ['required', 'integer', 'exists:rooms,id'],
         ]);
 
-        $targetRoom = Room::where('id', $request->target_room_id)
-            ->where('property_id', $property->id)
-            ->firstOrFail();
+        $targetRoom = Room::findOrFail($request->target_room_id);
+
+        abort_unless($request->user()->canAccessProperty($targetRoom->property), 403);
 
         $hasActiveLease = Lease::query()
             ->where('room_id', $targetRoom->id)
