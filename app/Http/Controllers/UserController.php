@@ -124,6 +124,8 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
+        $this->ensureNotTenant($user);
+
         $validated = $request->validated();
 
         if (! $validated['is_active'] && $this->isLastActiveOwner($user)) {
@@ -154,6 +156,8 @@ class UserController extends Controller
 
     public function destroy(User $user): RedirectResponse
     {
+        $this->ensureNotTenant($user);
+
         if ($this->isLastActiveOwner($user)) {
             return back()->withErrors(['user' => __('At least one active owner must remain.')]);
         }
@@ -163,6 +167,8 @@ class UserController extends Controller
             'invited_at' => null,
         ]);
 
+        DB::table('sessions')->where('user_id', $user->id)->delete();
+
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User access disabled.')]);
 
         return to_route('users.index');
@@ -170,6 +176,8 @@ class UserController extends Controller
 
     public function resetPassword(User $user): RedirectResponse
     {
+        $this->ensureNotTenant($user);
+
         if (! $user->is_active) {
             return back()->withErrors(['user' => __('Disabled users cannot receive password reset links.')]);
         }
@@ -183,6 +191,8 @@ class UserController extends Controller
 
     public function resendInvitation(User $user): RedirectResponse
     {
+        $this->ensureNotTenant($user);
+
         if (! $user->invited_at) {
             return back()->withErrors(['user' => __('Only invited users can receive invitation links.')]);
         }
@@ -239,6 +249,11 @@ class UserController extends Controller
         }
 
         return to_route('login')->with('status', __('Invitation accepted. You can now log in.'));
+    }
+
+    private function ensureNotTenant(User $user): void
+    {
+        abort_if($user->hasTenantProfile(), 404);
     }
 
     private function isLastActiveOwner(User $user): bool
