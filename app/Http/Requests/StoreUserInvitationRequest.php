@@ -9,17 +9,12 @@ use Illuminate\Validation\Rule;
 
 class StoreUserInvitationRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return $this->user()?->can('users.manage') ?? false;
+        return $this->user()?->can('users.create') ?? false;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -27,7 +22,8 @@ class StoreUserInvitationRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'role' => ['required', Rule::in([Role::Admin->value, Role::Staff->value])],
+            'roles' => ['required', 'array', 'min:1'],
+            'roles.*' => ['string', Rule::exists('roles', 'name')->where('is_active', true)->whereNot('name', Role::Owner->value)],
             'property_ids' => ['array'],
             'property_ids.*' => ['integer', 'exists:properties,id'],
         ];

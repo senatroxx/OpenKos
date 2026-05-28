@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -59,14 +60,55 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->afterCreating(function (User $user) {
-            $user->assignRole(SpatieRole::findOrCreate(Role::Admin->value));
+            $role = SpatieRole::findOrCreate('admin');
+            $role->label = 'Admin';
+            $role->saveQuietly();
+
+            $role->syncPermissions([
+                Permission::DashboardView->value,
+                Permission::PropertiesView->value,
+                Permission::PropertiesCreate->value,
+                Permission::PropertiesUpdate->value,
+                Permission::PropertiesDelete->value,
+                Permission::RoomsView->value,
+                Permission::RoomsCreate->value,
+                Permission::RoomsUpdate->value,
+                Permission::RoomsDelete->value,
+                Permission::TenantsView->value,
+                Permission::TenantsCreate->value,
+                Permission::TenantsUpdate->value,
+                Permission::TenantsDelete->value,
+                Permission::LeasesView->value,
+                Permission::LeasesCreate->value,
+                Permission::LeasesUpdate->value,
+                Permission::LeasesDelete->value,
+                Permission::LeasesMove->value,
+                Permission::LeasesMoveOut->value,
+                Permission::FinancialsView->value,
+                Permission::ReportsView->value,
+                Permission::UsersView->value,
+                Permission::UsersUpdate->value,
+            ]);
+
+            $user->assignRole($role);
         });
     }
 
     public function staff(): static
     {
         return $this->afterCreating(function (User $user) {
-            $user->assignRole(SpatieRole::findOrCreate(Role::Staff->value));
+            $role = SpatieRole::findOrCreate('staff');
+            $role->label = 'Staff';
+            $role->saveQuietly();
+
+            $role->syncPermissions([
+                Permission::DashboardView->value,
+                Permission::TenantsView->value,
+                Permission::TenantsUpdate->value,
+                Permission::LeasesView->value,
+            ]);
+
+            $user->assignRole($role);
         });
     }
 }

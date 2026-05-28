@@ -137,8 +137,9 @@ class PropertyAndRoomSeeder extends Seeder
                 'postal_code' => $data['postal_code'],
                 'phone' => $data['phone'],
                 'description' => $data['description'],
-                'is_active' => true,
             ]);
+
+            DB::statement('UPDATE properties SET is_active = true WHERE id = ?', [$property->id]);
 
             foreach ($this->roomTemplates as $template) {
                 for ($i = 1; $i <= $template['count']; $i++) {
