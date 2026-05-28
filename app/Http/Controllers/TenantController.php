@@ -42,8 +42,8 @@ class TenantController extends Controller
         $tenants = Tenant::query()
             ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property'])])
             ->withCount(['leases as active_leases_count' => fn (Builder $q) => $q->where('status', 'active')])
-            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', '1'))
-            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', '0'))
+            ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
+            ->when($status === 'inactive', fn (Builder $q) => $q->whereRaw('is_active is false'))
             ->when($status === 'archived', fn (Builder $q) => $q->onlyTrashed())
             ->when(! $status || $status === 'active' || $status === 'inactive', fn (Builder $q) => $q->whereNull('deleted_at'))
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
