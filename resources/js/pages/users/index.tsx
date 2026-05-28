@@ -1,17 +1,15 @@
-import { Form, Head, Link, router } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
 import {
     Check,
     ChevronDown,
     ChevronUp,
     ChevronsUpDown,
-    Copy,
     EllipsisVertical,
     Eye,
     KeyRound,
     Pencil,
     Search,
     ShieldOff,
-    Trash2,
     UserPlus,
     X,
 } from 'lucide-react';
@@ -30,14 +28,6 @@ import {
     CommandItem,
     CommandList,
 } from '@/components/ui/command';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -116,10 +106,6 @@ function StatusBadge({ user }: { user: ManagedUser }) {
     }
 
     return <Badge variant="secondary">Disabled</Badge>;
-}
-
-function roleLabel(value: string | null, roles: RoleOption[]) {
-    return roles.find((role) => role.value === value)?.label ?? 'Owner';
 }
 
 function formatDate(value: string | null) {
@@ -537,7 +523,6 @@ export default function Index({
                 onDisable={disableAccess}
                 onResetPassword={sendReset}
                 onResendInvitation={resendInvite}
-                roles={roles}
             />
         </>
     );
@@ -686,7 +671,6 @@ function UserDetailSheet({
     onDisable,
     onResetPassword,
     onResendInvitation,
-    roles,
 }: {
     user: ManagedUser | null;
     open: boolean;
@@ -695,7 +679,6 @@ function UserDetailSheet({
     onDisable: (user: ManagedUser) => void;
     onResetPassword: (user: ManagedUser) => void;
     onResendInvitation: (user: ManagedUser) => void;
-    roles: RoleOption[];
 }) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>

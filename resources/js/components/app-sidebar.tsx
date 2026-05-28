@@ -22,10 +22,6 @@ import userRoutes from '@/routes/users';
 import type { Auth } from '@/types';
 import type { NavItem } from '@/types';
 
-function hasPermission(permission: string, auth: Auth): boolean {
-    return auth.role === 'owner' || auth.permissions.includes(permission);
-}
-
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
     const permissions = auth.permissions;

@@ -47,12 +47,11 @@ type RoleFormProps = {
     } | null;
     permissionGroups: PermissionGroup;
     recommendations?: { name: string; label: string; description: string; color: string; permissions: string[] }[];
-    selectedRecommendation?: { name: string; label: string; description: string; color: string; permissions: string[] } | null;
     action: string;
     method: 'post' | 'put';
 };
 
-export default function RoleForm({ role, permissionGroups, recommendations, selectedRecommendation, action, method }: RoleFormProps) {
+export default function RoleForm({ role, permissionGroups, recommendations, action, method }: RoleFormProps) {
     const isEdit = Boolean(role);
     const isSystem = role?.is_system ?? false;
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>(() => role?.permissions ?? []);
@@ -119,6 +118,7 @@ export default function RoleForm({ role, permissionGroups, recommendations, sele
                                     value={nameValue}
                                     onChange={(e) => {
                                         setNameValue(e.target.value);
+
                                         if (!labelValue) {
                                             setLabelValue(
                                                 e.target.value.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
