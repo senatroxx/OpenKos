@@ -16,8 +16,8 @@ return new class extends Migration
         });
 
         DB::statement("UPDATE roles SET is_system = true, is_active = true, label = 'Owner' WHERE name = 'owner'");
-        DB::statement("UPDATE roles SET is_system = true, is_active = true, label = 'Admin' WHERE name = 'admin'");
-        DB::statement("UPDATE roles SET is_system = true, is_active = true, label = 'Staff' WHERE name = 'staff'");
+        DB::statement("UPDATE roles SET is_active = true, label = 'Admin' WHERE name = 'admin'");
+        DB::statement("UPDATE roles SET is_active = true, label = 'Staff' WHERE name = 'staff'");
     }
 
     public function down(): void
