@@ -154,18 +154,6 @@ export default function Index({
         }
     }
 
-    function SortIcon({ column }: { column: string }) {
-        if (currentSort !== column) {
-            return <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />;
-        }
-
-        return currentDirection === 'asc' ? (
-            <ChevronUp className="ml-1 inline size-3.5" />
-        ) : (
-            <ChevronDown className="ml-1 inline size-3.5" />
-        );
-    }
-
     return (
         <>
             <Head title="Roles & Permissions" />
@@ -233,7 +221,11 @@ export default function Index({
                                         onClick={() => toggleSort('label')}
                                     >
                                         Role
-                                        <SortIcon column="label" />
+                                        {currentSort === 'label' ? (
+                                            currentDirection === 'asc' ? <ChevronUp className="ml-1 inline size-3.5" /> : <ChevronDown className="ml-1 inline size-3.5" />
+                                        ) : (
+                                            <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
+                                        )}
                                     </th>
                                     <th className="px-4 py-3 font-medium">Description</th>
                                     <th className="px-4 py-3 font-medium">Type</th>
@@ -242,7 +234,11 @@ export default function Index({
                                         onClick={() => toggleSort('users_count')}
                                     >
                                         Users
-                                        <SortIcon column="users_count" />
+                                        {currentSort === 'users_count' ? (
+                                            currentDirection === 'asc' ? <ChevronUp className="ml-1 inline size-3.5" /> : <ChevronDown className="ml-1 inline size-3.5" />
+                                        ) : (
+                                            <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
+                                        )}
                                     </th>
                                     <th className="px-4 py-3 font-medium">Permissions</th>
                                     <th className="px-4 py-3 font-medium">Status</th>
