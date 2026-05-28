@@ -32,6 +32,7 @@ import tenants from '@/routes/tenants';
 type Property = {
     id: number;
     name: string;
+    city: { name: string } | null;
 };
 
 type Room = {
@@ -48,6 +49,7 @@ type AvailableRoom = {
 };
 
 type RoomWithProperty = Room & {
+    property_id: number;
     property: Property | null;
 };
 

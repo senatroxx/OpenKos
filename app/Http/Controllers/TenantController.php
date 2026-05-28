@@ -39,11 +39,19 @@ class TenantController extends Controller
             $perPage = 15;
         }
 
+        $assignedPropertyIds = ! $request->user()->isOwner()
+            ? $request->user()->properties()->pluck('properties.id')
+            : null;
+
         $tenants = Tenant::query()
             ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property'])])
             ->withCount(['leases as active_leases_count' => fn (Builder $q) => $q->where('status', 'active')])
-            ->when($status === 'active', fn (Builder $q) => $q->where('is_active', '1'))
-            ->when($status === 'inactive', fn (Builder $q) => $q->where('is_active', '0'))
+            ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
+                'leases',
+                fn (Builder $q) => $q->whereHas('room', fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds)),
+            ))
+            ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
+            ->when($status === 'inactive', fn (Builder $q) => $q->whereRaw('is_active is false'))
             ->when($status === 'archived', fn (Builder $q) => $q->onlyTrashed())
             ->when(! $status || $status === 'active' || $status === 'inactive', fn (Builder $q) => $q->whereNull('deleted_at'))
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
@@ -57,6 +65,7 @@ class TenantController extends Controller
         $availableRooms = Room::query()
             ->with('property.city')
             ->whereNull('deleted_at')
+            ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))
             ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
             ->orderBy('name')
             ->get(['id', 'name', 'property_id']);
@@ -86,6 +95,8 @@ class TenantController extends Controller
         ]);
 
         $room = Room::findOrFail($validated['room_id']);
+
+        abort_unless($request->user()->canAccessProperty($room->property), 403);
 
         $hasActiveLease = Lease::query()
             ->where('room_id', $room->id)
