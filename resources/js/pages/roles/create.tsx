@@ -9,11 +9,9 @@ type PermissionGroup = Record<string, PermissionEntry[]>;
 export default function Create({
     permissionGroups,
     recommendations,
-    selectedRecommendation,
 }: {
     permissionGroups: PermissionGroup;
     recommendations: { name: string; label: string; description: string; color: string; permissions: string[] }[];
-    selectedRecommendation: { name: string; label: string; description: string; color: string; permissions: string[] } | null;
 }) {
     return (
         <>
@@ -25,7 +23,6 @@ export default function Create({
                 <RoleForm
                     permissionGroups={permissionGroups}
                     recommendations={recommendations}
-                    selectedRecommendation={selectedRecommendation}
                     action={roles.store.url()}
                     method="post"
                 />
