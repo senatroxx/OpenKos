@@ -55,7 +55,7 @@ class UserController extends Controller
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(email)'), 'like', '%'.mb_strtolower($search).'%');
             }))
-            ->when($role, fn (Builder $q) => $q->role($role))
+            ->when($role && RoleModel::whereName($role)->exists(), fn (Builder $q) => $q->role($role))
             ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
             ->when($status === 'invited', fn (Builder $q) => $q->whereNotNull('invited_at'))
             ->when($status === 'disabled', fn (Builder $q) => $q->whereRaw('is_active is false')->whereNull('invited_at'))
