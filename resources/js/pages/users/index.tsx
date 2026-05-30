@@ -621,7 +621,7 @@ function UserFormSheet({
                                             <p className="text-sm text-muted-foreground">Owner</p>
                                         )}
                                     </div>
-                                    {selectedRoles.map((roleName) => (
+                                    {canEditRole && selectedRoles.map((roleName) => (
                                         <input key={roleName} type="hidden" name="roles[]" value={roleName} />
                                     ))}
                                     <InputError message={errors.roles} />
