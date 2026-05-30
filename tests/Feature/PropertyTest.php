@@ -115,3 +115,27 @@ describe('CRUD', function () {
         expect($property->is_active)->toBeFalse();
     });
 });
+
+describe('cross-property access', function () {
+    it('denies admin from updating a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+
+        $this->actingAs($admin)
+            ->put(route('properties.update', $propertyB), ['name' => 'Hacked Name'])
+            ->assertForbidden();
+    });
+
+    it('denies admin from archiving a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+
+        $this->actingAs($admin)
+            ->delete(route('properties.destroy', $propertyB))
+            ->assertForbidden();
+    });
+});

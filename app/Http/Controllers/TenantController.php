@@ -96,7 +96,7 @@ class TenantController extends Controller
 
         $room = Room::findOrFail($validated['room_id']);
 
-        abort_unless($request->user()->canAccessProperty($room->property), 403);
+        $this->authorize('assignRoom', [Tenant::class, $room]);
 
         $hasActiveLease = Lease::query()
             ->where('room_id', $room->id)
@@ -137,6 +137,8 @@ class TenantController extends Controller
 
     public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
     {
+        $this->authorize('update', $tenant);
+
         $tenant->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant updated.')]);
@@ -146,6 +148,8 @@ class TenantController extends Controller
 
     public function destroy(Tenant $tenant): RedirectResponse
     {
+        $this->authorize('delete', $tenant);
+
         $tenant->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant archived.')]);
