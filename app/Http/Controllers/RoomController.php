@@ -18,7 +18,7 @@ class RoomController extends Controller
 {
     public function index(Request $request, Property $property): Response
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
+        $this->authorize('viewAny', [Room::class, $property]);
 
         $sort = $request->query('sort', 'name');
         $direction = $request->query('direction', 'asc');
@@ -85,7 +85,7 @@ class RoomController extends Controller
 
     public function store(StoreRoomRequest $request, Property $property): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
+        $this->authorize('create', [Room::class, $property]);
 
         $property->rooms()->create($request->validated());
 
@@ -96,7 +96,7 @@ class RoomController extends Controller
 
     public function update(UpdateRoomRequest $request, Property $property, Room $room): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
+        $this->authorize('update', $room);
 
         $room->update($request->validated());
 
@@ -107,7 +107,7 @@ class RoomController extends Controller
 
     public function destroy(Property $property, Room $room): RedirectResponse
     {
-        abort_unless(request()->user()->canAccessProperty($property), 403);
+        $this->authorize('delete', $room);
 
         $room->delete();
 

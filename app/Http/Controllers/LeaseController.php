@@ -18,7 +18,7 @@ class LeaseController extends Controller
 {
     public function index(Property $property, Room $room): Response
     {
-        abort_unless(request()->user()->canAccessProperty($property), 403);
+        $this->authorize('viewAny', [Lease::class, $property]);
 
         $room->load('property.city');
 
@@ -124,7 +124,7 @@ class LeaseController extends Controller
 
     public function store(StoreLeaseRequest $request, Property $property, Room $room): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
+        $this->authorize('create', [Lease::class, $property]);
 
         $request->ensureRoomAvailable($room);
 
@@ -151,7 +151,7 @@ class LeaseController extends Controller
 
     public function update(UpdateLeaseRequest $request, Property $property, Room $room, Lease $lease): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
+        $this->authorize('update', $lease);
 
         $lease->update($request->validated());
 
@@ -162,7 +162,7 @@ class LeaseController extends Controller
 
     public function destroy(Property $property, Room $room, Lease $lease): RedirectResponse
     {
-        abort_unless(request()->user()->canAccessProperty($property), 403);
+        $this->authorize('delete', $lease);
 
         $lease->update([
             'end_date' => now(),
@@ -178,8 +178,6 @@ class LeaseController extends Controller
 
     public function moveOut(Request $request, Lease $lease): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($lease->room->property), 403);
-
         $validated = $request->validate([
             'move_out_date' => ['required', 'date'],
             'reason' => ['nullable', 'string', 'max:255'],
@@ -190,11 +188,13 @@ class LeaseController extends Controller
             'target_room_id' => ['nullable', 'integer', 'exists:rooms,id'],
         ]);
 
+        $targetRoom = ($validated['move_to_another_room'] ?? false)
+            ? Room::findOrFail($validated['target_room_id'])
+            : null;
+
+        $this->authorize('moveOut', [$lease, $targetRoom]);
+
         if ($validated['move_to_another_room'] ?? false) {
-            $targetRoom = Room::findOrFail($validated['target_room_id']);
-
-            abort_unless($request->user()->canAccessProperty($targetRoom->property), 403);
-
             $hasActiveLease = Lease::query()
                 ->where('room_id', $targetRoom->id)
                 ->where('status', 'active')
@@ -250,15 +250,13 @@ class LeaseController extends Controller
 
     public function move(Request $request, Property $property, Room $room, Lease $lease): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
-
         $request->validate([
             'target_room_id' => ['required', 'integer', 'exists:rooms,id'],
         ]);
 
         $targetRoom = Room::findOrFail($request->target_room_id);
 
-        abort_unless($request->user()->canAccessProperty($targetRoom->property), 403);
+        $this->authorize('move', [$lease, $targetRoom]);
 
         $hasActiveLease = Lease::query()
             ->where('room_id', $targetRoom->id)

@@ -150,3 +150,59 @@ describe('CRUD', function () {
         );
     });
 });
+
+describe('cross-property access', function () {
+    it('denies admin viewing rooms of a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+
+        $this->actingAs($admin)
+            ->get(route('properties.rooms.index', $propertyB))
+            ->assertForbidden();
+    });
+
+    it('denies admin creating a room in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+
+        $this->actingAs($admin)
+            ->post(route('properties.rooms.store', $propertyB), [
+                'name' => 'Room 101',
+                'base_price' => 1_000_000,
+                'capacity' => 1,
+            ])
+            ->assertForbidden();
+    });
+
+    it('denies admin updating a room in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $room = Room::factory()->for($propertyB)->create();
+
+        $this->actingAs($admin)
+            ->put(route('properties.rooms.update', [$propertyB, $room]), [
+                'name' => 'Hacked',
+                'base_price' => 1_000_000,
+                'capacity' => 1,
+            ])
+            ->assertForbidden();
+    });
+
+    it('denies admin deleting a room in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $room = Room::factory()->for($propertyB)->create();
+
+        $this->actingAs($admin)
+            ->delete(route('properties.rooms.destroy', [$propertyB, $room]))
+            ->assertForbidden();
+    });
+});
