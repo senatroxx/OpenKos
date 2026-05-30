@@ -43,6 +43,14 @@ test('non owners cannot view users page', function () {
         ->assertForbidden();
 });
 
+test('invalid role filter falls back gracefully without error', function () {
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->get(route('users.index', ['role' => 'does-not-exist']))
+        ->assertOk();
+});
+
 test('owner can invite admin and assign properties with custom notification', function () {
     Notification::fake();
     $owner = User::factory()->owner()->create();
