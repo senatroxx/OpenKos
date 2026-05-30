@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Http\Requests\StoreUserInvitationRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\Property;
+use App\Models\Role as RoleModel;
 use App\Models\User;
 use App\Notifications\UserInvitation;
 use Illuminate\Auth\Events\PasswordReset;
@@ -20,7 +21,6 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Inertia\Inertia;
 use Inertia\Response;
-use Spatie\Permission\Models\Role as SpatieRole;
 
 class UserController extends Controller
 {
@@ -49,13 +49,13 @@ class UserController extends Controller
         }
 
         $users = User::query()
-            ->with(['roles:id,name', 'properties:id,name'])
+            ->with(['roles:id,name,label', 'properties:id,name'])
             ->whereDoesntHave('tenant')
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(email)'), 'like', '%'.mb_strtolower($search).'%');
             }))
-            ->when(in_array($role, Role::values()), fn (Builder $q) => $q->role($role))
+            ->when($role && RoleModel::whereName($role)->exists(), fn (Builder $q) => $q->role($role))
             ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
             ->when($status === 'invited', fn (Builder $q) => $q->whereNotNull('invited_at'))
             ->when($status === 'disabled', fn (Builder $q) => $q->whereRaw('is_active is false')->whereNull('invited_at'))
@@ -65,6 +65,10 @@ class UserController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'roles' => $user->roles->map(fn ($role) => [
+                    'name' => $role->name,
+                    'label' => $role->label ?? ucfirst($role->name),
+                ])->values(),
                 'role' => $user->roles->first()?->name,
                 'properties' => $user->properties->map(fn (Property $property) => [
                     'id' => $property->id,
@@ -77,13 +81,19 @@ class UserController extends Controller
                 'last_login_at' => $user->last_login_at?->toISOString(),
             ]);
 
+        $assignableRoles = RoleModel::query()
+            ->whereRaw('is_active is true')
+            ->where('name', '!=', Role::Owner->value)
+            ->orderBy('name')
+            ->get(['name', 'label']);
+
         return Inertia::render('users/index', [
             'users' => $users,
             'properties' => Property::query()->whereRaw('is_active is true')->orderBy('name')->get(['id', 'name']),
-            'roles' => [
-                ['value' => Role::Admin->value, 'label' => Role::Admin->label()],
-                ['value' => Role::Staff->value, 'label' => Role::Staff->label()],
-            ],
+            'roles' => $assignableRoles->map(fn (RoleModel $role) => [
+                'value' => $role->name,
+                'label' => $role->label ?? ucfirst($role->name),
+            ]),
             'search' => $search,
             'role' => $role,
             'status' => $status,
@@ -107,7 +117,8 @@ class UserController extends Controller
 
             User::query()->whereKey($user->id)->update(['is_active' => DB::raw('false')]);
 
-            $user->assignRole(SpatieRole::findOrCreate($validated['role']));
+            $roleNames = $validated['roles'];
+            $user->syncRoles($roleNames);
             $user->properties()->sync($validated['property_ids'] ?? []);
 
             $token = $this->createInvitationToken($user);
@@ -143,7 +154,8 @@ class UserController extends Controller
             ]);
 
             if (! $user->isOwner()) {
-                $user->syncRoles([SpatieRole::findOrCreate($validated['role'])]);
+                $roleNames = $validated['roles'] ?? [];
+                $user->syncRoles($roleNames);
             }
 
             $user->properties()->sync($validated['property_ids'] ?? []);
