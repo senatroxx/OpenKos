@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Collection;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -22,7 +23,9 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
+        HasRoles::hasRole as protected traitHasRole;
+    }
 
     /**
      * @return array<string, string>
@@ -39,19 +42,27 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         ];
     }
 
+    public function hasRole($roles, ?string $guard = null): bool
+    {
+        $this->loadMissing('roles');
+
+        $this->setRelation('roles', $this->roles->filter(fn ($role) => $role->is_active));
+
+        return $this->traitHasRole($roles, $guard);
+    }
+
+    public function getPermissionsViaRoles(): Collection
+    {
+        $this->loadMissing('roles', 'roles.permissions');
+
+        return $this->roles->filter(fn ($role) => $role->is_active)
+            ->flatMap(fn ($role) => $role->permissions)
+            ->sort()->values();
+    }
+
     public function isOwner(): bool
     {
         return $this->hasRole(Role::Owner->value);
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->hasRole(Role::Admin->value);
-    }
-
-    public function isStaff(): bool
-    {
-        return $this->hasRole(Role::Staff->value);
     }
 
     public function tenant(): HasOne

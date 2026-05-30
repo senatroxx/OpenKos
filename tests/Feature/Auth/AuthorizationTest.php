@@ -16,39 +16,45 @@ test('owner has all permissions', function () {
 test('admin has operational permissions', function () {
     $user = User::factory()->admin()->create();
 
-    expect($user->can('properties.manage'))->toBeTrue();
-    expect($user->can('rooms.manage'))->toBeTrue();
-    expect($user->can('tenants.manage'))->toBeTrue();
+    expect($user->can('properties.view'))->toBeTrue();
+    expect($user->can('rooms.view'))->toBeTrue();
+    expect($user->can('tenants.view'))->toBeTrue();
+    expect($user->can('leases.view'))->toBeTrue();
     expect($user->can('financials.view'))->toBeTrue();
     expect($user->can('reports.view'))->toBeTrue();
     expect($user->can('dashboard.view'))->toBeTrue();
+    expect($user->can('users.view'))->toBeTrue();
+    expect($user->can('users.update'))->toBeTrue();
 });
 
-test('admin cannot manage users, roles, or financials', function () {
+test('admin cannot manage users, roles, or financials beyond view', function () {
     $user = User::factory()->admin()->create();
 
-    expect($user->can('users.manage'))->toBeFalse();
-    expect($user->can('roles.manage'))->toBeFalse();
-    expect($user->can('financials.manage'))->toBeFalse();
+    expect($user->can('users.create'))->toBeFalse();
+    expect($user->can('users.delete'))->toBeFalse();
+    expect($user->can('roles.view'))->toBeFalse();
+    expect($user->can('roles.create'))->toBeFalse();
+    expect($user->can('financials.view'))->toBeTrue();
 });
 
 test('staff has limited permissions', function () {
     $user = User::factory()->staff()->create();
 
-    expect($user->can('tenants.manage'))->toBeTrue();
+    expect($user->can('tenants.view'))->toBeTrue();
+    expect($user->can('tenants.update'))->toBeTrue();
+    expect($user->can('leases.view'))->toBeTrue();
     expect($user->can('dashboard.view'))->toBeTrue();
 });
 
 test('staff cannot access admin permissions', function () {
     $user = User::factory()->staff()->create();
 
-    expect($user->can('properties.manage'))->toBeFalse();
-    expect($user->can('rooms.manage'))->toBeFalse();
+    expect($user->can('properties.view'))->toBeFalse();
+    expect($user->can('rooms.view'))->toBeFalse();
     expect($user->can('financials.view'))->toBeFalse();
     expect($user->can('reports.view'))->toBeFalse();
-    expect($user->can('users.manage'))->toBeFalse();
-    expect($user->can('roles.manage'))->toBeFalse();
-    expect($user->can('financials.manage'))->toBeFalse();
+    expect($user->can('users.view'))->toBeFalse();
+    expect($user->can('roles.view'))->toBeFalse();
 });
 
 test('middleware blocks users without dashboard.view permission', function () {
