@@ -9,15 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('roles', function (Blueprint $table) {
-            $table->text('description')->nullable()->after('label');
-            $table->string('color', 7)->nullable()->after('description');
+            $table->text('description')->nullable()->change();
         });
     }
 
     public function down(): void
     {
         Schema::table('roles', function (Blueprint $table) {
-            $table->dropColumn(['description', 'color']);
+            $table->string('description', 255)->nullable()->change();
         });
     }
 };
