@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Building2, FileText, FolderGit2, LayoutGrid, UserCog, Users } from 'lucide-react';
+import { BookOpen, Building2, FileText, FolderGit2, LayoutGrid, Shield, UserCog, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -16,60 +16,50 @@ import {
 import { dashboard } from '@/routes';
 import leases from '@/routes/leases';
 import properties from '@/routes/properties';
+import roles from '@/routes/roles';
 import tenants from '@/routes/tenants';
 import userRoutes from '@/routes/users';
 import type { Auth } from '@/types';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'Properties',
-        href: properties.index(),
-        icon: Building2,
-    },
-    {
-        title: 'Tenants',
-        href: tenants.index(),
-        icon: Users,
-    },
-    {
-        title: 'Leases',
-        href: leases.index(),
-        icon: FileText,
-    },
-];
-
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
-
 export function AppSidebar() {
     const { auth } = usePage<{ auth: Auth }>().props;
-    const navItems =
-        auth.role === 'owner'
-            ? [
-                  ...mainNavItems,
-                  {
-                      title: 'Users',
-                      href: userRoutes.index(),
-                      icon: UserCog,
-                  },
-              ]
-            : mainNavItems;
+    const permissions = auth.permissions;
+    const isOwner = auth.role === 'owner';
+
+    const mainNavItems: NavItem[] = [
+        ...(isOwner || permissions.includes('dashboard.view')
+            ? [{ title: 'Dashboard', href: dashboard(), icon: LayoutGrid }]
+            : []),
+        ...(isOwner || permissions.includes('properties.view')
+            ? [{ title: 'Properties', href: properties.index(), icon: Building2 }]
+            : []),
+        ...(isOwner || permissions.includes('tenants.view')
+            ? [{ title: 'Tenants', href: tenants.index(), icon: Users }]
+            : []),
+        ...(isOwner || permissions.includes('leases.view')
+            ? [{ title: 'Leases', href: leases.index(), icon: FileText }]
+            : []),
+        ...(isOwner || permissions.includes('users.view')
+            ? [{ title: 'Users', href: userRoutes.index(), icon: UserCog }]
+            : []),
+        ...(isOwner
+            ? [{ title: 'Roles & Permissions', href: roles.index(), icon: Shield }]
+            : []),
+    ];
+
+    const footerNavItems: NavItem[] = [
+        {
+            title: 'Repository',
+            href: 'https://github.com/laravel/react-starter-kit',
+            icon: FolderGit2,
+        },
+        {
+            title: 'Documentation',
+            href: 'https://laravel.com/docs/starter-kits#react',
+            icon: BookOpen,
+        },
+    ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -86,7 +76,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={navItems} />
+                <NavMain items={mainNavItems} />
             </SidebarContent>
 
             <SidebarFooter>

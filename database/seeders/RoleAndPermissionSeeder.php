@@ -4,9 +4,10 @@ namespace Database\Seeders;
 
 use App\Enums\Permission;
 use App\Enums\Role;
+use App\Models\Role as SpatieRole;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission as SpatiePermission;
-use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\PermissionRegistrar;
 
 class RoleAndPermissionSeeder extends Seeder
@@ -19,16 +20,15 @@ class RoleAndPermissionSeeder extends Seeder
             SpatiePermission::findOrCreate($permission->value);
         }
 
-        foreach (Role::cases() as $role) {
-            $spatieRole = SpatieRole::findOrCreate($role->value);
+        $ownerRole = SpatieRole::findOrCreate(Role::Owner->value);
+        $ownerRole->label = Role::Owner->label();
+        $ownerRole->saveQuietly();
 
-            if ($role !== Role::Owner) {
-                $permissions = Permission::forRole($role);
-                $spatieRole->syncPermissions(array_map(
-                    fn (Permission $p) => $p->value,
-                    $permissions,
-                ));
-            }
-        }
+        DB::statement('UPDATE roles SET is_system = true, is_active = true WHERE id = ?', [$ownerRole->id]);
+
+        $ownerRole->syncPermissions(array_map(
+            fn (Permission $p) => $p->value,
+            Permission::forRole(Role::Owner),
+        ));
     }
 }

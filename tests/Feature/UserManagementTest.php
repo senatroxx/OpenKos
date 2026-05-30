@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Models\Property;
+use App\Models\Role as RoleModel;
 use App\Models\Room;
 use App\Models\Tenant;
 use App\Models\User;
@@ -35,11 +36,19 @@ test('owner can view users page and tenant users are excluded', function () {
 });
 
 test('non owners cannot view users page', function () {
-    $admin = User::factory()->admin()->create();
+    $staff = User::factory()->staff()->create();
 
-    $this->actingAs($admin)
+    $this->actingAs($staff)
         ->get(route('users.index'))
         ->assertForbidden();
+});
+
+test('invalid role filter falls back gracefully without error', function () {
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->get(route('users.index', ['role' => 'does-not-exist']))
+        ->assertOk();
 });
 
 test('owner can invite admin and assign properties with custom notification', function () {
@@ -47,18 +56,20 @@ test('owner can invite admin and assign properties with custom notification', fu
     $owner = User::factory()->owner()->create();
     $properties = Property::factory()->count(2)->create();
 
+    RoleModel::findOrCreate('admin')->update(['label' => 'Admin']);
+
     $this->actingAs($owner)
         ->post(route('users.store'), [
             'name' => 'Admin User',
             'email' => 'admin@example.com',
-            'role' => Role::Admin->value,
+            'roles' => ['admin'],
             'property_ids' => $properties->pluck('id')->all(),
         ])
         ->assertRedirect(route('users.index'));
 
     $user = User::where('email', 'admin@example.com')->firstOrFail();
 
-    expect($user->hasRole(Role::Admin->value))->toBeTrue()
+    expect($user->hasRole('admin'))->toBeTrue()
         ->and($user->properties()->pluck('properties.id')->all())->toEqualCanonicalizing($properties->pluck('id')->all())
         ->and($user->email_verified_at)->toBeNull()
         ->and($user->invited_at)->not->toBeNull()
@@ -82,6 +93,52 @@ test('owner can invite admin and assign properties with custom notification', fu
     });
 });
 
+test('owner can invite user with multiple roles', function () {
+    Notification::fake();
+    $owner = User::factory()->owner()->create();
+
+    RoleModel::findOrCreate('admin')->update(['label' => 'Admin']);
+    RoleModel::findOrCreate('staff')->update(['label' => 'Staff']);
+
+    $this->actingAs($owner)
+        ->post(route('users.store'), [
+            'name' => 'Multi Role User',
+            'email' => 'multi@example.com',
+            'roles' => ['admin', 'staff'],
+        ])
+        ->assertRedirect(route('users.index'));
+
+    $user = User::where('email', 'multi@example.com')->firstOrFail();
+
+    expect($user->hasRole('admin'))->toBeTrue()
+        ->and($user->hasRole('staff'))->toBeTrue();
+});
+
+test('owner can invite user with custom role', function () {
+    Notification::fake();
+    $owner = User::factory()->owner()->create();
+
+    $customRole = RoleModel::create([
+        'name' => 'finance-staff',
+        'label' => 'Finance Staff',
+        'guard_name' => 'web',
+        'is_system' => false,
+        'is_active' => true,
+    ]);
+    $customRole->givePermissionTo('financials.view');
+
+    $this->actingAs($owner)
+        ->post(route('users.store'), [
+            'name' => 'Finance User',
+            'email' => 'finance@example.com',
+            'roles' => ['finance-staff'],
+        ])
+        ->assertRedirect(route('users.index'));
+
+    $user = User::where('email', 'finance@example.com')->firstOrFail();
+    expect($user->hasRole('finance-staff'))->toBeTrue();
+});
+
 test('owner cannot invite owner through users page', function () {
     Notification::fake();
     $owner = User::factory()->owner()->create();
@@ -90,9 +147,9 @@ test('owner cannot invite owner through users page', function () {
         ->post(route('users.store'), [
             'name' => 'Owner User',
             'email' => 'new-owner@example.com',
-            'role' => Role::Owner->value,
+            'roles' => [Role::Owner->value],
         ])
-        ->assertSessionHasErrors('role');
+        ->assertSessionHasErrors('roles.0');
 
     expect(User::where('email', 'new-owner@example.com')->exists())->toBeFalse();
 });
@@ -101,10 +158,12 @@ test('invited user accepts invitation on dedicated invitation route and becomes 
     Notification::fake();
     $owner = User::factory()->owner()->create();
 
+    RoleModel::findOrCreate('staff')->update(['label' => 'Staff']);
+
     $this->actingAs($owner)->post(route('users.store'), [
         'name' => 'Staff User',
         'email' => 'staff@example.com',
-        'role' => Role::Staff->value,
+        'roles' => ['staff'],
     ]);
 
     $user = User::where('email', 'staff@example.com')->firstOrFail();
