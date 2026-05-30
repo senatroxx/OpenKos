@@ -250,6 +250,106 @@ describe('move room', function () {
         expect($newLease->deposit_amount)->toBe('500000.00');
     });
 
+    it('denies admin from accessing leases of a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        [$propertyA] = createPropertyWithRoom();
+        [$propertyB, $roomB] = createPropertyWithRoom();
+        $admin->properties()->sync([$propertyA->id]);
+
+        $this->actingAs($admin)
+            ->get(route('properties.rooms.leases.index', [$propertyB, $roomB]))
+            ->assertForbidden();
+    });
+
+    it('denies admin from creating a lease in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        [$propertyA] = createPropertyWithRoom();
+        [$propertyB, $roomB] = createPropertyWithRoom();
+        $admin->properties()->sync([$propertyA->id]);
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($admin)
+            ->post(route('properties.rooms.leases.store', [$propertyB, $roomB]), [
+                'tenant_id' => $tenant->id,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertForbidden();
+    });
+
+    it('denies admin from updating a lease in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        [$propertyA] = createPropertyWithRoom();
+        [$propertyB, $roomB] = createPropertyWithRoom();
+        $admin->properties()->sync([$propertyA->id]);
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'tenant_id' => $tenant->id,
+            'room_id' => $roomB->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('properties.rooms.leases.update', [$propertyB, $roomB, $lease]), [
+                'monthly_rent' => 9_999_999,
+            ])
+            ->assertForbidden();
+    });
+
+    it('denies admin from terminating a lease in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        [$propertyA] = createPropertyWithRoom();
+        [$propertyB, $roomB] = createPropertyWithRoom();
+        $admin->properties()->sync([$propertyA->id]);
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'tenant_id' => $tenant->id,
+            'room_id' => $roomB->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('properties.rooms.leases.destroy', [$propertyB, $roomB, $lease]))
+            ->assertForbidden();
+    });
+
+    it('denies admin from moving a lease to a room in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        [$propertyA] = createPropertyWithRoom();
+        [$propertyB, $roomB] = createPropertyWithRoom();
+        $admin->properties()->sync([$propertyA->id]);
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'tenant_id' => $tenant->id,
+            'room_id' => $roomB->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('properties.rooms.leases.move', [$propertyB, $roomB, $lease]), [
+                'target_room_id' => Room::factory()->for($propertyB)->create()->id,
+            ])
+            ->assertForbidden();
+    });
+
+    it('denies admin from moving a lease to a target room in a different property', function () {
+        $admin = User::factory()->admin()->create();
+        [$propertyA, $roomA] = createPropertyWithRoom();
+        [$propertyB] = createPropertyWithRoom();
+        $admin->properties()->sync([$propertyA->id]);
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'tenant_id' => $tenant->id,
+            'room_id' => $roomA->id,
+            'status' => 'active',
+        ]);
+        $targetRoomInB = Room::factory()->for($propertyB)->create();
+
+        $this->actingAs($admin)
+            ->post(route('properties.rooms.leases.move', [$propertyA, $roomA, $lease]), [
+                'target_room_id' => $targetRoomInB->id,
+            ])
+            ->assertForbidden();
+    });
+
     it('prevents moving to an already occupied room', function () {
         [$property, $roomA] = createPropertyWithRoom();
         $roomB = Room::factory()->create([
