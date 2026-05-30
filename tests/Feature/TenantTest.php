@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Lease;
+use App\Models\Property;
+use App\Models\Room;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -185,5 +188,57 @@ describe('CRUD', function () {
             ->component('tenants/index')
             ->has('tenants.data', 1)
         );
+    });
+});
+
+describe('cross-property access', function () {
+    it('denies admin from updating a tenant in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $room = Room::factory()->for($propertyB)->create();
+        $tenant = Tenant::factory()->create();
+        Lease::factory()->create([
+            'tenant_id' => $tenant->id,
+            'room_id' => $room->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('tenants.update', $tenant), ['name' => 'Hacked Name'])
+            ->assertForbidden();
+    });
+
+    it('denies admin from archiving a tenant in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $room = Room::factory()->for($propertyB)->create();
+        $tenant = Tenant::factory()->create();
+        Lease::factory()->create([
+            'tenant_id' => $tenant->id,
+            'room_id' => $room->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('tenants.destroy', $tenant))
+            ->assertForbidden();
+    });
+
+    it('denies admin assigning a tenant to a room in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $tenant = Tenant::factory()->create();
+        $roomInB = Room::factory()->for($propertyB)->create();
+
+        $this->actingAs($admin)
+            ->post(route('tenants.assign-room', $tenant), [
+                'room_id' => $roomInB->id,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertForbidden();
     });
 });
