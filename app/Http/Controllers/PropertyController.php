@@ -93,7 +93,7 @@ class PropertyController extends Controller
 
     public function update(UpdatePropertyRequest $request, Property $property): RedirectResponse
     {
-        abort_unless($request->user()->canAccessProperty($property), 403);
+        $this->authorize('update', $property);
 
         $property->update($request->validated());
 
@@ -104,7 +104,7 @@ class PropertyController extends Controller
 
     public function destroy(Property $property): RedirectResponse
     {
-        abort_unless(request()->user()->canAccessProperty($property), 403);
+        $this->authorize('delete', $property);
 
         Property::query()->whereKey($property->id)->update(['is_active' => DB::raw('false')]);
 
