@@ -44,16 +44,6 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasRole(Role::Owner->value);
     }
 
-    public function isAdmin(): bool
-    {
-        return $this->hasRole(Role::Admin->value);
-    }
-
-    public function isStaff(): bool
-    {
-        return $this->hasRole(Role::Staff->value);
-    }
-
     public function tenant(): HasOne
     {
         return $this->hasOne(Tenant::class);
