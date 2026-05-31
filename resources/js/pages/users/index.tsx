@@ -180,7 +180,10 @@ export default function Index({
             }
         });
 
-        router.get(users.index(), params, { preserveState: true, replace: true });
+        router.get(users.index(), params, {
+            preserveState: true,
+            replace: true,
+        });
     }
 
     function handleSearchChange(value: string) {
@@ -197,7 +200,9 @@ export default function Index({
 
     function toggleSort(column: string) {
         const direction =
-            currentSort === column && currentDirection === 'asc' ? 'desc' : 'asc';
+            currentSort === column && currentDirection === 'asc'
+                ? 'desc'
+                : 'asc';
 
         applyFilters({ sort: column, direction, page: '' });
     }
@@ -225,12 +230,17 @@ export default function Index({
     }
 
     function roleFilterLabel() {
-        return roleFilterOptions.find((role) => role.value === currentRole)?.label ?? 'All roles';
+        return (
+            roleFilterOptions.find((role) => role.value === currentRole)
+                ?.label ?? 'All roles'
+        );
     }
 
     function SortIcon({ column }: { column: string }) {
         if (currentSort !== column) {
-            return <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />;
+            return (
+                <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
+            );
         }
 
         return currentDirection === 'asc' ? (
@@ -246,7 +256,10 @@ export default function Index({
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between gap-4">
-                    <Heading title="Users" description="Invite staff and manage access" />
+                    <Heading
+                        title="Users"
+                        description="Invite staff and manage access"
+                    />
                     <Button onClick={openInvite}>
                         <UserPlus className="size-4" />
                         Invite User
@@ -260,7 +273,9 @@ export default function Index({
                             placeholder="Search by name or email..."
                             className="pl-9"
                             value={searchValue}
-                            onChange={(event) => handleSearchChange(event.target.value)}
+                            onChange={(event) =>
+                                handleSearchChange(event.target.value)
+                            }
                         />
                         {searchValue && (
                             <button
@@ -275,7 +290,10 @@ export default function Index({
                         )}
                     </div>
 
-                    <Popover open={roleFilterOpen} onOpenChange={setRoleFilterOpen}>
+                    <Popover
+                        open={roleFilterOpen}
+                        onOpenChange={setRoleFilterOpen}
+                    >
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
@@ -298,13 +316,17 @@ export default function Index({
                                                 key={role.value || 'all'}
                                                 value={role.label}
                                                 onSelect={() => {
-                                                    applyFilters({ role: role.value, page: '' });
+                                                    applyFilters({
+                                                        role: role.value,
+                                                        page: '',
+                                                    });
                                                     setRoleFilterOpen(false);
                                                 }}
                                             >
                                                 <Check
                                                     className={`mr-2 size-4 ${
-                                                        currentRole === role.value
+                                                        currentRole ===
+                                                        role.value
                                                             ? 'opacity-100'
                                                             : 'opacity-0'
                                                     }`}
@@ -327,9 +349,18 @@ export default function Index({
                         ].map((status) => (
                             <Button
                                 key={status.value}
-                                variant={currentStatus === status.value ? 'default' : 'ghost'}
+                                variant={
+                                    currentStatus === status.value
+                                        ? 'default'
+                                        : 'ghost'
+                                }
                                 size="sm"
-                                onClick={() => applyFilters({ status: status.value, page: '' })}
+                                onClick={() =>
+                                    applyFilters({
+                                        status: status.value,
+                                        page: '',
+                                    })
+                                }
                             >
                                 {status.label}
                             </Button>
@@ -338,7 +369,11 @@ export default function Index({
                 </div>
 
                 {data.data.length === 0 ? (
-                    <EmptyState message="No users yet." createLabel="Invite a user" onCreate={openInvite} />
+                    <EmptyState
+                        message="No users yet."
+                        createLabel="Invite a user"
+                        onCreate={openInvite}
+                    />
                 ) : (
                     <div className="overflow-x-auto rounded-lg border">
                         <table className="w-full text-sm">
@@ -358,9 +393,15 @@ export default function Index({
                                             <SortIcon column={column} />
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 font-medium">Roles</th>
-                                    <th className="px-4 py-3 font-medium">Assigned Properties</th>
-                                    <th className="px-4 py-3 font-medium">Status</th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Roles
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Assigned Properties
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Status
+                                    </th>
                                     <th className="w-12 px-4 py-3" />
                                 </tr>
                             </thead>
@@ -371,25 +412,41 @@ export default function Index({
                                         className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
                                         onClick={() => openDetail(user)}
                                     >
-                                        <td className="px-4 py-3 font-medium">{user.name}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{formatDate(user.last_login_at)}</td>
+                                        <td className="px-4 py-3 font-medium">
+                                            {user.name}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {user.email}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {formatDate(user.last_login_at)}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-1">
                                                 {user.roles.length > 0 ? (
                                                     user.roles.map((r) => (
-                                                        <Badge key={r.name} variant="outline">
+                                                        <Badge
+                                                            key={r.name}
+                                                            variant="outline"
+                                                        >
                                                             {r.label}
                                                         </Badge>
                                                     ))
                                                 ) : (
-                                                    <span className="text-muted-foreground text-sm">No roles</span>
+                                                    <span className="text-sm text-muted-foreground">
+                                                        No roles
+                                                    </span>
                                                 )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {user.properties.length > 0
-                                                ? user.properties.map((property) => property.name).join(', ')
+                                                ? user.properties
+                                                      .map(
+                                                          (property) =>
+                                                              property.name,
+                                                      )
+                                                      .join(', ')
                                                 : user.role === 'owner'
                                                   ? 'All properties'
                                                   : 'No properties'}
@@ -399,34 +456,76 @@ export default function Index({
                                         </td>
                                         <td className="px-4 py-3">
                                             <DropdownMenu>
-                                                <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
-                                                    <Button variant="ghost" size="icon" className="size-8">
+                                                <DropdownMenuTrigger
+                                                    asChild
+                                                    onClick={(event) =>
+                                                        event.stopPropagation()
+                                                    }
+                                                >
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-8"
+                                                    >
                                                         <EllipsisVertical className="size-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                                                    <DropdownMenuItem onClick={() => openDetail(user)}>
+                                                <DropdownMenuContent
+                                                    align="end"
+                                                    onClick={(event) =>
+                                                        event.stopPropagation()
+                                                    }
+                                                >
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            openDetail(user)
+                                                        }
+                                                    >
                                                         <Eye className="size-4" />
                                                         View
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openEdit(user)}>
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            openEdit(user)
+                                                        }
+                                                    >
                                                         <Pencil className="size-4" />
                                                         Edit / Assign Property
                                                     </DropdownMenuItem>
-                                                    {user.status === 'active' && (
-                                                        <DropdownMenuItem onClick={() => sendReset(user)}>
+                                                    {user.status ===
+                                                        'active' && (
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                sendReset(user)
+                                                            }
+                                                        >
                                                             <KeyRound className="size-4" />
                                                             Reset Password
                                                         </DropdownMenuItem>
                                                     )}
-                                                    {user.status === 'invited' && (
-                                                        <DropdownMenuItem onClick={() => resendInvite(user)}>
+                                                    {user.status ===
+                                                        'invited' && (
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                resendInvite(
+                                                                    user,
+                                                                )
+                                                            }
+                                                        >
                                                             <UserPlus className="size-4" />
                                                             Resend Invite Link
                                                         </DropdownMenuItem>
                                                     )}
-                                                    {user.status !== 'disabled' && (
-                                                        <DropdownMenuItem variant="destructive" onClick={() => disableAccess(user)}>
+                                                    {user.status !==
+                                                        'disabled' && (
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            onClick={() =>
+                                                                disableAccess(
+                                                                    user,
+                                                                )
+                                                            }
+                                                        >
                                                             <ShieldOff className="size-4" />
                                                             Disable Access
                                                         </DropdownMenuItem>
@@ -442,11 +541,14 @@ export default function Index({
                         <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
                             <div className="flex items-center gap-4">
                                 <p className="text-muted-foreground">
-                                    Showing {data.from} to {data.to} of {data.total} users
+                                    Showing {data.from} to {data.to} of{' '}
+                                    {data.total} users
                                 </p>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">Per page</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Per page
+                                    </span>
                                     <select
                                         className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         value={currentPerPage}
@@ -458,7 +560,10 @@ export default function Index({
                                         }
                                     >
                                         {[10, 15, 25, 50].map((perPage) => (
-                                            <option key={perPage} value={perPage}>
+                                            <option
+                                                key={perPage}
+                                                value={perPage}
+                                            >
                                                 {perPage}
                                             </option>
                                         ))}
@@ -471,19 +576,29 @@ export default function Index({
                                     variant="outline"
                                     size="sm"
                                     disabled={data.current_page === 1}
-                                    onClick={() => goToPage(data.current_page - 1)}
+                                    onClick={() =>
+                                        goToPage(data.current_page - 1)
+                                    }
                                 >
                                     Previous
                                 </Button>
 
                                 {data.links
-                                    .filter((link) => !isNaN(Number(link.label)))
+                                    .filter(
+                                        (link) => !isNaN(Number(link.label)),
+                                    )
                                     .map((link) => (
                                         <Button
                                             key={link.label}
-                                            variant={link.active ? 'default' : 'outline'}
+                                            variant={
+                                                link.active
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
                                             size="sm"
-                                            onClick={() => goToPage(Number(link.label))}
+                                            onClick={() =>
+                                                goToPage(Number(link.label))
+                                            }
                                         >
                                             {link.label}
                                         </Button>
@@ -492,8 +607,12 @@ export default function Index({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={data.current_page === data.last_page}
-                                    onClick={() => goToPage(data.current_page + 1)}
+                                    disabled={
+                                        data.current_page === data.last_page
+                                    }
+                                    onClick={() =>
+                                        goToPage(data.current_page + 1)
+                                    }
                                 >
                                     Next
                                 </Button>
@@ -556,9 +675,7 @@ function UserFormSheet({
         setSelectedPropertyIds(
             user?.properties.map((property) => property.id) ?? [],
         );
-        setSelectedRoles(
-            user?.roles.map((r) => r.name) ?? [],
-        );
+        setSelectedRoles(user?.roles.map((r) => r.name) ?? []);
     }
 
     const canEditRole = user?.role !== 'owner';
@@ -568,13 +685,17 @@ function UserFormSheet({
 
     function toggleProperty(propertyId: number, checked: boolean) {
         setSelectedPropertyIds((current) =>
-            checked ? [...current, propertyId] : current.filter((id) => id !== propertyId),
+            checked
+                ? [...current, propertyId]
+                : current.filter((id) => id !== propertyId),
         );
     }
 
     function toggleRole(roleName: string, checked: boolean) {
         setSelectedRoles((current) =>
-            checked ? [...current, roleName] : current.filter((r) => r !== roleName),
+            checked
+                ? [...current, roleName]
+                : current.filter((r) => r !== roleName),
         );
     }
 
@@ -582,9 +703,13 @@ function UserFormSheet({
         <Sheet key={user?.id ?? 'new'} open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>{isEdit ? 'Edit User' : 'Invite User'}</SheetTitle>
+                    <SheetTitle>
+                        {isEdit ? 'Edit User' : 'Invite User'}
+                    </SheetTitle>
                     <SheetDescription>
-                        {isEdit ? 'Update access and property assignments' : 'Invite a team member'}
+                        {isEdit
+                            ? 'Update access and property assignments'
+                            : 'Invite a team member'}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -594,13 +719,24 @@ function UserFormSheet({
                             <div className="space-y-6 pt-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">Name</Label>
-                                    <Input id="name" name="name" defaultValue={user?.name ?? ''} required />
+                                    <Input
+                                        id="name"
+                                        name="name"
+                                        defaultValue={user?.name ?? ''}
+                                        required
+                                    />
                                     <InputError message={errors.name} />
                                 </div>
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email</Label>
-                                    <Input id="email" name="email" type="email" defaultValue={user?.email ?? ''} required />
+                                    <Input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        defaultValue={user?.email ?? ''}
+                                        required
+                                    />
                                     <InputError message={errors.email} />
                                 </div>
 
@@ -609,37 +745,81 @@ function UserFormSheet({
                                     <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
                                         {canEditRole ? (
                                             roles.map((role) => (
-                                                <label key={role.value} className="flex items-center gap-2 text-sm">
+                                                <label
+                                                    key={role.value}
+                                                    className="flex items-center gap-2 text-sm"
+                                                >
                                                     <Checkbox
-                                                        checked={selectedRoles.includes(role.value)}
-                                                        onCheckedChange={(checked) => toggleRole(role.value, checked === true)}
+                                                        checked={selectedRoles.includes(
+                                                            role.value,
+                                                        )}
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            toggleRole(
+                                                                role.value,
+                                                                checked ===
+                                                                    true,
+                                                            )
+                                                        }
                                                     />
                                                     {role.label}
                                                 </label>
                                             ))
                                         ) : (
-                                            <p className="text-sm text-muted-foreground">Owner</p>
+                                            <p className="text-sm text-muted-foreground">
+                                                Owner
+                                            </p>
                                         )}
                                     </div>
-                                    {canEditRole && selectedRoles.map((roleName) => (
-                                        <input key={roleName} type="hidden" name="roles[]" value={roleName} />
-                                    ))}
+                                    {canEditRole &&
+                                        selectedRoles.map((roleName) => (
+                                            <input
+                                                key={roleName}
+                                                type="hidden"
+                                                name="roles[]"
+                                                value={roleName}
+                                            />
+                                        ))}
                                     <InputError message={errors.roles} />
                                 </div>
 
-                                <input type="hidden" name="is_active" value={user?.is_active === false ? '0' : '1'} />
+                                <input
+                                    type="hidden"
+                                    name="is_active"
+                                    value={
+                                        user?.is_active === false ? '0' : '1'
+                                    }
+                                />
                                 {selectedPropertyIds.map((propertyId) => (
-                                    <input key={propertyId} type="hidden" name="property_ids[]" value={propertyId} />
+                                    <input
+                                        key={propertyId}
+                                        type="hidden"
+                                        name="property_ids[]"
+                                        value={propertyId}
+                                    />
                                 ))}
 
                                 <div className="grid gap-3">
                                     <Label>Assigned Properties</Label>
                                     <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-3">
                                         {properties.map((property) => (
-                                            <label key={property.id} className="flex items-center gap-2 text-sm">
+                                            <label
+                                                key={property.id}
+                                                className="flex items-center gap-2 text-sm"
+                                            >
                                                 <Checkbox
-                                                    checked={selectedPropertyIds.includes(property.id)}
-                                                    onCheckedChange={(checked) => toggleProperty(property.id, checked === true)}
+                                                    checked={selectedPropertyIds.includes(
+                                                        property.id,
+                                                    )}
+                                                    onCheckedChange={(
+                                                        checked,
+                                                    ) =>
+                                                        toggleProperty(
+                                                            property.id,
+                                                            checked === true,
+                                                        )
+                                                    }
                                                 />
                                                 {property.name}
                                             </label>
@@ -649,10 +829,17 @@ function UserFormSheet({
                                 </div>
 
                                 <div className="flex items-center justify-end gap-4 pt-2">
-                                    <Button variant="outline" type="button" onClick={() => onOpenChange(false)} disabled={processing}>
+                                    <Button
+                                        variant="outline"
+                                        type="button"
+                                        onClick={() => onOpenChange(false)}
+                                        disabled={processing}
+                                    >
                                         Cancel
                                     </Button>
-                                    <Button disabled={processing}>{isEdit ? 'Save' : 'Send Invite'}</Button>
+                                    <Button disabled={processing}>
+                                        {isEdit ? 'Save' : 'Send Invite'}
+                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -689,61 +876,91 @@ function UserDetailSheet({
                 </SheetHeader>
 
                 {user && (
-                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-6">
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
                                 <StatusBadge user={user} />
                             </section>
 
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Account
                                 </h3>
                                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Name</span>
-                                        <span className="text-sm font-medium">{user.name}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Name
+                                        </span>
+                                        <span className="text-sm font-medium">
+                                            {user.name}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Email</span>
-                                        <span className="text-sm">{user.email}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Email
+                                        </span>
+                                        <span className="text-sm">
+                                            {user.email}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Roles</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Roles
+                                        </span>
                                         <div className="flex flex-wrap gap-1">
                                             {user.roles.length > 0 ? (
                                                 user.roles.map((r) => (
-                                                    <Badge key={r.name} variant="outline">
+                                                    <Badge
+                                                        key={r.name}
+                                                        variant="outline"
+                                                    >
                                                         {r.label}
                                                     </Badge>
                                                 ))
                                             ) : (
-                                                <span className="text-sm text-muted-foreground">None</span>
+                                                <span className="text-sm text-muted-foreground">
+                                                    None
+                                                </span>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Email verified</span>
-                                        <span className="text-sm">{user.email_verified_at ? 'Yes' : 'No'}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Email verified
+                                        </span>
+                                        <span className="text-sm">
+                                            {user.email_verified_at
+                                                ? 'Yes'
+                                                : 'No'}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Last login</span>
-                                        <span className="text-sm tabular-nums">{formatDate(user.last_login_at)}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Last login
+                                        </span>
+                                        <span className="text-sm tabular-nums">
+                                            {formatDate(user.last_login_at)}
+                                        </span>
                                     </div>
                                 </div>
                             </section>
 
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Properties
                                 </h3>
                                 <div className="rounded-lg border p-4">
                                     <p className="text-sm text-muted-foreground">
                                         {user.properties.length > 0
-                                            ? user.properties.map((property) => property.name).join(', ')
+                                            ? user.properties
+                                                  .map(
+                                                      (property) =>
+                                                          property.name,
+                                                  )
+                                                  .join(', ')
                                             : user.role === 'owner'
                                               ? 'All properties'
                                               : 'No properties assigned'}
@@ -754,26 +971,38 @@ function UserDetailSheet({
 
                         <div className="flex flex-wrap items-center justify-end gap-4">
                             {user.status === 'invited' && (
-                                <Button variant="outline" onClick={() => onResendInvitation(user)}>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onResendInvitation(user)}
+                                >
                                     <UserPlus className="size-4" />
                                     Resend Invite Link
                                 </Button>
                             )}
 
-                            <Button variant="outline" onClick={() => onEdit(user)}>
+                            <Button
+                                variant="outline"
+                                onClick={() => onEdit(user)}
+                            >
                                 <Pencil className="size-4" />
                                 Edit / Assign Property
                             </Button>
 
                             {user.status === 'active' && (
-                                <Button variant="outline" onClick={() => onResetPassword(user)}>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => onResetPassword(user)}
+                                >
                                     <KeyRound className="size-4" />
                                     Reset Password
                                 </Button>
                             )}
 
                             {user.status !== 'disabled' && (
-                                <Button variant="destructive" onClick={() => onDisable(user)}>
+                                <Button
+                                    variant="destructive"
+                                    onClick={() => onDisable(user)}
+                                >
                                     <ShieldOff className="size-4" />
                                     Disable Access
                                 </Button>

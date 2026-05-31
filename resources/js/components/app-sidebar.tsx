@@ -1,5 +1,14 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Building2, FileText, FolderGit2, LayoutGrid, Shield, UserCog, Users } from 'lucide-react';
+import {
+    BookOpen,
+    Building2,
+    FileText,
+    FolderGit2,
+    LayoutGrid,
+    Shield,
+    UserCog,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -32,7 +41,13 @@ export function AppSidebar() {
             ? [{ title: 'Dashboard', href: dashboard(), icon: LayoutGrid }]
             : []),
         ...(isOwner || permissions.includes('properties.view')
-            ? [{ title: 'Properties', href: properties.index(), icon: Building2 }]
+            ? [
+                  {
+                      title: 'Properties',
+                      href: properties.index(),
+                      icon: Building2,
+                  },
+              ]
             : []),
         ...(isOwner || permissions.includes('tenants.view')
             ? [{ title: 'Tenants', href: tenants.index(), icon: Users }]
@@ -44,7 +59,13 @@ export function AppSidebar() {
             ? [{ title: 'Users', href: userRoutes.index(), icon: UserCog }]
             : []),
         ...(isOwner
-            ? [{ title: 'Roles & Permissions', href: roles.index(), icon: Shield }]
+            ? [
+                  {
+                      title: 'Roles & Permissions',
+                      href: roles.index(),
+                      icon: Shield,
+                  },
+              ]
             : []),
     ];
 

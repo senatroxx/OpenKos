@@ -49,7 +49,11 @@ export default function PropertyDetailSheet({
         }
     }
 
-    const locationLabel = [property?.city?.name, property?.region?.name, property?.postal_code]
+    const locationLabel = [
+        property?.city?.name,
+        property?.region?.name,
+        property?.postal_code,
+    ]
         .filter(Boolean)
         .join(', ');
 

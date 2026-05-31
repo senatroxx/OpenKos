@@ -17,7 +17,11 @@ type RoomInfo = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 type Lease = {
@@ -111,16 +115,18 @@ export default function LeaseDetailSheet({
                 </SheetHeader>
 
                 {lease && (
-                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-6">
                             {/* Status */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
                                 <Badge
                                     className={
-                                        isActive ? 'bg-blue-600 text-white' : 'bg-gray-400 text-white'
+                                        isActive
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-gray-400 text-white'
                                     }
                                 >
                                     {isActive ? 'Active' : 'Terminated'}
@@ -129,28 +135,41 @@ export default function LeaseDetailSheet({
 
                             {/* Occupancy */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Occupancy
                                 </h3>
-                                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                                <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Tenant</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Tenant
+                                        </span>
                                         <div className="text-right">
-                                            <p className="text-sm font-medium">{tenantName}</p>
+                                            <p className="text-sm font-medium">
+                                                {tenantName}
+                                            </p>
                                             {phone && (
-                                                <p className="text-xs text-muted-foreground">{phone}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {phone}
+                                                </p>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Room</span>
-                                        <span className="text-sm">{roomName}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Room
+                                        </span>
+                                        <span className="text-sm">
+                                            {roomName}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">Property</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            Property
+                                        </span>
                                         <span className="text-sm">
                                             {propertyName}
-                                            {propertyCity && ` — ${propertyCity}`}
+                                            {propertyCity &&
+                                                ` — ${propertyCity}`}
                                         </span>
                                     </div>
                                 </div>
@@ -158,27 +177,40 @@ export default function LeaseDetailSheet({
 
                             {/* Agreement */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Agreement
                                 </h3>
                                 <div className="space-y-2 rounded-lg border p-4">
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Start date</span>
-                                        <span className="tabular-nums">{formatDate(lease.start_date)}</span>
+                                        <span className="text-muted-foreground">
+                                            Start date
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {formatDate(lease.start_date)}
+                                        </span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">End date</span>
+                                        <span className="text-muted-foreground">
+                                            End date
+                                        </span>
                                         <span className="tabular-nums">
                                             {lease.termination_date
-                                                ? formatDate(lease.termination_date)
+                                                ? formatDate(
+                                                      lease.termination_date,
+                                                  )
                                                 : formatDate(lease.end_date)}
                                         </span>
                                     </div>
                                     {lease.termination_reason && (
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Reason</span>
+                                            <span className="text-muted-foreground">
+                                                Reason
+                                            </span>
                                             <span className="text-right text-sm capitalize">
-                                                {lease.termination_reason.replace(/_/g, ' ')}
+                                                {lease.termination_reason.replace(
+                                                    /_/g,
+                                                    ' ',
+                                                )}
                                             </span>
                                         </div>
                                     )}
@@ -187,26 +219,38 @@ export default function LeaseDetailSheet({
 
                             {/* Rent */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Rent
                                 </h3>
                                 <div className="space-y-2 rounded-lg border p-4">
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Billing rate</span>
+                                        <span className="text-muted-foreground">
+                                            Billing rate
+                                        </span>
                                         <span className="tabular-nums">
-                                            {formatPrice(lease.rent_amount)}{lease.billing_label}
+                                            {formatPrice(lease.rent_amount)}
+                                            {lease.billing_label}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Monthly equivalent</span>
+                                        <span className="text-muted-foreground">
+                                            Monthly equivalent
+                                        </span>
                                         <span className="tabular-nums">
-                                            {formatPrice(lease.monthly_equivalent)}/mo
+                                            {formatPrice(
+                                                lease.monthly_equivalent,
+                                            )}
+                                            /mo
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Due every month</span>
+                                        <span className="text-muted-foreground">
+                                            Due every month
+                                        </span>
                                         <span className="tabular-nums">
-                                            {DUE_DAY_LABELS[lease.rent_due_day] ?? lease.rent_due_day}
+                                            {DUE_DAY_LABELS[
+                                                lease.rent_due_day
+                                            ] ?? lease.rent_due_day}
                                         </span>
                                     </div>
                                 </div>
@@ -214,37 +258,51 @@ export default function LeaseDetailSheet({
 
                             {/* Deposit */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Deposit
                                 </h3>
                                 <div className="space-y-2 rounded-lg border p-4">
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Amount</span>
+                                        <span className="text-muted-foreground">
+                                            Amount
+                                        </span>
                                         <span className="tabular-nums">
                                             {formatPrice(lease.deposit_amount)}
                                         </span>
                                     </div>
                                     {lease.deposit_paid_at && (
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Paid at</span>
+                                            <span className="text-muted-foreground">
+                                                Paid at
+                                            </span>
                                             <span className="tabular-nums">
-                                                {formatDate(lease.deposit_paid_at)}
+                                                {formatDate(
+                                                    lease.deposit_paid_at,
+                                                )}
                                             </span>
                                         </div>
                                     )}
                                     {lease.deposit_refund_amount && (
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Refund</span>
+                                            <span className="text-muted-foreground">
+                                                Refund
+                                            </span>
                                             <span className="tabular-nums">
-                                                {formatPrice(lease.deposit_refund_amount)}
+                                                {formatPrice(
+                                                    lease.deposit_refund_amount,
+                                                )}
                                             </span>
                                         </div>
                                     )}
                                     {lease.deposit_refunded_at && (
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Refunded at</span>
+                                            <span className="text-muted-foreground">
+                                                Refunded at
+                                            </span>
                                             <span className="tabular-nums">
-                                                {formatDate(lease.deposit_refunded_at)}
+                                                {formatDate(
+                                                    lease.deposit_refunded_at,
+                                                )}
                                             </span>
                                         </div>
                                     )}
@@ -254,10 +312,10 @@ export default function LeaseDetailSheet({
                             {/* Notes */}
                             {lease.notes && (
                                 <section>
-                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                         Notes
                                     </h3>
-                                    <p className="text-sm whitespace-pre-wrap rounded-lg border p-4">
+                                    <p className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
                                         {lease.notes}
                                     </p>
                                 </section>
@@ -271,7 +329,10 @@ export default function LeaseDetailSheet({
                                 </Button>
                             )}
                             {isActive && onMoveOut && (
-                                <Button variant="destructive" onClick={onMoveOut}>
+                                <Button
+                                    variant="destructive"
+                                    onClick={onMoveOut}
+                                >
                                     Move Out Tenant
                                 </Button>
                             )}
@@ -280,7 +341,10 @@ export default function LeaseDetailSheet({
                                     Move Room
                                 </Button>
                             )}
-                            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                            <Button
+                                variant="ghost"
+                                onClick={() => onOpenChange(false)}
+                            >
                                 Close
                             </Button>
                         </div>

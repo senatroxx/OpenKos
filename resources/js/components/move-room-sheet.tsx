@@ -71,24 +71,35 @@ export default function MoveRoomSheet({
                     >
                         {({ processing, errors }) => (
                             <div className="space-y-6 pt-4">
-                                <input type="hidden" name="target_room_id" value={targetRoomId ?? ''} />
+                                <input
+                                    type="hidden"
+                                    name="target_room_id"
+                                    value={targetRoomId ?? ''}
+                                />
 
                                 <div className="grid gap-2">
                                     <Label>Target Room</Label>
                                     <SearchableSelect
                                         options={roomOptions}
                                         value={targetRoomId}
-                                        onChange={(val) => setTargetRoomId(val as number | null)}
+                                        onChange={(val) =>
+                                            setTargetRoomId(
+                                                val as number | null,
+                                            )
+                                        }
                                         placeholder="Select target room..."
                                         searchPlaceholder="Search room..."
                                         emptyText="No available rooms."
                                     />
-                                    <InputError message={errors.target_room_id} />
+                                    <InputError
+                                        message={errors.target_room_id}
+                                    />
                                 </div>
 
                                 <p className="text-sm text-muted-foreground">
-                                    The current lease will be terminated, and a new lease will be
-                                    created in the selected room. The deposit will be transferred.
+                                    The current lease will be terminated, and a
+                                    new lease will be created in the selected
+                                    room. The deposit will be transferred.
                                 </p>
 
                                 <div className="flex items-center justify-end gap-4 pt-2">

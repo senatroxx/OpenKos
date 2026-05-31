@@ -46,22 +46,46 @@ type RoleFormProps = {
         permissions: string[];
     } | null;
     permissionGroups: PermissionGroup;
-    recommendations?: { name: string; label: string; description: string; color: string; permissions: string[] }[];
+    recommendations?: {
+        name: string;
+        label: string;
+        description: string;
+        color: string;
+        permissions: string[];
+    }[];
     action: string;
     method: 'post' | 'put';
 };
 
-export default function RoleForm({ role, permissionGroups, recommendations, action, method }: RoleFormProps) {
+export default function RoleForm({
+    role,
+    permissionGroups,
+    recommendations,
+    action,
+    method,
+}: RoleFormProps) {
     const isEdit = Boolean(role);
     const isSystem = role?.is_system ?? false;
-    const [selectedPermissions, setSelectedPermissions] = useState<string[]>(() => role?.permissions ?? []);
+    const [selectedPermissions, setSelectedPermissions] = useState<string[]>(
+        () => role?.permissions ?? [],
+    );
     const [labelValue, setLabelValue] = useState(role?.label ?? '');
     const [nameValue, setNameValue] = useState(role?.name ?? '');
-    const [descriptionValue, setDescriptionValue] = useState(role?.description ?? '');
-    const [colorValue, setColorValue] = useState(role?.color ?? COLOR_SWATCHES[0]);
+    const [descriptionValue, setDescriptionValue] = useState(
+        role?.description ?? '',
+    );
+    const [colorValue, setColorValue] = useState(
+        role?.color ?? COLOR_SWATCHES[0],
+    );
     const [isActiveValue, setIsActiveValue] = useState(role?.is_active ?? true);
 
-    function applyRecommendation(rec: { name: string; label: string; description: string; color: string; permissions: string[] }) {
+    function applyRecommendation(rec: {
+        name: string;
+        label: string;
+        description: string;
+        color: string;
+        permissions: string[];
+    }) {
         setNameValue(rec.name);
         setLabelValue(rec.label);
         setDescriptionValue(rec.description);
@@ -71,46 +95,67 @@ export default function RoleForm({ role, permissionGroups, recommendations, acti
 
     function togglePermission(permission: string, checked: boolean) {
         setSelectedPermissions((current) =>
-            checked ? [...current, permission] : current.filter((p) => p !== permission),
+            checked
+                ? [...current, permission]
+                : current.filter((p) => p !== permission),
         );
     }
 
     return (
-        <Form action={action} method={method} onSuccess={() => { }}>
+        <Form action={action} method={method} onSuccess={() => {}}>
             {({ processing, errors }) => (
                 <div className="space-y-8">
-                    {!isEdit && recommendations && recommendations.length > 0 && (
-                        <section>
-                            <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Quick start templates
-                            </h3>
-                            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                                {recommendations.map((rec) => (
-                                    <button
-                                        key={rec.name}
-                                        type="button"
-                                        onClick={() => applyRecommendation(rec)}
-                                        className="rounded-lg border border-input bg-transparent p-3 text-left text-sm transition-colors hover:bg-accent"
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span
-                                                className="inline-block size-3 rounded-full shrink-0"
-                                                style={{ backgroundColor: rec.color }}
-                                            />
-                                            <span className="font-medium">{rec.label}</span>
-                                        </div>
-                                        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{rec.description}</p>
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
-                    )}
+                    {!isEdit &&
+                        recommendations &&
+                        recommendations.length > 0 && (
+                            <section>
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                    Quick start templates
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                                    {recommendations.map((rec) => (
+                                        <button
+                                            key={rec.name}
+                                            type="button"
+                                            onClick={() =>
+                                                applyRecommendation(rec)
+                                            }
+                                            className="rounded-lg border border-input bg-transparent p-3 text-left text-sm transition-colors hover:bg-accent"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className="inline-block size-3 shrink-0 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            rec.color,
+                                                    }}
+                                                />
+                                                <span className="font-medium">
+                                                    {rec.label}
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                                                {rec.description}
+                                            </p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
 
                     <section className="grid gap-4 sm:grid-cols-2">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">{isEdit ? 'Identifier' : 'Role identifier'}</Label>
+                            <Label htmlFor="name">
+                                {isEdit ? 'Identifier' : 'Role identifier'}
+                            </Label>
                             {isEdit ? (
-                                <Input id="name" name="name" defaultValue={role?.name ?? ''} disabled={isSystem} required />
+                                <Input
+                                    id="name"
+                                    name="name"
+                                    defaultValue={role?.name ?? ''}
+                                    disabled={isSystem}
+                                    required
+                                />
                             ) : (
                                 <Input
                                     id="name"
@@ -121,7 +166,11 @@ export default function RoleForm({ role, permissionGroups, recommendations, acti
 
                                         if (!labelValue) {
                                             setLabelValue(
-                                                e.target.value.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+                                                e.target.value
+                                                    .replace(/[-_]/g, ' ')
+                                                    .replace(/\b\w/g, (c) =>
+                                                        c.toUpperCase(),
+                                                    ),
                                             );
                                         }
                                     }}
@@ -146,13 +195,15 @@ export default function RoleForm({ role, permissionGroups, recommendations, acti
                             <InputError message={errors.label} />
                         </div>
 
-                        <div className="sm:col-span-2 grid gap-2">
+                        <div className="grid gap-2 sm:col-span-2">
                             <Label htmlFor="description">Description</Label>
                             <Input
                                 id="description"
                                 name="description"
                                 value={descriptionValue}
-                                onChange={(e) => setDescriptionValue(e.target.value)}
+                                onChange={(e) =>
+                                    setDescriptionValue(e.target.value)
+                                }
                                 placeholder="What this role can do..."
                                 disabled={isSystem}
                             />
@@ -168,21 +219,34 @@ export default function RoleForm({ role, permissionGroups, recommendations, acti
                                         type="button"
                                         onClick={() => setColorValue(swatch)}
                                         className={`inline-block size-7 rounded-full border-2 transition-all ${
-                                            colorValue === swatch ? 'border-foreground scale-110' : 'border-transparent'
+                                            colorValue === swatch
+                                                ? 'scale-110 border-foreground'
+                                                : 'border-transparent'
                                         }`}
                                         style={{ backgroundColor: swatch }}
                                         disabled={isSystem}
                                     />
                                 ))}
                             </div>
-                            <input type="hidden" name="color" value={colorValue} />
+                            <input
+                                type="hidden"
+                                name="color"
+                                value={colorValue}
+                            />
                             <InputError message={errors.color} />
                         </div>
 
                         {isEdit && !isSystem && (
                             <div className="flex items-center gap-3 self-end pb-1">
-                                <Switch checked={isActiveValue} onCheckedChange={setIsActiveValue} />
-                                <input type="hidden" name="is_active" value={isActiveValue ? '1' : '0'} />
+                                <Switch
+                                    checked={isActiveValue}
+                                    onCheckedChange={setIsActiveValue}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="is_active"
+                                    value={isActiveValue ? '1' : '0'}
+                                />
                                 <Label className="cursor-pointer">Active</Label>
                             </div>
                         )}
@@ -199,41 +263,65 @@ export default function RoleForm({ role, permissionGroups, recommendations, acti
                     </div>
 
                     <section>
-                        <h3 className="mb-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        <h3 className="mb-4 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                             Permissions
                         </h3>
                         {isSystem && (
                             <p className="mb-4 text-sm text-muted-foreground">
-                                System roles have all permissions and cannot be modified.
+                                System roles have all permissions and cannot be
+                                modified.
                             </p>
                         )}
                         <div className="space-y-6 rounded-lg border p-4">
-                            {Object.entries(permissionGroups).map(([group, permissions]) => (
-                                <div key={group}>
-                                    <h4 className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                        {PERMISSION_LABELS[group] ?? group}
-                                    </h4>
-                                    <div className="space-y-0">
-                                        {permissions.map((perm) => (
-                                            <div key={perm.value} className="flex items-center gap-3 border-b border-border last:border-0 py-2.5 text-sm">
-                                                <div className="flex-1 min-w-0">
-                                                    <span className="font-medium">{perm.label}</span>
-                                                    <p className="text-xs text-muted-foreground">{perm.description}</p>
+                            {Object.entries(permissionGroups).map(
+                                ([group, permissions]) => (
+                                    <div key={group}>
+                                        <h4 className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                            {PERMISSION_LABELS[group] ?? group}
+                                        </h4>
+                                        <div className="space-y-0">
+                                            {permissions.map((perm) => (
+                                                <div
+                                                    key={perm.value}
+                                                    className="flex items-center gap-3 border-b border-border py-2.5 text-sm last:border-0"
+                                                >
+                                                    <div className="min-w-0 flex-1">
+                                                        <span className="font-medium">
+                                                            {perm.label}
+                                                        </span>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {perm.description}
+                                                        </p>
+                                                    </div>
+                                                    <Switch
+                                                        checked={selectedPermissions.includes(
+                                                            perm.value,
+                                                        )}
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            togglePermission(
+                                                                perm.value,
+                                                                checked,
+                                                            )
+                                                        }
+                                                        disabled={isSystem}
+                                                        className="shrink-0"
+                                                    />
                                                 </div>
-                                                <Switch
-                                                    checked={selectedPermissions.includes(perm.value)}
-                                                    onCheckedChange={(checked) => togglePermission(perm.value, checked)}
-                                                    disabled={isSystem}
-                                                    className="shrink-0"
-                                                />
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ),
+                            )}
                         </div>
                         {selectedPermissions.map((perm) => (
-                            <input key={perm} type="hidden" name="permissions[]" value={perm} />
+                            <input
+                                key={perm}
+                                type="hidden"
+                                name="permissions[]"
+                                value={perm}
+                            />
                         ))}
                         <InputError message={errors.permissions} />
                     </section>
