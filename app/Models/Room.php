@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'name',
     'floor',
     'description',
-    'base_price',
     'size_sqm',
     'capacity',
     'status',
@@ -43,6 +42,18 @@ class Room extends Model
     public function leases(): HasMany
     {
         return $this->hasMany(Lease::class);
+    }
+
+    public function rates(): HasMany
+    {
+        return $this->hasMany(RoomRate::class);
+    }
+
+    public function activeRates(): HasMany
+    {
+        return $this->hasMany(RoomRate::class)
+            ->whereRaw('is_active is true')
+            ->orderBy('billing_interval');
     }
 
     public function maintenanceTickets(): HasMany

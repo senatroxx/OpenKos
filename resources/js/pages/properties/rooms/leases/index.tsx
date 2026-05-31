@@ -16,7 +16,11 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string | null;
+    rent_amount: string | null;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -43,11 +47,18 @@ type Property = {
     city: string | null;
 };
 
+type RoomRate = {
+    id: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
+
 type Room = {
     id: number;
     name: string;
     floor: string | null;
-    base_price: string;
+    active_rates: RoomRate[];
 };
 
 type AvailableRoom = {
@@ -143,8 +154,8 @@ export default function Index({ property, room, leases, availableRooms: _availab
                         title={`${room.name} — Lease History`}
                         description={
                             room.floor
-                                ? `Floor ${room.floor} · ${formatPrice(room.base_price)}/mo`
-                                : `${formatPrice(room.base_price)}/mo`
+                                ? `Floor ${room.floor}`
+                                : undefined
                         }
                     />
                 </div>
@@ -192,7 +203,7 @@ export default function Index({ property, room, leases, availableRooms: _availab
                                             {formatDate(lease.end_date)}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {formatPrice(lease.monthly_rent)}
+                                            {formatPrice(lease.rent_amount)}{lease.billing_label}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
                                             <div>{formatPrice(lease.deposit_amount)}</div>

@@ -9,31 +9,28 @@ import {
 } from '@/components/ui/sheet';
 import properties from '@/routes/properties';
 
-const STATUS_LABELS: Record<string, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-    unavailable: 'Unavailable',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    available: 'bg-green-600',
-    occupied: 'bg-blue-600',
-    maintenance: 'bg-amber-500',
-    unavailable: 'bg-gray-400',
-};
-
 type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
 };
 
+type RoomRate = {
+    id: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
+
 type LeaseInfo = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string;
+    rent_amount: string;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -49,7 +46,7 @@ type Room = {
     name: string;
     floor: string | null;
     description: string | null;
-    base_price: string;
+    active_rates: RoomRate[];
     size_sqm: string | null;
     capacity: number;
     status: string;
@@ -75,6 +72,20 @@ function formatPrice(cents: string): string {
         maximumFractionDigits: 0,
     }).format(num);
 }
+
+const STATUS_LABELS: Record<string, string> = {
+    available: 'Available',
+    occupied: 'Occupied',
+    maintenance: 'Maintenance',
+    unavailable: 'Unavailable',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+    available: 'bg-green-600',
+    occupied: 'bg-blue-600',
+    maintenance: 'bg-amber-500',
+    unavailable: 'bg-gray-400',
+};
 
 const DUE_DAY_LABELS: Record<number, string> = {
     1: '1st',
@@ -152,10 +163,19 @@ export default function RoomDetailSheet({
                                         <span className="text-muted-foreground">Capacity</span>
                                         <span className="tabular-nums">{room.capacity}</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Base price</span>
-                                        <span className="tabular-nums">{formatPrice(room.base_price)}</span>
-                                    </div>
+                                    {room.active_rates && room.active_rates.length > 0 && (
+                                        <div className="border-t pt-2">
+                                            <p className="mb-2 text-xs text-muted-foreground">Pricing</p>
+                                            {room.active_rates.map((rate, i) => (
+                                                <div key={i} className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        {rate.billing_interval} {rate.billing_unit}{rate.billing_interval > 1 ? 's' : ''}
+                                                    </span>
+                                                    <span className="tabular-nums">{formatPrice(rate.amount)}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </section>
 
@@ -176,9 +196,15 @@ export default function RoomDetailSheet({
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Monthly rent</span>
+                                            <span className="text-muted-foreground">Billing rate</span>
                                             <span className="tabular-nums font-medium">
-                                                {formatPrice(activeLease.monthly_rent)}/mo
+                                                {formatPrice(activeLease.rent_amount)}{activeLease.billing_label}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">Monthly equivalent</span>
+                                            <span className="tabular-nums">
+                                                {formatPrice(activeLease.monthly_equivalent)}/mo
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">

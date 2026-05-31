@@ -158,10 +158,10 @@ describe('Lease', function () {
         expect($lease->termination_reason)->not->toBeNull();
     });
 
-    it('can override monthly rent', function () {
-        $lease = Lease::factory()->create(['monthly_rent' => 1_500_000]);
+    it('can override rent amount', function () {
+        $lease = Lease::factory()->create(['rent_amount' => 1_500_000]);
 
-        expect((float) $lease->monthly_rent)->toBe(1500000.00);
+        expect((float) $lease->rent_amount)->toBe(1500000.00);
     });
 
     it('can be soft deleted', function () {
