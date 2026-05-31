@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import SearchableSelect from '@/components/searchable-select';
 import { Button } from '@/components/ui/button';
@@ -126,10 +126,20 @@ export default function LeaseFormSheet({
     const [hasDeposit, setHasDeposit] = useState(false);
     const dueDayInitialized = useRef(false);
 
-    const [selectedRateId, setSelectedRateId] = useState<number | null>(null);
-    const [rentAmount, setRentAmount] = useState('');
-    const [billingInterval, setBillingInterval] = useState('1');
-    const [billingUnit, setBillingUnit] = useState('month');
+    const defaultRate = room?.active_rates?.[0] ?? null;
+
+    const [selectedRateId, setSelectedRateId] = useState<number | null>(
+        () => defaultRate?.id ?? null,
+    );
+    const [rentAmount, setRentAmount] = useState(
+        () => defaultRate?.amount ?? '',
+    );
+    const [billingInterval, setBillingInterval] = useState(
+        () => String(defaultRate?.billing_interval ?? 1),
+    );
+    const [billingUnit, setBillingUnit] = useState(
+        () => defaultRate?.billing_unit ?? 'month',
+    );
     const [isCustom, setIsCustom] = useState(false);
 
     const tenantOptions = (tenants ?? []).map((t) => ({
@@ -155,16 +165,6 @@ export default function LeaseFormSheet({
         setBillingUnit(rate.billing_unit);
         setIsCustom(false);
     }, []);
-
-    useEffect(() => {
-        if (
-            room?.active_rates &&
-            room.active_rates.length > 0 &&
-            !selectedRateId
-        ) {
-            handleRateSelect(room.active_rates[0]);
-        }
-    }, [room, handleRateSelect, selectedRateId]);
 
     const handleStartDateChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
