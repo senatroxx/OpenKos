@@ -70,16 +70,21 @@ export default function RoomFormSheet({
     const formAction = isEdit
         ? properties.rooms.update.url({ property: property.id, room: room!.id })
         : properties.rooms.store.url(property.id);
-    const formMethod = isEdit ? 'put' as const : 'post' as const;
+    const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
     const [rates, setRates] = useState<RoomRate[]>(() =>
         room?.active_rates?.length ? room.active_rates : [emptyRate],
     );
 
-    function updateRate(index: number, field: keyof RoomRate, value: string | number) {
+    function updateRate(
+        index: number,
+        field: keyof RoomRate,
+        value: string | number,
+    ) {
         setRates((prev) => {
             const next = [...prev];
             next[index] = { ...next[index], [field]: value };
+
             return next;
         });
     }
@@ -105,7 +110,11 @@ export default function RoomFormSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form action={formAction} method={formMethod} onSuccess={() => onOpenChange(false)}>
+                    <Form
+                        action={formAction}
+                        method={formMethod}
+                        onSuccess={() => onOpenChange(false)}
+                    >
                         {({ processing, errors }) => (
                             <div className="space-y-6 pt-4">
                                 <div className="grid gap-2">
@@ -133,7 +142,9 @@ export default function RoomFormSheet({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="capacity">Capacity</Label>
+                                        <Label htmlFor="capacity">
+                                            Capacity
+                                        </Label>
                                         <Input
                                             id="capacity"
                                             name="capacity"
@@ -168,8 +179,10 @@ export default function RoomFormSheet({
                                                 key={index}
                                                 className="flex items-end gap-2 rounded-lg border p-3"
                                             >
-                                                <div className="flex-1 grid gap-1">
-                                                    <Label className="text-xs">Amount (IDR)</Label>
+                                                <div className="grid flex-1 gap-1">
+                                                    <Label className="text-xs">
+                                                        Amount (IDR)
+                                                    </Label>
                                                     <input
                                                         type="hidden"
                                                         name={`rates[${index}][id]`}
@@ -182,42 +195,82 @@ export default function RoomFormSheet({
                                                         step="0.01"
                                                         required
                                                         value={rate.amount}
-                                                        onChange={(e) => updateRate(index, 'amount', e.target.value)}
+                                                        onChange={(e) =>
+                                                            updateRate(
+                                                                index,
+                                                                'amount',
+                                                                e.target.value,
+                                                            )
+                                                        }
                                                         placeholder="e.g. 1000000"
-                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                                     />
                                                 </div>
-                                                <div className="w-20 grid gap-1">
-                                                    <Label className="text-xs">Every</Label>
+                                                <div className="grid w-20 gap-1">
+                                                    <Label className="text-xs">
+                                                        Every
+                                                    </Label>
                                                     <input
                                                         type="number"
                                                         name={`rates[${index}][billing_interval]`}
                                                         min={1}
-                                                        value={rate.billing_interval}
-                                                        onChange={(e) => updateRate(index, 'billing_interval', Number.parseInt(e.target.value) || 1)}
-                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                        value={
+                                                            rate.billing_interval
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateRate(
+                                                                index,
+                                                                'billing_interval',
+                                                                Number.parseInt(
+                                                                    e.target
+                                                                        .value,
+                                                                ) || 1,
+                                                            )
+                                                        }
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                                     />
                                                 </div>
-                                                <div className="w-28 grid gap-1">
-                                                    <Label className="text-xs">Unit</Label>
+                                                <div className="grid w-28 gap-1">
+                                                    <Label className="text-xs">
+                                                        Unit
+                                                    </Label>
                                                     <input
                                                         type="hidden"
                                                         name={`rates[${index}][billing_unit]`}
-                                                        value={rate.billing_unit}
+                                                        value={
+                                                            rate.billing_unit
+                                                        }
                                                     />
                                                     <Select
-                                                        value={rate.billing_unit}
-                                                        onValueChange={(val) => updateRate(index, 'billing_unit', val)}
+                                                        value={
+                                                            rate.billing_unit
+                                                        }
+                                                        onValueChange={(val) =>
+                                                            updateRate(
+                                                                index,
+                                                                'billing_unit',
+                                                                val,
+                                                            )
+                                                        }
                                                     >
                                                         <SelectTrigger>
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {BILLING_UNITS.map((unit) => (
-                                                                <SelectItem key={unit} value={unit}>
-                                                                    {unit}
-                                                                </SelectItem>
-                                                            ))}
+                                                            {BILLING_UNITS.map(
+                                                                (unit) => (
+                                                                    <SelectItem
+                                                                        key={
+                                                                            unit
+                                                                        }
+                                                                        value={
+                                                                            unit
+                                                                        }
+                                                                    >
+                                                                        {unit}
+                                                                    </SelectItem>
+                                                                ),
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -227,7 +280,9 @@ export default function RoomFormSheet({
                                                         variant="ghost"
                                                         size="icon"
                                                         className="size-9 shrink-0 text-destructive"
-                                                        onClick={() => removeRate(index)}
+                                                        onClick={() =>
+                                                            removeRate(index)
+                                                        }
                                                     >
                                                         <Trash2 className="size-4" />
                                                     </Button>
@@ -240,7 +295,9 @@ export default function RoomFormSheet({
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
-                                        <Label htmlFor="size_sqm">Size (m²)</Label>
+                                        <Label htmlFor="size_sqm">
+                                            Size (m²)
+                                        </Label>
                                         <Input
                                             id="size_sqm"
                                             name="size_sqm"
@@ -258,16 +315,33 @@ export default function RoomFormSheet({
                                         <select
                                             id="status"
                                             name="status"
-                                            defaultValue={room?.status ?? 'available'}
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            defaultValue={
+                                                room?.status ?? 'available'
+                                            }
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         >
                                             {[
-                                                { value: 'available', label: 'Available' },
-                                                { value: 'occupied', label: 'Occupied' },
-                                                { value: 'maintenance', label: 'Maintenance' },
-                                                { value: 'unavailable', label: 'Unavailable' },
+                                                {
+                                                    value: 'available',
+                                                    label: 'Available',
+                                                },
+                                                {
+                                                    value: 'occupied',
+                                                    label: 'Occupied',
+                                                },
+                                                {
+                                                    value: 'maintenance',
+                                                    label: 'Maintenance',
+                                                },
+                                                {
+                                                    value: 'unavailable',
+                                                    label: 'Unavailable',
+                                                },
                                             ].map((opt) => (
-                                                <option key={opt.value} value={opt.value}>
+                                                <option
+                                                    key={opt.value}
+                                                    value={opt.value}
+                                                >
                                                     {opt.label}
                                                 </option>
                                             ))}
@@ -277,13 +351,15 @@ export default function RoomFormSheet({
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="description">Description</Label>
+                                    <Label htmlFor="description">
+                                        Description
+                                    </Label>
                                     <textarea
                                         id="description"
                                         name="description"
                                         defaultValue={room?.description ?? ''}
                                         placeholder="Room description"
-                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     />
                                     <InputError message={errors.description} />
                                 </div>
@@ -295,7 +371,7 @@ export default function RoomFormSheet({
                                         name="notes"
                                         defaultValue={room?.notes ?? ''}
                                         placeholder="Additional notes"
-                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     />
                                     <InputError message={errors.notes} />
                                 </div>
