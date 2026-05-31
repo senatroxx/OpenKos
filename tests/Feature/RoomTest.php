@@ -64,11 +64,13 @@ describe('CRUD', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
 
-        $this->actingAs($user)->post(route('properties.rooms.store', $property), [
+        $response = $this->actingAs($user)->post(route('properties.rooms.store', $property), [
             'name' => 'Room 101',
-            'base_price' => 1_000_000,
             'capacity' => 1,
         ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
 
         $room = Room::first();
 
@@ -83,7 +85,7 @@ describe('CRUD', function () {
 
         $this->actingAs($user)
             ->post(route('properties.rooms.store', $property), [])
-            ->assertSessionHasErrors(['name', 'base_price', 'capacity']);
+            ->assertSessionHasErrors(['name', 'capacity']);
     });
 
     it('updates a room', function () {
@@ -94,14 +96,12 @@ describe('CRUD', function () {
         $this->actingAs($user)
             ->put(route('properties.rooms.update', [$property, $room]), [
                 'name' => 'Room 102',
-                'base_price' => 1_500_000,
                 'capacity' => 2,
             ]);
 
         $room->refresh();
 
         expect($room->name)->toBe('Room 102');
-        expect($room->base_price)->toBe('1500000.00');
     });
 
     it('deletes a room via soft delete', function () {

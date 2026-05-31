@@ -31,7 +31,11 @@ type RoomInfo = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 type LeaseData = {
@@ -44,7 +48,11 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 const REASONS = [
@@ -71,8 +79,12 @@ export default function MoveOutSheet({
     const [reason, setReason] = useState('');
     const [depositReturned, setDepositReturned] = useState<string | null>(null);
     const [moveToAnotherRoom, setMoveToAnotherRoom] = useState(false);
-    const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
-    const [selectedTargetRoomId, setSelectedTargetRoomId] = useState<number | null>(null);
+    const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
+        null,
+    );
+    const [selectedTargetRoomId, setSelectedTargetRoomId] = useState<
+        number | null
+    >(null);
 
     const propertyOptions = useMemo(() => {
         const seen = new Set<number>();
@@ -96,7 +108,9 @@ export default function MoveOutSheet({
     const filteredRooms = useMemo(
         () =>
             selectedPropertyId
-                ? (availableRooms ?? []).filter((r) => r.property_id === selectedPropertyId)
+                ? (availableRooms ?? []).filter(
+                      (r) => r.property_id === selectedPropertyId,
+                  )
                 : [],
         [availableRooms, selectedPropertyId],
     );
@@ -144,33 +158,55 @@ export default function MoveOutSheet({
                             <div className="space-y-6 pt-4">
                                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
                                     <div className="flex items-center justify-between">
-                                        <span className="font-medium">{tenantName}</span>
-                                        <span className="text-muted-foreground">{roomName}</span>
+                                        <span className="font-medium">
+                                            {tenantName}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            {roomName}
+                                        </span>
                                     </div>
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="move_out_date">Move-out Date</Label>
+                                    <Label htmlFor="move_out_date">
+                                        Move-out Date
+                                    </Label>
                                     <Input
                                         id="move_out_date"
                                         name="move_out_date"
                                         type="date"
-                                        defaultValue={new Date().toISOString().split('T')[0]}
+                                        defaultValue={
+                                            new Date()
+                                                .toISOString()
+                                                .split('T')[0]
+                                        }
                                         required
                                     />
-                                    <InputError message={errors.move_out_date} />
+                                    <InputError
+                                        message={errors.move_out_date}
+                                    />
                                 </div>
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="reason">Reason</Label>
-                                    <input type="hidden" name="reason" value={reason} />
-                                    <Select value={reason} onValueChange={setReason}>
+                                    <input
+                                        type="hidden"
+                                        name="reason"
+                                        value={reason}
+                                    />
+                                    <Select
+                                        value={reason}
+                                        onValueChange={setReason}
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select reason (optional)" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {REASONS.map((r) => (
-                                                <SelectItem key={r.value} value={r.value}>
+                                                <SelectItem
+                                                    key={r.value}
+                                                    value={r.value}
+                                                >
                                                     {r.label}
                                                 </SelectItem>
                                             ))}
@@ -184,15 +220,23 @@ export default function MoveOutSheet({
                                     <input
                                         type="hidden"
                                         name="deposit_returned"
-                                        value={depositReturned === 'yes' ? '1' : '0'}
+                                        value={
+                                            depositReturned === 'yes'
+                                                ? '1'
+                                                : '0'
+                                        }
                                     />
                                     <div className="flex items-center gap-4">
                                         <label className="flex items-center gap-2 text-sm">
                                             <input
                                                 type="radio"
                                                 name="deposit_returned_radio"
-                                                checked={depositReturned === 'yes'}
-                                                onChange={() => setDepositReturned('yes')}
+                                                checked={
+                                                    depositReturned === 'yes'
+                                                }
+                                                onChange={() =>
+                                                    setDepositReturned('yes')
+                                                }
                                                 className="size-4"
                                             />
                                             Yes
@@ -201,14 +245,20 @@ export default function MoveOutSheet({
                                             <input
                                                 type="radio"
                                                 name="deposit_returned_radio"
-                                                checked={depositReturned === 'no'}
-                                                onChange={() => setDepositReturned('no')}
+                                                checked={
+                                                    depositReturned === 'no'
+                                                }
+                                                onChange={() =>
+                                                    setDepositReturned('no')
+                                                }
                                                 className="size-4"
                                             />
                                             No
                                         </label>
                                     </div>
-                                    <InputError message={errors.deposit_returned} />
+                                    <InputError
+                                        message={errors.deposit_returned}
+                                    />
                                 </div>
 
                                 {depositReturned === 'yes' && (
@@ -223,7 +273,11 @@ export default function MoveOutSheet({
                                             min={0}
                                             placeholder="Leave empty for full deposit"
                                         />
-                                        <InputError message={errors.deposit_refund_amount} />
+                                        <InputError
+                                            message={
+                                                errors.deposit_refund_amount
+                                            }
+                                        />
                                     </div>
                                 )}
 
@@ -232,7 +286,9 @@ export default function MoveOutSheet({
                                         type="checkbox"
                                         checked={moveToAnotherRoom}
                                         onChange={(e) => {
-                                            setMoveToAnotherRoom(e.target.checked);
+                                            setMoveToAnotherRoom(
+                                                e.target.checked,
+                                            );
 
                                             if (!e.target.checked) {
                                                 setSelectedPropertyId(null);
@@ -242,10 +298,13 @@ export default function MoveOutSheet({
                                         className="mt-0.5 size-4"
                                     />
                                     <div>
-                                        <span className="font-medium">Moving to another room?</span>
+                                        <span className="font-medium">
+                                            Moving to another room?
+                                        </span>
                                         <p className="text-xs text-muted-foreground">
-                                            Terminate this lease and create a new one in a different
-                                            room. Deposit carries forward.
+                                            Terminate this lease and create a
+                                            new one in a different room. Deposit
+                                            carries forward.
                                         </p>
                                     </div>
                                 </label>
@@ -261,10 +320,12 @@ export default function MoveOutSheet({
                                         <div className="grid gap-2">
                                             <Label>Property</Label>
                                             <SearchableSelect
-                                                options={propertyOptions.map((p) => ({
-                                                    value: p.propertyId,
-                                                    label: p.label,
-                                                }))}
+                                                options={propertyOptions.map(
+                                                    (p) => ({
+                                                        value: p.propertyId,
+                                                        label: p.label,
+                                                    }),
+                                                )}
                                                 value={selectedPropertyId}
                                                 onChange={handlePropertyChange}
                                                 placeholder="Select property..."
@@ -278,14 +339,20 @@ export default function MoveOutSheet({
                                             <input
                                                 type="hidden"
                                                 name="target_room_id"
-                                                value={selectedTargetRoomId ?? ''}
+                                                value={
+                                                    selectedTargetRoomId ?? ''
+                                                }
                                             />
                                             <SearchableSelect
-                                                key={selectedPropertyId ?? 'none'}
+                                                key={
+                                                    selectedPropertyId ?? 'none'
+                                                }
                                                 options={targetRoomOptions}
                                                 value={selectedTargetRoomId}
                                                 onChange={(val) =>
-                                                    setSelectedTargetRoomId(val as number | null)
+                                                    setSelectedTargetRoomId(
+                                                        val as number | null,
+                                                    )
                                                 }
                                                 placeholder={
                                                     selectedPropertyId
@@ -296,7 +363,9 @@ export default function MoveOutSheet({
                                                 emptyText="No available rooms."
                                                 disabled={!selectedPropertyId}
                                             />
-                                            <InputError message={errors.target_room_id} />
+                                            <InputError
+                                                message={errors.target_room_id}
+                                            />
                                         </div>
                                     </div>
                                 )}
@@ -307,7 +376,7 @@ export default function MoveOutSheet({
                                         id="notes"
                                         name="notes"
                                         placeholder="Additional notes"
-                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     />
                                     <InputError message={errors.notes} />
                                 </div>

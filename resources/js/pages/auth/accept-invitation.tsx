@@ -13,7 +13,11 @@ type Props = {
     passwordRules: string;
 };
 
-export default function AcceptInvitation({ token, email, passwordRules }: Props) {
+export default function AcceptInvitation({
+    token,
+    email,
+    passwordRules,
+}: Props) {
     return (
         <>
             <Head title="Accept invitation" />
@@ -55,7 +59,9 @@ export default function AcceptInvitation({ token, email, passwordRules }: Props)
                                 placeholder="Confirm password"
                                 passwordrules={passwordRules}
                             />
-                            <InputError message={errors.password_confirmation} />
+                            <InputError
+                                message={errors.password_confirmation}
+                            />
                         </div>
 
                         <Button className="mt-4 w-full" disabled={processing}>

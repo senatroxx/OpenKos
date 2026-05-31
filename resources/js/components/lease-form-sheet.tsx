@@ -1,6 +1,6 @@
 import { Form, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import SearchableSelect from '@/components/searchable-select';
 import { Button } from '@/components/ui/button';
@@ -27,11 +27,18 @@ import {
 } from '@/components/ui/sheet';
 import properties from '@/routes/properties';
 
+type RoomRate = {
+    id: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
+
 type Room = {
     id: number;
     name: string;
     floor: string | null;
-    base_price: string;
+    active_rates: RoomRate[];
 };
 
 type Property = {
@@ -48,6 +55,55 @@ const DUE_DAY_OPTIONS = [
     { value: '25', label: '25th' },
     { value: '31', label: 'Last day of month' },
 ];
+
+function formatCurrency(value: string | number): string {
+    const num = typeof value === 'string' ? Number.parseFloat(value) : value;
+
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(num);
+}
+
+function computeMonthlyEquivalent(
+    amount: string | null,
+    interval: number | null,
+    unit: string | null,
+): string {
+    if (!amount || !interval || !unit) {
+        return '';
+    }
+
+    const num = Number.parseFloat(amount);
+
+    if (isNaN(num)) {
+        return '';
+    }
+
+    const int = interval || 1;
+    let monthly: number;
+
+    switch (unit) {
+        case 'day':
+            monthly = (num * 365) / 12 / int;
+            break;
+        case 'week':
+            monthly = (num * 52) / 12 / int;
+            break;
+        case 'month':
+            monthly = num / int;
+            break;
+        case 'year':
+            monthly = (num * 12) / int;
+            break;
+        default:
+            return '';
+    }
+
+    return `≈ ${formatCurrency(Math.round(monthly))}/month`;
+}
 
 export default function LeaseFormSheet({
     room,
@@ -70,10 +126,45 @@ export default function LeaseFormSheet({
     const [hasDeposit, setHasDeposit] = useState(false);
     const dueDayInitialized = useRef(false);
 
+    const defaultRate = room?.active_rates?.[0] ?? null;
+
+    const [selectedRateId, setSelectedRateId] = useState<number | null>(
+        () => defaultRate?.id ?? null,
+    );
+    const [rentAmount, setRentAmount] = useState(
+        () => defaultRate?.amount ?? '',
+    );
+    const [billingInterval, setBillingInterval] = useState(
+        () => String(defaultRate?.billing_interval ?? 1),
+    );
+    const [billingUnit, setBillingUnit] = useState(
+        () => defaultRate?.billing_unit ?? 'month',
+    );
+    const [isCustom, setIsCustom] = useState(false);
+
     const tenantOptions = (tenants ?? []).map((t) => ({
         value: t.id,
         label: `${t.name}${t.phone ? ` (${t.phone})` : ''}`,
     }));
+
+    const selectedRate =
+        room?.active_rates?.find((r) => r.id === selectedRateId) ?? null;
+
+    const monthlyEquivalent = useMemo(() => {
+        return computeMonthlyEquivalent(
+            rentAmount,
+            Number.parseInt(billingInterval) || 1,
+            billingUnit,
+        );
+    }, [rentAmount, billingInterval, billingUnit]);
+
+    const handleRateSelect = useCallback((rate: RoomRate) => {
+        setSelectedRateId(rate.id);
+        setRentAmount(rate.amount);
+        setBillingInterval(String(rate.billing_interval));
+        setBillingUnit(rate.billing_unit);
+        setIsCustom(false);
+    }, []);
 
     const handleStartDateChange = useCallback(
         (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,23 +268,126 @@ export default function LeaseFormSheet({
                                         />
                                     </div>
 
+                                    {room?.active_rates &&
+                                    room.active_rates.length > 0 ? (
+                                        <div className="mt-4 grid gap-2">
+                                            <Label>Room Rate Options</Label>
+                                            <div className="space-y-1">
+                                                {room.active_rates.map(
+                                                    (rate) => (
+                                                        <label
+                                                            key={`${rate.billing_interval}-${rate.billing_unit}`}
+                                                            className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors ${
+                                                                selectedRateId ===
+                                                                rate.id
+                                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                                                                    : 'hover:bg-muted/50'
+                                                            }`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name="rate_option"
+                                                                value={rate.id}
+                                                                checked={
+                                                                    selectedRateId ===
+                                                                    rate.id
+                                                                }
+                                                                onChange={() =>
+                                                                    handleRateSelect(
+                                                                        rate,
+                                                                    )
+                                                                }
+                                                                className="size-4 accent-blue-600"
+                                                            />
+                                                            <div className="flex flex-1 items-center justify-between">
+                                                                <span>
+                                                                    {
+                                                                        rate.billing_interval
+                                                                    }{' '}
+                                                                    {
+                                                                        rate.billing_unit
+                                                                    }
+                                                                    {rate.billing_interval >
+                                                                    1
+                                                                        ? 's'
+                                                                        : ''}
+                                                                </span>
+                                                                <span className="font-medium tabular-nums">
+                                                                    {formatCurrency(
+                                                                        rate.amount,
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="mt-4 text-xs text-amber-600">
+                                            No pricing configured for this room.
+                                            Please set up room rates first.
+                                        </p>
+                                    )}
+
                                     <div className="mt-4 grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="monthly_rent">
-                                                Monthly Rent (IDR)
-                                            </Label>
+                                            <Label>Rent Amount (IDR)</Label>
+                                            <input
+                                                type="hidden"
+                                                name="room_rate_id"
+                                                value={selectedRateId ?? ''}
+                                            />
+                                            <input
+                                                type="hidden"
+                                                name="billing_interval"
+                                                value={billingInterval}
+                                            />
+                                            <input
+                                                type="hidden"
+                                                name="billing_unit"
+                                                value={billingUnit}
+                                            />
                                             <Input
-                                                id="monthly_rent"
-                                                name="monthly_rent"
+                                                id="rent_amount"
+                                                name="rent_amount"
                                                 type="number"
                                                 min={0}
-                                                defaultValue={
-                                                    room?.base_price ?? ''
-                                                }
-                                                placeholder="Leave empty for room price"
+                                                value={rentAmount}
+                                                onChange={(e) => {
+                                                    setRentAmount(
+                                                        e.target.value,
+                                                    );
+
+                                                    if (
+                                                        selectedRate &&
+                                                        Number.parseFloat(
+                                                            e.target.value,
+                                                        ) !==
+                                                            Number.parseFloat(
+                                                                selectedRate.amount,
+                                                            )
+                                                    ) {
+                                                        setIsCustom(true);
+                                                    } else {
+                                                        setIsCustom(false);
+                                                    }
+                                                }}
                                             />
+                                            {isCustom && (
+                                                <p className="text-xs font-medium text-amber-600">
+                                                    Custom Price ⚠️ This lease
+                                                    differs from room default
+                                                    pricing.
+                                                </p>
+                                            )}
+                                            {monthlyEquivalent && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    {monthlyEquivalent}
+                                                </p>
+                                            )}
                                             <InputError
-                                                message={errors.monthly_rent}
+                                                message={errors.rent_amount}
                                             />
                                         </div>
                                         <div className="grid gap-2">

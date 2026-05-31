@@ -54,12 +54,15 @@ export default function Dashboard({ stats }: { stats: Stats }) {
 
                 {/* Property breakdown */}
                 <div>
-                    <h2 className="mb-4 text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
                         Per Property
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {stats.properties.map((property) => (
-                            <PropertyCard key={property.id} property={property} />
+                            <PropertyCard
+                                key={property.id}
+                                property={property}
+                            />
                         ))}
                     </div>
                 </div>
@@ -83,16 +86,18 @@ function StatCard({
         <div
             className={`rounded-xl border border-sidebar-border/70 p-6 dark:border-sidebar-border ${bgColor}`}
         >
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                 {label}
             </p>
-            <p className={`mt-2 text-3xl font-bold tabular-nums ${isPercentage ? 'text-indigo-600 dark:text-indigo-400' : ''}`}>
+            <p
+                className={`mt-2 text-3xl font-bold tabular-nums ${isPercentage ? 'text-indigo-600 dark:text-indigo-400' : ''}`}
+            >
                 {isPercentage ? `${value}%` : value}
             </p>
             {isPercentage && (
                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-indigo-200 dark:bg-indigo-900/40">
                     <div
-                        className="h-full rounded-full bg-indigo-600 dark:bg-indigo-400 transition-all"
+                        className="h-full rounded-full bg-indigo-600 transition-all dark:bg-indigo-400"
                         style={{ width: `${value}%` }}
                     />
                 </div>
@@ -109,25 +114,25 @@ function PropertyCard({ property }: { property: PropertyStats }) {
             <div className="mt-4 grid grid-cols-2 gap-4">
                 <div>
                     <p className="text-xs text-muted-foreground">Occupied</p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums text-blue-600 dark:text-blue-400">
+                    <p className="mt-0.5 text-lg font-bold text-blue-600 tabular-nums dark:text-blue-400">
                         {property.occupied_rooms}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-muted-foreground">Available</p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums text-green-600 dark:text-green-400">
+                    <p className="mt-0.5 text-lg font-bold text-green-600 tabular-nums dark:text-green-400">
                         {property.available_rooms}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-muted-foreground">Maintenance</p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                    <p className="mt-0.5 text-lg font-bold text-amber-600 tabular-nums dark:text-amber-400">
                         {property.maintenance_rooms}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-muted-foreground">Occupancy</p>
-                    <p className="mt-0.5 text-lg font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
+                    <p className="mt-0.5 text-lg font-bold text-indigo-600 tabular-nums dark:text-indigo-400">
                         {property.occupancy_percentage}%
                     </p>
                 </div>
