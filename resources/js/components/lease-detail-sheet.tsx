@@ -24,7 +24,11 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string | null;
+    rent_amount: string | null;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -186,18 +190,24 @@ export default function LeaseDetailSheet({
                                 <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                                     Rent
                                 </h3>
-                                <div className="flex items-start gap-4 rounded-lg border p-4">
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-xs text-muted-foreground">Monthly rent</p>
-                                        <p className="mt-1 text-sm tabular-nums">
-                                            {formatPrice(lease.monthly_rent)}
-                                        </p>
+                                <div className="space-y-2 rounded-lg border p-4">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Billing rate</span>
+                                        <span className="tabular-nums">
+                                            {formatPrice(lease.rent_amount)}{lease.billing_label}
+                                        </span>
                                     </div>
-                                    <div className="shrink-0 text-right">
-                                        <p className="text-xs text-muted-foreground">Due every month</p>
-                                        <p className="mt-1 text-sm tabular-nums">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Monthly equivalent</span>
+                                        <span className="tabular-nums">
+                                            {formatPrice(lease.monthly_equivalent)}/mo
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Due every month</span>
+                                        <span className="tabular-nums">
                                             {DUE_DAY_LABELS[lease.rent_due_day] ?? lease.rent_due_day}
-                                        </p>
+                                        </span>
                                     </div>
                                 </div>
                             </section>

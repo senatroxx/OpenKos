@@ -1,8 +1,17 @@
 import { Form } from '@inertiajs/react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Sheet,
     SheetContent,
@@ -12,23 +21,23 @@ import {
 } from '@/components/ui/sheet';
 import properties from '@/routes/properties';
 
-const STATUS_OPTIONS = [
-    { value: 'available', label: 'Available' },
-    { value: 'occupied', label: 'Occupied' },
-    { value: 'maintenance', label: 'Maintenance' },
-    { value: 'unavailable', label: 'Unavailable' },
-];
+type RoomRate = {
+    id?: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
 
 type Room = {
     id: number;
     name: string;
     floor: string | null;
     description: string | null;
-    base_price: string;
     size_sqm: string | null;
     capacity: number;
     status: string;
     notes: string | null;
+    active_rates: RoomRate[];
 };
 
 type Property = {
@@ -36,6 +45,14 @@ type Property = {
     name: string;
     slug: string;
     city: string | null;
+};
+
+const BILLING_UNITS = ['day', 'week', 'month', 'year'] as const;
+
+const emptyRate: RoomRate = {
+    billing_interval: 1,
+    billing_unit: 'month',
+    amount: '',
 };
 
 export default function RoomFormSheet({
@@ -54,6 +71,26 @@ export default function RoomFormSheet({
         ? properties.rooms.update.url({ property: property.id, room: room!.id })
         : properties.rooms.store.url(property.id);
     const formMethod = isEdit ? 'put' as const : 'post' as const;
+
+    const [rates, setRates] = useState<RoomRate[]>(() =>
+        room?.active_rates?.length ? room.active_rates : [emptyRate],
+    );
+
+    function updateRate(index: number, field: keyof RoomRate, value: string | number) {
+        setRates((prev) => {
+            const next = [...prev];
+            next[index] = { ...next[index], [field]: value };
+            return next;
+        });
+    }
+
+    function addRate() {
+        setRates((prev) => [...prev, { ...emptyRate }]);
+    }
+
+    function removeRate(index: number) {
+        setRates((prev) => prev.filter((_, i) => i !== index));
+    }
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -108,20 +145,103 @@ export default function RoomFormSheet({
                                     </div>
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="base_price">Base Price (IDR)</Label>
-                                    <Input
-                                        id="base_price"
-                                        name="base_price"
-                                        type="number"
-                                        min={0}
-                                        step="0.01"
-                                        required
-                                        defaultValue={room?.base_price ?? ''}
-                                        placeholder="e.g. 1000000"
-                                    />
-                                    <InputError message={errors.base_price} />
-                                </div>
+                                {/* Pricing Rates */}
+                                <section>
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                            Pricing Rates
+                                        </h3>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={addRate}
+                                        >
+                                            <Plus className="mr-1 size-3" />
+                                            Add Rate
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {rates.map((rate, index) => (
+                                            <div
+                                                key={index}
+                                                className="flex items-end gap-2 rounded-lg border p-3"
+                                            >
+                                                <div className="flex-1 grid gap-1">
+                                                    <Label className="text-xs">Amount (IDR)</Label>
+                                                    <input
+                                                        type="hidden"
+                                                        name={`rates[${index}][id]`}
+                                                        value={rate.id ?? ''}
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        name={`rates[${index}][amount]`}
+                                                        min={0}
+                                                        step="0.01"
+                                                        required
+                                                        value={rate.amount}
+                                                        onChange={(e) => updateRate(index, 'amount', e.target.value)}
+                                                        placeholder="e.g. 1000000"
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                    />
+                                                </div>
+                                                <div className="w-20 grid gap-1">
+                                                    <Label className="text-xs">Every</Label>
+                                                    <input
+                                                        type="hidden"
+                                                        name={`rates[${index}][billing_interval]`}
+                                                        value={rate.billing_interval}
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        name={`rates[${index}][billing_interval]`}
+                                                        min={1}
+                                                        value={rate.billing_interval}
+                                                        onChange={(e) => updateRate(index, 'billing_interval', Number.parseInt(e.target.value) || 1)}
+                                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                                    />
+                                                </div>
+                                                <div className="w-28 grid gap-1">
+                                                    <Label className="text-xs">Unit</Label>
+                                                    <input
+                                                        type="hidden"
+                                                        name={`rates[${index}][billing_unit]`}
+                                                        value={rate.billing_unit}
+                                                    />
+                                                    <Select
+                                                        value={rate.billing_unit}
+                                                        onValueChange={(val) => updateRate(index, 'billing_unit', val)}
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {BILLING_UNITS.map((unit) => (
+                                                                <SelectItem key={unit} value={unit}>
+                                                                    {unit}{rate.billing_interval > 1 ? 's' : ''}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                {rates.length > 1 && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-9 shrink-0 text-destructive"
+                                                        onClick={() => removeRate(index)}
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <InputError message={errors.rates} />
+                                </section>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="grid gap-2">
@@ -146,7 +266,12 @@ export default function RoomFormSheet({
                                             defaultValue={room?.status ?? 'available'}
                                             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                                         >
-                                            {STATUS_OPTIONS.map((opt) => (
+                                            {[
+                                                { value: 'available', label: 'Available' },
+                                                { value: 'occupied', label: 'Occupied' },
+                                                { value: 'maintenance', label: 'Maintenance' },
+                                                { value: 'unavailable', label: 'Unavailable' },
+                                            ].map((opt) => (
                                                 <option key={opt.value} value={opt.value}>
                                                     {opt.label}
                                                 </option>

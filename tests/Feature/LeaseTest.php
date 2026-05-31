@@ -104,7 +104,9 @@ describe('CRUD', function () {
         $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
             'tenant_id' => $tenant->id,
             'start_date' => '2026-06-01',
-            'monthly_rent' => 1_500_000,
+            'rent_amount' => 1_500_000,
+            'billing_unit' => 'month',
+            'billing_interval' => 1,
             'deposit_amount' => 1_000_000,
             'rent_due_day' => 5,
         ]);
@@ -114,13 +116,13 @@ describe('CRUD', function () {
         expect($lease)->not->toBeNull();
         expect($lease->tenant_id)->toBe($tenant->id);
         expect($lease->room_id)->toBe($room->id);
-        expect($lease->monthly_rent)->toBe('1500000.00');
+        expect($lease->rent_amount)->toBe('1500000.00');
         expect($lease->deposit_amount)->toBe('1000000.00');
         expect($lease->rent_due_day)->toBe(5);
         expect($lease->status)->toBe('active');
     });
 
-    it('uses room base price when monthly rent is not specified', function () {
+    it('uses room base price when rent amount is not specified', function () {
         [$property, $room] = createPropertyWithRoom();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
@@ -132,7 +134,7 @@ describe('CRUD', function () {
 
         $lease = Lease::first();
 
-        expect($lease->monthly_rent)->toBe($room->base_price);
+        expect($lease->rent_amount)->toBe($room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount'));
     });
 
     it('validates required fields on create', function () {
@@ -172,17 +174,17 @@ describe('CRUD', function () {
         $lease = Lease::factory()->create([
             'tenant_id' => $tenant->id,
             'room_id' => $room->id,
-            'monthly_rent' => 1_000_000,
+            'rent_amount' => 1_000_000,
         ]);
 
         $this->actingAs($user)
             ->put(route('properties.rooms.leases.update', [$property, $room, $lease]), [
-                'monthly_rent' => 2_000_000,
+                'rent_amount' => 2_000_000,
             ]);
 
         $lease->refresh();
 
-        expect($lease->monthly_rent)->toBe('2000000.00');
+        expect($lease->rent_amount)->toBe('2000000.00');
     });
 });
 
@@ -225,7 +227,7 @@ describe('move room', function () {
             'tenant_id' => $tenant->id,
             'room_id' => $roomA->id,
             'status' => 'active',
-            'monthly_rent' => 1_000_000,
+            'rent_amount' => 1_000_000,
             'deposit_amount' => 500_000,
             'deposit_paid_at' => now(),
             'rent_due_day' => 5,
@@ -246,7 +248,7 @@ describe('move room', function () {
         expect($newLease)->not->toBeNull();
         expect($newLease->tenant_id)->toBe($tenant->id);
         expect($newLease->status)->toBe('active');
-        expect($newLease->monthly_rent)->toBe('1000000.00');
+        expect($newLease->rent_amount)->toBe('1000000.00');
         expect($newLease->deposit_amount)->toBe('500000.00');
     });
 
@@ -289,7 +291,7 @@ describe('move room', function () {
 
         $this->actingAs($admin)
             ->put(route('properties.rooms.leases.update', [$propertyB, $roomB, $lease]), [
-                'monthly_rent' => 9_999_999,
+                'rent_amount' => 9_999_999,
             ])
             ->assertForbidden();
     });
