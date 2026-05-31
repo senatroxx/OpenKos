@@ -413,7 +413,7 @@ export default function Index({
                                         { key: 'property_name', label: 'Property' },
                                         { key: 'start_date', label: 'Start' },
                                         { key: 'end_date', label: 'End' },
-                                        { key: 'monthly_rent', label: 'Rent' },
+                                        { key: 'rent_amount', label: 'Rent' },
                                         { key: 'status', label: 'Status' },
                                     ].map(({ key, label }) => (
                                         <th

@@ -78,8 +78,9 @@ class Lease extends Model
     {
         $amount = $this->rent_amount ? (float) $this->rent_amount : 0;
         $interval = $this->billing_interval ?? 1;
+        $unit = $this->billing_unit ?? BillingUnit::Month;
 
-        return match ($this->billing_unit) {
+        return match ($unit) {
             BillingUnit::Day => number_format($amount * 365 / 12 / $interval, 2, '.', ''),
             BillingUnit::Week => number_format($amount * 52 / 12 / $interval, 2, '.', ''),
             BillingUnit::Month => number_format($amount / $interval, 2, '.', ''),

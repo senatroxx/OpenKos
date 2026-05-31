@@ -190,11 +190,6 @@ export default function RoomFormSheet({
                                                 <div className="w-20 grid gap-1">
                                                     <Label className="text-xs">Every</Label>
                                                     <input
-                                                        type="hidden"
-                                                        name={`rates[${index}][billing_interval]`}
-                                                        value={rate.billing_interval}
-                                                    />
-                                                    <input
                                                         type="number"
                                                         name={`rates[${index}][billing_interval]`}
                                                         min={1}
@@ -220,7 +215,7 @@ export default function RoomFormSheet({
                                                         <SelectContent>
                                                             {BILLING_UNITS.map((unit) => (
                                                                 <SelectItem key={unit} value={unit}>
-                                                                    {unit}{rate.billing_interval > 1 ? 's' : ''}
+                                                                    {unit}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
