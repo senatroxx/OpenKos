@@ -9,31 +9,28 @@ import {
 } from '@/components/ui/sheet';
 import properties from '@/routes/properties';
 
-const STATUS_LABELS: Record<string, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-    unavailable: 'Unavailable',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    available: 'bg-green-600',
-    occupied: 'bg-blue-600',
-    maintenance: 'bg-amber-500',
-    unavailable: 'bg-gray-400',
-};
-
 type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
 };
 
+type RoomRate = {
+    id: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
+
 type LeaseInfo = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string;
+    rent_amount: string;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -49,7 +46,7 @@ type Room = {
     name: string;
     floor: string | null;
     description: string | null;
-    base_price: string;
+    active_rates: RoomRate[];
     size_sqm: string | null;
     capacity: number;
     status: string;
@@ -75,6 +72,20 @@ function formatPrice(cents: string): string {
         maximumFractionDigits: 0,
     }).format(num);
 }
+
+const STATUS_LABELS: Record<string, string> = {
+    available: 'Available',
+    occupied: 'Occupied',
+    maintenance: 'Maintenance',
+    unavailable: 'Unavailable',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+    available: 'bg-green-600',
+    occupied: 'bg-blue-600',
+    maintenance: 'bg-amber-500',
+    unavailable: 'bg-gray-400',
+};
 
 const DUE_DAY_LABELS: Record<number, string> = {
     1: '1st',
@@ -106,7 +117,8 @@ export default function RoomDetailSheet({
     onMoveRoom?: () => void;
 }) {
     const activeLease = room?.leases?.[0];
-    const isOccupied = activeLease !== undefined && (room?.active_leases ?? 0) > 0;
+    const isOccupied =
+        activeLease !== undefined && (room?.active_leases ?? 0) > 0;
     const tenantName = activeLease?.tenant?.name ?? '—';
     const phone = activeLease?.tenant?.phone;
 
@@ -118,11 +130,11 @@ export default function RoomDetailSheet({
                 </SheetHeader>
 
                 {room && (
-                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-6">
                             {/* Status */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
                                 <Badge
@@ -134,63 +146,133 @@ export default function RoomDetailSheet({
 
                             {/* Room Details */}
                             <section>
-                                <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Room Details
                                 </h3>
                                 <div className="space-y-2 rounded-lg border p-4">
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Floor</span>
+                                        <span className="text-muted-foreground">
+                                            Floor
+                                        </span>
                                         <span>{room.floor ?? '—'}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Size</span>
+                                        <span className="text-muted-foreground">
+                                            Size
+                                        </span>
                                         <span className="tabular-nums">
-                                            {room.size_sqm ? `${room.size_sqm} m²` : '—'}
+                                            {room.size_sqm
+                                                ? `${room.size_sqm} m²`
+                                                : '—'}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Capacity</span>
-                                        <span className="tabular-nums">{room.capacity}</span>
+                                        <span className="text-muted-foreground">
+                                            Capacity
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {room.capacity}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Base price</span>
-                                        <span className="tabular-nums">{formatPrice(room.base_price)}</span>
-                                    </div>
+                                    {room.active_rates &&
+                                        room.active_rates.length > 0 && (
+                                            <div className="border-t pt-2">
+                                                <p className="mb-2 text-xs text-muted-foreground">
+                                                    Pricing
+                                                </p>
+                                                {room.active_rates.map(
+                                                    (rate, i) => (
+                                                        <div
+                                                            key={i}
+                                                            className="flex items-center justify-between text-sm"
+                                                        >
+                                                            <span className="text-muted-foreground">
+                                                                {
+                                                                    rate.billing_interval
+                                                                }{' '}
+                                                                {
+                                                                    rate.billing_unit
+                                                                }
+                                                                {rate.billing_interval >
+                                                                1
+                                                                    ? 's'
+                                                                    : ''}
+                                                            </span>
+                                                            <span className="tabular-nums">
+                                                                {formatPrice(
+                                                                    rate.amount,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
                                 </div>
                             </section>
 
                             {/* Current Occupancy */}
                             {isOccupied && activeLease && (
                                 <section>
-                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                         Current Occupancy
                                     </h3>
-                                    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                                    <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm text-muted-foreground">Tenant</span>
+                                            <span className="text-sm text-muted-foreground">
+                                                Tenant
+                                            </span>
                                             <div className="text-right">
-                                                <p className="text-sm font-medium">{tenantName}</p>
+                                                <p className="text-sm font-medium">
+                                                    {tenantName}
+                                                </p>
                                                 {phone && (
-                                                    <p className="text-xs text-muted-foreground">{phone}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {phone}
+                                                    </p>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Monthly rent</span>
-                                            <span className="tabular-nums font-medium">
-                                                {formatPrice(activeLease.monthly_rent)}/mo
+                                            <span className="text-muted-foreground">
+                                                Billing rate
+                                            </span>
+                                            <span className="font-medium tabular-nums">
+                                                {formatPrice(
+                                                    activeLease.rent_amount,
+                                                )}
+                                                {activeLease.billing_label}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Deposit</span>
+                                            <span className="text-muted-foreground">
+                                                Monthly equivalent
+                                            </span>
                                             <span className="tabular-nums">
-                                                {formatPrice(activeLease.deposit_amount)}
+                                                {formatPrice(
+                                                    activeLease.monthly_equivalent,
+                                                )}
+                                                /mo
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Due day</span>
+                                            <span className="text-muted-foreground">
+                                                Deposit
+                                            </span>
                                             <span className="tabular-nums">
-                                                {DUE_DAY_LABELS[activeLease.rent_due_day] ?? activeLease.rent_due_day}
+                                                {formatPrice(
+                                                    activeLease.deposit_amount,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                Due day
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {DUE_DAY_LABELS[
+                                                    activeLease.rent_due_day
+                                                ] ?? activeLease.rent_due_day}
                                             </span>
                                         </div>
                                     </div>
@@ -200,10 +282,10 @@ export default function RoomDetailSheet({
                             {/* Description */}
                             {room.description && (
                                 <section>
-                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                         Description
                                     </h3>
-                                    <p className="text-sm whitespace-pre-wrap rounded-lg border p-4">
+                                    <p className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
                                         {room.description}
                                     </p>
                                 </section>
@@ -212,10 +294,10 @@ export default function RoomDetailSheet({
                             {/* Notes */}
                             {room.notes && (
                                 <section>
-                                    <h3 className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                         Notes
                                     </h3>
-                                    <p className="text-sm whitespace-pre-wrap rounded-lg border p-4">
+                                    <p className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
                                         {room.notes}
                                     </p>
                                 </section>
@@ -229,7 +311,10 @@ export default function RoomDetailSheet({
                                 </Button>
                             )}
                             {isOccupied && onMoveOut && (
-                                <Button variant="destructive" onClick={onMoveOut}>
+                                <Button
+                                    variant="destructive"
+                                    onClick={onMoveOut}
+                                >
                                     Move Out Tenant
                                 </Button>
                             )}
@@ -259,7 +344,10 @@ export default function RoomDetailSheet({
                                     Lease History
                                 </Button>
                             )}
-                            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+                            <Button
+                                variant="ghost"
+                                onClick={() => onOpenChange(false)}
+                            >
                                 Close
                             </Button>
                         </div>

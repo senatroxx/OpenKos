@@ -36,13 +36,19 @@ export default function TenantFormSheet({
     const formAction = isEdit
         ? tenants.update.url(tenant!.id)
         : tenants.store.url();
-    const formMethod = isEdit ? 'put' as const : 'post' as const;
+    const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
     return (
-        <Sheet key={tenant?.id ?? 'new'} open={open} onOpenChange={onOpenChange}>
+        <Sheet
+            key={tenant?.id ?? 'new'}
+            open={open}
+            onOpenChange={onOpenChange}
+        >
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>{isEdit ? 'Edit Tenant' : 'New Tenant'}</SheetTitle>
+                    <SheetTitle>
+                        {isEdit ? 'Edit Tenant' : 'New Tenant'}
+                    </SheetTitle>
                     <SheetDescription>
                         {isEdit
                             ? 'Update tenant details'
@@ -51,7 +57,11 @@ export default function TenantFormSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form action={formAction} method={formMethod} onSuccess={() => onOpenChange(false)}>
+                    <Form
+                        action={formAction}
+                        method={formMethod}
+                        onSuccess={() => onOpenChange(false)}
+                    >
                         {({ processing, errors }) => (
                             <div className="space-y-6 pt-4">
                                 <div className="grid gap-2">
@@ -78,14 +88,20 @@ export default function TenantFormSheet({
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="id_card_number">ID Card Number (KTP)</Label>
+                                    <Label htmlFor="id_card_number">
+                                        ID Card Number (KTP)
+                                    </Label>
                                     <Input
                                         id="id_card_number"
                                         name="id_card_number"
-                                        defaultValue={tenant?.id_card_number ?? ''}
+                                        defaultValue={
+                                            tenant?.id_card_number ?? ''
+                                        }
                                         placeholder="e.g. 3273010203040005"
                                     />
-                                    <InputError message={errors.id_card_number} />
+                                    <InputError
+                                        message={errors.id_card_number}
+                                    />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -96,10 +112,17 @@ export default function TenantFormSheet({
                                         <Input
                                             id="emergency_contact_name"
                                             name="emergency_contact_name"
-                                            defaultValue={tenant?.emergency_contact_name ?? ''}
+                                            defaultValue={
+                                                tenant?.emergency_contact_name ??
+                                                ''
+                                            }
                                             placeholder="e.g. Siti Nurhaliza"
                                         />
-                                        <InputError message={errors.emergency_contact_name} />
+                                        <InputError
+                                            message={
+                                                errors.emergency_contact_name
+                                            }
+                                        />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -109,10 +132,17 @@ export default function TenantFormSheet({
                                         <Input
                                             id="emergency_contact_phone"
                                             name="emergency_contact_phone"
-                                            defaultValue={tenant?.emergency_contact_phone ?? ''}
+                                            defaultValue={
+                                                tenant?.emergency_contact_phone ??
+                                                ''
+                                            }
                                             placeholder="e.g. 081234567891"
                                         />
-                                        <InputError message={errors.emergency_contact_phone} />
+                                        <InputError
+                                            message={
+                                                errors.emergency_contact_phone
+                                            }
+                                        />
                                     </div>
                                 </div>
 
@@ -123,19 +153,25 @@ export default function TenantFormSheet({
                                         name="notes"
                                         defaultValue={tenant?.notes ?? ''}
                                         placeholder="Additional notes"
-                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     />
                                     <InputError message={errors.notes} />
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <input type="hidden" name="is_active" value="0" />
+                                    <input
+                                        type="hidden"
+                                        name="is_active"
+                                        value="0"
+                                    />
                                     <input
                                         id="is_active"
                                         name="is_active"
                                         type="checkbox"
                                         value="1"
-                                        defaultChecked={tenant?.is_active ?? true}
+                                        defaultChecked={
+                                            tenant?.is_active ?? true
+                                        }
                                         className="rounded border-input"
                                     />
                                     <Label htmlFor="is_active">Active</Label>

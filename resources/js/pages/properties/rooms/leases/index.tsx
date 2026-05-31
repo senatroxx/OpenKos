@@ -16,7 +16,11 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string | null;
+    rent_amount: string | null;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -32,7 +36,11 @@ type Lease = {
         id: number;
         name: string;
         property_id: number;
-        property: { id: number; name: string; city: { name: string } | null } | null;
+        property: {
+            id: number;
+            name: string;
+            city: { name: string } | null;
+        } | null;
     } | null;
 };
 
@@ -43,18 +51,29 @@ type Property = {
     city: string | null;
 };
 
+type RoomRate = {
+    id: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
+
 type Room = {
     id: number;
     name: string;
     floor: string | null;
-    base_price: string;
+    active_rates: RoomRate[];
 };
 
 type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 type PageProps = {
@@ -101,7 +120,12 @@ const STATUS_LABELS: Record<string, string> = {
     terminated: 'Terminated',
 };
 
-export default function Index({ property, room, leases, availableRooms: _availableRooms }: PageProps) {
+export default function Index({
+    property,
+    room,
+    leases,
+    availableRooms: _availableRooms,
+}: PageProps) {
     const backUrl = properties.rooms.index.url(property);
 
     const [detailLease, setDetailLease] = useState<Lease | null>(null);
@@ -142,30 +166,46 @@ export default function Index({ property, room, leases, availableRooms: _availab
                     <Heading
                         title={`${room.name} — Lease History`}
                         description={
-                            room.floor
-                                ? `Floor ${room.floor} · ${formatPrice(room.base_price)}/mo`
-                                : `${formatPrice(room.base_price)}/mo`
+                            room.floor ? `Floor ${room.floor}` : undefined
                         }
                     />
                 </div>
 
                 {leases.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center rounded-lg border py-16">
-                        <p className="text-muted-foreground">No lease history for this room.</p>
+                        <p className="text-muted-foreground">
+                            No lease history for this room.
+                        </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto rounded-lg border">
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b bg-muted/50 text-left text-muted-foreground">
-                                    <th className="px-4 py-3 font-medium">Tenant</th>
-                                    <th className="px-4 py-3 font-medium">Start</th>
-                                    <th className="px-4 py-3 font-medium">End</th>
-                                    <th className="px-4 py-3 font-medium">Rent</th>
-                                    <th className="px-4 py-3 font-medium">Deposit</th>
-                                    <th className="px-4 py-3 font-medium">Due Day</th>
-                                    <th className="px-4 py-3 font-medium">Status</th>
-                                    <th className="px-4 py-3 font-medium">Termination</th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Tenant
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Start
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        End
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Rent
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Deposit
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Due Day
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Status
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Termination
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -177,7 +217,8 @@ export default function Index({ property, room, leases, availableRooms: _availab
                                     >
                                         <td className="px-4 py-3">
                                             <p className="font-medium">
-                                                {lease.tenant?.name ?? 'Unknown'}
+                                                {lease.tenant?.name ??
+                                                    'Unknown'}
                                             </p>
                                             {lease.tenant?.phone && (
                                                 <p className="text-xs text-muted-foreground">
@@ -188,17 +229,25 @@ export default function Index({ property, room, leases, availableRooms: _availab
                                         <td className="px-4 py-3 tabular-nums">
                                             {formatDate(lease.start_date)}
                                         </td>
-                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                        <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                             {formatDate(lease.end_date)}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {formatPrice(lease.monthly_rent)}
+                                            {formatPrice(lease.rent_amount)}
+                                            {lease.billing_label}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            <div>{formatPrice(lease.deposit_amount)}</div>
+                                            <div>
+                                                {formatPrice(
+                                                    lease.deposit_amount,
+                                                )}
+                                            </div>
                                             {lease.deposit_refund_amount && (
                                                 <div className="text-xs text-muted-foreground">
-                                                    Refund: {formatPrice(lease.deposit_refund_amount)}
+                                                    Refund:{' '}
+                                                    {formatPrice(
+                                                        lease.deposit_refund_amount,
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
@@ -209,23 +258,30 @@ export default function Index({ property, room, leases, availableRooms: _availab
                                             <Badge
                                                 className={`${STATUS_COLORS[lease.status] ?? 'bg-gray-400'} text-white`}
                                             >
-                                                {STATUS_LABELS[lease.status] ?? lease.status}
+                                                {STATUS_LABELS[lease.status] ??
+                                                    lease.status}
                                             </Badge>
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             {lease.termination_date ? (
                                                 <div>
                                                     <p className="tabular-nums">
-                                                        {formatDate(lease.termination_date)}
+                                                        {formatDate(
+                                                            lease.termination_date,
+                                                        )}
                                                     </p>
                                                     {lease.termination_reason && (
                                                         <p className="text-xs text-muted-foreground">
-                                                            {lease.termination_reason}
+                                                            {
+                                                                lease.termination_reason
+                                                            }
                                                         </p>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <span className="text-muted-foreground">—</span>
+                                                <span className="text-muted-foreground">
+                                                    —
+                                                </span>
                                             )}
                                         </td>
                                     </tr>
@@ -240,7 +296,11 @@ export default function Index({ property, room, leases, availableRooms: _availab
                 lease={detailLease}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
-                onMoveOut={detailLease?.status === 'active' ? openMoveOutFromDetail : undefined}
+                onMoveOut={
+                    detailLease?.status === 'active'
+                        ? openMoveOutFromDetail
+                        : undefined
+                }
                 onEdit={detailLease ? openEditFromDetail : undefined}
             />
 
@@ -248,10 +308,10 @@ export default function Index({ property, room, leases, availableRooms: _availab
                 lease={
                     detailLease
                         ? {
-                            id: detailLease.id,
-                            tenant: detailLease.tenant,
-                            room: detailLease.room,
-                        }
+                              id: detailLease.id,
+                              tenant: detailLease.tenant,
+                              room: detailLease.room,
+                          }
                         : null
                 }
                 availableRooms={_availableRooms}

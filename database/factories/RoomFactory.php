@@ -6,6 +6,7 @@ use App\Enums\RoomStatus;
 use App\Models\Property;
 use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<Room>
@@ -26,6 +27,20 @@ class RoomFactory extends Factory
             'status' => RoomStatus::Available,
             'notes' => null,
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Room $room) {
+            if ($room->base_price) {
+                $room->rates()->create([
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'amount' => $room->base_price,
+                    'is_active' => DB::raw('true'),
+                ]);
+            }
+        });
     }
 
     public function occupied(): static

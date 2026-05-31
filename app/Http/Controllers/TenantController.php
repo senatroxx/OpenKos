@@ -2,15 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\BillingUnit;
 use App\Http\Requests\StoreTenantRequest;
 use App\Http\Requests\UpdateTenantRequest;
 use App\Models\Lease;
 use App\Models\Room;
+use App\Models\RoomRate;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -87,7 +90,10 @@ class TenantController extends Controller
             'room_id' => ['required', 'integer', 'exists:rooms,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
-            'monthly_rent' => ['nullable', 'numeric', 'min:0'],
+            'rent_amount' => ['nullable', 'numeric', 'min:0'],
+            'billing_interval' => ['nullable', 'integer', 'min:1', 'max:255'],
+            'billing_unit' => ['nullable', 'string', Rule::in(BillingUnit::values())],
+            'room_rate_id' => ['nullable', 'integer', 'exists:room_rates,id'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'deposit_paid_at' => ['nullable', 'date'],
             'rent_due_day' => ['nullable', 'integer', 'between:1,31'],
@@ -107,11 +113,19 @@ class TenantController extends Controller
             return back()->withErrors(['room_id' => __('Room already has an active lease.')]);
         }
 
+        $roomRate = isset($validated['room_rate_id']) ? RoomRate::find($validated['room_rate_id']) : null;
+        $rentAmount = $validated['rent_amount'] ?? $roomRate?->amount ?? $room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
+        $isCustomPrice = isset($validated['rent_amount']) && $roomRate && (float) $validated['rent_amount'] !== (float) $roomRate->amount;
+
         $room->leases()->create([
             'tenant_id' => $tenant->id,
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'] ?? null,
-            'monthly_rent' => $validated['monthly_rent'] ?? $room->base_price,
+            'rent_amount' => $rentAmount,
+            'billing_interval' => $validated['billing_interval'] ?? $roomRate?->billing_interval ?? 1,
+            'billing_unit' => $validated['billing_unit'] ?? $roomRate?->billing_unit ?? 'month',
+            'is_custom_price' => $isCustomPrice,
+            'room_rate_id' => $validated['room_rate_id'] ?? null,
             'deposit_amount' => $validated['deposit_amount'] ?? 0,
             'deposit_paid_at' => $validated['deposit_paid_at'] ?? null,
             'deposit_refund_amount' => null,
