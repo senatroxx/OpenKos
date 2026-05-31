@@ -26,7 +26,7 @@ class UpdateRoomRequest extends FormRequest
             ],
             'floor' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
-            'base_price' => ['required', 'numeric', 'min:0'],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
             'size_sqm' => ['nullable', 'numeric', 'min:0'],
             'capacity' => ['required', 'integer', 'min:0', 'max:255'],
             'status' => ['nullable', new Enum(RoomStatus::class)],

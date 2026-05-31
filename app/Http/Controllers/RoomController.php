@@ -26,7 +26,7 @@ class RoomController extends Controller
         $status = $request->query('status', '');
         $perPage = (int) $request->query('per_page', 15);
 
-        $sortable = ['name', 'floor', 'base_price', 'size_sqm', 'status', 'capacity'];
+        $sortable = ['name', 'floor', 'size_sqm', 'status', 'capacity'];
         $perPageOptions = [10, 15, 25, 50];
 
         if (! in_array($sort, $sortable)) {
@@ -45,7 +45,7 @@ class RoomController extends Controller
             ->withCount([
                 'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
             ])
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenant:id,name,phone')])
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenant:id,name,phone'), 'activeRates'])
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(floor)'), 'like', '%'.mb_strtolower($search).'%');
@@ -87,7 +87,18 @@ class RoomController extends Controller
     {
         $this->authorize('create', [Room::class, $property]);
 
-        $property->rooms()->create($request->validated());
+        $room = $property->rooms()->create($request->validated());
+
+        if ($request->filled('rates')) {
+            foreach ($request->rates as $rate) {
+                $room->rates()->create([
+                    'billing_interval' => $rate['billing_interval'],
+                    'billing_unit' => $rate['billing_unit'],
+                    'amount' => $rate['amount'],
+                    'is_active' => true,
+                ]);
+            }
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Room created.')]);
 
@@ -99,6 +110,30 @@ class RoomController extends Controller
         $this->authorize('update', $room);
 
         $room->update($request->validated());
+
+        if ($request->has('rates')) {
+            $keepIds = [];
+            foreach ($request->rates as $rate) {
+                if (isset($rate['id'])) {
+                    $room->rates()->where('id', $rate['id'])->update([
+                        'billing_interval' => $rate['billing_interval'],
+                        'billing_unit' => $rate['billing_unit'],
+                        'amount' => $rate['amount'],
+                        'is_active' => $rate['is_active'] ?? true,
+                    ]);
+                    $keepIds[] = $rate['id'];
+                } else {
+                    $new = $room->rates()->create([
+                        'billing_interval' => $rate['billing_interval'],
+                        'billing_unit' => $rate['billing_unit'],
+                        'amount' => $rate['amount'],
+                        'is_active' => true,
+                    ]);
+                    $keepIds[] = $new->id;
+                }
+            }
+            $room->rates()->whereNotIn('id', $keepIds)->delete();
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Room updated.')]);
 

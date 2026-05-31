@@ -43,7 +43,11 @@ type LeaseInfo = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string;
+    rent_amount: string;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -54,12 +58,19 @@ type LeaseInfo = {
     tenant: TenantInfo | null;
 };
 
+type RoomRate = {
+    id: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+};
+
 type Room = {
     id: number;
     name: string;
     floor: string | null;
     description: string | null;
-    base_price: string;
+    active_rates: RoomRate[];
     size_sqm: string | null;
     capacity: number;
     status: string;
@@ -102,7 +113,7 @@ type PageProps = {
     per_page?: number;
 };
 
-const SORTABLE = ['name', 'floor', 'base_price', 'size_sqm', 'status', 'capacity'] as const;
+const SORTABLE = ['name', 'floor', 'size_sqm', 'status', 'capacity'] as const;
 
 const STATUS_LABELS: Record<string, string> = {
     available: 'Available',
@@ -415,16 +426,15 @@ export default function Index({
                                                 ? 'Name'
                                                 : col === 'floor'
                                                   ? 'Floor'
-                                                  : col === 'base_price'
-                                                    ? 'Price'
-                                                    : col === 'size_sqm'
-                                                      ? 'Size'
-                                                      : col === 'status'
-                                                        ? 'Status'
-                                                        : 'Capacity'}
+                                                  : col === 'size_sqm'
+                                                    ? 'Size'
+                                                    : col === 'status'
+                                                      ? 'Status'
+                                                      : 'Capacity'}
                                             <SortIcon column={col} />
                                         </th>
                                     ))}
+                                    <th className="px-4 py-3 font-medium">Pricing</th>
                                     <th className="px-4 py-3 font-medium">Tenant</th>
                                     <th className="w-12 px-4 py-3" />
                                 </tr>
@@ -444,9 +454,6 @@ export default function Index({
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 {room.floor ?? '—'}
                                             </td>
-                                            <td className="px-4 py-3 tabular-nums">
-                                                {formatPrice(room.base_price)}
-                                            </td>
                                             <td className="px-4 py-3 tabular-nums text-muted-foreground">
                                                 {room.size_sqm ? `${room.size_sqm} m²` : '—'}
                                             </td>
@@ -458,6 +465,11 @@ export default function Index({
                                                 </Badge>
                                             </td>
                                             <td className="px-4 py-3 tabular-nums">{room.capacity}</td>
+                                            <td className="px-4 py-3 tabular-nums">
+                                                {room.active_rates?.[0]
+                                                    ? formatPrice(room.active_rates[0].amount)
+                                                    : '—'}
+                                            </td>
                                             <td className="px-4 py-3">
                                                 {hasActiveLease ? (
                                                     <span className="text-sm">

@@ -61,7 +61,11 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string | null;
+    rent_amount: string | null;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -465,7 +469,7 @@ export default function Index({
                                                 {formatDate(lease.end_date)}
                                             </td>
                                             <td className="px-4 py-3 tabular-nums">
-                                                {formatPrice(lease.monthly_rent)}
+                                                {formatPrice(lease.rent_amount)}{lease.billing_label}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge

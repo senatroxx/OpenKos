@@ -36,7 +36,11 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string | null;
+    rent_amount: string | null;
+    billing_interval: number;
+    billing_unit: string;
+    monthly_equivalent: string;
+    billing_label: string;
     deposit_amount: string;
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
@@ -141,18 +145,18 @@ export default function LeaseEditSheet({
 
                                     <div className="flex items-start gap-4">
                                         <div className="min-w-0 flex-1">
-                                            <Label htmlFor="monthly_rent">
-                                                Monthly Rent (IDR)
+                                            <Label htmlFor="rent_amount">
+                                                Rent Amount (IDR)
                                             </Label>
                                             <Input
-                                                id="monthly_rent"
-                                                name="monthly_rent"
+                                                id="rent_amount"
+                                                name="rent_amount"
                                                 type="number"
                                                 min={0}
-                                                defaultValue={lease.monthly_rent ?? ''}
-                                                placeholder="Monthly rent amount"
+                                                defaultValue={lease.rent_amount ?? ''}
+                                                placeholder="Rent amount"
                                             />
-                                            <InputError message={errors.monthly_rent} />
+                                            <InputError message={errors.rent_amount} />
                                         </div>
 
                                         <div className="shrink-0">

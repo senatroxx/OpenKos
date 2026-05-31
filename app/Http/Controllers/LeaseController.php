@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateLeaseRequest;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Room;
+use App\Models\RoomRate;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,7 +39,7 @@ class LeaseController extends Controller
 
         return Inertia::render('properties/rooms/leases/index', [
             'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
-            'room' => $room->only('id', 'name', 'floor', 'base_price'),
+            'room' => $room->only('id', 'name', 'floor'),
             'leases' => $leases,
             'availableRooms' => $availableRooms,
         ]);
@@ -53,7 +54,7 @@ class LeaseController extends Controller
         $properties = $request->query('properties', '');
         $perPage = (int) $request->query('per_page', 15);
 
-        $sortable = ['tenant_name', 'room_name', 'property_name', 'start_date', 'end_date', 'monthly_rent', 'status', 'created_at'];
+        $sortable = ['tenant_name', 'room_name', 'property_name', 'start_date', 'end_date', 'rent_amount', 'status', 'created_at'];
         $perPageOptions = [10, 15, 25, 50];
 
         if (! in_array($sort, $sortable)) {
@@ -128,11 +129,19 @@ class LeaseController extends Controller
 
         $request->ensureRoomAvailable($room);
 
+        $roomRate = $request->room_rate_id ? RoomRate::find($request->room_rate_id) : null;
+        $rentAmount = $request->rent_amount ?? $roomRate?->amount ?? $room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
+        $isCustomPrice = $request->rent_amount !== null && $roomRate && (float) $request->rent_amount !== (float) $roomRate->amount;
+
         $lease = $room->leases()->create([
             'tenant_id' => $request->tenant_id,
             'start_date' => $request->start_date,
             'end_date' => $request->end_date,
-            'monthly_rent' => $request->monthly_rent ?? $room->base_price,
+            'rent_amount' => $rentAmount,
+            'billing_interval' => $request->billing_interval ?? $roomRate?->billing_interval ?? 1,
+            'billing_unit' => $request->billing_unit ?? $roomRate?->billing_unit ?? 'month',
+            'is_custom_price' => $isCustomPrice,
+            'room_rate_id' => $request->room_rate_id,
             'deposit_amount' => $request->deposit_amount ?? 0,
             'deposit_paid_at' => $request->deposit_paid_at,
             'deposit_refund_amount' => $request->deposit_refund_amount,
@@ -223,7 +232,10 @@ class LeaseController extends Controller
             $targetRoom->leases()->create([
                 'tenant_id' => $lease->tenant_id,
                 'start_date' => $validated['move_out_date'],
-                'monthly_rent' => $lease->monthly_rent ?? $targetRoom->base_price,
+                'rent_amount' => $lease->rent_amount,
+                'billing_interval' => $lease->billing_interval ?? 1,
+                'billing_unit' => $lease->billing_unit ?? 'month',
+                'is_custom_price' => $lease->is_custom_price,
                 'deposit_amount' => $lease->deposit_amount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'deposit_refund_amount' => null,
@@ -276,7 +288,10 @@ class LeaseController extends Controller
         $targetRoom->leases()->create([
             'tenant_id' => $lease->tenant_id,
             'start_date' => now(),
-            'monthly_rent' => $lease->monthly_rent ?? $targetRoom->base_price,
+            'rent_amount' => $lease->rent_amount,
+            'billing_interval' => $lease->billing_interval ?? 1,
+            'billing_unit' => $lease->billing_unit ?? 'month',
+            'is_custom_price' => $lease->is_custom_price,
             'deposit_amount' => $lease->deposit_amount,
             'deposit_paid_at' => $lease->deposit_paid_at,
             'deposit_refund_amount' => $lease->deposit_refund_amount,
