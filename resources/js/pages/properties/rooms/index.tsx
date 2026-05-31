@@ -105,7 +105,16 @@ type PageProps = {
         links: PaginationLinks[];
     };
     tenants: { id: number; name: string; phone: string }[];
-    availableRooms: { id: number; name: string; property_id: number; property: { id: number; name: string; city: { name: string } | null } | null }[];
+    availableRooms: {
+        id: number;
+        name: string;
+        property_id: number;
+        property: {
+            id: number;
+            name: string;
+            city: { name: string } | null;
+        } | null;
+    }[];
     sort?: string;
     direction?: string;
     search?: string;
@@ -166,7 +175,16 @@ export default function Index({
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
         tenant: { id: number; name: string; phone: string | null } | null;
-        room: { id: number; name: string; property_id: number; property: { id: number; name: string; city: { name: string } | null } | null } | null;
+        room: {
+            id: number;
+            name: string;
+            property_id: number;
+            property: {
+                id: number;
+                name: string;
+                city: { name: string } | null;
+            } | null;
+        } | null;
     } | null>(null);
     const [moveOutOpen, setMoveOutOpen] = useState(false);
 
@@ -255,7 +273,12 @@ export default function Index({
 
     function destroy(room: Room) {
         if (confirm('Are you sure you want to delete this room?')) {
-            router.delete(properties.rooms.destroy.url({ property: property.id, room: room.id }));
+            router.delete(
+                properties.rooms.destroy.url({
+                    property: property.id,
+                    room: room.id,
+                }),
+            );
         }
     }
 
@@ -316,7 +339,9 @@ export default function Index({
 
     function toggleSort(column: string) {
         const direction =
-            currentSort === column && currentDirection === 'asc' ? 'desc' : 'asc';
+            currentSort === column && currentDirection === 'asc'
+                ? 'desc'
+                : 'asc';
 
         applyFilters({ sort: column, direction, page: '' });
     }
@@ -327,7 +352,9 @@ export default function Index({
 
     function SortIcon({ column }: { column: string }) {
         if (currentSort !== column) {
-            return <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />;
+            return (
+                <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
+            );
         }
 
         return currentDirection === 'asc' ? (
@@ -337,7 +364,9 @@ export default function Index({
         );
     }
 
-    function getFilteredRoomsForMove(currentRoomId: number): { id: number; name: string }[] {
+    function getFilteredRoomsForMove(
+        currentRoomId: number,
+    ): { id: number; name: string }[] {
         return _availableRooms.filter((r) => r.id !== currentRoomId);
     }
 
@@ -390,18 +419,28 @@ export default function Index({
                     </div>
 
                     <div className="flex items-center gap-1 rounded-lg border p-1">
-                        {(['', 'available', 'occupied', 'maintenance', 'unavailable'] as const).map(
-                            (value) => (
-                                <Button
-                                    key={value}
-                                    variant={currentStatus === value ? 'default' : 'ghost'}
-                                    size="sm"
-                                    onClick={() => setStatusFilter(value)}
-                                >
-                                    {value === '' ? 'All' : STATUS_LABELS[value]}
-                                </Button>
-                            ),
-                        )}
+                        {(
+                            [
+                                '',
+                                'available',
+                                'occupied',
+                                'maintenance',
+                                'unavailable',
+                            ] as const
+                        ).map((value) => (
+                            <Button
+                                key={value}
+                                variant={
+                                    currentStatus === value
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                size="sm"
+                                onClick={() => setStatusFilter(value)}
+                            >
+                                {value === '' ? 'All' : STATUS_LABELS[value]}
+                            </Button>
+                        ))}
                     </div>
                 </div>
 
@@ -434,15 +473,20 @@ export default function Index({
                                             <SortIcon column={col} />
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3 font-medium">Pricing</th>
-                                    <th className="px-4 py-3 font-medium">Tenant</th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Pricing
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Tenant
+                                    </th>
                                     <th className="w-12 px-4 py-3" />
                                 </tr>
                             </thead>
                             <tbody>
                                 {data.data.map((room) => {
                                     const activeLease = room.leases?.[0];
-                                    const hasActiveLease = room.active_leases > 0 && activeLease;
+                                    const hasActiveLease =
+                                        room.active_leases > 0 && activeLease;
 
                                     return (
                                         <tr
@@ -450,30 +494,43 @@ export default function Index({
                                             className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
                                             onClick={() => openDetail(room)}
                                         >
-                                            <td className="px-4 py-3 font-medium">{room.name}</td>
+                                            <td className="px-4 py-3 font-medium">
+                                                {room.name}
+                                            </td>
                                             <td className="px-4 py-3 text-muted-foreground">
                                                 {room.floor ?? '—'}
                                             </td>
-                                            <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                                                {room.size_sqm ? `${room.size_sqm} m²` : '—'}
+                                            <td className="px-4 py-3 text-muted-foreground tabular-nums">
+                                                {room.size_sqm
+                                                    ? `${room.size_sqm} m²`
+                                                    : '—'}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge
                                                     className={`${STATUS_COLORS[room.status] ?? 'bg-gray-400'} text-white`}
                                                 >
-                                                    {STATUS_LABELS[room.status] ?? room.status}
+                                                    {STATUS_LABELS[
+                                                        room.status
+                                                    ] ?? room.status}
                                                 </Badge>
                                             </td>
-                                            <td className="px-4 py-3 tabular-nums">{room.capacity}</td>
+                                            <td className="px-4 py-3 tabular-nums">
+                                                {room.capacity}
+                                            </td>
                                             <td className="px-4 py-3 tabular-nums">
                                                 {room.active_rates?.[0]
-                                                    ? formatPrice(room.active_rates[0].amount)
+                                                    ? formatPrice(
+                                                          room.active_rates[0]
+                                                              .amount,
+                                                      )
                                                     : '—'}
                                             </td>
                                             <td className="px-4 py-3">
                                                 {hasActiveLease ? (
                                                     <span className="text-sm">
-                                                        {activeLease.tenant?.name ?? 'Occupied'}
+                                                        {activeLease.tenant
+                                                            ?.name ??
+                                                            'Occupied'}
                                                     </span>
                                                 ) : (
                                                     <span className="text-sm text-muted-foreground">
@@ -485,7 +542,9 @@ export default function Index({
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
                                                         asChild
-                                                        onClick={(e: React.MouseEvent) =>
+                                                        onClick={(
+                                                            e: React.MouseEvent,
+                                                        ) =>
                                                             e.stopPropagation()
                                                         }
                                                     >
@@ -499,12 +558,16 @@ export default function Index({
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent
                                                         align="end"
-                                                        onClick={(e: React.MouseEvent) =>
+                                                        onClick={(
+                                                            e: React.MouseEvent,
+                                                        ) =>
                                                             e.stopPropagation()
                                                         }
                                                     >
                                                         <DropdownMenuItem
-                                                            onClick={() => openDetail(room)}
+                                                            onClick={() =>
+                                                                openDetail(room)
+                                                            }
                                                         >
                                                             <Eye className="size-4" />
                                                             View
@@ -513,17 +576,28 @@ export default function Index({
                                                             <>
                                                                 <DropdownMenuItem
                                                                     onClick={() => {
-                                                                        setViewingRoom(room);
-                                                                        setDetailOpen(false);
+                                                                        setViewingRoom(
+                                                                            room,
+                                                                        );
+                                                                        setDetailOpen(
+                                                                            false,
+                                                                        );
                                                                         const lease =
-                                                                            room.leases?.[0];
+                                                                            room
+                                                                                .leases?.[0];
 
-                                                                        if (lease) {
+                                                                        if (
+                                                                            lease
+                                                                        ) {
                                                                             setMoveFromRoom(
                                                                                 room,
                                                                             );
-                                                                            setMoveLease(lease);
-                                                                            setMoveOpen(true);
+                                                                            setMoveLease(
+                                                                                lease,
+                                                                            );
+                                                                            setMoveOpen(
+                                                                                true,
+                                                                            );
                                                                         }
                                                                     }}
                                                                 >
@@ -537,25 +611,34 @@ export default function Index({
                                                             <>
                                                                 <DropdownMenuItem
                                                                     onClick={() => {
-                                                                        setAssignRoom(room);
-                                                                        setLeaseFormOpen(true);
+                                                                        setAssignRoom(
+                                                                            room,
+                                                                        );
+                                                                        setLeaseFormOpen(
+                                                                            true,
+                                                                        );
                                                                     }}
                                                                 >
                                                                     <DoorOpen className="size-4" />
-                                                                    Assign Tenant
+                                                                    Assign
+                                                                    Tenant
                                                                 </DropdownMenuItem>
                                                                 <DropdownMenuSeparator />
                                                             </>
                                                         )}
                                                         <DropdownMenuItem
-                                                            onClick={() => openEdit(room)}
+                                                            onClick={() =>
+                                                                openEdit(room)
+                                                            }
                                                         >
                                                             <Pencil className="size-4" />
                                                             Edit
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             variant="destructive"
-                                                            onClick={() => destroy(room)}
+                                                            onClick={() =>
+                                                                destroy(room)
+                                                            }
                                                         >
                                                             <Trash2 className="size-4" />
                                                             Delete
@@ -572,13 +655,16 @@ export default function Index({
                         <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
                             <div className="flex items-center gap-4">
                                 <p className="text-muted-foreground">
-                                    Showing {data.from} to {data.to} of {data.total} rooms
+                                    Showing {data.from} to {data.to} of{' '}
+                                    {data.total} rooms
                                 </p>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground text-xs">Per page</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Per page
+                                    </span>
                                     <select
-                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         value={currentPerPage}
                                         onChange={(e) =>
                                             applyFilters({
@@ -601,19 +687,29 @@ export default function Index({
                                     variant="outline"
                                     size="sm"
                                     disabled={data.current_page === 1}
-                                    onClick={() => goToPage(data.current_page - 1)}
+                                    onClick={() =>
+                                        goToPage(data.current_page - 1)
+                                    }
                                 >
                                     Previous
                                 </Button>
 
                                 {data.links
-                                    .filter((link) => !isNaN(Number(link.label)))
+                                    .filter(
+                                        (link) => !isNaN(Number(link.label)),
+                                    )
                                     .map((link) => (
                                         <Button
                                             key={link.label}
-                                            variant={link.active ? 'default' : 'outline'}
+                                            variant={
+                                                link.active
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
                                             size="sm"
-                                            onClick={() => goToPage(Number(link.label))}
+                                            onClick={() =>
+                                                goToPage(Number(link.label))
+                                            }
                                         >
                                             {link.label}
                                         </Button>
@@ -622,8 +718,12 @@ export default function Index({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={data.current_page === data.last_page}
-                                    onClick={() => goToPage(data.current_page + 1)}
+                                    disabled={
+                                        data.current_page === data.last_page
+                                    }
+                                    onClick={() =>
+                                        goToPage(data.current_page + 1)
+                                    }
                                 >
                                     Next
                                 </Button>

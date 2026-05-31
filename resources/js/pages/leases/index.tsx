@@ -89,7 +89,11 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 type PaginationLinks = {
@@ -162,12 +166,18 @@ export default function Index({
 }: PageProps) {
     const [searchValue, setSearchValue] = useState(currentSearch);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>([]);
+    const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>(
+        [],
+    );
     const [propertyFilterOpen, setPropertyFilterOpen] = useState(false);
 
-    const propertyFilterRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const propertyFilterRef = useRef<ReturnType<typeof setTimeout> | null>(
+        null,
+    );
 
-    const applyFiltersRef = useRef<(overrides: Record<string, string>) => void>(() => {});
+    const applyFiltersRef = useRef<(overrides: Record<string, string>) => void>(
+        () => {},
+    );
 
     useEffect(() => {
         applyFiltersRef.current = applyFilters;
@@ -202,7 +212,10 @@ export default function Index({
             sort: currentSort,
             direction: currentDirection,
             per_page: String(currentPerPage),
-            properties: selectedPropertyIds.length > 0 ? selectedPropertyIds.join(',') : '',
+            properties:
+                selectedPropertyIds.length > 0
+                    ? selectedPropertyIds.join(',')
+                    : '',
             ...overrides,
         };
 
@@ -267,7 +280,9 @@ export default function Index({
 
     function toggleSort(column: string) {
         const direction =
-            currentSort === column && currentDirection === 'asc' ? 'desc' : 'asc';
+            currentSort === column && currentDirection === 'asc'
+                ? 'desc'
+                : 'asc';
 
         applyFilters({ sort: column, direction, page: '' });
     }
@@ -278,7 +293,9 @@ export default function Index({
 
     function SortIcon({ column: _column }: { column: string }) {
         if (currentSort !== _column) {
-            return <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />;
+            return (
+                <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
+            );
         }
 
         return currentDirection === 'asc' ? (
@@ -335,14 +352,16 @@ export default function Index({
                                     applyFilters({ search: '', page: '' });
                                 }}
                                 className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-
                             >
                                 <X className="size-4" />
                             </button>
                         )}
                     </div>
 
-                    <Popover open={propertyFilterOpen} onOpenChange={setPropertyFilterOpen}>
+                    <Popover
+                        open={propertyFilterOpen}
+                        onOpenChange={setPropertyFilterOpen}
+                    >
                         <PopoverTrigger asChild>
                             <Button
                                 variant="outline"
@@ -360,17 +379,25 @@ export default function Index({
                             <Command>
                                 <CommandInput placeholder="Search property..." />
                                 <CommandList>
-                                    <CommandEmpty>No property found.</CommandEmpty>
+                                    <CommandEmpty>
+                                        No property found.
+                                    </CommandEmpty>
                                     <CommandGroup>
                                         {allProperties.map((property) => (
                                             <CommandItem
                                                 key={property.id}
                                                 value={property.name}
-                                                onSelect={() => handlePropertyToggle(property.id)}
+                                                onSelect={() =>
+                                                    handlePropertyToggle(
+                                                        property.id,
+                                                    )
+                                                }
                                             >
                                                 <Check
                                                     className={`mr-2 size-4 ${
-                                                        selectedPropertyIds.includes(property.id)
+                                                        selectedPropertyIds.includes(
+                                                            property.id,
+                                                        )
                                                             ? 'opacity-100'
                                                             : 'opacity-0'
                                                     }`}
@@ -385,22 +412,33 @@ export default function Index({
                     </Popover>
 
                     <div className="flex items-center gap-1 rounded-lg border p-1">
-                        {(['', 'active', 'terminated'] as const).map((value) => (
-                            <Button
-                                key={value}
-                                variant={currentStatus === value ? 'default' : 'ghost'}
-                                size="sm"
-                                onClick={() => setStatusFilter(value)}
-                            >
-                                {value === '' ? 'All' : value.charAt(0).toUpperCase() + value.slice(1)}
-                            </Button>
-                        ))}
+                        {(['', 'active', 'terminated'] as const).map(
+                            (value) => (
+                                <Button
+                                    key={value}
+                                    variant={
+                                        currentStatus === value
+                                            ? 'default'
+                                            : 'ghost'
+                                    }
+                                    size="sm"
+                                    onClick={() => setStatusFilter(value)}
+                                >
+                                    {value === ''
+                                        ? 'All'
+                                        : value.charAt(0).toUpperCase() +
+                                          value.slice(1)}
+                                </Button>
+                            ),
+                        )}
                     </div>
                 </div>
 
                 {data.data.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center rounded-lg border py-16">
-                        <p className="text-muted-foreground">No leases found.</p>
+                        <p className="text-muted-foreground">
+                            No leases found.
+                        </p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto rounded-lg border">
@@ -410,7 +448,10 @@ export default function Index({
                                     {[
                                         { key: 'tenant_name', label: 'Tenant' },
                                         { key: 'room_name', label: 'Room' },
-                                        { key: 'property_name', label: 'Property' },
+                                        {
+                                            key: 'property_name',
+                                            label: 'Property',
+                                        },
                                         { key: 'start_date', label: 'Start' },
                                         { key: 'end_date', label: 'End' },
                                         { key: 'rent_amount', label: 'Rent' },
@@ -430,7 +471,8 @@ export default function Index({
                             </thead>
                             <tbody>
                                 {data.data.map((lease) => {
-                                    const propertyName = lease.room?.property?.name ?? '—';
+                                    const propertyName =
+                                        lease.room?.property?.name ?? '—';
                                     const roomRoute = lease.room
                                         ? `/properties/${lease.room.property_id}/rooms`
                                         : null;
@@ -449,11 +491,14 @@ export default function Index({
                                                     <Link
                                                         href={roomRoute}
                                                         className="text-blue-600 hover:underline"
-                                                        onClick={(e: React.MouseEvent) =>
+                                                        onClick={(
+                                                            e: React.MouseEvent,
+                                                        ) =>
                                                             e.stopPropagation()
                                                         }
                                                     >
-                                                        {lease.room?.name ?? '—'}
+                                                        {lease.room?.name ??
+                                                            '—'}
                                                     </Link>
                                                 ) : (
                                                     '—'
@@ -465,11 +510,12 @@ export default function Index({
                                             <td className="px-4 py-3 tabular-nums">
                                                 {formatDate(lease.start_date)}
                                             </td>
-                                            <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                                            <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                                 {formatDate(lease.end_date)}
                                             </td>
                                             <td className="px-4 py-3 tabular-nums">
-                                                {formatPrice(lease.rent_amount)}{lease.billing_label}
+                                                {formatPrice(lease.rent_amount)}
+                                                {lease.billing_label}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Badge
@@ -484,7 +530,9 @@ export default function Index({
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
                                                         asChild
-                                                        onClick={(e: React.MouseEvent) =>
+                                                        onClick={(
+                                                            e: React.MouseEvent,
+                                                        ) =>
                                                             e.stopPropagation()
                                                         }
                                                     >
@@ -498,13 +546,17 @@ export default function Index({
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent
                                                         align="end"
-                                                        onClick={(e: React.MouseEvent) =>
+                                                        onClick={(
+                                                            e: React.MouseEvent,
+                                                        ) =>
                                                             e.stopPropagation()
                                                         }
                                                     >
                                                         <DropdownMenuItem
                                                             onClick={() =>
-                                                                openDetail(lease)
+                                                                openDetail(
+                                                                    lease,
+                                                                )
                                                             }
                                                         >
                                                             <Eye className="size-4" />
@@ -512,21 +564,34 @@ export default function Index({
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onClick={() => {
-                                                                setDetailLease(lease);
-                                                                setDetailOpen(false);
-                                                                setEditOpen(true);
+                                                                setDetailLease(
+                                                                    lease,
+                                                                );
+                                                                setDetailOpen(
+                                                                    false,
+                                                                );
+                                                                setEditOpen(
+                                                                    true,
+                                                                );
                                                             }}
                                                         >
                                                             <Pencil className="size-4" />
                                                             Edit
                                                         </DropdownMenuItem>
-                                                        {lease.status === 'active' && (
+                                                        {lease.status ===
+                                                            'active' && (
                                                             <DropdownMenuItem
                                                                 variant="destructive"
                                                                 onClick={() => {
-                                                                    setDetailLease(lease);
-                                                                    setDetailOpen(false);
-                                                                    setMoveOutOpen(true);
+                                                                    setDetailLease(
+                                                                        lease,
+                                                                    );
+                                                                    setDetailOpen(
+                                                                        false,
+                                                                    );
+                                                                    setMoveOutOpen(
+                                                                        true,
+                                                                    );
                                                                 }}
                                                             >
                                                                 <LogOut className="size-4" />
@@ -545,16 +610,22 @@ export default function Index({
                         <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
                             <div className="flex items-center gap-4">
                                 <p className="text-muted-foreground">
-                                    Showing {data.from} to {data.to} of {data.total} leases
+                                    Showing {data.from} to {data.to} of{' '}
+                                    {data.total} leases
                                 </p>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground text-xs">Per page</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        Per page
+                                    </span>
                                     <select
-                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         value={currentPerPage}
                                         onChange={(e) =>
-                                            applyFilters({ per_page: e.target.value, page: '' })
+                                            applyFilters({
+                                                per_page: e.target.value,
+                                                page: '',
+                                            })
                                         }
                                     >
                                         {[10, 15, 25, 50].map((n) => (
@@ -571,19 +642,29 @@ export default function Index({
                                     variant="outline"
                                     size="sm"
                                     disabled={data.current_page === 1}
-                                    onClick={() => goToPage(data.current_page - 1)}
+                                    onClick={() =>
+                                        goToPage(data.current_page - 1)
+                                    }
                                 >
                                     Previous
                                 </Button>
 
                                 {data.links
-                                    .filter((link) => !isNaN(Number(link.label)))
+                                    .filter(
+                                        (link) => !isNaN(Number(link.label)),
+                                    )
                                     .map((link) => (
                                         <Button
                                             key={link.label}
-                                            variant={link.active ? 'default' : 'outline'}
+                                            variant={
+                                                link.active
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
                                             size="sm"
-                                            onClick={() => goToPage(Number(link.label))}
+                                            onClick={() =>
+                                                goToPage(Number(link.label))
+                                            }
                                         >
                                             {link.label}
                                         </Button>
@@ -592,8 +673,12 @@ export default function Index({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    disabled={data.current_page === data.last_page}
-                                    onClick={() => goToPage(data.current_page + 1)}
+                                    disabled={
+                                        data.current_page === data.last_page
+                                    }
+                                    onClick={() =>
+                                        goToPage(data.current_page + 1)
+                                    }
                                 >
                                     Next
                                 </Button>
@@ -607,7 +692,11 @@ export default function Index({
                 lease={detailLease}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
-                onMoveOut={detailLease?.status === 'active' ? openMoveOutFromDetail : undefined}
+                onMoveOut={
+                    detailLease?.status === 'active'
+                        ? openMoveOutFromDetail
+                        : undefined
+                }
                 onEdit={detailLease ? openEditFromDetail : undefined}
             />
 
@@ -621,10 +710,10 @@ export default function Index({
                 lease={
                     detailLease
                         ? {
-                            id: detailLease.id,
-                            tenant: detailLease.tenant,
-                            room: detailLease.room,
-                        }
+                              id: detailLease.id,
+                              tenant: detailLease.tenant,
+                              room: detailLease.room,
+                          }
                         : null
                 }
                 availableRooms={_availableRooms}

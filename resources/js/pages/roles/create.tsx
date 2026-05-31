@@ -11,14 +11,23 @@ export default function Create({
     recommendations,
 }: {
     permissionGroups: PermissionGroup;
-    recommendations: { name: string; label: string; description: string; color: string; permissions: string[] }[];
+    recommendations: {
+        name: string;
+        label: string;
+        description: string;
+        color: string;
+        permissions: string[];
+    }[];
 }) {
     return (
         <>
             <Head title="Create Role" />
 
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
-                <Heading title="Create Role" description="Define a new custom role and its permissions" />
+                <Heading
+                    title="Create Role"
+                    description="Define a new custom role and its permissions"
+                />
 
                 <RoleForm
                     permissionGroups={permissionGroups}

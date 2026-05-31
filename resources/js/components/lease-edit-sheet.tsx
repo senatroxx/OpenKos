@@ -29,7 +29,11 @@ type RoomInfo = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 type Lease = {
@@ -120,20 +124,37 @@ export default function LeaseEditSheet({
                                     </h3>
                                     <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Tenant</span>
-                                            <span className="font-medium">{lease.tenant?.name ?? '—'}</span>
+                                            <span className="text-muted-foreground">
+                                                Tenant
+                                            </span>
+                                            <span className="font-medium">
+                                                {lease.tenant?.name ?? '—'}
+                                            </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Room</span>
-                                            <span className="font-medium">{lease.room?.name}</span>
+                                            <span className="text-muted-foreground">
+                                                Room
+                                            </span>
+                                            <span className="font-medium">
+                                                {lease.room?.name}
+                                            </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Property</span>
-                                            <span className="font-medium">{lease.room?.property?.name ?? '—'}</span>
+                                            <span className="text-muted-foreground">
+                                                Property
+                                            </span>
+                                            <span className="font-medium">
+                                                {lease.room?.property?.name ??
+                                                    '—'}
+                                            </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Start date</span>
-                                            <span className="tabular-nums">{formatDate(lease.start_date)}</span>
+                                            <span className="text-muted-foreground">
+                                                Start date
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {formatDate(lease.start_date)}
+                                            </span>
                                         </div>
                                     </div>
                                 </section>
@@ -153,10 +174,14 @@ export default function LeaseEditSheet({
                                                 name="rent_amount"
                                                 type="number"
                                                 min={0}
-                                                defaultValue={lease.rent_amount ?? ''}
+                                                defaultValue={
+                                                    lease.rent_amount ?? ''
+                                                }
                                                 placeholder="Rent amount"
                                             />
-                                            <InputError message={errors.rent_amount} />
+                                            <InputError
+                                                message={errors.rent_amount}
+                                            />
                                         </div>
 
                                         <div className="shrink-0">
@@ -176,14 +201,23 @@ export default function LeaseEditSheet({
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {DUE_DAY_OPTIONS.map((opt) => (
-                                                        <SelectItem key={opt.value} value={opt.value}>
-                                                            {opt.label}
-                                                        </SelectItem>
-                                                    ))}
+                                                    {DUE_DAY_OPTIONS.map(
+                                                        (opt) => (
+                                                            <SelectItem
+                                                                key={opt.value}
+                                                                value={
+                                                                    opt.value
+                                                                }
+                                                            >
+                                                                {opt.label}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
                                                 </SelectContent>
                                             </Select>
-                                            <InputError message={errors.rent_due_day} />
+                                            <InputError
+                                                message={errors.rent_due_day}
+                                            />
                                         </div>
                                     </div>
                                 </section>
@@ -194,15 +228,30 @@ export default function LeaseEditSheet({
                                     </h3>
                                     <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">Amount</span>
-                                            <span className="tabular-nums font-medium">
-                                                {Number.parseFloat(lease.deposit_amount).toLocaleString('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                            <span className="text-muted-foreground">
+                                                Amount
+                                            </span>
+                                            <span className="font-medium tabular-nums">
+                                                {Number.parseFloat(
+                                                    lease.deposit_amount,
+                                                ).toLocaleString('id-ID', {
+                                                    style: 'currency',
+                                                    currency: 'IDR',
+                                                    minimumFractionDigits: 0,
+                                                    maximumFractionDigits: 0,
+                                                })}
                                             </span>
                                         </div>
                                         {lease.deposit_paid_at && (
                                             <div className="flex items-center justify-between text-sm">
-                                                <span className="text-muted-foreground">Paid at</span>
-                                                <span className="tabular-nums">{formatDate(lease.deposit_paid_at)}</span>
+                                                <span className="text-muted-foreground">
+                                                    Paid at
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {formatDate(
+                                                        lease.deposit_paid_at,
+                                                    )}
+                                                </span>
                                             </div>
                                         )}
                                     </div>
@@ -215,15 +264,22 @@ export default function LeaseEditSheet({
                                             id="deposit_refunded_at"
                                             name="deposit_refunded_at"
                                             type="date"
-                                            defaultValue={lease.deposit_refunded_at?.split('T')[0] ?? ''}
+                                            defaultValue={
+                                                lease.deposit_refunded_at?.split(
+                                                    'T',
+                                                )[0] ?? ''
+                                            }
                                             disabled={noDeposit}
                                         />
                                         {noDeposit && (
                                             <p className="text-xs text-muted-foreground">
-                                                No deposit was collected for this lease.
+                                                No deposit was collected for
+                                                this lease.
                                             </p>
                                         )}
-                                        <InputError message={errors.deposit_refunded_at} />
+                                        <InputError
+                                            message={errors.deposit_refunded_at}
+                                        />
                                     </div>
                                 </section>
 
@@ -237,7 +293,7 @@ export default function LeaseEditSheet({
                                             name="notes"
                                             defaultValue={lease.notes ?? ''}
                                             placeholder="Additional notes"
-                                            className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                            className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         />
                                         <InputError message={errors.notes} />
                                     </div>
@@ -252,9 +308,7 @@ export default function LeaseEditSheet({
                                     >
                                         Cancel
                                     </Button>
-                                    <Button disabled={processing}>
-                                        Save
-                                    </Button>
+                                    <Button disabled={processing}>Save</Button>
                                 </div>
                             </div>
                         )}

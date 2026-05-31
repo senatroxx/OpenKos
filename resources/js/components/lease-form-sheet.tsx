@@ -58,6 +58,7 @@ const DUE_DAY_OPTIONS = [
 
 function formatCurrency(value: string | number): string {
     const num = typeof value === 'string' ? Number.parseFloat(value) : value;
+
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
@@ -66,19 +67,41 @@ function formatCurrency(value: string | number): string {
     }).format(num);
 }
 
-function computeMonthlyEquivalent(amount: string | null, interval: number | null, unit: string | null): string {
-    if (!amount || !interval || !unit) return '';
+function computeMonthlyEquivalent(
+    amount: string | null,
+    interval: number | null,
+    unit: string | null,
+): string {
+    if (!amount || !interval || !unit) {
+        return '';
+    }
+
     const num = Number.parseFloat(amount);
-    if (isNaN(num)) return '';
+
+    if (isNaN(num)) {
+        return '';
+    }
+
     const int = interval || 1;
     let monthly: number;
+
     switch (unit) {
-        case 'day': monthly = num * 365 / 12 / int; break;
-        case 'week': monthly = num * 52 / 12 / int; break;
-        case 'month': monthly = num / int; break;
-        case 'year': monthly = num * 12 / int; break;
-        default: return '';
+        case 'day':
+            monthly = (num * 365) / 12 / int;
+            break;
+        case 'week':
+            monthly = (num * 52) / 12 / int;
+            break;
+        case 'month':
+            monthly = num / int;
+            break;
+        case 'year':
+            monthly = (num * 12) / int;
+            break;
+        default:
+            return '';
     }
+
     return `≈ ${formatCurrency(Math.round(monthly))}/month`;
 }
 
@@ -114,10 +137,15 @@ export default function LeaseFormSheet({
         label: `${t.name}${t.phone ? ` (${t.phone})` : ''}`,
     }));
 
-    const selectedRate = room?.active_rates?.find((r) => r.id === selectedRateId) ?? null;
+    const selectedRate =
+        room?.active_rates?.find((r) => r.id === selectedRateId) ?? null;
 
     const monthlyEquivalent = useMemo(() => {
-        return computeMonthlyEquivalent(rentAmount, Number.parseInt(billingInterval) || 1, billingUnit);
+        return computeMonthlyEquivalent(
+            rentAmount,
+            Number.parseInt(billingInterval) || 1,
+            billingUnit,
+        );
     }, [rentAmount, billingInterval, billingUnit]);
 
     const handleRateSelect = useCallback((rate: RoomRate) => {
@@ -129,7 +157,11 @@ export default function LeaseFormSheet({
     }, []);
 
     useEffect(() => {
-        if (room?.active_rates && room.active_rates.length > 0 && !selectedRateId) {
+        if (
+            room?.active_rates &&
+            room.active_rates.length > 0 &&
+            !selectedRateId
+        ) {
             handleRateSelect(room.active_rates[0]);
         }
     }, [room, handleRateSelect, selectedRateId]);
@@ -236,51 +268,86 @@ export default function LeaseFormSheet({
                                         />
                                     </div>
 
-                                    {room?.active_rates && room.active_rates.length > 0 ? (
+                                    {room?.active_rates &&
+                                    room.active_rates.length > 0 ? (
                                         <div className="mt-4 grid gap-2">
                                             <Label>Room Rate Options</Label>
                                             <div className="space-y-1">
-                                                {room.active_rates.map((rate) => (
-                                                    <label
-                                                        key={`${rate.billing_interval}-${rate.billing_unit}`}
-                                                        className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors ${
-                                                            selectedRateId === rate.id
-                                                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
-                                                                : 'hover:bg-muted/50'
-                                                        }`}
-                                                    >
-                                                        <input
-                                                            type="radio"
-                                                            name="rate_option"
-                                                            value={rate.id}
-                                                            checked={selectedRateId === rate.id}
-                                                            onChange={() => handleRateSelect(rate)}
-                                                            className="size-4 accent-blue-600"
-                                                        />
-                                                        <div className="flex flex-1 items-center justify-between">
-                                                            <span>
-                                                                {rate.billing_interval} {rate.billing_unit}{rate.billing_interval > 1 ? 's' : ''}
-                                                            </span>
-                                                            <span className="font-medium tabular-nums">
-                                                                {formatCurrency(rate.amount)}
-                                                            </span>
-                                                        </div>
-                                                    </label>
-                                                ))}
+                                                {room.active_rates.map(
+                                                    (rate) => (
+                                                        <label
+                                                            key={`${rate.billing_interval}-${rate.billing_unit}`}
+                                                            className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors ${
+                                                                selectedRateId ===
+                                                                rate.id
+                                                                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                                                                    : 'hover:bg-muted/50'
+                                                            }`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name="rate_option"
+                                                                value={rate.id}
+                                                                checked={
+                                                                    selectedRateId ===
+                                                                    rate.id
+                                                                }
+                                                                onChange={() =>
+                                                                    handleRateSelect(
+                                                                        rate,
+                                                                    )
+                                                                }
+                                                                className="size-4 accent-blue-600"
+                                                            />
+                                                            <div className="flex flex-1 items-center justify-between">
+                                                                <span>
+                                                                    {
+                                                                        rate.billing_interval
+                                                                    }{' '}
+                                                                    {
+                                                                        rate.billing_unit
+                                                                    }
+                                                                    {rate.billing_interval >
+                                                                    1
+                                                                        ? 's'
+                                                                        : ''}
+                                                                </span>
+                                                                <span className="font-medium tabular-nums">
+                                                                    {formatCurrency(
+                                                                        rate.amount,
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                        </label>
+                                                    ),
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
                                         <p className="mt-4 text-xs text-amber-600">
-                                            No pricing configured for this room. Please set up room rates first.
+                                            No pricing configured for this room.
+                                            Please set up room rates first.
                                         </p>
                                     )}
 
                                     <div className="mt-4 grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
                                             <Label>Rent Amount (IDR)</Label>
-                                            <input type="hidden" name="room_rate_id" value={selectedRateId ?? ''} />
-                                            <input type="hidden" name="billing_interval" value={billingInterval} />
-                                            <input type="hidden" name="billing_unit" value={billingUnit} />
+                                            <input
+                                                type="hidden"
+                                                name="room_rate_id"
+                                                value={selectedRateId ?? ''}
+                                            />
+                                            <input
+                                                type="hidden"
+                                                name="billing_interval"
+                                                value={billingInterval}
+                                            />
+                                            <input
+                                                type="hidden"
+                                                name="billing_unit"
+                                                value={billingUnit}
+                                            />
                                             <Input
                                                 id="rent_amount"
                                                 name="rent_amount"
@@ -288,8 +355,19 @@ export default function LeaseFormSheet({
                                                 min={0}
                                                 value={rentAmount}
                                                 onChange={(e) => {
-                                                    setRentAmount(e.target.value);
-                                                    if (selectedRate && Number.parseFloat(e.target.value) !== Number.parseFloat(selectedRate.amount)) {
+                                                    setRentAmount(
+                                                        e.target.value,
+                                                    );
+
+                                                    if (
+                                                        selectedRate &&
+                                                        Number.parseFloat(
+                                                            e.target.value,
+                                                        ) !==
+                                                            Number.parseFloat(
+                                                                selectedRate.amount,
+                                                            )
+                                                    ) {
                                                         setIsCustom(true);
                                                     } else {
                                                         setIsCustom(false);
@@ -297,14 +375,20 @@ export default function LeaseFormSheet({
                                                 }}
                                             />
                                             {isCustom && (
-                                                <p className="text-xs text-amber-600 font-medium">
-                                                    Custom Price ⚠️ This lease differs from room default pricing.
+                                                <p className="text-xs font-medium text-amber-600">
+                                                    Custom Price ⚠️ This lease
+                                                    differs from room default
+                                                    pricing.
                                                 </p>
                                             )}
                                             {monthlyEquivalent && (
-                                                <p className="text-xs text-muted-foreground">{monthlyEquivalent}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {monthlyEquivalent}
+                                                </p>
                                             )}
-                                            <InputError message={errors.rent_amount} />
+                                            <InputError
+                                                message={errors.rent_amount}
+                                            />
                                         </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="rent_due_day">
