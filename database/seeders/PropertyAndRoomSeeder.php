@@ -106,9 +106,18 @@ class PropertyAndRoomSeeder extends Seeder
     ];
 
     private array $roomTemplates = [
-        ['prefix' => 'A', 'count' => 4, 'base_price' => 1_500_000, 'floor' => 1],
-        ['prefix' => 'B', 'count' => 4, 'base_price' => 1_800_000, 'floor' => 2],
-        ['prefix' => 'C', 'count' => 4, 'base_price' => 2_200_000, 'floor' => 3],
+        ['prefix' => 'A', 'count' => 4, 'floor' => 1, 'rates' => [
+            ['billing_interval' => 1, 'billing_unit' => 'month', 'amount' => 1_500_000],
+            ['billing_interval' => 1, 'billing_unit' => 'year', 'amount' => 15_000_000],
+        ]],
+        ['prefix' => 'B', 'count' => 4, 'floor' => 2, 'rates' => [
+            ['billing_interval' => 1, 'billing_unit' => 'month', 'amount' => 1_800_000],
+            ['billing_interval' => 3, 'billing_unit' => 'month', 'amount' => 5_000_000],
+        ]],
+        ['prefix' => 'C', 'count' => 4, 'floor' => 3, 'rates' => [
+            ['billing_interval' => 1, 'billing_unit' => 'month', 'amount' => 2_200_000],
+            ['billing_interval' => 1, 'billing_unit' => 'week', 'amount' => 600_000],
+        ]],
     ];
 
     public function run(): void
@@ -143,23 +152,24 @@ class PropertyAndRoomSeeder extends Seeder
 
             foreach ($this->roomTemplates as $template) {
                 for ($i = 1; $i <= $template['count']; $i++) {
-                    Room::create([
+                    $room = Room::create([
                         'property_id' => $property->id,
                         'name' => $template['prefix'].$i,
                         'floor' => (string) $template['floor'],
-                        'base_price' => $template['base_price'],
                         'size_sqm' => fake()->randomFloat(2, 14, 28),
                         'capacity' => fake()->randomElement([1, 2]),
-                        'status' => fake()->randomElement([
-                            RoomStatus::Available,
-                            RoomStatus::Available,
-                            RoomStatus::Available,
-                            RoomStatus::Occupied,
-                            RoomStatus::Occupied,
-                            RoomStatus::Maintenance,
-                        ]),
+                        'status' => RoomStatus::Available,
                         'notes' => null,
                     ]);
+
+                    foreach ($template['rates'] as $rate) {
+                        $room->rates()->create([
+                            'billing_interval' => $rate['billing_interval'],
+                            'billing_unit' => $rate['billing_unit'],
+                            'amount' => $rate['amount'],
+                            'is_active' => DB::raw('true'),
+                        ]);
+                    }
                 }
             }
         }

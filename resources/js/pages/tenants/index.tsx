@@ -45,7 +45,11 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
-    property: { id: number; name: string; city: { name: string } | null } | null;
+    property: {
+        id: number;
+        name: string;
+        city: { name: string } | null;
+    } | null;
 };
 
 type RoomWithProperty = Room & {
@@ -397,7 +401,7 @@ export default function Index({
                                             ) : (
                                                 <Badge
                                                     variant="outline"
-                                                    className="text-amber-600 border-amber-300"
+                                                    className="border-amber-300 text-amber-600"
                                                 >
                                                     Inactive
                                                 </Badge>
@@ -433,17 +437,23 @@ export default function Index({
                                                         <Eye className="size-4" />
                                                         View
                                                     </DropdownMenuItem>
-                                                    {!tenant.deleted_at && tenant.active_leases_count === 0 && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                setAssignTenant(tenant);
-                                                                setAssignRoomOpen(true);
-                                                            }}
-                                                        >
-                                                            <DoorOpen className="size-4" />
-                                                            Assign to Room
-                                                        </DropdownMenuItem>
-                                                    )}
+                                                    {!tenant.deleted_at &&
+                                                        tenant.active_leases_count ===
+                                                            0 && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setAssignTenant(
+                                                                        tenant,
+                                                                    );
+                                                                    setAssignRoomOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <DoorOpen className="size-4" />
+                                                                Assign to Room
+                                                            </DropdownMenuItem>
+                                                        )}
                                                     {!tenant.deleted_at && (
                                                         <DropdownMenuItem
                                                             onClick={() =>
@@ -582,14 +592,14 @@ export default function Index({
                 lease={
                     moveOutTenant
                         ? {
-                            id: moveOutTenant.leases?.[0]?.id ?? 0,
-                            tenant: {
-                                id: moveOutTenant.id,
-                                name: moveOutTenant.name,
-                                phone: moveOutTenant.phone,
-                            },
-                            room: moveOutTenant.leases?.[0]?.room ?? null,
-                        }
+                              id: moveOutTenant.leases?.[0]?.id ?? 0,
+                              tenant: {
+                                  id: moveOutTenant.id,
+                                  name: moveOutTenant.name,
+                                  phone: moveOutTenant.phone,
+                              },
+                              room: moveOutTenant.leases?.[0]?.room ?? null,
+                          }
                         : null
                 }
                 availableRooms={_availableRooms}

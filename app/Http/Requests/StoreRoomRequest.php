@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BillingUnit;
 use App\Enums\RoomStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -24,11 +25,15 @@ class StoreRoomRequest extends FormRequest
             ],
             'floor' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
-            'base_price' => ['required', 'numeric', 'min:0'],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
             'size_sqm' => ['nullable', 'numeric', 'min:0'],
             'capacity' => ['required', 'integer', 'min:0', 'max:255'],
             'status' => ['nullable', new Enum(RoomStatus::class)],
             'notes' => ['nullable', 'string', 'max:65535'],
+            'rates' => ['nullable', 'array'],
+            'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1'],
+            'rates.*.billing_unit' => ['required_with:rates', 'string', Rule::in(BillingUnit::values())],
+            'rates.*.amount' => ['required_with:rates', 'numeric', 'min:0'],
         ];
     }
 }

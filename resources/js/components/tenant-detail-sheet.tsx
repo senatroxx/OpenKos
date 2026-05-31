@@ -102,18 +102,20 @@ export default function TenantDetailSheet({
                 </SheetHeader>
 
                 {tenant && (
-                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pb-6 pt-4">
+                    <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-5">
                             <div className="flex items-center gap-2">
                                 <span>Status:</span>
                                 {isArchived ? (
                                     <Badge variant="secondary">Archived</Badge>
                                 ) : tenant.is_active ? (
-                                    <Badge className="bg-green-600">Active</Badge>
+                                    <Badge className="bg-green-600">
+                                        Active
+                                    </Badge>
                                 ) : (
                                     <Badge
                                         variant="outline"
-                                        className="text-amber-600 border-amber-300"
+                                        className="border-amber-300 text-amber-600"
                                     >
                                         Inactive
                                     </Badge>
@@ -129,26 +131,36 @@ export default function TenantDetailSheet({
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium">
-                                                {activeLease.room?.name ?? 'Unknown Room'}
+                                                {activeLease.room?.name ??
+                                                    'Unknown Room'}
                                             </span>
                                             <span className="text-sm text-muted-foreground">
-                                                {activeLease.room?.property?.name ?? 'Unknown Property'}
+                                                {activeLease.room?.property
+                                                    ?.name ??
+                                                    'Unknown Property'}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                {formatDate(activeLease.start_date)}
+                                                {formatDate(
+                                                    activeLease.start_date,
+                                                )}
                                                 {activeLease.end_date
                                                     ? ` — ${formatDate(activeLease.end_date)}`
                                                     : ' — Present'}
                                             </span>
-                                            <span className="tabular-nums font-medium">
-                                                {formatPrice(activeLease.monthly_rent)}/mo
+                                            <span className="font-medium tabular-nums">
+                                                {formatPrice(
+                                                    activeLease.monthly_rent,
+                                                )}
+                                                /mo
                                             </span>
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground">No active lease</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        No active lease
+                                    </p>
                                 )}
                             </div>
 
@@ -157,7 +169,9 @@ export default function TenantDetailSheet({
                                 <p className="text-xs font-medium text-muted-foreground uppercase">
                                     Phone
                                 </p>
-                                <p className="mt-1 text-sm">{tenant.phone ?? '—'}</p>
+                                <p className="mt-1 text-sm">
+                                    {tenant.phone ?? '—'}
+                                </p>
                             </div>
 
                             <div>
@@ -201,7 +215,10 @@ export default function TenantDetailSheet({
                         </div>
 
                         <div className="flex items-center justify-end gap-4">
-                            <Button variant="outline" onClick={() => onOpenChange(false)}>
+                            <Button
+                                variant="outline"
+                                onClick={() => onOpenChange(false)}
+                            >
                                 Close
                             </Button>
                             {!isArchived && (
@@ -212,7 +229,10 @@ export default function TenantDetailSheet({
                                         </Button>
                                     )}
                                     {activeLease && onMoveOut && (
-                                        <Button variant="destructive" onClick={onMoveOut}>
+                                        <Button
+                                            variant="destructive"
+                                            onClick={onMoveOut}
+                                        >
                                             Move Out
                                         </Button>
                                     )}
