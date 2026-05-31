@@ -229,6 +229,11 @@ class LeaseController extends Controller
         ]);
 
         if ($validated['move_to_another_room'] ?? false) {
+            $matchingRate = $targetRoom->rates()
+                ->where('billing_interval', $lease->billing_interval)
+                ->where('billing_unit', $lease->billing_unit)
+                ->first();
+
             $targetRoom->leases()->create([
                 'tenant_id' => $lease->tenant_id,
                 'start_date' => $validated['move_out_date'],
@@ -236,6 +241,7 @@ class LeaseController extends Controller
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
                 'is_custom_price' => $lease->is_custom_price,
+                'room_rate_id' => $matchingRate?->id,
                 'deposit_amount' => $lease->deposit_amount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'deposit_refund_amount' => null,
@@ -285,6 +291,11 @@ class LeaseController extends Controller
             'notes' => ($lease->notes ? $lease->notes."\n" : '').'Moved to room '.$targetRoom->name.' on '.now()->format('Y-m-d'),
         ]);
 
+        $matchingRate = $targetRoom->rates()
+            ->where('billing_interval', $lease->billing_interval)
+            ->where('billing_unit', $lease->billing_unit)
+            ->first();
+
         $targetRoom->leases()->create([
             'tenant_id' => $lease->tenant_id,
             'start_date' => now(),
@@ -292,6 +303,7 @@ class LeaseController extends Controller
             'billing_interval' => $lease->billing_interval ?? 1,
             'billing_unit' => $lease->billing_unit ?? 'month',
             'is_custom_price' => $lease->is_custom_price,
+            'room_rate_id' => $matchingRate?->id,
             'deposit_amount' => $lease->deposit_amount,
             'deposit_paid_at' => $lease->deposit_paid_at,
             'deposit_refund_amount' => $lease->deposit_refund_amount,

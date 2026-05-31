@@ -11,12 +11,16 @@ class OwnerSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::create([
-            'name' => 'Budi',
-            'email' => 'budi@openkos.com',
-            'password' => Hash::make('password'),
-        ]);
+        $user = User::firstOrCreate(
+            ['email' => 'budi@openkos.com'],
+            [
+                'name' => 'Budi',
+                'password' => Hash::make('password'),
+            ],
+        );
 
-        $user->assignRole(Role::Owner->value);
+        if (! $user->hasRole(Role::Owner->value)) {
+            $user->assignRole(Role::Owner->value);
+        }
     }
 }

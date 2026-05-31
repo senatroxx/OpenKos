@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\Room;
 use App\Models\Tenant;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -36,7 +37,7 @@ class LeaseSeeder extends Seeder
 
     public function run(): void
     {
-        /** @var \Illuminate\Database\Eloquent\Collection<int, Property> */
+        /** @var Collection<int, Property> */
         $properties = Property::with('rooms.activeRates')->get()->keyBy('name');
         $tenants = Tenant::pluck('id', 'name');
 
