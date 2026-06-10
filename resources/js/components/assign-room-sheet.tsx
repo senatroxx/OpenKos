@@ -31,6 +31,8 @@ type Room = {
     id: number;
     name: string;
     property_id: number;
+    capacity: number;
+    occupied_count: number;
     property: {
         id: number;
         name: string;
@@ -103,10 +105,19 @@ export default function AssignRoomSheet({
         [availableRooms, selectedPropertyId],
     );
 
-    const roomOptions = filteredRooms.map((r) => ({
-        value: r.id,
-        label: r.name,
-    }));
+    const roomOptions = filteredRooms.map((r) => {
+        const spotsLeft = r.capacity - r.occupied_count;
+        const suffix = r.occupied_count > 0
+            ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+            : r.capacity > 1
+                ? ` (capacity ${r.capacity})`
+                : '';
+
+        return {
+            value: r.id,
+            label: `${r.name}${suffix}`,
+        };
+    });
 
     function handlePropertyChange(val: number | string | null) {
         setSelectedPropertyId(val as number | null);
@@ -155,6 +166,12 @@ export default function AssignRoomSheet({
                     >
                         {({ processing, errors }) => (
                             <div className="space-y-6 pt-4">
+                                <input
+                                    type="hidden"
+                                    name="tenant_ids[]"
+                                    value={tenant!.id}
+                                />
+
                                 <section>
                                     <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                         Section 1 — Who

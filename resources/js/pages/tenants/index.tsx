@@ -45,6 +45,8 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
+    capacity: number;
+    occupied_count: number;
     property: {
         id: number;
         name: string;
@@ -57,12 +59,21 @@ type RoomWithProperty = Room & {
     property: Property | null;
 };
 
+type TenantInfo = {
+    id: number;
+    name: string;
+    phone: string | null;
+    pivot?: { is_primary: boolean };
+};
+
 type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
     monthly_rent: string;
     room: RoomWithProperty | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
 };
 
 type Tenant = {
@@ -593,7 +604,13 @@ export default function Index({
                     moveOutTenant
                         ? {
                               id: moveOutTenant.leases?.[0]?.id ?? 0,
-                              tenant: {
+                              tenants: [{
+                                  id: moveOutTenant.id,
+                                  name: moveOutTenant.name,
+                                  phone: moveOutTenant.phone,
+                                  pivot: { is_primary: true },
+                              }],
+                              primary_tenant: {
                                   id: moveOutTenant.id,
                                   name: moveOutTenant.name,
                                   phone: moveOutTenant.phone,

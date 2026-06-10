@@ -16,6 +16,8 @@ import properties from '@/routes/properties';
 type Room = {
     id: number;
     name: string;
+    capacity: number;
+    occupied_count: number;
 };
 
 type Property = {
@@ -44,10 +46,19 @@ export default function MoveRoomSheet({
 }) {
     const [targetRoomId, setTargetRoomId] = useState<number | null>(null);
 
-    const roomOptions = availableRooms.map((r) => ({
-        value: r.id,
-        label: r.name,
-    }));
+    const roomOptions = availableRooms.map((r) => {
+        const spotsLeft = r.capacity - r.occupied_count;
+        const suffix = r.occupied_count > 0
+            ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+            : r.capacity > 1
+                ? ` (capacity ${r.capacity})`
+                : '';
+
+        return {
+            value: r.id,
+            label: `${r.name}${suffix}`,
+        };
+    });
 
     return (
         <Sheet key="move-room" open={open} onOpenChange={onOpenChange}>

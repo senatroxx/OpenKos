@@ -18,7 +18,7 @@ class LeaseFactory extends Factory
     public function definition(): array
     {
         return [
-            'tenant_id' => Tenant::factory(),
+            'primary_tenant_id' => Tenant::factory(),
             'room_id' => Room::factory(),
             'start_date' => fake()->dateTimeBetween('-6 months', 'now'),
             'end_date' => null,
@@ -34,6 +34,13 @@ class LeaseFactory extends Factory
             'termination_reason' => null,
             'notes' => null,
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Lease $lease) {
+            $lease->tenants()->attach($lease->primary_tenant_id, ['is_primary' => DB::raw('true')]);
+        });
     }
 
     public function terminated(): static

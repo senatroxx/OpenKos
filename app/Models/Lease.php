@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
-    'tenant_id',
+    'primary_tenant_id',
     'room_id',
     'start_date',
     'end_date',
@@ -54,9 +55,16 @@ class Lease extends Model
         ];
     }
 
-    public function tenant(): BelongsTo
+    public function tenants(): BelongsToMany
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsToMany(Tenant::class)
+            ->withPivot('is_primary')
+            ->withTimestamps();
+    }
+
+    public function primaryTenant(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'primary_tenant_id');
     }
 
     public function room(): BelongsTo

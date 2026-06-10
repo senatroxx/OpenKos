@@ -200,7 +200,7 @@ describe('cross-property access', function () {
         $room = Room::factory()->for($propertyB)->create();
         $tenant = Tenant::factory()->create();
         Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $room->id,
         ]);
 
@@ -217,7 +217,7 @@ describe('cross-property access', function () {
         $room = Room::factory()->for($propertyB)->create();
         $tenant = Tenant::factory()->create();
         Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $room->id,
         ]);
 

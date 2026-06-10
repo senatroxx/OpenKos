@@ -10,6 +10,13 @@ import {
 } from '@/components/ui/sheet';
 import tenants from '@/routes/tenants';
 
+type TenantInfo = {
+    id: number;
+    name: string;
+    phone: string | null;
+    pivot?: { is_primary: boolean };
+};
+
 type Property = {
     id: number;
     name: string;
@@ -28,6 +35,8 @@ type Lease = {
     end_date: string | null;
     monthly_rent: string;
     room: Room | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
 };
 
 type Tenant = {
@@ -156,6 +165,25 @@ export default function TenantDetailSheet({
                                                 /mo
                                             </span>
                                         </div>
+                                        {(activeLease.tenants ?? []).length > 1 && (
+                                            <div className="border-t pt-2">
+                                                <p className="mb-1 text-xs text-muted-foreground">
+                                                    Co-tenants
+                                                </p>
+                                                <div className="space-y-1">
+                                                    {activeLease.tenants
+                                                        .filter((t) => !t.pivot?.is_primary)
+                                                        .map((t) => (
+                                                            <div key={t.id} className="flex items-center justify-between text-sm">
+                                                                <span>{t.name}</span>
+                                                                {t.phone && (
+                                                                    <span className="text-xs text-muted-foreground">{t.phone}</span>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
