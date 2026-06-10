@@ -120,12 +120,18 @@ describe('Tenant', function () {
 });
 
 describe('Lease', function () {
-    it('belongs to a tenant', function () {
-        $tenant = Tenant::factory()->create();
-        $lease = Lease::factory()->for($tenant)->create();
+    it('has many tenants via pivot', function () {
+        $lease = Lease::factory()->create();
 
-        expect($lease->tenant)->toBeInstanceOf(Tenant::class);
-        expect($lease->tenant->id)->toBe($tenant->id);
+        expect($lease->tenants)->toHaveCount(1);
+        expect($lease->tenants->first()->id)->toBe($lease->primary_tenant_id);
+    });
+
+    it('has a primary tenant', function () {
+        $lease = Lease::factory()->create();
+
+        expect($lease->primaryTenant)->toBeInstanceOf(Tenant::class);
+        expect($lease->primaryTenant->id)->toBe($lease->primary_tenant_id);
     });
 
     it('belongs to a room', function () {

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
     Sheet,
     SheetContent,
+    SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
@@ -13,6 +14,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type RoomRate = {
@@ -38,7 +42,8 @@ type LeaseInfo = {
     rent_due_day: number;
     status: string;
     notes: string | null;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
 };
 
 type Room = {
@@ -116,17 +121,21 @@ export default function RoomDetailSheet({
     onMoveOut?: () => void;
     onMoveRoom?: () => void;
 }) {
-    const activeLease = room?.leases?.[0];
-    const isOccupied =
-        activeLease !== undefined && (room?.active_leases ?? 0) > 0;
-    const tenantName = activeLease?.tenant?.name ?? '—';
-    const phone = activeLease?.tenant?.phone;
+    const isOccupied = (room?.active_leases ?? 0) > 0;
+    const allTenants = isOccupied && room?.leases
+        ? room.leases.flatMap((l) => l.tenants ?? (l.primary_tenant ? [l.primary_tenant] : []))
+        : [];
+    const occupantCount = allTenants.length;
+    const hasSpace = room ? occupantCount < room.capacity : false;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>{room?.name}</SheetTitle>
+                    <SheetDescription>
+                        Room details and occupancy
+                    </SheetDescription>
                 </SheetHeader>
 
                 {room && (
@@ -212,25 +221,41 @@ export default function RoomDetailSheet({
                             </section>
 
                             {/* Current Occupancy */}
-                            {isOccupied && activeLease && (
+                            {isOccupied && room?.leases?.[0] && (
                                 <section>
                                     <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                         Current Occupancy
                                     </h3>
                                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm text-muted-foreground">
-                                                Tenant
-                                            </span>
-                                            <div className="text-right">
-                                                <p className="text-sm font-medium">
-                                                    {tenantName}
-                                                </p>
-                                                {phone && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {phone}
-                                                    </p>
-                                                )}
+                                        <div>
+                                            <p className="mb-2 text-xs text-muted-foreground">
+                                                Tenants ({room.capacity > 0
+                                                    ? `${allTenants.length}/${room.capacity}`
+                                                    : ''})
+                                            </p>
+                                            <div className="space-y-1">
+                                                {allTenants.length > 0
+                                                    ? allTenants.map((t) => (
+                                                          <div
+                                                              key={t.id}
+                                                              className="flex items-center justify-between text-sm"
+                                                          >
+                                                              <span className="font-medium">
+                                                                  {t.name}
+                                                              </span>
+                                                              {t.pivot
+                                                                  ?.is_primary && (
+                                                                  <span className="text-[10px] font-medium text-blue-600 uppercase">
+                                                                      Primary
+                                                                  </span>
+                                                              )}
+                                                          </div>
+                                                      ))
+                                                    : (
+                                                        <span className="text-sm text-muted-foreground">
+                                                            No tenants
+                                                        </span>
+                                                    )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -239,9 +264,9 @@ export default function RoomDetailSheet({
                                             </span>
                                             <span className="font-medium tabular-nums">
                                                 {formatPrice(
-                                                    activeLease.rent_amount,
+                                                    room.leases[0].rent_amount,
                                                 )}
-                                                {activeLease.billing_label}
+                                                {room.leases[0].billing_label}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -250,7 +275,7 @@ export default function RoomDetailSheet({
                                             </span>
                                             <span className="tabular-nums">
                                                 {formatPrice(
-                                                    activeLease.monthly_equivalent,
+                                                    room.leases[0].monthly_equivalent,
                                                 )}
                                                 /mo
                                             </span>
@@ -261,7 +286,7 @@ export default function RoomDetailSheet({
                                             </span>
                                             <span className="tabular-nums">
                                                 {formatPrice(
-                                                    activeLease.deposit_amount,
+                                                    room.leases[0].deposit_amount,
                                                 )}
                                             </span>
                                         </div>
@@ -271,8 +296,8 @@ export default function RoomDetailSheet({
                                             </span>
                                             <span className="tabular-nums">
                                                 {DUE_DAY_LABELS[
-                                                    activeLease.rent_due_day
-                                                ] ?? activeLease.rent_due_day}
+                                                    room.leases[0].rent_due_day
+                                                ] ?? room.leases[0].rent_due_day}
                                             </span>
                                         </div>
                                     </div>
@@ -323,9 +348,9 @@ export default function RoomDetailSheet({
                                     Move Room
                                 </Button>
                             )}
-                            {!isOccupied && onAssignTenant && (
+                            {hasSpace && onAssignTenant && (
                                 <Button onClick={onAssignTenant}>
-                                    Assign Tenant
+                                    Assign Tenant{room.capacity > 1 ? '(s)' : ''}
                                 </Button>
                             )}
                             {room && property && (

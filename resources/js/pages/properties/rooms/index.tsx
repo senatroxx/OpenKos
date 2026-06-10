@@ -37,6 +37,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type LeaseInfo = {
@@ -55,7 +58,8 @@ type LeaseInfo = {
     rent_due_day: number;
     status: string;
     notes: string | null;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
 };
 
 type RoomRate = {
@@ -109,6 +113,8 @@ type PageProps = {
         id: number;
         name: string;
         property_id: number;
+        capacity: number;
+        occupied_count: number;
         property: {
             id: number;
             name: string;
@@ -174,7 +180,8 @@ export default function Index({
 
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
-        tenant: { id: number; name: string; phone: string | null } | null;
+        tenants: { id: number; name: string; phone: string | null }[];
+        primary_tenant: { id: number; name: string; phone: string | null } | null;
         room: {
             id: number;
             name: string;
@@ -255,7 +262,8 @@ export default function Index({
 
         setMoveOutLeaseData({
             id: lease.id,
-            tenant: lease.tenant,
+            tenants: lease.tenants ?? [],
+            primary_tenant: lease.primary_tenant ?? null,
             room: {
                 id: viewingRoom.id,
                 name: viewingRoom.name,
@@ -484,9 +492,10 @@ export default function Index({
                             </thead>
                             <tbody>
                                 {data.data.map((room) => {
-                                    const activeLease = room.leases?.[0];
-                                    const hasActiveLease =
-                                        room.active_leases > 0 && activeLease;
+                                    const hasActiveLease = room.active_leases > 0;
+                                    const occupants = hasActiveLease
+                                        ? room.leases.flatMap((l) => l.tenants ?? (l.primary_tenant ? [l.primary_tenant] : []))
+                                        : [];
 
                                     return (
                                         <tr
@@ -526,12 +535,15 @@ export default function Index({
                                                     : '—'}
                                             </td>
                                             <td className="px-4 py-3">
-                                                {hasActiveLease ? (
-                                                    <span className="text-sm">
-                                                        {activeLease.tenant
-                                                            ?.name ??
-                                                            'Occupied'}
-                                                    </span>
+                                                {hasActiveLease &&
+                                                occupants.length > 0 ? (
+                                                    <div className="text-sm">
+                                                        {occupants.map((t) => (
+                                                            <div key={t.id}>
+                                                                {t.name}
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 ) : (
                                                     <span className="text-sm text-muted-foreground">
                                                         —
@@ -572,59 +584,61 @@ export default function Index({
                                                             <Eye className="size-4" />
                                                             View
                                                         </DropdownMenuItem>
-                                                        {hasActiveLease && (
-                                                            <>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        setViewingRoom(
-                                                                            room,
-                                                                        );
-                                                                        setDetailOpen(
-                                                                            false,
-                                                                        );
-                                                                        const lease =
-                                                                            room
-                                                                                .leases?.[0];
-
-                                                                        if (
-                                                                            lease
-                                                                        ) {
-                                                                            setMoveFromRoom(
-                                                                                room,
-                                                                            );
-                                                                            setMoveLease(
-                                                                                lease,
-                                                                            );
-                                                                            setMoveOpen(
-                                                                                true,
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <Move className="size-4" />
-                                                                    Move Room
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                            </>
+                                                        {room.capacity >
+                                                            occupants.length && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setAssignRoom(
+                                                                        room,
+                                                                    );
+                                                                    setLeaseFormOpen(
+                                                                        true,
+                                                                    );
+                                                                }}
+                                                            >
+                                                                <DoorOpen className="size-4" />
+                                                                Assign Tenant{room.capacity >
+                                                                1
+                                                                    ? '(s)'
+                                                                    : ''}
+                                                            </DropdownMenuItem>
                                                         )}
-                                                        {!hasActiveLease && (
-                                                            <>
-                                                                <DropdownMenuItem
-                                                                    onClick={() => {
-                                                                        setAssignRoom(
+                                                        {hasActiveLease && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setViewingRoom(
+                                                                        room,
+                                                                    );
+                                                                    setDetailOpen(
+                                                                        false,
+                                                                    );
+                                                                    const lease =
+                                                                        room
+                                                                            .leases?.[0];
+
+                                                                    if (
+                                                                        lease
+                                                                    ) {
+                                                                        setMoveFromRoom(
                                                                             room,
                                                                         );
-                                                                        setLeaseFormOpen(
+                                                                        setMoveLease(
+                                                                            lease,
+                                                                        );
+                                                                        setMoveOpen(
                                                                             true,
                                                                         );
-                                                                    }}
-                                                                >
-                                                                    <DoorOpen className="size-4" />
-                                                                    Assign
-                                                                    Tenant
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuSeparator />
-                                                            </>
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Move className="size-4" />
+                                                                Move Room
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                        {(room.capacity >
+                                                            occupants.length ||
+                                                            hasActiveLease) && (
+                                                            <DropdownMenuSeparator />
                                                         )}
                                                         <DropdownMenuItem
                                                             onClick={() =>

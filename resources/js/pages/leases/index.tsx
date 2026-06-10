@@ -44,6 +44,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type RoomInfo = {
@@ -76,7 +79,8 @@ type Lease = {
     termination_reason: string | null;
     notes: string | null;
     created_at: string;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
     room: RoomInfo | null;
 };
 
@@ -89,6 +93,8 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
+    capacity: number;
+    occupied_count: number;
     property: {
         id: number;
         name: string;
@@ -484,7 +490,13 @@ export default function Index({
                                             onClick={() => openDetail(lease)}
                                         >
                                             <td className="px-4 py-3 font-medium">
-                                                {lease.tenant?.name ?? '—'}
+                                                {(lease.tenants ?? []).length > 0
+                                                    ? (lease.tenants
+                                                          .map((t) => t.name)
+                                                          .join(', ') ||
+                                                      lease.tenants[0]?.name)
+                                                    : lease.primary_tenant?.name ??
+                                                      '—'}
                                             </td>
                                             <td className="px-4 py-3">
                                                 {roomRoute ? (
@@ -711,7 +723,8 @@ export default function Index({
                     detailLease
                         ? {
                               id: detailLease.id,
-                              tenant: detailLease.tenant,
+                              tenants: detailLease.tenants,
+                              primary_tenant: detailLease.primary_tenant,
                               room: detailLease.room,
                           }
                         : null

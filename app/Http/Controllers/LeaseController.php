@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RoomStatus;
 use App\Http\Requests\StoreLeaseRequest;
 use App\Http\Requests\UpdateLeaseRequest;
 use App\Models\Lease;
@@ -24,7 +25,7 @@ class LeaseController extends Controller
         $room->load('property.city');
 
         $leases = $room->leases()
-            ->with('tenant:id,name,phone')
+            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -32,10 +33,24 @@ class LeaseController extends Controller
 
         $availableRooms = $property->rooms()
             ->with('property.city')
+            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->addSelect([
+                'occupied_count' => DB::table('lease_tenant')
+                    ->selectRaw('COALESCE(COUNT(*), 0)')
+                    ->whereIn('lease_id', function (\Illuminate\Database\Query\Builder $q) {
+                        $q->select('id')
+                            ->from('leases')
+                            ->whereColumn('room_id', 'rooms.id')
+                            ->where('status', 'active');
+                    }),
+            ])
             ->whereNull('deleted_at')
-            ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+            ->where(function (Builder $q) {
+                $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+                    ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
+            })
             ->orderBy('name')
-            ->get(['id', 'name', 'property_id']);
+            ->get();
 
         return Inertia::render('properties/rooms/leases/index', [
             'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
@@ -74,13 +89,13 @@ class LeaseController extends Controller
             : [];
 
         $leases = Lease::query()
-            ->with(['tenant:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
+            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'room.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->whereHas('tenant', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
+                $q->whereHas('tenants', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
                     ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
                     ->orWhereHas('room.property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
             }))
@@ -94,14 +109,28 @@ class LeaseController extends Controller
 
         $availableRooms = Room::query()
             ->with('property.city')
+            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->addSelect([
+                'occupied_count' => DB::table('lease_tenant')
+                    ->selectRaw('COALESCE(COUNT(*), 0)')
+                    ->whereIn('lease_id', function (\Illuminate\Database\Query\Builder $q) {
+                        $q->select('id')
+                            ->from('leases')
+                            ->whereColumn('room_id', 'rooms.id')
+                            ->where('status', 'active');
+                    }),
+            ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
             ->whereNull('deleted_at')
-            ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+            ->where(function (Builder $q) {
+                $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+                    ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
+            })
             ->orderBy('name')
-            ->get(['id', 'name', 'property_id']);
+            ->get();
 
         $allProperties = Property::query()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -127,33 +156,68 @@ class LeaseController extends Controller
     {
         $this->authorize('create', [Lease::class, $property]);
 
-        $request->ensureRoomAvailable($room);
+        $request->ensureCapacityAvailable($room);
 
-        $roomRate = $request->room_rate_id ? RoomRate::find($request->room_rate_id) : null;
-        $rentAmount = $request->rent_amount ?? $roomRate?->amount ?? $room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
-        $isCustomPrice = $request->rent_amount !== null && $roomRate && (float) $request->rent_amount !== (float) $roomRate->amount;
+        $tenantIds = $request->tenant_ids;
 
-        $lease = $room->leases()->create([
-            'tenant_id' => $request->tenant_id,
-            'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
-            'rent_amount' => $rentAmount,
-            'billing_interval' => $request->billing_interval ?? $roomRate?->billing_interval ?? 1,
-            'billing_unit' => $request->billing_unit ?? $roomRate?->billing_unit ?? 'month',
-            'is_custom_price' => $isCustomPrice,
-            'room_rate_id' => $request->room_rate_id,
-            'deposit_amount' => $request->deposit_amount ?? 0,
-            'deposit_paid_at' => $request->deposit_paid_at,
-            'deposit_refund_amount' => $request->deposit_refund_amount,
-            'deposit_refunded_at' => $request->deposit_refunded_at,
-            'rent_due_day' => $request->rent_due_day ?? 1,
-            'status' => 'active',
-            'notes' => $request->notes,
-        ]);
+        $lease = DB::transaction(function () use ($room, $request, $tenantIds) {
+            $existingLease = $room->leases()->where('status', 'active')->first();
 
-        $lease->load('tenant:id,name,phone');
+            if ($existingLease) {
+                $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant assigned to room.')]);
+                foreach ($tenantIds as $tenantId) {
+                    if (! $existingTenantIds->contains($tenantId)) {
+                        $existingLease->tenants()->attach($tenantId, ['is_primary' => DB::raw('false')]);
+                    }
+                }
+
+                $room->update(['status' => RoomStatus::Occupied]);
+
+                return $existingLease;
+            }
+
+            $roomRate = $request->room_rate_id ? RoomRate::find($request->room_rate_id) : null;
+            $rentAmount = $request->rent_amount ?? $roomRate?->amount ?? $room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
+            $isCustomPrice = $request->rent_amount !== null && $roomRate && (float) $request->rent_amount !== (float) $roomRate->amount;
+
+            $primaryTenantId = $tenantIds[0];
+
+            $lease = $room->leases()->create([
+                'primary_tenant_id' => $primaryTenantId,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'rent_amount' => $rentAmount,
+                'billing_interval' => $request->billing_interval ?? $roomRate?->billing_interval ?? 1,
+                'billing_unit' => $request->billing_unit ?? $roomRate?->billing_unit ?? 'month',
+                'is_custom_price' => $isCustomPrice ? DB::raw('true') : DB::raw('false'),
+                'room_rate_id' => $request->room_rate_id,
+                'deposit_amount' => $request->deposit_amount ?? 0,
+                'deposit_paid_at' => $request->deposit_paid_at,
+                'deposit_refund_amount' => $request->deposit_refund_amount,
+                'deposit_refunded_at' => $request->deposit_refunded_at,
+                'rent_due_day' => $request->rent_due_day ?? 1,
+                'status' => 'active',
+                'notes' => $request->notes,
+            ]);
+
+            foreach ($tenantIds as $index => $tenantId) {
+                $lease->tenants()->attach($tenantId, ['is_primary' => $index === 0 ? DB::raw('true') : DB::raw('false')]);
+            }
+
+            $room->update(['status' => RoomStatus::Occupied]);
+
+            return $lease;
+        });
+
+        $lease->load('tenants:id,name,phone', 'primaryTenant:id,name,phone');
+
+        $count = $lease->tenants->count();
+        $message = $count > 1
+            ? __(':count tenants assigned to room.', ['count' => $count])
+            : __('Tenant assigned to room.');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return to_route('properties.rooms.index', $property);
     }
@@ -173,12 +237,20 @@ class LeaseController extends Controller
     {
         $this->authorize('delete', $lease);
 
-        $lease->update([
-            'end_date' => now(),
-            'status' => 'terminated',
-            'termination_date' => now(),
-            'termination_reason' => request('reason'),
-        ]);
+        DB::transaction(function () use ($lease, $room) {
+            $lease->update([
+                'end_date' => now(),
+                'status' => 'terminated',
+                'termination_date' => now(),
+                'termination_reason' => request('reason'),
+            ]);
+
+            $room->unsetRelation('leases');
+
+            if ($room->leases()->where('status', 'active')->doesntExist()) {
+                $room->update(['status' => RoomStatus::Available]);
+            }
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease terminated.')]);
 
@@ -204,53 +276,76 @@ class LeaseController extends Controller
         $this->authorize('moveOut', [$lease, $targetRoom]);
 
         if ($validated['move_to_another_room'] ?? false) {
-            $hasActiveLease = Lease::query()
-                ->where('room_id', $targetRoom->id)
-                ->where('status', 'active')
-                ->exists();
+            $lease->load('tenants');
 
-            if ($hasActiveLease) {
-                return back()->withErrors(['target_room_id' => __('Target room already has an active lease.')]);
-            }
+            $activeTenantsCount = $targetRoom->leases()
+                ->where('status', 'active')
+                ->withCount('tenants')
+                ->get()
+                ->sum('tenants_count');
+
+            $totalOccupants = $activeTenantsCount + $lease->tenants->count();
+
+            abort_if($totalOccupants > $targetRoom->capacity, 422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
         }
 
         $depositRefundAmount = ($validated['deposit_returned'] ?? false)
             ? ($validated['deposit_refund_amount'] ?? $lease->deposit_amount)
             : null;
 
-        $lease->update([
-            'end_date' => $validated['move_out_date'],
-            'status' => 'terminated',
-            'termination_date' => now(),
-            'termination_reason' => $validated['reason'],
-            'deposit_refund_amount' => $depositRefundAmount,
-            'deposit_refunded_at' => $validated['deposit_returned'] ? now() : null,
-            'notes' => $validated['notes'] ?? $lease->notes,
-        ]);
+        DB::transaction(function () use ($lease, $validated, $targetRoom, $depositRefundAmount) {
+            $oldRoom = $lease->room;
 
-        if ($validated['move_to_another_room'] ?? false) {
-            $matchingRate = $targetRoom->rates()
-                ->where('billing_interval', $lease->billing_interval)
-                ->where('billing_unit', $lease->billing_unit)
-                ->first();
-
-            $targetRoom->leases()->create([
-                'tenant_id' => $lease->tenant_id,
-                'start_date' => $validated['move_out_date'],
-                'rent_amount' => $lease->rent_amount,
-                'billing_interval' => $lease->billing_interval ?? 1,
-                'billing_unit' => $lease->billing_unit ?? 'month',
-                'is_custom_price' => $lease->is_custom_price,
-                'room_rate_id' => $matchingRate?->id,
-                'deposit_amount' => $lease->deposit_amount,
-                'deposit_paid_at' => $lease->deposit_paid_at,
-                'deposit_refund_amount' => null,
-                'deposit_refunded_at' => null,
-                'rent_due_day' => $lease->rent_due_day,
-                'status' => 'active',
-                'notes' => 'Moved from room '.$lease->room->name.' on '.now()->format('Y-m-d'),
+            $lease->update([
+                'end_date' => $validated['move_out_date'],
+                'status' => 'terminated',
+                'termination_date' => now(),
+                'termination_reason' => $validated['reason'],
+                'deposit_refund_amount' => $depositRefundAmount,
+                'deposit_refunded_at' => $validated['deposit_returned'] ? now() : null,
+                'notes' => $validated['notes'] ?? $lease->notes,
             ]);
-        }
+
+            $oldRoom->unsetRelation('leases');
+
+            if ($oldRoom->leases()->where('status', 'active')->doesntExist()) {
+                $oldRoom->update(['status' => RoomStatus::Available]);
+            }
+
+            if ($validated['move_to_another_room'] ?? false) {
+                $matchingRate = $targetRoom->rates()
+                    ->where('billing_interval', $lease->billing_interval)
+                    ->where('billing_unit', $lease->billing_unit)
+                    ->first();
+
+                $newLease = $targetRoom->leases()->create([
+                    'primary_tenant_id' => $lease->primary_tenant_id,
+                    'start_date' => $validated['move_out_date'],
+                    'rent_amount' => $lease->rent_amount,
+                    'billing_interval' => $lease->billing_interval ?? 1,
+                    'billing_unit' => $lease->billing_unit ?? 'month',
+                    'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
+                    'room_rate_id' => $matchingRate?->id,
+                    'deposit_amount' => $lease->deposit_amount,
+                    'deposit_paid_at' => $lease->deposit_paid_at,
+                    'deposit_refund_amount' => null,
+                    'deposit_refunded_at' => null,
+                    'rent_due_day' => $lease->rent_due_day,
+                    'status' => 'active',
+                    'notes' => 'Moved from room '.$lease->room->name.' on '.now()->format('Y-m-d'),
+                ]);
+
+                $lease->load('tenants');
+
+                foreach ($lease->tenants as $tenant) {
+                    $newLease->tenants()->attach($tenant->id, [
+                        'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+                    ]);
+                }
+
+                $targetRoom->update(['status' => RoomStatus::Occupied]);
+            }
+        });
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -276,42 +371,65 @@ class LeaseController extends Controller
 
         $this->authorize('move', [$lease, $targetRoom]);
 
-        $hasActiveLease = Lease::query()
-            ->where('room_id', $targetRoom->id)
+        $lease->load('tenants');
+
+        $activeTenantsCount = $targetRoom->leases()
             ->where('status', 'active')
-            ->exists();
+            ->withCount('tenants')
+            ->get()
+            ->sum('tenants_count');
 
-        abort_if($hasActiveLease, 422, __('Target room already has an active lease.'));
+        $totalOccupants = $activeTenantsCount + $lease->tenants->count();
 
-        $lease->update([
-            'end_date' => now(),
-            'status' => 'terminated',
-            'termination_date' => now(),
-            'termination_reason' => 'Moved to room '.$targetRoom->name,
-            'notes' => ($lease->notes ? $lease->notes."\n" : '').'Moved to room '.$targetRoom->name.' on '.now()->format('Y-m-d'),
-        ]);
+        abort_if($totalOccupants > $targetRoom->capacity, 422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
 
-        $matchingRate = $targetRoom->rates()
-            ->where('billing_interval', $lease->billing_interval)
-            ->where('billing_unit', $lease->billing_unit)
-            ->first();
+        DB::transaction(function () use ($lease, $targetRoom, $room) {
+            $lease->update([
+                'end_date' => now(),
+                'status' => 'terminated',
+                'termination_date' => now(),
+                'termination_reason' => 'Moved to room '.$targetRoom->name,
+                'notes' => ($lease->notes ? $lease->notes."\n" : '').'Moved to room '.$targetRoom->name.' on '.now()->format('Y-m-d'),
+            ]);
 
-        $targetRoom->leases()->create([
-            'tenant_id' => $lease->tenant_id,
-            'start_date' => now(),
-            'rent_amount' => $lease->rent_amount,
-            'billing_interval' => $lease->billing_interval ?? 1,
-            'billing_unit' => $lease->billing_unit ?? 'month',
-            'is_custom_price' => $lease->is_custom_price,
-            'room_rate_id' => $matchingRate?->id,
-            'deposit_amount' => $lease->deposit_amount,
-            'deposit_paid_at' => $lease->deposit_paid_at,
-            'deposit_refund_amount' => $lease->deposit_refund_amount,
-            'deposit_refunded_at' => $lease->deposit_refunded_at,
-            'rent_due_day' => $lease->rent_due_day,
-            'status' => 'active',
-            'notes' => 'Moved from room '.$room->name.' on '.now()->format('Y-m-d'),
-        ]);
+            $room->unsetRelation('leases');
+
+            if ($room->leases()->where('status', 'active')->doesntExist()) {
+                $room->update(['status' => RoomStatus::Available]);
+            }
+
+            $matchingRate = $targetRoom->rates()
+                ->where('billing_interval', $lease->billing_interval)
+                ->where('billing_unit', $lease->billing_unit)
+                ->first();
+
+            $newLease = $targetRoom->leases()->create([
+                'primary_tenant_id' => $lease->primary_tenant_id,
+                'start_date' => now(),
+                'rent_amount' => $lease->rent_amount,
+                'billing_interval' => $lease->billing_interval ?? 1,
+                'billing_unit' => $lease->billing_unit ?? 'month',
+                'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
+                'room_rate_id' => $matchingRate?->id,
+                'deposit_amount' => $lease->deposit_amount,
+                'deposit_paid_at' => $lease->deposit_paid_at,
+                'deposit_refund_amount' => $lease->deposit_refund_amount,
+                'deposit_refunded_at' => $lease->deposit_refunded_at,
+                'rent_due_day' => $lease->rent_due_day,
+                'status' => 'active',
+                'notes' => 'Moved from room '.$room->name.' on '.now()->format('Y-m-d'),
+            ]);
+
+            $lease->load('tenants');
+
+            foreach ($lease->tenants as $tenant) {
+                $newLease->tenants()->attach($tenant->id, [
+                    'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+                ]);
+            }
+
+            $targetRoom->update(['status' => RoomStatus::Occupied]);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new room.')]);
 
