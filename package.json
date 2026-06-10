@@ -29,6 +29,7 @@
         "typescript-eslint": "^8.23.0"
     },
     "dependencies": {
+        "@base-ui/react": "^1.5.0",
         "@headlessui/react": "^2.2.0",
         "@inertiajs/react": "^3.0.0",
         "@inertiajs/vite": "^3.0.0",
@@ -59,7 +60,9 @@
         "input-otp": "^1.4.2",
         "laravel-vite-plugin": "^3.0.0",
         "lucide-react": "^0.475.0",
+        "radix-ui": "^1.4.3",
         "react": "^19.2.0",
+        "react-compiler-runtime": "^1.0.0",
         "react-dom": "^19.2.0",
         "sonner": "^2.0.0",
         "tailwind-merge": "^3.0.1",

@@ -48,8 +48,18 @@ class PropertyController extends Controller
             ))
             ->withCount([
                 'rooms',
-                'rooms as occupied_rooms_count' => fn (Builder $q) => $q->where('status', RoomStatus::Occupied),
-                'leases as tenants_count' => fn (Builder $q) => $q->selectRaw('count(distinct tenant_id)'),
+                'rooms as occupied_rooms_count' => fn (Builder $q) => $q->where(function (Builder $q) {
+                    $q->where('status', RoomStatus::Occupied)
+                        ->orWhereHas('leases', fn (Builder $q) => $q->where('status', 'active'));
+                }),
+            ])
+            ->addSelect([
+                'tenants_count' => DB::table('leases')
+                    ->selectRaw('COALESCE(COUNT(DISTINCT lease_tenant.tenant_id), 0)')
+                    ->join('lease_tenant', 'lease_tenant.lease_id', '=', 'leases.id')
+                    ->join('rooms', 'rooms.id', '=', 'leases.room_id')
+                    ->whereColumn('rooms.property_id', 'properties.id')
+                    ->where('leases.status', 'active'),
             ])
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(properties.name)'), 'like', '%'.mb_strtolower($search).'%')

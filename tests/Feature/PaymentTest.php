@@ -26,7 +26,7 @@ describe('authorization', function () {
         $admin->properties()->sync([$property->id]);
         $room = Room::factory()->for($property)->create();
         $tenant = Tenant::factory()->create();
-        $lease = Lease::factory()->create(['room_id' => $room->id, 'tenant_id' => $tenant->id]);
+        $lease = Lease::factory()->create(['room_id' => $room->id, 'primary_tenant_id' => $tenant->id]);
         $payment = Payment::factory()->create(['lease_id' => $lease->id]);
 
         expect($admin->can('view', $payment))->toBeTrue();
@@ -39,7 +39,7 @@ describe('authorization', function () {
         $admin->properties()->sync([$propertyA->id]);
         $room = Room::factory()->for($propertyB)->create();
         $tenant = Tenant::factory()->create();
-        $lease = Lease::factory()->create(['room_id' => $room->id, 'tenant_id' => $tenant->id]);
+        $lease = Lease::factory()->create(['room_id' => $room->id, 'primary_tenant_id' => $tenant->id]);
         $payment = Payment::factory()->create(['lease_id' => $lease->id]);
 
         expect($admin->can('view', $payment))->toBeFalse();

@@ -60,8 +60,8 @@ class LeaseSeeder extends Seeder
             $rate = $room->activeRates->first();
             $startDate = $now->copy()->subMonths(fake()->numberBetween(1, 6));
 
-            Lease::create([
-                'tenant_id' => $tenantId,
+            $lease = Lease::create([
+                'primary_tenant_id' => $tenantId,
                 'room_id' => $room->id,
                 'start_date' => $startDate,
                 'end_date' => null,
@@ -76,6 +76,8 @@ class LeaseSeeder extends Seeder
                 'status' => 'active',
                 'notes' => null,
             ]);
+
+            $lease->tenants()->attach($tenantId, ['is_primary' => DB::raw('true')]);
         }
 
         foreach ($this->historicalAssignments as $assignment) {
@@ -97,8 +99,8 @@ class LeaseSeeder extends Seeder
             $startDate = $now->copy()->subMonths($monthsAgo + random_int(1, 4));
             $endDate = $now->copy()->subMonths($monthsAgo);
 
-            Lease::create([
-                'tenant_id' => $tenantId,
+            $lease = Lease::create([
+                'primary_tenant_id' => $tenantId,
                 'room_id' => $room->id,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
@@ -119,6 +121,8 @@ class LeaseSeeder extends Seeder
                 ]),
                 'notes' => null,
             ]);
+
+            $lease->tenants()->attach($tenantId, ['is_primary' => DB::raw('true')]);
         }
 
         Room::query()

@@ -77,13 +77,13 @@ describe('CRUD', function () {
         $tenant = Tenant::factory()->create();
 
         Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $room->id,
             'status' => 'active',
         ]);
 
         Lease::factory()->terminated()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $room->id,
         ]);
 
@@ -102,7 +102,7 @@ describe('CRUD', function () {
         $tenant = Tenant::factory()->create();
 
         $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
-            'tenant_id' => $tenant->id,
+            'tenant_ids' => [$tenant->id],
             'start_date' => '2026-06-01',
             'rent_amount' => 1_500_000,
             'billing_unit' => 'month',
@@ -114,7 +114,7 @@ describe('CRUD', function () {
         $lease = Lease::first();
 
         expect($lease)->not->toBeNull();
-        expect($lease->tenant_id)->toBe($tenant->id);
+        expect($lease->primary_tenant_id)->toBe($tenant->id);
         expect($lease->room_id)->toBe($room->id);
         expect($lease->rent_amount)->toBe('1500000.00');
         expect($lease->deposit_amount)->toBe('1000000.00');
@@ -128,7 +128,7 @@ describe('CRUD', function () {
         $tenant = Tenant::factory()->create();
 
         $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
-            'tenant_id' => $tenant->id,
+            'tenant_ids' => [$tenant->id],
             'start_date' => '2026-06-01',
         ]);
 
@@ -143,7 +143,7 @@ describe('CRUD', function () {
 
         $this->actingAs($user)
             ->post(route('properties.rooms.leases.store', [$property, $room]), [])
-            ->assertSessionHasErrors(['tenant_id', 'start_date']);
+            ->assertSessionHasErrors(['tenant_ids', 'start_date']);
     });
 
     it('prevents assigning tenant to an already occupied room', function () {
@@ -153,14 +153,14 @@ describe('CRUD', function () {
         $tenantB = Tenant::factory()->create();
 
         Lease::factory()->create([
-            'tenant_id' => $tenantA->id,
+            'primary_tenant_id' => $tenantA->id,
             'room_id' => $room->id,
             'status' => 'active',
         ]);
 
         $this->actingAs($user)
             ->post(route('properties.rooms.leases.store', [$property, $room]), [
-                'tenant_id' => $tenantB->id,
+                'tenant_ids' => [$tenantB->id],
                 'start_date' => '2026-06-01',
             ])
             ->assertStatus(422);
@@ -172,7 +172,7 @@ describe('CRUD', function () {
         $tenant = Tenant::factory()->create();
 
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $room->id,
             'rent_amount' => 1_000_000,
         ]);
@@ -195,7 +195,7 @@ describe('termination', function () {
         $tenant = Tenant::factory()->create();
 
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $room->id,
             'status' => 'active',
             'end_date' => null,
@@ -224,7 +224,7 @@ describe('move room', function () {
         $tenant = Tenant::factory()->create();
 
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $roomA->id,
             'status' => 'active',
             'rent_amount' => 1_000_000,
@@ -246,7 +246,7 @@ describe('move room', function () {
         $newLease = Lease::where('room_id', $roomB->id)->first();
 
         expect($newLease)->not->toBeNull();
-        expect($newLease->tenant_id)->toBe($tenant->id);
+        expect($newLease->primary_tenant_id)->toBe($tenant->id);
         expect($newLease->status)->toBe('active');
         expect($newLease->rent_amount)->toBe('1000000.00');
         expect($newLease->deposit_amount)->toBe('500000.00');
@@ -272,7 +272,7 @@ describe('move room', function () {
 
         $this->actingAs($admin)
             ->post(route('properties.rooms.leases.store', [$propertyB, $roomB]), [
-                'tenant_id' => $tenant->id,
+                'tenant_ids' => [$tenant->id],
                 'start_date' => '2026-06-01',
             ])
             ->assertForbidden();
@@ -285,7 +285,7 @@ describe('move room', function () {
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $roomB->id,
         ]);
 
@@ -303,7 +303,7 @@ describe('move room', function () {
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $roomB->id,
             'status' => 'active',
         ]);
@@ -320,7 +320,7 @@ describe('move room', function () {
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $roomB->id,
             'status' => 'active',
         ]);
@@ -339,7 +339,7 @@ describe('move room', function () {
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
-            'tenant_id' => $tenant->id,
+            'primary_tenant_id' => $tenant->id,
             'room_id' => $roomA->id,
             'status' => 'active',
         ]);
@@ -363,13 +363,13 @@ describe('move room', function () {
         $tenantB = Tenant::factory()->create();
 
         $leaseA = Lease::factory()->create([
-            'tenant_id' => $tenantA->id,
+            'primary_tenant_id' => $tenantA->id,
             'room_id' => $roomA->id,
             'status' => 'active',
         ]);
 
         Lease::factory()->create([
-            'tenant_id' => $tenantB->id,
+            'primary_tenant_id' => $tenantB->id,
             'room_id' => $roomB->id,
             'status' => 'active',
         ]);
@@ -389,7 +389,7 @@ describe('room occupancy derived from lease', function () {
         $tenant = Tenant::factory()->create();
 
         $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
-            'tenant_id' => $tenant->id,
+            'tenant_ids' => [$tenant->id],
             'start_date' => '2026-06-01',
         ]);
 
