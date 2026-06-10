@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BillingUnit;
+use App\Enums\RoomStatus;
 use App\Http\Requests\StoreTenantRequest;
 use App\Http\Requests\UpdateTenantRequest;
-use App\Models\Lease;
 use App\Models\Room;
 use App\Models\RoomRate;
 use App\Models\Tenant;
@@ -47,8 +47,8 @@ class TenantController extends Controller
             : null;
 
         $tenants = Tenant::query()
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property'])])
-            ->withCount(['leases as active_leases_count' => fn (Builder $q) => $q->where('status', 'active')])
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
+            ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',
                 fn (Builder $q) => $q->whereHas('room', fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds)),
@@ -67,11 +67,25 @@ class TenantController extends Controller
 
         $availableRooms = Room::query()
             ->with('property.city')
+            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->addSelect([
+                'occupied_count' => DB::table('lease_tenant')
+                    ->selectRaw('COALESCE(COUNT(*), 0)')
+                    ->whereIn('lease_id', function (\Illuminate\Database\Query\Builder $q) {
+                        $q->select('id')
+                            ->from('leases')
+                            ->whereColumn('room_id', 'rooms.id')
+                            ->where('status', 'active');
+                    }),
+            ])
             ->whereNull('deleted_at')
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))
-            ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+            ->where(function (Builder $q) {
+                $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+                    ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
+            })
             ->orderBy('name')
-            ->get(['id', 'name', 'property_id']);
+            ->get();
 
         return Inertia::render('tenants/index', [
             'tenants' => $tenants,
@@ -87,6 +101,8 @@ class TenantController extends Controller
     public function assignRoom(Request $request, Tenant $tenant): RedirectResponse
     {
         $validated = $request->validate([
+            'tenant_ids' => ['nullable', 'array'],
+            'tenant_ids.*' => ['integer', 'exists:tenants,id'],
             'room_id' => ['required', 'integer', 'exists:rooms,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
@@ -104,36 +120,65 @@ class TenantController extends Controller
 
         $this->authorize('assignRoom', [Tenant::class, $room]);
 
-        $hasActiveLease = Lease::query()
-            ->where('room_id', $room->id)
+        $tenantIds = $validated['tenant_ids'] ?? [$tenant->id];
+
+        $activeTenantsCount = $room->leases()
             ->where('status', 'active')
-            ->exists();
+            ->withCount('tenants')
+            ->get()
+            ->sum('tenants_count');
 
-        if ($hasActiveLease) {
-            return back()->withErrors(['room_id' => __('Room already has an active lease.')]);
-        }
+        $totalOccupants = $activeTenantsCount + count($tenantIds);
 
-        $roomRate = isset($validated['room_rate_id']) ? RoomRate::find($validated['room_rate_id']) : null;
-        $rentAmount = $validated['rent_amount'] ?? $roomRate?->amount ?? $room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
-        $isCustomPrice = isset($validated['rent_amount']) && $roomRate && (float) $validated['rent_amount'] !== (float) $roomRate->amount;
+        abort_if($totalOccupants > $room->capacity, 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
 
-        $room->leases()->create([
-            'tenant_id' => $tenant->id,
-            'start_date' => $validated['start_date'],
-            'end_date' => $validated['end_date'] ?? null,
-            'rent_amount' => $rentAmount,
-            'billing_interval' => $validated['billing_interval'] ?? $roomRate?->billing_interval ?? 1,
-            'billing_unit' => $validated['billing_unit'] ?? $roomRate?->billing_unit ?? 'month',
-            'is_custom_price' => $isCustomPrice,
-            'room_rate_id' => $validated['room_rate_id'] ?? null,
-            'deposit_amount' => $validated['deposit_amount'] ?? 0,
-            'deposit_paid_at' => $validated['deposit_paid_at'] ?? null,
-            'deposit_refund_amount' => null,
-            'deposit_refunded_at' => null,
-            'rent_due_day' => $validated['rent_due_day'] ?? 1,
-            'status' => 'active',
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        DB::transaction(function () use ($room, $tenantIds, $validated) {
+            $existingLease = $room->leases()->where('status', 'active')->first();
+
+            if ($existingLease) {
+                $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
+
+                foreach ($tenantIds as $tenantId) {
+                    if (! $existingTenantIds->contains($tenantId)) {
+                        $existingLease->tenants()->attach($tenantId, ['is_primary' => DB::raw('false')]);
+                    }
+                }
+
+                $room->update(['status' => RoomStatus::Occupied]);
+
+                return;
+            }
+
+            $primaryTenantId = $tenantIds[0];
+
+            $roomRate = isset($validated['room_rate_id']) ? RoomRate::find($validated['room_rate_id']) : null;
+            $rentAmount = $validated['rent_amount'] ?? $roomRate?->amount ?? $room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
+            $isCustomPrice = isset($validated['rent_amount']) && $roomRate && (float) $validated['rent_amount'] !== (float) $roomRate->amount;
+
+            $lease = $room->leases()->create([
+                'primary_tenant_id' => $primaryTenantId,
+                'start_date' => $validated['start_date'],
+                'end_date' => $validated['end_date'] ?? null,
+                'rent_amount' => $rentAmount,
+                'billing_interval' => $validated['billing_interval'] ?? $roomRate?->billing_interval ?? 1,
+                'billing_unit' => $validated['billing_unit'] ?? $roomRate?->billing_unit ?? 'month',
+                'is_custom_price' => $isCustomPrice ? DB::raw('true') : DB::raw('false'),
+                'room_rate_id' => $validated['room_rate_id'] ?? null,
+                'deposit_amount' => $validated['deposit_amount'] ?? 0,
+                'deposit_paid_at' => $validated['deposit_paid_at'] ?? null,
+                'deposit_refund_amount' => null,
+                'deposit_refunded_at' => null,
+                'rent_due_day' => $validated['rent_due_day'] ?? 1,
+                'status' => 'active',
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            foreach ($tenantIds as $index => $tid) {
+                $lease->tenants()->attach($tid, ['is_primary' => $index === 0 ? DB::raw('true') : DB::raw('false')]);
+            }
+
+            $room->update(['status' => RoomStatus::Occupied]);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant assigned to room.')]);
 

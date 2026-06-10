@@ -2,7 +2,6 @@ import { Form, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
-import SearchableSelect from '@/components/searchable-select';
 import { Button } from '@/components/ui/button';
 import {
     Collapsible,
@@ -39,6 +38,7 @@ type Room = {
     name: string;
     floor: string | null;
     active_rates: RoomRate[];
+    capacity?: number;
 };
 
 type Property = {
@@ -119,9 +119,7 @@ export default function LeaseFormSheet({
     const { tenants } = usePage<{
         tenants: { id: number; name: string; phone: string }[];
     }>().props;
-    const [selectedTenantId, setSelectedTenantId] = useState<number | null>(
-        null,
-    );
+    const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>([]);
     const [dueDay, setDueDay] = useState('1');
     const [hasDeposit, setHasDeposit] = useState(false);
     const dueDayInitialized = useRef(false);
@@ -142,11 +140,7 @@ export default function LeaseFormSheet({
     );
     const [isCustom, setIsCustom] = useState(false);
 
-    const tenantOptions = (tenants ?? []).map((t) => ({
-        value: t.id,
-        label: `${t.name}${t.phone ? ` (${t.phone})` : ''}`,
-    }));
-
+    const capacity = room?.capacity ?? 1;
     const selectedRate =
         room?.active_rates?.find((r) => r.id === selectedRateId) ?? null;
 
@@ -191,13 +185,23 @@ export default function LeaseFormSheet({
         [],
     );
 
+    function toggleTenant(tenantId: number) {
+        setSelectedTenantIds((prev) =>
+            prev.includes(tenantId)
+                ? prev.filter((id) => id !== tenantId)
+                : [...prev, tenantId],
+        );
+    }
+
     return (
         <Sheet key="lease-form" open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Assign Tenant</SheetTitle>
+                    <SheetTitle>Assign Tenant{capacity > 1 ? 's' : ''}</SheetTitle>
                     <SheetDescription>
-                        Assign a tenant to {room?.name ?? 'this room'}
+                        Assign {capacity > 1 ? 'tenants' : 'a tenant'} to{' '}
+                        {room?.name ?? 'this room'}
+                        {capacity > 1 && ` (capacity: ${capacity})`}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -218,26 +222,79 @@ export default function LeaseFormSheet({
                                     </h3>
 
                                     <div className="grid gap-2">
-                                        <Label>Tenant</Label>
-                                        <input
-                                            type="hidden"
-                                            name="tenant_id"
-                                            value={selectedTenantId ?? ''}
-                                        />
-                                        <SearchableSelect
-                                            options={tenantOptions}
-                                            value={selectedTenantId}
-                                            onChange={(val) =>
-                                                setSelectedTenantId(
-                                                    val as number | null,
-                                                )
-                                            }
-                                            placeholder="Select tenant..."
-                                            searchPlaceholder="Search tenant..."
-                                            emptyText="No tenant found."
-                                        />
+                                        <Label>
+                                            Tenants{' '}
+                                            {capacity > 1 &&
+                                                `(select up to ${capacity})`}
+                                        </Label>
+
+                                        {selectedTenantIds.map((id) => (
+                                            <input
+                                                key={id}
+                                                type="hidden"
+                                                name="tenant_ids[]"
+                                                value={id}
+                                            />
+                                        ))}
+
+                                        <div className="max-h-48 overflow-y-auto rounded-md border">
+                                            {(tenants ?? []).map((t) => {
+                                                const isSelected =
+                                                    selectedTenantIds.includes(
+                                                        t.id,
+                                                    );
+                                                const atCapacity =
+                                                    !isSelected &&
+                                                    selectedTenantIds.length >=
+                                                        capacity;
+
+                                                return (
+                                                    <label
+                                                        key={t.id}
+                                                        className={`flex cursor-pointer items-center gap-3 border-b px-3 py-2 text-sm last:border-0 hover:bg-muted/50 ${
+                                                            isSelected
+                                                                ? 'bg-blue-50 dark:bg-blue-950'
+                                                                : ''
+                                                        } ${
+                                                            atCapacity
+                                                                ? 'cursor-not-allowed opacity-50'
+                                                                : ''
+                                                        }`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() =>
+                                                                toggleTenant(
+                                                                    t.id,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                atCapacity
+                                                            }
+                                                            className="size-4"
+                                                        />
+                                                        <span className="font-medium">
+                                                            {t.name}
+                                                        </span>
+                                                        {t.phone && (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {t.phone}
+                                                            </span>
+                                                        )}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <p className="text-xs text-muted-foreground">
+                                            {selectedTenantIds.length === 0
+                                                ? 'Select at least one tenant'
+                                                : `${selectedTenantIds.length} of ${capacity} selected`}
+                                        </p>
+
                                         <InputError
-                                            message={errors.tenant_id}
+                                            message={errors.tenant_ids}
                                         />
                                     </div>
                                 </section>
@@ -516,6 +573,9 @@ export default function LeaseFormSheet({
                                     </Button>
                                     <Button disabled={processing}>
                                         Assign Tenant
+                                        {selectedTenantIds.length > 1
+                                            ? 's'
+                                            : ''}
                                     </Button>
                                 </div>
                             </div>

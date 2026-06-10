@@ -11,6 +11,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type RoomInfo = {
@@ -42,7 +45,8 @@ type Lease = {
     termination_date: string | null;
     termination_reason: string | null;
     notes: string | null;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
     room: RoomInfo | null;
 };
 
@@ -99,8 +103,6 @@ export default function LeaseDetailSheet({
     onEdit?: () => void;
 }) {
     const isActive = lease?.status === 'active';
-    const tenantName = lease?.tenant?.name ?? '—';
-    const phone = lease?.tenant?.phone;
     const roomName = lease?.room?.name ?? '—';
     const propertyName = lease?.room?.property?.name ?? '—';
     const propertyCity = lease?.room?.property?.city?.name ?? '';
@@ -139,19 +141,57 @@ export default function LeaseDetailSheet({
                                     Occupancy
                                 </h3>
                                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Tenant
-                                        </span>
-                                        <div className="text-right">
-                                            <p className="text-sm font-medium">
-                                                {tenantName}
-                                            </p>
-                                            {phone && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {phone}
-                                                </p>
-                                            )}
+                                    <div>
+                                        <p className="mb-2 text-xs text-muted-foreground">
+                                            Tenants
+                                        </p>
+                                        <div className="space-y-2">
+                                            {(lease?.tenants ?? []).length > 0
+                                                ? lease!.tenants.map((t) => (
+                                                      <div
+                                                          key={t.id}
+                                                          className="flex items-center justify-between"
+                                                      >
+                                                          <div>
+                                                              <span className="text-sm font-medium">
+                                                                  {t.name}
+                                                              </span>
+                                                              {t.pivot
+                                                                  ?.is_primary && (
+                                                                  <span className="ml-2 text-[10px] font-medium text-blue-600 uppercase">
+                                                                      Primary
+                                                                  </span>
+                                                              )}
+                                                          </div>
+                                                          {t.phone && (
+                                                              <span className="text-xs text-muted-foreground">
+                                                                  {t.phone}
+                                                              </span>
+                                                          )}
+                                                      </div>
+                                                  ))
+                                                : lease?.primary_tenant && (
+                                                      <div className="flex items-center justify-between">
+                                                          <span className="text-sm font-medium">
+                                                              {
+                                                                  lease
+                                                                      .primary_tenant
+                                                                      .name
+                                                              }
+                                                          </span>
+                                                          {lease
+                                                              .primary_tenant
+                                                              .phone && (
+                                                              <span className="text-xs text-muted-foreground">
+                                                                  {
+                                                                      lease
+                                                                          .primary_tenant
+                                                                          .phone
+                                                                  }
+                                                              </span>
+                                                          )}
+                                                      </div>
+                                                  )}
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
