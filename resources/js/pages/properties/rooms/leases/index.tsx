@@ -10,6 +10,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type Lease = {
@@ -31,7 +34,8 @@ type Lease = {
     termination_reason: string | null;
     notes: string | null;
     created_at: string;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
     room: {
         id: number;
         name: string;
@@ -69,6 +73,8 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
+    capacity: number;
+    occupied_count: number;
     property: {
         id: number;
         name: string;
@@ -216,15 +222,47 @@ export default function Index({
                                         onClick={() => openDetail(lease)}
                                     >
                                         <td className="px-4 py-3">
-                                            <p className="font-medium">
-                                                {lease.tenant?.name ??
-                                                    'Unknown'}
-                                            </p>
-                                            {lease.tenant?.phone && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {lease.tenant.phone}
-                                                </p>
-                                            )}
+                                            {(lease.tenants ?? []).length > 0
+                                                ? lease.tenants.map((t) => (
+                                                      <div key={t.id}>
+                                                          <p className="font-medium">
+                                                              {t.name}
+                                                              {t.pivot
+                                                                  ?.is_primary && (
+                                                                  <span className="ml-1 text-[10px] font-medium text-blue-600 uppercase">
+                                                                      Primary
+                                                                  </span>
+                                                              )}
+                                                          </p>
+                                                          {t.phone && (
+                                                              <p className="text-xs text-muted-foreground">
+                                                                  {t.phone}
+                                                              </p>
+                                                          )}
+                                                      </div>
+                                                  ))
+                                                : lease.primary_tenant && (
+                                                      <div>
+                                                          <p className="font-medium">
+                                                              {
+                                                                  lease
+                                                                      .primary_tenant
+                                                                      .name
+                                                              }
+                                                          </p>
+                                                          {lease
+                                                              .primary_tenant
+                                                              .phone && (
+                                                              <p className="text-xs text-muted-foreground">
+                                                                  {
+                                                                      lease
+                                                                          .primary_tenant
+                                                                          .phone
+                                                                  }
+                                                              </p>
+                                                          )}
+                                                      </div>
+                                                  )}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
                                             {formatDate(lease.start_date)}
@@ -309,7 +347,8 @@ export default function Index({
                     detailLease
                         ? {
                               id: detailLease.id,
-                              tenant: detailLease.tenant,
+                              tenants: detailLease.tenants,
+                              primary_tenant: detailLease.primary_tenant,
                               room: detailLease.room,
                           }
                         : null
