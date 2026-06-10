@@ -23,6 +23,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type RoomInfo = {
@@ -54,7 +57,8 @@ type Lease = {
     termination_date: string | null;
     termination_reason: string | null;
     notes: string | null;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
     room: RoomInfo | null;
 };
 
@@ -123,13 +127,44 @@ export default function LeaseEditSheet({
                                         Occupancy
                                     </h3>
                                     <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                Tenant
-                                            </span>
-                                            <span className="font-medium">
-                                                {lease.tenant?.name ?? '—'}
-                                            </span>
+                                        <div>
+                                            <p className="mb-1 text-xs text-muted-foreground">
+                                                Tenants
+                                            </p>
+                                            <div className="space-y-1">
+                                                {(lease.tenants ?? []).length >
+                                                0
+                                                    ? lease.tenants.map((t) => (
+                                                          <div
+                                                              key={t.id}
+                                                              className="flex items-center justify-between text-sm"
+                                                          >
+                                                              <span className="font-medium">
+                                                                  {t.name}
+                                                              </span>
+                                                              {t.pivot
+                                                                  ?.is_primary && (
+                                                                  <span className="text-[10px] font-medium text-blue-600 uppercase">
+                                                                      Primary
+                                                                  </span>
+                                                              )}
+                                                          </div>
+                                                      ))
+                                                    : lease.primary_tenant && (
+                                                          <div className="flex items-center justify-between text-sm">
+                                                              <span className="font-medium">
+                                                                  {
+                                                                      lease
+                                                                          .primary_tenant
+                                                                          .name
+                                                                  }
+                                                              </span>
+                                                              <span className="text-[10px] font-medium text-blue-600 uppercase">
+                                                                  Primary
+                                                              </span>
+                                                          </div>
+                                                      )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">

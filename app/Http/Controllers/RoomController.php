@@ -45,7 +45,7 @@ class RoomController extends Controller
             ->withCount([
                 'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
             ])
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenant:id,name,phone'), 'activeRates'])
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']), 'activeRates'])
             ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
                 $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
                     ->orWhere(DB::raw('lower(floor)'), 'like', '%'.mb_strtolower($search).'%');
@@ -65,10 +65,24 @@ class RoomController extends Controller
 
         $availableRooms = $property->rooms()
             ->with('property.city')
+            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->addSelect([
+                'occupied_count' => DB::table('lease_tenant')
+                    ->selectRaw('COALESCE(COUNT(*), 0)')
+                    ->whereIn('lease_id', function (\Illuminate\Database\Query\Builder $q) {
+                        $q->select('id')
+                            ->from('leases')
+                            ->whereColumn('room_id', 'rooms.id')
+                            ->where('status', 'active');
+                    }),
+            ])
             ->whereNull('deleted_at')
-            ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+            ->where(function (Builder $q) {
+                $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
+                    ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
+            })
             ->orderBy('name')
-            ->get(['id', 'name', 'property_id']);
+            ->get();
 
         return Inertia::render('properties/rooms/index', [
             'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],

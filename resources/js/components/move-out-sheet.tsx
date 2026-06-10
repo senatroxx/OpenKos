@@ -25,6 +25,9 @@ type TenantInfo = {
     id: number;
     name: string;
     phone: string | null;
+    pivot?: {
+        is_primary: boolean;
+    };
 };
 
 type RoomInfo = {
@@ -40,7 +43,8 @@ type RoomInfo = {
 
 type LeaseData = {
     id: number;
-    tenant: TenantInfo | null;
+    tenants: TenantInfo[];
+    primary_tenant: TenantInfo | null;
     room: RoomInfo | null;
 };
 
@@ -48,6 +52,8 @@ type AvailableRoom = {
     id: number;
     name: string;
     property_id: number;
+    capacity: number;
+    occupied_count: number;
     property: {
         id: number;
         name: string;
@@ -115,10 +121,19 @@ export default function MoveOutSheet({
         [availableRooms, selectedPropertyId],
     );
 
-    const targetRoomOptions = filteredRooms.map((r) => ({
-        value: r.id,
-        label: r.name,
-    }));
+    const targetRoomOptions = filteredRooms.map((r) => {
+        const spotsLeft = r.capacity - r.occupied_count;
+        const suffix = r.occupied_count > 0
+            ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+            : r.capacity > 1
+                ? ` (capacity ${r.capacity})`
+                : '';
+
+        return {
+            value: r.id,
+            label: `${r.name}${suffix}`,
+        };
+    });
 
     function handlePropertyChange(val: number | string | null) {
         setSelectedPropertyId(val as number | null);
@@ -130,7 +145,10 @@ export default function MoveOutSheet({
         onClose?.();
     }
 
-    const tenantName = lease?.tenant?.name ?? 'Unknown';
+    const tenantName = lease?.primary_tenant?.name
+        ?? lease?.tenants?.[0]?.name
+        ?? 'Unknown';
+    const tenantList = lease?.tenants ?? [];
     const roomName = lease?.room?.name ?? 'Unknown';
     const isCurrentlyOccupied = Boolean(lease);
 
@@ -157,13 +175,33 @@ export default function MoveOutSheet({
                         {({ processing, errors }) => (
                             <div className="space-y-6 pt-4">
                                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-medium">
-                                            {tenantName}
-                                        </span>
-                                        <span className="text-muted-foreground">
-                                            {roomName}
-                                        </span>
+                                    <div className="space-y-1">
+                                        {tenantList.length > 0
+                                            ? tenantList.map((t) => (
+                                                  <div
+                                                      key={t.id}
+                                                      className="flex items-center justify-between"
+                                                  >
+                                                      <span className="font-medium">
+                                                          {t.name}
+                                                      </span>
+                                                      <span className="text-xs text-muted-foreground">
+                                                          {t.pivot?.is_primary
+                                                              ? 'Primary'
+                                                              : roomName}
+                                                      </span>
+                                                  </div>
+                                              ))
+                                            : (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="font-medium">
+                                                        {tenantName}
+                                                    </span>
+                                                    <span className="text-muted-foreground">
+                                                        {roomName}
+                                                    </span>
+                                                </div>
+                                            )}
                                     </div>
                                 </div>
 
