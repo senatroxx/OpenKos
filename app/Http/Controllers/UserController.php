@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Role;
-use App\Http\Requests\StoreUserInvitationRequest;
-use App\Http\Requests\UpdateUserRequest;
+use App\Http\Requests\User\CompleteInvitationRequest;
+use App\Http\Requests\User\StoreUserInvitationRequest;
+use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\Property;
 use App\Models\Role as RoleModel;
 use App\Models\User;
@@ -18,7 +19,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password as PasswordRule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -229,21 +229,17 @@ class UserController extends Controller
         ]);
     }
 
-    public function completeInvitation(Request $request): RedirectResponse
+    public function completeInvitation(CompleteInvitationRequest $request): RedirectResponse
     {
-        $request->validate([
-            'token' => ['required', 'string'],
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string', PasswordRule::default(), 'confirmed'],
-        ]);
+        $validated = $request->validated();
 
-        $invitedUser = User::where('email', $request->email)->first();
+        $invitedUser = User::where('email', $validated['email'])->first();
 
         if (! $invitedUser?->invited_at) {
             return back()->withErrors(['email' => __('This invitation is invalid or inactive.')]);
         }
 
-        $status = Password::broker()->reset($request->only('email', 'password', 'password_confirmation', 'token'), function (User $user, string $password): void {
+        $status = Password::broker()->reset($validated, function (User $user, string $password): void {
             $user->forceFill([
                 'password' => $password,
                 'email_verified_at' => now(),
