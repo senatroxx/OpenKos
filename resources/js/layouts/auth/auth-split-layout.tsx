@@ -8,7 +8,7 @@ export default function AuthSplitLayout({
     title,
     description,
 }: AuthLayoutProps) {
-    const { setting } = usePage().props;
+    const { setting } = usePage<{ setting: { site_name: string } }>().props;
 
     return (
         <div className="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">

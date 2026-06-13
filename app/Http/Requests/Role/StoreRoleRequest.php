@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Role;
 
 use App\Enums\Permission;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateRoleRequest extends FormRequest
+class StoreRoleRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -19,21 +19,13 @@ class UpdateRoleRequest extends FormRequest
      */
     public function rules(): array
     {
-        $role = $this->route('role');
-
-        $rules = [
-            'label' => ['nullable', 'string', 'max:255'],
+        return [
+            'name' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:roles,name'],
+            'label' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:1000'],
             'color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'is_active' => ['boolean'],
             'permissions' => ['array'],
             'permissions.*' => ['string', Rule::in(Permission::values())],
         ];
-
-        if ($role && $role->is_system) {
-            unset($rules['is_active']);
-        }
-
-        return $rules;
     }
 }

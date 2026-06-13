@@ -374,7 +374,7 @@ export default function Index({
 
     function getFilteredRoomsForMove(
         currentRoomId: number,
-    ): { id: number; name: string }[] {
+    ): (typeof _availableRooms)[number][] {
         return _availableRooms.filter((r) => r.id !== currentRoomId);
     }
 
@@ -759,6 +759,7 @@ export default function Index({
             />
 
             <RoomFormSheet
+                key={editingRoom?.id ?? 'new'}
                 room={editingRoom}
                 property={property}
                 open={dialogOpen}
