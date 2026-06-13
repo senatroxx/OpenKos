@@ -7,21 +7,20 @@ declare module 'react' {
     }
 }
 
-declare module '@inertiajs/core' {
-    export interface InertiaConfig {
-        sharedPageProps: {
-            name: string;
-            auth: Auth;
-            setting: {
-                id: number;
-                site_name: string;
-                country_code: string;
-                locale: string;
-                currency: string;
-                timezone: string;
+    declare module '@inertiajs/core' {
+        export interface InertiaConfig {
+            sharedPageProps: {
+                name: string;
+                auth: Auth;
+                setting: {
+                    id: number;
+                    site_name: string;
+                    country_code: string;
+                    locale: string;
+                    currency: string;
+                    timezone: string;
+                };
+                sidebarOpen: boolean;
             };
-            sidebarOpen: boolean;
-            [key: string]: unknown;
-        };
+        }
     }
-}
