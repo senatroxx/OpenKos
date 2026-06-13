@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Lease;
 
 use App\Enums\BillingUnit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class StoreLeaseRequest extends FormRequest
+class UpdateLeaseRequest extends FormRequest
 {
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -15,9 +15,7 @@ class StoreLeaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tenant_ids' => ['required', 'array', 'min:1'],
-            'tenant_ids.*' => ['required', 'integer', 'distinct', 'exists:tenants,id'],
-            'start_date' => ['required', 'date'],
+            'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'rent_amount' => ['nullable', 'numeric', 'min:0'],
             'billing_interval' => ['nullable', 'integer', 'min:1', 'max:255'],

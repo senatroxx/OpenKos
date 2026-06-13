@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RoomStatus;
-use App\Http\Requests\StorePropertyRequest;
-use App\Http\Requests\UpdatePropertyRequest;
+use App\Http\Requests\Property\StorePropertyRequest;
+use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\City;
 use App\Models\Property;
 use App\Models\Region;
