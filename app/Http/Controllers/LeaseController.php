@@ -156,11 +156,19 @@ class LeaseController extends Controller
     {
         $this->authorize('create', [Lease::class, $property]);
 
-        $request->ensureCapacityAvailable($room);
-
-        $tenantIds = $request->tenant_ids;
+        $tenantIds = array_values(array_unique($request->tenant_ids));
 
         $lease = DB::transaction(function () use ($room, $request, $tenantIds) {
+            $room = Room::lockForUpdate()->findOrFail($room->id);
+
+            $activeTenantsCount = DB::table('lease_tenant')
+                ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
+                ->where('leases.room_id', $room->id)
+                ->where('leases.status', 'active')
+                ->count();
+
+            abort_if(($activeTenantsCount + count($tenantIds)) > $room->capacity, 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
+
             $existingLease = $room->leases()->where('status', 'active')->first();
 
             if ($existingLease) {
@@ -275,25 +283,24 @@ class LeaseController extends Controller
 
         $this->authorize('moveOut', [$lease, $targetRoom]);
 
-        if ($validated['move_to_another_room'] ?? false) {
-            $lease->load('tenants');
-
-            $activeTenantsCount = $targetRoom->leases()
-                ->where('status', 'active')
-                ->withCount('tenants')
-                ->get()
-                ->sum('tenants_count');
-
-            $totalOccupants = $activeTenantsCount + $lease->tenants->count();
-
-            abort_if($totalOccupants > $targetRoom->capacity, 422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
-        }
-
         $depositRefundAmount = ($validated['deposit_returned'] ?? false)
             ? ($validated['deposit_refund_amount'] ?? $lease->deposit_amount)
             : null;
 
         DB::transaction(function () use ($lease, $validated, $targetRoom, $depositRefundAmount) {
+            if ($validated['move_to_another_room'] ?? false) {
+                $targetRoom = Room::lockForUpdate()->findOrFail($targetRoom->id);
+
+                $lease->load('tenants');
+
+                $activeTenantsCount = DB::table('lease_tenant')
+                    ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
+                    ->where('leases.room_id', $targetRoom->id)
+                    ->where('leases.status', 'active')
+                    ->count();
+
+                abort_if(($activeTenantsCount + $lease->tenants->count()) > $targetRoom->capacity, 422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
+            }
             $oldRoom = $lease->room;
 
             $lease->update([
@@ -313,34 +320,48 @@ class LeaseController extends Controller
             }
 
             if ($validated['move_to_another_room'] ?? false) {
-                $matchingRate = $targetRoom->rates()
-                    ->where('billing_interval', $lease->billing_interval)
-                    ->where('billing_unit', $lease->billing_unit)
-                    ->first();
-
-                $newLease = $targetRoom->leases()->create([
-                    'primary_tenant_id' => $lease->primary_tenant_id,
-                    'start_date' => $validated['move_out_date'],
-                    'rent_amount' => $lease->rent_amount,
-                    'billing_interval' => $lease->billing_interval ?? 1,
-                    'billing_unit' => $lease->billing_unit ?? 'month',
-                    'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
-                    'room_rate_id' => $matchingRate?->id,
-                    'deposit_amount' => $lease->deposit_amount,
-                    'deposit_paid_at' => $lease->deposit_paid_at,
-                    'deposit_refund_amount' => null,
-                    'deposit_refunded_at' => null,
-                    'rent_due_day' => $lease->rent_due_day,
-                    'status' => 'active',
-                    'notes' => 'Moved from room '.$lease->room->name.' on '.now()->format('Y-m-d'),
-                ]);
+                $existingLease = $targetRoom->leases()->where('status', 'active')->first();
 
                 $lease->load('tenants');
 
-                foreach ($lease->tenants as $tenant) {
-                    $newLease->tenants()->attach($tenant->id, [
-                        'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+                if ($existingLease) {
+                    $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
+
+                    foreach ($lease->tenants as $tenant) {
+                        if (! $existingTenantIds->contains($tenant->id)) {
+                            $existingLease->tenants()->attach($tenant->id, [
+                                'is_primary' => DB::raw('false'),
+                            ]);
+                        }
+                    }
+                } else {
+                    $matchingRate = $targetRoom->rates()
+                        ->where('billing_interval', $lease->billing_interval)
+                        ->where('billing_unit', $lease->billing_unit)
+                        ->first();
+
+                    $newLease = $targetRoom->leases()->create([
+                        'primary_tenant_id' => $lease->primary_tenant_id,
+                        'start_date' => $validated['move_out_date'],
+                        'rent_amount' => $lease->rent_amount,
+                        'billing_interval' => $lease->billing_interval ?? 1,
+                        'billing_unit' => $lease->billing_unit ?? 'month',
+                        'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
+                        'room_rate_id' => $matchingRate?->id,
+                        'deposit_amount' => $lease->deposit_amount,
+                        'deposit_paid_at' => $lease->deposit_paid_at,
+                        'deposit_refund_amount' => null,
+                        'deposit_refunded_at' => null,
+                        'rent_due_day' => $lease->rent_due_day,
+                        'status' => 'active',
+                        'notes' => 'Moved from room '.$lease->room->name.' on '.now()->format('Y-m-d'),
                     ]);
+
+                    foreach ($lease->tenants as $tenant) {
+                        $newLease->tenants()->attach($tenant->id, [
+                            'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+                        ]);
+                    }
                 }
 
                 $targetRoom->update(['status' => RoomStatus::Occupied]);
@@ -371,19 +392,18 @@ class LeaseController extends Controller
 
         $this->authorize('move', [$lease, $targetRoom]);
 
-        $lease->load('tenants');
-
-        $activeTenantsCount = $targetRoom->leases()
-            ->where('status', 'active')
-            ->withCount('tenants')
-            ->get()
-            ->sum('tenants_count');
-
-        $totalOccupants = $activeTenantsCount + $lease->tenants->count();
-
-        abort_if($totalOccupants > $targetRoom->capacity, 422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
-
         DB::transaction(function () use ($lease, $targetRoom, $room) {
+            $targetRoom = Room::lockForUpdate()->findOrFail($targetRoom->id);
+
+            $lease->load('tenants');
+
+            $activeTenantsCount = DB::table('lease_tenant')
+                ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
+                ->where('leases.room_id', $targetRoom->id)
+                ->where('leases.status', 'active')
+                ->count();
+
+            abort_if(($activeTenantsCount + $lease->tenants->count()) > $targetRoom->capacity, 422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
             $lease->update([
                 'end_date' => now(),
                 'status' => 'terminated',
@@ -398,34 +418,48 @@ class LeaseController extends Controller
                 $room->update(['status' => RoomStatus::Available]);
             }
 
-            $matchingRate = $targetRoom->rates()
-                ->where('billing_interval', $lease->billing_interval)
-                ->where('billing_unit', $lease->billing_unit)
-                ->first();
-
-            $newLease = $targetRoom->leases()->create([
-                'primary_tenant_id' => $lease->primary_tenant_id,
-                'start_date' => now(),
-                'rent_amount' => $lease->rent_amount,
-                'billing_interval' => $lease->billing_interval ?? 1,
-                'billing_unit' => $lease->billing_unit ?? 'month',
-                'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
-                'room_rate_id' => $matchingRate?->id,
-                'deposit_amount' => $lease->deposit_amount,
-                'deposit_paid_at' => $lease->deposit_paid_at,
-                'deposit_refund_amount' => $lease->deposit_refund_amount,
-                'deposit_refunded_at' => $lease->deposit_refunded_at,
-                'rent_due_day' => $lease->rent_due_day,
-                'status' => 'active',
-                'notes' => 'Moved from room '.$room->name.' on '.now()->format('Y-m-d'),
-            ]);
+            $existingLease = $targetRoom->leases()->where('status', 'active')->first();
 
             $lease->load('tenants');
 
-            foreach ($lease->tenants as $tenant) {
-                $newLease->tenants()->attach($tenant->id, [
-                    'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+            if ($existingLease) {
+                $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
+
+                foreach ($lease->tenants as $tenant) {
+                    if (! $existingTenantIds->contains($tenant->id)) {
+                        $existingLease->tenants()->attach($tenant->id, [
+                            'is_primary' => DB::raw('false'),
+                        ]);
+                    }
+                }
+            } else {
+                $matchingRate = $targetRoom->rates()
+                    ->where('billing_interval', $lease->billing_interval)
+                    ->where('billing_unit', $lease->billing_unit)
+                    ->first();
+
+                $newLease = $targetRoom->leases()->create([
+                    'primary_tenant_id' => $lease->primary_tenant_id,
+                    'start_date' => now(),
+                    'rent_amount' => $lease->rent_amount,
+                    'billing_interval' => $lease->billing_interval ?? 1,
+                    'billing_unit' => $lease->billing_unit ?? 'month',
+                    'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
+                    'room_rate_id' => $matchingRate?->id,
+                    'deposit_amount' => $lease->deposit_amount,
+                    'deposit_paid_at' => $lease->deposit_paid_at,
+                    'deposit_refund_amount' => $lease->deposit_refund_amount,
+                    'deposit_refunded_at' => $lease->deposit_refunded_at,
+                    'rent_due_day' => $lease->rent_due_day,
+                    'status' => 'active',
+                    'notes' => 'Moved from room '.$room->name.' on '.now()->format('Y-m-d'),
                 ]);
+
+                foreach ($lease->tenants as $tenant) {
+                    $newLease->tenants()->attach($tenant->id, [
+                        'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+                    ]);
+                }
             }
 
             $targetRoom->update(['status' => RoomStatus::Occupied]);

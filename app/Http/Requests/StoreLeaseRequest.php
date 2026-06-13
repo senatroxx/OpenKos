@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Enums\BillingUnit;
-use App\Models\Room;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -17,7 +16,7 @@ class StoreLeaseRequest extends FormRequest
     {
         return [
             'tenant_ids' => ['required', 'array', 'min:1'],
-            'tenant_ids.*' => ['required', 'integer', 'exists:tenants,id'],
+            'tenant_ids.*' => ['required', 'integer', 'distinct', 'exists:tenants,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'rent_amount' => ['nullable', 'numeric', 'min:0'],
@@ -31,19 +30,5 @@ class StoreLeaseRequest extends FormRequest
             'rent_due_day' => ['nullable', 'integer', 'between:1,31'],
             'notes' => ['nullable', 'string', 'max:65535'],
         ];
-    }
-
-    public function ensureCapacityAvailable(Room $room): void
-    {
-        $tenantCount = count($this->tenant_ids);
-        $activeTenantsCount = $room->leases()
-            ->where('status', 'active')
-            ->withCount('tenants')
-            ->get()
-            ->sum('tenants_count');
-
-        $totalOccupants = $activeTenantsCount + $tenantCount;
-
-        abort_if($totalOccupants > $room->capacity, 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
     }
 }
