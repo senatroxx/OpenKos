@@ -101,8 +101,8 @@ class TenantController extends Controller
     public function assignRoom(Request $request, Tenant $tenant): RedirectResponse
     {
         $validated = $request->validate([
-            'tenant_ids' => ['nullable', 'array'],
-            'tenant_ids.*' => ['integer', 'exists:tenants,id'],
+            'tenant_ids' => ['nullable', 'array', 'min:1'],
+            'tenant_ids.*' => ['integer', 'distinct', 'exists:tenants,id'],
             'room_id' => ['required', 'integer', 'exists:rooms,id'],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
@@ -120,13 +120,15 @@ class TenantController extends Controller
 
         $this->authorize('assignRoom', [Tenant::class, $room]);
 
-        $tenantIds = $validated['tenant_ids'] ?? [$tenant->id];
+        $tenantIds = $validated['tenant_ids'] !== null
+            ? array_values(array_unique($validated['tenant_ids']))
+            : [$tenant->id];
 
-        $activeTenantsCount = $room->leases()
-            ->where('status', 'active')
-            ->withCount('tenants')
-            ->get()
-            ->sum('tenants_count');
+        $activeTenantsCount = DB::table('lease_tenant')
+            ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
+            ->where('leases.room_id', $room->id)
+            ->where('leases.status', 'active')
+            ->count();
 
         $totalOccupants = $activeTenantsCount + count($tenantIds);
 
