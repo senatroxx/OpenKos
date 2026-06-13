@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\BillingUnit;
 use App\Enums\RoomStatus;
-use App\Http\Requests\StoreTenantRequest;
-use App\Http\Requests\UpdateTenantRequest;
+use App\Http\Requests\Tenant\AssignRoomRequest;
+use App\Http\Requests\Tenant\StoreTenantRequest;
+use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Room;
 use App\Models\RoomRate;
 use App\Models\Tenant;
@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -98,23 +97,9 @@ class TenantController extends Controller
         ]);
     }
 
-    public function assignRoom(Request $request, Tenant $tenant): RedirectResponse
+    public function assignRoom(AssignRoomRequest $request, Tenant $tenant): RedirectResponse
     {
-        $validated = $request->validate([
-            'tenant_ids' => ['nullable', 'array', 'min:1'],
-            'tenant_ids.*' => ['integer', 'distinct', 'exists:tenants,id'],
-            'room_id' => ['required', 'integer', 'exists:rooms,id'],
-            'start_date' => ['required', 'date'],
-            'end_date' => ['nullable', 'date', 'after:start_date'],
-            'rent_amount' => ['nullable', 'numeric', 'min:0'],
-            'billing_interval' => ['nullable', 'integer', 'min:1', 'max:255'],
-            'billing_unit' => ['nullable', 'string', Rule::in(BillingUnit::values())],
-            'room_rate_id' => ['nullable', 'integer', 'exists:room_rates,id'],
-            'deposit_amount' => ['nullable', 'numeric', 'min:0'],
-            'deposit_paid_at' => ['nullable', 'date'],
-            'rent_due_day' => ['nullable', 'integer', 'between:1,31'],
-            'notes' => ['nullable', 'string', 'max:65535'],
-        ]);
+        $validated = $request->validated();
 
         $room = Room::findOrFail($validated['room_id']);
 

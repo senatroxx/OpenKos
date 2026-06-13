@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\Permission;
-use App\Http\Requests\StoreRoleRequest;
-use App\Http\Requests\UpdateRoleRequest;
+use App\Http\Requests\Role\CloneRoleRequest;
+use App\Http\Requests\Role\StoreRoleRequest;
+use App\Http\Requests\Role\UpdateRoleRequest;
 use App\Models\Role;
 use App\Support\RecommendedRoles;
 use Illuminate\Http\RedirectResponse;
@@ -169,12 +170,9 @@ class RoleController extends Controller
         return to_route('roles.index');
     }
 
-    public function clone(Request $request, Role $role): RedirectResponse
+    public function clone(CloneRoleRequest $request, Role $role): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
-            'label' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         $newRole = Role::create([
             'name' => $validated['name'],

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Room;
 
 use App\Enums\BillingUnit;
 use App\Enums\RoomStatus;

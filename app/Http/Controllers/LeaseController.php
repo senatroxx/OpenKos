@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RoomStatus;
-use App\Http\Requests\StoreLeaseRequest;
-use App\Http\Requests\UpdateLeaseRequest;
+use App\Http\Requests\Lease\MoveLeaseRequest;
+use App\Http\Requests\Lease\MoveOutRequest;
+use App\Http\Requests\Lease\StoreLeaseRequest;
+use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Room;
@@ -265,17 +267,9 @@ class LeaseController extends Controller
         return to_route('properties.rooms.index', $property);
     }
 
-    public function moveOut(Request $request, Lease $lease): RedirectResponse
+    public function moveOut(MoveOutRequest $request, Lease $lease): RedirectResponse
     {
-        $validated = $request->validate([
-            'move_out_date' => ['required', 'date'],
-            'reason' => ['nullable', 'string', 'max:255'],
-            'deposit_returned' => ['nullable', 'boolean'],
-            'deposit_refund_amount' => ['nullable', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string', 'max:65535'],
-            'move_to_another_room' => ['nullable', 'boolean'],
-            'target_room_id' => ['nullable', 'integer', 'exists:rooms,id'],
-        ]);
+        $validated = $request->validated();
 
         $targetRoom = ($validated['move_to_another_room'] ?? false)
             ? Room::findOrFail($validated['target_room_id'])
@@ -382,13 +376,9 @@ class LeaseController extends Controller
         return back();
     }
 
-    public function move(Request $request, Property $property, Room $room, Lease $lease): RedirectResponse
+    public function move(MoveLeaseRequest $request, Property $property, Room $room, Lease $lease): RedirectResponse
     {
-        $request->validate([
-            'target_room_id' => ['required', 'integer', 'exists:rooms,id'],
-        ]);
-
-        $targetRoom = Room::findOrFail($request->target_room_id);
+        $targetRoom = Room::findOrFail($request->validated('target_room_id'));
 
         $this->authorize('move', [$lease, $targetRoom]);
 
