@@ -8,7 +8,7 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: AuthLayoutProps) {
-    const { setting } = usePage().props;
+    const { setting } = usePage<{ setting: { site_name: string } }>().props;
 
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
