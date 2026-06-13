@@ -101,40 +101,39 @@ class TenantController extends Controller
     {
         $validated = $request->validated();
 
-        $room = Room::findOrFail($validated['room_id']);
+        $this->authorize('assignRoom', [Tenant::class, Room::findOrFail($validated['room_id'])]);
 
-        $this->authorize('assignRoom', [Tenant::class, $room]);
+        DB::transaction(function () use ($validated, $tenant) {
+            $room = Room::lockForUpdate()->findOrFail($validated['room_id']);
 
-        $tenantIds = $validated['tenant_ids'] !== null
-            ? array_values(array_unique($validated['tenant_ids']))
-            : [$tenant->id];
+            $tenantIds = isset($validated['tenant_ids'])
+                ? array_values(array_unique($validated['tenant_ids']))
+                : [$tenant->id];
 
-        $activeTenantsCount = DB::table('lease_tenant')
-            ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
-            ->where('leases.room_id', $room->id)
-            ->where('leases.status', 'active')
-            ->count();
+            $activeTenantsCount = DB::table('lease_tenant')
+                ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
+                ->where('leases.room_id', $room->id)
+                ->where('leases.status', 'active')
+                ->count();
 
-        $totalOccupants = $activeTenantsCount + count($tenantIds);
-
-        abort_if($totalOccupants > $room->capacity, 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
-
-        DB::transaction(function () use ($room, $tenantIds, $validated) {
             $existingLease = $room->leases()->where('status', 'active')->first();
 
             if ($existingLease) {
                 $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
+                $newTenantIds = array_diff($tenantIds, $existingTenantIds->all());
 
-                foreach ($tenantIds as $tenantId) {
-                    if (! $existingTenantIds->contains($tenantId)) {
-                        $existingLease->tenants()->attach($tenantId, ['is_primary' => DB::raw('false')]);
-                    }
+                abort_if(($activeTenantsCount + count($newTenantIds)) > $room->capacity, 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
+
+                foreach ($newTenantIds as $tenantId) {
+                    $existingLease->tenants()->attach($tenantId, ['is_primary' => DB::raw('false')]);
                 }
 
                 $room->update(['status' => RoomStatus::Occupied]);
 
                 return;
             }
+
+            abort_if(($activeTenantsCount + count($tenantIds)) > $room->capacity, 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
 
             $primaryTenantId = $tenantIds[0];
 
