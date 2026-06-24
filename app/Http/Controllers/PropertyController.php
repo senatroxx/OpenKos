@@ -9,6 +9,9 @@ use App\Models\City;
 use App\Models\Property;
 use App\Models\Region;
 use App\Models\Setting;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,28 +23,37 @@ class PropertyController extends Controller
 {
     public function index(Request $request): Response
     {
-        $sort = $request->query('sort', 'name');
-        $direction = $request->query('direction', 'asc');
-        $search = $request->query('search', '');
-        $status = $request->query('status', '');
-        $perPage = (int) $request->query('per_page', 15);
+        $table = Table::make()
+            ->columns([
+                Column::make('name', 'Name')->sortable()->searchable(),
+                Column::make('city', 'City')->sortable(
+                    fn (Builder $q, string $dir) => $q->orderBy(
+                        City::select('name')->whereColumn('cities.id', 'properties.city_id'),
+                        $dir,
+                    ),
+                )->searchable(function (Builder $q, string $search): void {
+                    $q->orWhereHas('region', fn (Builder $q) => $q->where(
+                        DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%',
+                    ));
+                    $q->orWhereHas('city', fn (Builder $q) => $q->where(
+                        DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%',
+                    ));
+                }),
+                Column::make('rooms_count', 'Total Rooms')->sortable(),
+                Column::make('occupied_rooms_count', 'Occupied')->sortable(),
+                Column::make('tenants_count', 'Tenants')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'archived'])
+                    ->query(fn (Builder $q, string $value) => match ($value) {
+                        'active' => $q->whereRaw('is_active is true'),
+                        'archived' => $q->whereRaw('is_active is false'),
+                        default => $q,
+                    }),
+            ])
+            ->defaultSort('name');
 
-        $sortable = ['name', 'city', 'rooms_count', 'occupied_rooms_count', 'tenants_count'];
-        $perPageOptions = [10, 15, 25, 50];
-
-        if (! in_array($sort, $sortable)) {
-            $sort = 'name';
-        }
-
-        if (! in_array($direction, ['asc', 'desc'])) {
-            $direction = 'asc';
-        }
-
-        if (! in_array($perPage, $perPageOptions)) {
-            $perPage = 15;
-        }
-
-        $properties = Property::query()
+        $query = Property::query()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
@@ -60,20 +72,9 @@ class PropertyController extends Controller
                     ->join('rooms', 'rooms.id', '=', 'leases.room_id')
                     ->whereColumn('rooms.property_id', 'properties.id')
                     ->where('leases.status', 'active'),
-            ])
-            ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->where(DB::raw('lower(properties.name)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhereHas('region', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
-                    ->orWhereHas('city', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
-            }))
-            ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
-            ->when($status === 'archived', fn (Builder $q) => $q->whereRaw('is_active is false'))
-            ->when($sort === 'city', fn (Builder $q) => $q->orderBy(
-                City::select('name')->whereColumn('cities.id', 'properties.city_id'),
-                $direction,
-            ))
-            ->when($sort !== 'city', fn (Builder $q) => $q->orderBy($sort, $direction))
-            ->paginate($perPage);
+            ]);
+
+        $result = $table->paginate($query, $request, 'properties');
 
         $countryCode = Setting::get()->country_code;
         $regions = Region::where('country_code', $countryCode)
@@ -82,13 +83,8 @@ class PropertyController extends Controller
             ->get();
 
         return Inertia::render('properties/index', [
-            'properties' => $properties,
+            ...$result,
             'regions' => $regions,
-            'search' => $search,
-            'status' => $status,
-            'sort' => $sort,
-            'direction' => $direction,
-            'per_page' => $perPage,
         ]);
     }
 

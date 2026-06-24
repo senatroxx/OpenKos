@@ -10,6 +10,9 @@ use App\Models\Property;
 use App\Models\Role as RoleModel;
 use App\Models\User;
 use App\Notifications\UserInvitation;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +22,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,80 +30,70 @@ class UserController extends Controller
 {
     public function index(Request $request): Response
     {
-        $sort = $request->query('sort', 'name');
-        $direction = $request->query('direction', 'asc');
-        $search = $request->query('search', '');
-        $role = $request->query('role', '');
-        $status = $request->query('status', '');
-        $perPage = (int) $request->query('per_page', 15);
-
-        $sortable = ['name', 'email', 'last_login_at'];
-        $perPageOptions = [10, 15, 25, 50];
-
-        if (! in_array($sort, $sortable)) {
-            $sort = 'name';
-        }
-
-        if (! in_array($direction, ['asc', 'desc'])) {
-            $direction = 'asc';
-        }
-
-        if (! in_array($perPage, $perPageOptions)) {
-            $perPage = 15;
-        }
-
-        $users = User::query()
-            ->with(['roles:id,name,label', 'properties:id,name'])
-            ->whereDoesntHave('tenant')
-            ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhere(DB::raw('lower(email)'), 'like', '%'.mb_strtolower($search).'%');
-            }))
-            ->when($role && RoleModel::whereName($role)->exists(), fn (Builder $q) => $q->role($role))
-            ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
-            ->when($status === 'invited', fn (Builder $q) => $q->whereNotNull('invited_at'))
-            ->when($status === 'disabled', fn (Builder $q) => $q->whereRaw('is_active is false')->whereNull('invited_at'))
-            ->orderBy($sort, $direction)
-            ->paginate($perPage)
-            ->through(fn (User $user) => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'roles' => $user->roles->map(fn ($role) => [
-                    'name' => $role->name,
-                    'label' => $role->label ?? ucfirst($role->name),
-                ])->values(),
-                'role' => $user->roles->first()?->name,
-                'properties' => $user->properties->map(fn (Property $property) => [
-                    'id' => $property->id,
-                    'name' => $property->name,
-                ])->values(),
-                'is_active' => $user->is_active,
-                'status' => $this->statusFor($user),
-                'invited_at' => $user->invited_at?->toISOString(),
-                'email_verified_at' => $user->email_verified_at?->toISOString(),
-                'last_login_at' => $user->last_login_at?->toISOString(),
-            ]);
-
         $assignableRoles = RoleModel::query()
             ->whereRaw('is_active is true')
             ->where('name', '!=', Role::Owner->value)
             ->orderBy('name')
             ->get(['name', 'label']);
 
+        $table = Table::make()
+            ->columns([
+                Column::make('name', 'Name')->sortable()->searchable(),
+                Column::make('email', 'Email')->sortable()->searchable(),
+                Column::make('last_login_at', 'Last Login')->sortable(),
+            ])
+            ->filters([
+                Filter::select('role', 'Role', $assignableRoles->map(fn (RoleModel $r) => [
+                    'value' => $r->name,
+                    'label' => $r->label ?? ucfirst($r->name),
+                ])->all())
+                    ->query(fn (Builder $q, string $value) => $q->when(
+                        RoleModel::whereName($value)->exists(),
+                        fn (Builder $q) => $q->role($value),
+                    )),
+                Filter::select('status', 'Status', ['active', 'invited', 'disabled'])
+                    ->query(fn (Builder $q, string $value) => match ($value) {
+                        'active' => $q->whereRaw('is_active is true'),
+                        'invited' => $q->whereNotNull('invited_at'),
+                        'disabled' => $q->whereRaw('is_active is false')->whereNull('invited_at'),
+                        default => $q,
+                    }),
+            ])
+            ->defaultSort('name');
+
+        $query = User::query()
+            ->with(['roles:id,name,label', 'properties:id,name'])
+            ->whereDoesntHave('tenant');
+
+        $result = $table->paginate($query, $request, 'users');
+
+        $result['users'] = $result['users']->through(fn (User $user) => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $user->roles->map(fn ($role) => [
+                'name' => $role->name,
+                'label' => $role->label ?? ucfirst($role->name),
+            ])->values(),
+            'role' => $user->roles->first()?->name,
+            'properties' => $user->properties->map(fn (Property $property) => [
+                'id' => $property->id,
+                'name' => $property->name,
+            ])->values(),
+            'is_active' => $user->is_active,
+            'status' => $this->statusFor($user),
+            'invited_at' => $user->invited_at?->toISOString(),
+            'email_verified_at' => $user->email_verified_at?->toISOString(),
+            'last_login_at' => $user->last_login_at?->toISOString(),
+        ]);
+
         return Inertia::render('users/index', [
-            'users' => $users,
+            ...$result,
             'properties' => Property::query()->whereRaw('is_active is true')->orderBy('name')->get(['id', 'name']),
             'roles' => $assignableRoles->map(fn (RoleModel $role) => [
                 'value' => $role->name,
                 'label' => $role->label ?? ucfirst($role->name),
             ]),
-            'search' => $search,
-            'role' => $role,
-            'status' => $status,
-            'sort' => $sort,
-            'direction' => $direction,
-            'per_page' => $perPage,
         ]);
     }
 
