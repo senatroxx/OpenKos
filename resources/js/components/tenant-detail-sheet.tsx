@@ -322,24 +322,20 @@ export default function TenantDetailSheet({
                                                 key={doc.id}
                                                 className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2"
                                             >
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-sm font-medium">
-                                                        {doc.original_name}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {TYPE_LABELS[doc.type] ??
-                                                            doc.type}
-                                                        {' · '}
-                                                        {formatSize(doc.size)}
-                                                        {' · '}
-                                                        {formatDate(
-                                                            doc.created_at,
-                                                        )}
-                                                    </p>
-                                                </div>
+                                                <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                                                    {TYPE_LABELS[doc.type] ??
+                                                        doc.type}
+                                                    {' · '}
+                                                    {formatSize(doc.size)}
+                                                    {' · '}
+                                                    {formatDate(
+                                                        doc.created_at,
+                                                    )}
+                                                </p>
                                                 <div className="flex shrink-0 items-center gap-1">
                                                     <a
                                                         href={tenants.documents.show.url({ tenant: tenant.id, document: doc.id })}
+                                                        download={doc.original_name}
                                                         className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
                                                     >
                                                         <FileDown className="size-4" />
@@ -368,38 +364,34 @@ export default function TenantDetailSheet({
 
                                     <form
                                         onSubmit={handleUpload}
-                                        className="mt-3 flex items-end gap-2"
+                                        className="mt-3 flex items-center gap-2"
                                     >
-                                        <div className="min-w-0 flex-1">
-                                            <select
-                                                name="type"
-                                                required
-                                                className="mb-1 block w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                            >
-                                                <option value="">
-                                                    Select type...
-                                                </option>
-                                                <option value="ktp">KTP</option>
-                                                <option value="passport">
-                                                    Passport
-                                                </option>
-                                                <option value="lease">
-                                                    Lease/Agreement
-                                                </option>
-                                                <option value="supporting">
-                                                    Supporting
-                                                </option>
-                                                <option value="other">
-                                                    Other
-                                                </option>
-                                            </select>
-                                            <input
-                                                type="file"
-                                                name="file"
-                                                required
-                                                className="block w-full text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
-                                            />
-                                        </div>
+                                        <select
+                                            name="type"
+                                            required
+                                            className="block w-40 shrink-0 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                        >
+                                            <option value="">
+                                                Select type...
+                                            </option>
+                                            <option value="ktp">KTP</option>
+                                            <option value="passport">
+                                                Passport
+                                            </option>
+                                            <option value="lease">
+                                                Lease/Agreement
+                                            </option>
+                                            <option value="supporting">
+                                                Supporting
+                                            </option>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <input
+                                            type="file"
+                                            name="file"
+                                            required
+                                            className="min-w-0 flex-1 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+                                        />
                                         <Button
                                             type="submit"
                                             size="icon"
