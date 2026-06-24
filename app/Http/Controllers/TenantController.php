@@ -48,7 +48,7 @@ class TenantController extends Controller
             : null;
 
         $query = Tenant::query()
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
+            ->with(['documents', 'leases' => fn ($q) => $q->where('status', 'active')->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
             ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',
