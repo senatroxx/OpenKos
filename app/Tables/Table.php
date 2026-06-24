@@ -3,6 +3,7 @@
 namespace App\Tables;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -56,7 +57,7 @@ class Table
         return $this;
     }
 
-    public function paginate(Builder $query, Request $request, string $dataKey): array
+    public function paginate(Builder|Relation $query, Request $request, string $dataKey): array
     {
         $search = $this->applySearch($query, $request);
 
@@ -96,7 +97,7 @@ class Table
         return $meta;
     }
 
-    protected function applySearch(Builder $query, Request $request): string
+    protected function applySearch(Builder|Relation $query, Request $request): string
     {
         $search = $request->query('search', '');
 
