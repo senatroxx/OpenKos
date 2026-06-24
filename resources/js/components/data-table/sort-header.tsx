@@ -22,18 +22,20 @@ export function SortHeader({
     const isDesc = isActive && part!.startsWith('-');
 
     return (
-        <th
-            className="cursor-pointer px-4 py-3 font-medium select-none hover:text-foreground"
-            onClick={() => onToggle(column)}
-        >
-            {label}
-            {isActive && isDesc ? (
-                <ChevronDown className="ml-1 inline size-3.5" />
-            ) : isActive ? (
-                <ChevronUp className="ml-1 inline size-3.5" />
-            ) : (
-                <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
-            )}
+        <th className="px-4 py-3 font-medium">
+            <button
+                className="flex items-center gap-1 select-none hover:text-foreground"
+                onClick={() => onToggle(column)}
+            >
+                {label}
+                {isActive && isDesc ? (
+                    <ChevronDown className="size-3.5" />
+                ) : isActive ? (
+                    <ChevronUp className="size-3.5" />
+                ) : (
+                    <ChevronsUpDown className="size-3.5 opacity-40" />
+                )}
+            </button>
         </th>
     );
 }

@@ -84,7 +84,7 @@ class Table
 
         $meta = [
             $dataKey => $paginator,
-            'sort' => $request->query('sort', $this->defaultSort),
+            'sort' => $sortParam,
             'search' => $search,
             'per_page' => $perPage,
             'table' => $table,

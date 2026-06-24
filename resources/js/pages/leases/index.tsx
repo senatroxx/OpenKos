@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import leases from '@/routes/leases';
+import rooms from '@/routes/properties/rooms';
 import type { PaginatedData, TableMeta } from '@/types';
 
 type TenantInfo = {
@@ -188,7 +189,7 @@ export default function Index({
             render: (lease) =>
                 lease.room ? (
                     <Link
-                        href={`/properties/${lease.room.property_id}/rooms`}
+                        href={rooms.index({ property: lease.room.property_id })}
                         className="text-blue-600 hover:underline"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >

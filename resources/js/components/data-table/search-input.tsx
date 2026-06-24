@@ -25,6 +25,8 @@ export function SearchInput({
             />
             {value && (
                 <button
+                    type="button"
+                    aria-label="Clear search"
                     onClick={onClear}
                     className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >

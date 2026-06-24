@@ -48,7 +48,11 @@ export function DataTable<T>({
     return (
         <>
             {rows.length === 0 && empty ? (
-                <EmptyState message={empty.message} />
+                <EmptyState
+                    message={empty.message}
+                    createLabel={empty.createLabel}
+                    onCreate={empty.onCreate}
+                />
             ) : (
                 <div className="overflow-x-auto rounded-lg border">
                     <table className="w-full text-sm">
@@ -87,7 +91,7 @@ export function DataTable<T>({
                                 return (
                                     <tr
                                         key={id}
-                                        className={`cursor-pointer border-b last:border-0 hover:bg-muted/30 ${onRowClick ? 'cursor-pointer' : ''}`}
+                                        className={`border-b last:border-0 hover:bg-muted/30 ${onRowClick ? 'cursor-pointer' : ''}`}
                                         onClick={() => onRowClick?.(row)}
                                     >
                                         {columns.map((col) => (
