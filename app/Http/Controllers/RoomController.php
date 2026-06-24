@@ -7,6 +7,9 @@ use App\Http\Requests\Room\UpdateRoomRequest;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\Tenant;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,39 +23,27 @@ class RoomController extends Controller
     {
         $this->authorize('viewAny', [Room::class, $property]);
 
-        $sort = $request->query('sort', 'name');
-        $direction = $request->query('direction', 'asc');
-        $search = $request->query('search', '');
-        $status = $request->query('status', '');
-        $perPage = (int) $request->query('per_page', 15);
+        $table = Table::make()
+            ->columns([
+                Column::make('name', 'Name')->sortable()->searchable(),
+                Column::make('floor', 'Floor')->sortable()->searchable(),
+                Column::make('size_sqm', 'Size')->sortable(),
+                Column::make('status', 'Status')->sortable(),
+                Column::make('capacity', 'Capacity')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['available', 'occupied', 'maintenance', 'unavailable'])
+                    ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+            ])
+            ->defaultSort('name');
 
-        $sortable = ['name', 'floor', 'size_sqm', 'status', 'capacity'];
-        $perPageOptions = [10, 15, 25, 50];
-
-        if (! in_array($sort, $sortable)) {
-            $sort = 'name';
-        }
-
-        if (! in_array($direction, ['asc', 'desc'])) {
-            $direction = 'asc';
-        }
-
-        if (! in_array($perPage, $perPageOptions)) {
-            $perPage = 15;
-        }
-
-        $rooms = $property->rooms()
+        $query = $property->rooms()
             ->withCount([
                 'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
             ])
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']), 'activeRates'])
-            ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhere(DB::raw('lower(floor)'), 'like', '%'.mb_strtolower($search).'%');
-            }))
-            ->when($status, fn (Builder $q) => $q->where('status', $status))
-            ->orderBy($sort, $direction)
-            ->paginate($perPage);
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']), 'activeRates']);
+
+        $result = $table->paginate($query, $request, 'rooms');
 
         $tenantsList = Tenant::whereRaw('is_active is true')
             ->whereNull('deleted_at')
@@ -85,15 +76,10 @@ class RoomController extends Controller
             ->get();
 
         return Inertia::render('properties/rooms/index', [
+            ...$result,
             'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
-            'rooms' => $rooms,
             'tenants' => $tenantsList,
             'availableRooms' => $availableRooms,
-            'search' => $search,
-            'status' => $status,
-            'sort' => $sort,
-            'direction' => $direction,
-            'per_page' => $perPage,
         ]);
     }
 
