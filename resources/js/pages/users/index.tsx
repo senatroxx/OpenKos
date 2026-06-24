@@ -1,33 +1,22 @@
 import { Form, Head, router } from '@inertiajs/react';
 import {
-    Check,
-    ChevronDown,
-    ChevronUp,
-    ChevronsUpDown,
     EllipsisVertical,
     Eye,
     KeyRound,
     Pencil,
-    Search,
     ShieldOff,
     UserPlus,
-    X,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import EmptyState from '@/components/empty-state';
+import { DataTable } from '@/components/data-table';
+import type { TableColumn } from '@/components/data-table';
+import { FilterBar } from '@/components/data-table/filter-bar';
+import { SearchInput } from '@/components/data-table/search-input';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from '@/components/ui/command';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -37,17 +26,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
-import {
     Sheet,
     SheetContent,
     SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { useTable } from '@/hooks/use-table';
 import users, {
     destroy,
     resendInvitation,
@@ -55,6 +40,7 @@ import users, {
     store,
     update,
 } from '@/routes/users';
+import type { PaginatedData, TableMeta } from '@/types';
 
 type Property = { id: number; name: string };
 type RoleOption = { value: string; label: string };
@@ -72,29 +58,18 @@ type ManagedUser = {
     email_verified_at: string | null;
     last_login_at: string | null;
 };
-type PaginationLinks = { url: string | null; label: string; active: boolean };
+
 type PageProps = {
-    users: {
-        data: ManagedUser[];
-        current_page: number;
-        last_page: number;
-        total: number;
-        per_page: number;
-        from: number | null;
-        to: number | null;
-        links: PaginationLinks[];
-    };
+    users: PaginatedData<ManagedUser>;
     properties: Property[];
     roles: RoleOption[];
     search?: string;
     role?: string;
     status?: string;
     sort?: string;
-    direction?: string;
     per_page?: number;
+    table: TableMeta;
 };
-
-const SORTABLE = ['name', 'email', 'last_login_at'] as const;
 
 function StatusBadge({ user }: { user: ManagedUser }) {
     if (user.status === 'invited') {
@@ -127,24 +102,29 @@ export default function Index({
     role: currentRole = '',
     status: currentStatus = '',
     sort: currentSort = 'name',
-    direction: currentDirection = 'asc',
     per_page: currentPerPage = 15,
+    table: tableMeta,
 }: PageProps) {
     const [formOpen, setFormOpen] = useState(false);
     const [detailOpen, setDetailOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
     const [viewingUser, setViewingUser] = useState<ManagedUser | null>(null);
-    const [searchValue, setSearchValue] = useState(currentSearch);
-    const [roleFilterOpen, setRoleFilterOpen] = useState(false);
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const roleFilterOptions = [
-        { value: '', label: 'All roles' },
-        { value: 'owner', label: 'Owner' },
-        ...roles,
-    ];
-
     const [formKey, setFormKey] = useState(0);
+
+    const table = useTable({
+        routeFn: () => users.index(),
+        params: {
+            sort: currentSort,
+            search: currentSearch,
+            per_page: String(currentPerPage),
+            role: currentRole,
+            status: currentStatus,
+        },
+        defaults: {
+            sort: 'name',
+            per_page: '15',
+        },
+    });
 
     function openInvite() {
         setEditingUser(null);
@@ -161,54 +141,6 @@ export default function Index({
     function openDetail(user: ManagedUser) {
         setViewingUser(user);
         setDetailOpen(true);
-    }
-
-    function applyFilters(overrides: Record<string, string>) {
-        const params: Record<string, string> = {
-            search: searchValue,
-            role: currentRole,
-            status: currentStatus,
-            sort: currentSort,
-            direction: currentDirection,
-            per_page: String(currentPerPage),
-            ...overrides,
-        };
-
-        Object.keys(params).forEach((key) => {
-            if (!params[key]) {
-                delete params[key];
-            }
-        });
-
-        router.get(users.index(), params, {
-            preserveState: true,
-            replace: true,
-        });
-    }
-
-    function handleSearchChange(value: string) {
-        setSearchValue(value);
-
-        if (debounceRef.current) {
-            clearTimeout(debounceRef.current);
-        }
-
-        debounceRef.current = setTimeout(() => {
-            applyFilters({ search: value, page: '' });
-        }, 300);
-    }
-
-    function toggleSort(column: string) {
-        const direction =
-            currentSort === column && currentDirection === 'asc'
-                ? 'desc'
-                : 'asc';
-
-        applyFilters({ sort: column, direction, page: '' });
-    }
-
-    function goToPage(page: number) {
-        applyFilters({ page: String(page) });
     }
 
     function disableAccess(user: ManagedUser) {
@@ -229,26 +161,111 @@ export default function Index({
         }
     }
 
-    function roleFilterLabel() {
-        return (
-            roleFilterOptions.find((role) => role.value === currentRole)
-                ?.label ?? 'All roles'
-        );
-    }
-
-    function SortIcon({ column }: { column: string }) {
-        if (currentSort !== column) {
-            return (
-                <ChevronsUpDown className="ml-1 inline size-3.5 opacity-40" />
-            );
-        }
-
-        return currentDirection === 'asc' ? (
-            <ChevronUp className="ml-1 inline size-3.5" />
-        ) : (
-            <ChevronDown className="ml-1 inline size-3.5" />
-        );
-    }
+    const columns: TableColumn<ManagedUser>[] = [
+        {
+            key: 'name',
+            label: 'Name',
+            sortable: true,
+            className: 'font-medium',
+        },
+        {
+            key: 'email',
+            label: 'Email',
+            sortable: true,
+            className: 'text-muted-foreground',
+        },
+        {
+            key: 'last_login_at',
+            label: 'Last Login',
+            sortable: true,
+            className: 'text-muted-foreground',
+            render: (u) => formatDate(u.last_login_at),
+        },
+        {
+            key: '_roles',
+            label: 'Roles',
+            render: (u) =>
+                u.roles.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                        {u.roles.map((r) => (
+                            <Badge key={r.name} variant="outline">
+                                {r.label}
+                            </Badge>
+                        ))}
+                    </div>
+                ) : (
+                    <span className="text-sm text-muted-foreground">
+                        No roles
+                    </span>
+                ),
+        },
+        {
+            key: '_properties',
+            label: 'Assigned Properties',
+            className: 'text-muted-foreground',
+            render: (u) =>
+                u.properties.length > 0
+                    ? u.properties.map((p) => p.name).join(', ')
+                    : u.role === 'owner'
+                      ? 'All properties'
+                      : 'No properties',
+        },
+        {
+            key: '_status',
+            label: 'Status',
+            render: (u) => <StatusBadge user={u} />,
+        },
+        {
+            key: '_actions',
+            label: '',
+            render: (u) => (
+                <DropdownMenu>
+                    <DropdownMenuTrigger
+                        asChild
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <Button variant="ghost" size="icon" className="size-8">
+                            <EllipsisVertical className="size-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        align="end"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <DropdownMenuItem onClick={() => openDetail(u)}>
+                            <Eye className="size-4" />
+                            View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEdit(u)}>
+                            <Pencil className="size-4" />
+                            Edit / Assign Property
+                        </DropdownMenuItem>
+                        {u.status === 'active' && (
+                            <DropdownMenuItem onClick={() => sendReset(u)}>
+                                <KeyRound className="size-4" />
+                                Reset Password
+                            </DropdownMenuItem>
+                        )}
+                        {u.status === 'invited' && (
+                            <DropdownMenuItem onClick={() => resendInvite(u)}>
+                                <UserPlus className="size-4" />
+                                Resend Invite Link
+                            </DropdownMenuItem>
+                        )}
+                        {u.status !== 'disabled' && (
+                            <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => disableAccess(u)}
+                            >
+                                <ShieldOff className="size-4" />
+                                Disable Access
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ),
+        },
+    ];
 
     return (
         <>
@@ -266,360 +283,39 @@ export default function Index({
                     </Button>
                 </div>
 
-                <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    <div className="relative flex-1">
-                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
+                <FilterBar
+                    filters={tableMeta.filters}
+                    activeFilters={table.activeFilters}
+                    activeFilterCount={table.activeFilterCount}
+                    onToggleOption={table.toggleFilterOption}
+                    onClearAll={table.clearAllFilters}
+                    searchInput={
+                        <SearchInput
+                            value={table.searchValue}
+                            onChange={table.onSearchChange}
+                            onClear={table.clearSearch}
                             placeholder="Search by name or email..."
-                            className="pl-9"
-                            value={searchValue}
-                            onChange={(event) =>
-                                handleSearchChange(event.target.value)
-                            }
                         />
-                        {searchValue && (
-                            <button
-                                onClick={() => {
-                                    setSearchValue('');
-                                    applyFilters({ search: '', page: '' });
-                                }}
-                                className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            >
-                                <X className="size-4" />
-                            </button>
-                        )}
-                    </div>
+                    }
+                />
 
-                    <Popover
-                        open={roleFilterOpen}
-                        onOpenChange={setRoleFilterOpen}
-                    >
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={roleFilterOpen}
-                                className="w-44 justify-between font-normal"
-                            >
-                                {roleFilterLabel()}
-                                <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-44 p-0">
-                            <Command>
-                                <CommandInput placeholder="Search role..." />
-                                <CommandList>
-                                    <CommandEmpty>No role found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {roleFilterOptions.map((role) => (
-                                            <CommandItem
-                                                key={role.value || 'all'}
-                                                value={role.label}
-                                                onSelect={() => {
-                                                    applyFilters({
-                                                        role: role.value,
-                                                        page: '',
-                                                    });
-                                                    setRoleFilterOpen(false);
-                                                }}
-                                            >
-                                                <Check
-                                                    className={`mr-2 size-4 ${
-                                                        currentRole ===
-                                                        role.value
-                                                            ? 'opacity-100'
-                                                            : 'opacity-0'
-                                                    }`}
-                                                />
-                                                {role.label}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-
-                    <div className="flex items-center gap-1 rounded-lg border p-1">
-                        {[
-                            { value: '', label: 'All' },
-                            { value: 'active', label: 'Active' },
-                            { value: 'invited', label: 'Invited' },
-                            { value: 'disabled', label: 'Disabled' },
-                        ].map((status) => (
-                            <Button
-                                key={status.value}
-                                variant={
-                                    currentStatus === status.value
-                                        ? 'default'
-                                        : 'ghost'
-                                }
-                                size="sm"
-                                onClick={() =>
-                                    applyFilters({
-                                        status: status.value,
-                                        page: '',
-                                    })
-                                }
-                            >
-                                {status.label}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-
-                {data.data.length === 0 ? (
-                    <EmptyState
-                        message="No users yet."
-                        createLabel="Invite a user"
-                        onCreate={openInvite}
-                    />
-                ) : (
-                    <div className="overflow-x-auto rounded-lg border">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b bg-muted/50 text-left text-muted-foreground">
-                                    {SORTABLE.map((column) => (
-                                        <th
-                                            key={column}
-                                            className="cursor-pointer px-4 py-3 font-medium select-none hover:text-foreground"
-                                            onClick={() => toggleSort(column)}
-                                        >
-                                            {column === 'last_login_at'
-                                                ? 'Last Login'
-                                                : column === 'name'
-                                                  ? 'Name'
-                                                  : 'Email'}
-                                            <SortIcon column={column} />
-                                        </th>
-                                    ))}
-                                    <th className="px-4 py-3 font-medium">
-                                        Roles
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Assigned Properties
-                                    </th>
-                                    <th className="px-4 py-3 font-medium">
-                                        Status
-                                    </th>
-                                    <th className="w-12 px-4 py-3" />
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {data.data.map((user) => (
-                                    <tr
-                                        key={user.id}
-                                        className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
-                                        onClick={() => openDetail(user)}
-                                    >
-                                        <td className="px-4 py-3 font-medium">
-                                            {user.name}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {user.email}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {formatDate(user.last_login_at)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                                {user.roles.length > 0 ? (
-                                                    user.roles.map((r) => (
-                                                        <Badge
-                                                            key={r.name}
-                                                            variant="outline"
-                                                        >
-                                                            {r.label}
-                                                        </Badge>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-sm text-muted-foreground">
-                                                        No roles
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {user.properties.length > 0
-                                                ? user.properties
-                                                      .map(
-                                                          (property) =>
-                                                              property.name,
-                                                      )
-                                                      .join(', ')
-                                                : user.role === 'owner'
-                                                  ? 'All properties'
-                                                  : 'No properties'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <StatusBadge user={user} />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger
-                                                    asChild
-                                                    onClick={(event) =>
-                                                        event.stopPropagation()
-                                                    }
-                                                >
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="size-8"
-                                                    >
-                                                        <EllipsisVertical className="size-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent
-                                                    align="end"
-                                                    onClick={(event) =>
-                                                        event.stopPropagation()
-                                                    }
-                                                >
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            openDetail(user)
-                                                        }
-                                                    >
-                                                        <Eye className="size-4" />
-                                                        View
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            openEdit(user)
-                                                        }
-                                                    >
-                                                        <Pencil className="size-4" />
-                                                        Edit / Assign Property
-                                                    </DropdownMenuItem>
-                                                    {user.status ===
-                                                        'active' && (
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                sendReset(user)
-                                                            }
-                                                        >
-                                                            <KeyRound className="size-4" />
-                                                            Reset Password
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    {user.status ===
-                                                        'invited' && (
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                resendInvite(
-                                                                    user,
-                                                                )
-                                                            }
-                                                        >
-                                                            <UserPlus className="size-4" />
-                                                            Resend Invite Link
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    {user.status !==
-                                                        'disabled' && (
-                                                        <DropdownMenuItem
-                                                            variant="destructive"
-                                                            onClick={() =>
-                                                                disableAccess(
-                                                                    user,
-                                                                )
-                                                            }
-                                                        >
-                                                            <ShieldOff className="size-4" />
-                                                            Disable Access
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
-                            <div className="flex items-center gap-4">
-                                <p className="text-muted-foreground">
-                                    Showing {data.from} to {data.to} of{' '}
-                                    {data.total} users
-                                </p>
-
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">
-                                        Per page
-                                    </span>
-                                    <select
-                                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                        value={currentPerPage}
-                                        onChange={(event) =>
-                                            applyFilters({
-                                                per_page: event.target.value,
-                                                page: '',
-                                            })
-                                        }
-                                    >
-                                        {[10, 15, 25, 50].map((perPage) => (
-                                            <option
-                                                key={perPage}
-                                                value={perPage}
-                                            >
-                                                {perPage}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={data.current_page === 1}
-                                    onClick={() =>
-                                        goToPage(data.current_page - 1)
-                                    }
-                                >
-                                    Previous
-                                </Button>
-
-                                {data.links
-                                    .filter(
-                                        (link) => !isNaN(Number(link.label)),
-                                    )
-                                    .map((link) => (
-                                        <Button
-                                            key={link.label}
-                                            variant={
-                                                link.active
-                                                    ? 'default'
-                                                    : 'outline'
-                                            }
-                                            size="sm"
-                                            onClick={() =>
-                                                goToPage(Number(link.label))
-                                            }
-                                        >
-                                            {link.label}
-                                        </Button>
-                                    ))}
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={
-                                        data.current_page === data.last_page
-                                    }
-                                    onClick={() =>
-                                        goToPage(data.current_page + 1)
-                                    }
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <DataTable
+                    columns={columns}
+                    rows={data.data}
+                    currentSort={currentSort}
+                    onSort={table.toggleSort}
+                    onRowClick={openDetail}
+                    paginator={data}
+                    perPage={currentPerPage}
+                    onPageChange={table.goToPage}
+                    onPerPageChange={table.setPerPage}
+                    noun="users"
+                    empty={{
+                        message: 'No users yet.',
+                        createLabel: 'Invite a user',
+                        onCreate: openInvite,
+                    }}
+                />
             </div>
 
             <UserFormSheet

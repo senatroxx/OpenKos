@@ -11,6 +11,9 @@ use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\RoomRate;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,49 +67,53 @@ class LeaseController extends Controller
 
     public function globalIndex(Request $request): Response
     {
-        $sort = $request->query('sort', 'created_at');
-        $direction = $request->query('direction', 'desc');
-        $search = $request->query('search', '');
-        $status = $request->query('status', '');
-        $properties = $request->query('properties', '');
-        $perPage = (int) $request->query('per_page', 15);
+        $allProperties = Property::query()
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        $sortable = ['tenant_name', 'room_name', 'property_name', 'start_date', 'end_date', 'rent_amount', 'status', 'created_at'];
-        $perPageOptions = [10, 15, 25, 50];
+        $table = Table::make()
+            ->columns([
+                Column::make('tenant_name', 'Tenant')->searchable(function (Builder $q, string $search): void {
+                    $q->whereHas('tenants', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
+                        ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
+                        ->orWhereHas('room.property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
+                }),
+                Column::make('room_name', 'Room'),
+                Column::make('property_name', 'Property'),
+                Column::make('start_date', 'Start')->sortable(),
+                Column::make('end_date', 'End')->sortable(),
+                Column::make('rent_amount', 'Rent')->sortable(),
+                Column::make('status', 'Status')->sortable(),
+                Column::make('created_at', 'Created')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'terminated'])
+                    ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+                Filter::select('properties', 'Property', $allProperties->map(fn (Property $p) => [
+                    'value' => (string) $p->id,
+                    'label' => $p->name,
+                ])->all())
+                    ->query(fn (Builder $q, string $value) => $q->whereHas(
+                        'room',
+                        fn (Builder $q) => $q->whereIn('property_id', explode(',', $value)),
+                    )),
+            ])
+            ->defaultSort('status,-start_date');
 
-        if (! in_array($sort, $sortable)) {
-            $sort = 'created_at';
-        }
-
-        if (! in_array($direction, ['asc', 'desc'])) {
-            $direction = 'desc';
-        }
-
-        if (! in_array($perPage, $perPageOptions)) {
-            $perPage = 15;
-        }
-
-        $propertyIds = $properties
-            ? array_map('intval', explode(',', $properties))
-            : [];
-
-        $leases = Lease::query()
+        $query = Lease::query()
             ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'room.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
-            ))
-            ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->whereHas('tenants', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
-                    ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
-                    ->orWhereHas('room.property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
-            }))
-            ->when($status === 'active', fn (Builder $q) => $q->where('status', 'active'))
-            ->when($status === 'terminated', fn (Builder $q) => $q->where('status', 'terminated'))
-            ->when(! empty($propertyIds), fn (Builder $q) => $q->whereHas('room', fn (Builder $q) => $q->whereIn('property_id', $propertyIds)))
-            ->orderBy('created_at', $direction)
-            ->paginate($perPage);
+            ));
 
+        $result = $table->paginate($query, $request, 'leases');
+
+        $leases = $result['leases'];
         $leases->loadMissing('room.property.city');
 
         $availableRooms = Room::query()
@@ -134,23 +141,9 @@ class LeaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        $allProperties = Property::query()
-            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
-                'users',
-                fn (Builder $q) => $q->whereKey($request->user()->id),
-            ))
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
         return Inertia::render('leases/index', [
-            'leases' => $leases,
+            ...$result,
             'availableRooms' => $availableRooms,
-            'search' => $search,
-            'status' => $status,
-            'sort' => $sort,
-            'direction' => $direction,
-            'per_page' => $perPage,
-            'properties' => $allProperties,
         ]);
     }
 
