@@ -75,6 +75,15 @@ type Lease = {
     primary_tenant: TenantInfo | null;
 };
 
+type TenantDocument = {
+    id: number;
+    type: string;
+    original_name: string;
+    size: number;
+    created_at: string;
+    download_url: string;
+};
+
 type Tenant = {
     id: number;
     name: string;
@@ -87,6 +96,7 @@ type Tenant = {
     deleted_at: string | null;
     active_leases_count: number;
     leases: Lease[];
+    documents: TenantDocument[];
 };
 
 type PageProps = {

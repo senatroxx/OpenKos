@@ -6,6 +6,7 @@ use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\TenantDocumentController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +55,10 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::put('{tenant}', [TenantController::class, 'update'])->name('update')->middleware('permission:tenants.update');
         Route::delete('{tenant}', [TenantController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.delete');
         Route::post('{tenant}/assign-room', [TenantController::class, 'assignRoom'])->name('assign-room')->middleware('permission:tenants.update');
+
+        Route::post('{tenant}/documents', [TenantDocumentController::class, 'store'])->name('documents.store')->middleware('permission:tenants.update');
+        Route::get('{tenant}/documents/{document}', [TenantDocumentController::class, 'show'])->name('documents.show');
+        Route::delete('{tenant}/documents/{document}', [TenantDocumentController::class, 'destroy'])->name('documents.destroy')->middleware('permission:tenants.update');
     });
 
     Route::prefix('leases')->name('leases.')->group(function () {
