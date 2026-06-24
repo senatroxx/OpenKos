@@ -7,11 +7,11 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
+import AssignRoomSheet from '@/components/assign-room-sheet';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import AssignRoomSheet from '@/components/assign-room-sheet';
 import Heading from '@/components/heading';
 import MoveOutSheet from '@/components/move-out-sheet';
 import TenantDetailSheet from '@/components/tenant-detail-sheet';
