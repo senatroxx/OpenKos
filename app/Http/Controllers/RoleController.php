@@ -8,6 +8,10 @@ use App\Http\Requests\Role\StoreRoleRequest;
 use App\Http\Requests\Role\UpdateRoleRequest;
 use App\Models\Role;
 use App\Support\RecommendedRoles;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,61 +22,47 @@ class RoleController extends Controller
 {
     public function index(Request $request): Response
     {
-        $search = $request->query('search', '');
-        $status = $request->query('status', '');
-        $sort = $request->query('sort', 'name');
-        $direction = $request->query('direction', 'asc');
-        $perPage = (int) $request->query('per_page', 15);
+        $table = Table::make()
+            ->columns([
+                Column::make('label', 'Role')->sortable()->searchable(function (Builder $q, string $search): void {
+                    $q->whereRaw('lower(label) like ?', ['%'.mb_strtolower($search).'%'])
+                        ->orWhereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']);
+                }),
+                Column::make('users_count', 'Users')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'disabled'])
+                    ->query(fn (Builder $q, string $value) => match ($value) {
+                        'active' => $q->whereRaw('is_active is true'),
+                        'disabled' => $q->whereRaw('is_active is false'),
+                        default => $q,
+                    }),
+            ])
+            ->defaultSort('label');
 
-        $sortable = ['name', 'label', 'users_count'];
-        $perPageOptions = [10, 15, 25, 50];
-
-        if (! in_array($sort, $sortable)) {
-            $sort = 'name';
-        }
-
-        if (! in_array($direction, ['asc', 'desc'])) {
-            $direction = 'asc';
-        }
-
-        if (! in_array($perPage, $perPageOptions)) {
-            $perPage = 15;
-        }
-
-        $roles = Role::query()
+        $query = Role::query()
             ->withCount('users')
-            ->with('permissions:id,name')
-            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
-                $q->whereRaw('lower(label) like ?', ['%'.mb_strtolower($search).'%'])
-                    ->orWhereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']);
-            }))
-            ->when($status === 'active', fn ($q) => $q->whereRaw('is_active is true'))
-            ->when($status === 'disabled', fn ($q) => $q->whereRaw('is_active is false'))
-            ->orderByDesc('is_system')
-            ->orderBy($sort === 'users_count' ? 'users_count' : $sort, $direction)
-            ->paginate($perPage)
-            ->through(fn (Role $role) => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'label' => $role->label ?? ucfirst($role->name),
-                'description' => $role->description,
-                'color' => $role->color,
-                'guard_name' => $role->guard_name,
-                'is_system' => $role->is_system,
-                'is_active' => $role->is_active,
-                'users_count' => $role->users_count,
-                'permissions_count' => $role->permissions->count(),
-                'permissions' => $role->permissions->pluck('name'),
-                'created_at' => $role->created_at?->toISOString(),
-            ]);
+            ->with('permissions:id,name');
+
+        $result = $table->paginate($query, $request, 'roles');
+
+        $result['roles'] = $result['roles']->through(fn (Role $role) => [
+            'id' => $role->id,
+            'name' => $role->name,
+            'label' => $role->label ?? ucfirst($role->name),
+            'description' => $role->description,
+            'color' => $role->color,
+            'guard_name' => $role->guard_name,
+            'is_system' => $role->is_system,
+            'is_active' => $role->is_active,
+            'users_count' => $role->users_count,
+            'permissions_count' => $role->permissions->count(),
+            'permissions' => $role->permissions->pluck('name'),
+            'created_at' => $role->created_at?->toISOString(),
+        ]);
 
         return Inertia::render('roles/index', [
-            'roles' => $roles,
-            'search' => $search,
-            'status' => $status,
-            'sort' => $sort,
-            'direction' => $direction,
-            'per_page' => $perPage,
+            ...$result,
         ]);
     }
 

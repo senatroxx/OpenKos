@@ -9,6 +9,9 @@ use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Room;
 use App\Models\RoomRate;
 use App\Models\Tenant;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,49 +23,39 @@ class TenantController extends Controller
 {
     public function index(Request $request): Response
     {
-        $sort = $request->query('sort', 'name');
-        $direction = $request->query('direction', 'asc');
-        $search = $request->query('search', '');
-        $status = $request->query('status', '');
-        $perPage = (int) $request->query('per_page', 15);
-
-        $sortable = ['name', 'phone'];
-        $perPageOptions = [10, 15, 25, 50];
-
-        if (! in_array($sort, $sortable)) {
-            $sort = 'name';
-        }
-
-        if (! in_array($direction, ['asc', 'desc'])) {
-            $direction = 'asc';
-        }
-
-        if (! in_array($perPage, $perPageOptions)) {
-            $perPage = 15;
-        }
+        $table = Table::make()
+            ->columns([
+                Column::make('name', 'Name')->sortable()->searchable(function (Builder $q, string $search): void {
+                    $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
+                        ->orWhere(DB::raw('lower(phone)'), 'like', '%'.mb_strtolower($search).'%')
+                        ->orWhere(DB::raw('lower(id_card_number)'), 'like', '%'.mb_strtolower($search).'%');
+                }),
+                Column::make('phone', 'Phone')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'inactive', 'archived'])
+                    ->query(fn (Builder $q, string $value) => match ($value) {
+                        'active' => $q->whereRaw('is_active is true'),
+                        'inactive' => $q->whereRaw('is_active is false'),
+                        'archived' => $q->onlyTrashed(),
+                        default => $q,
+                    }),
+            ])
+            ->defaultSort('name');
 
         $assignedPropertyIds = ! $request->user()->isOwner()
             ? $request->user()->properties()->pluck('properties.id')
             : null;
 
-        $tenants = Tenant::query()
+        $query = Tenant::query()
             ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
             ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',
                 fn (Builder $q) => $q->whereHas('room', fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds)),
-            ))
-            ->when($status === 'active', fn (Builder $q) => $q->whereRaw('is_active is true'))
-            ->when($status === 'inactive', fn (Builder $q) => $q->whereRaw('is_active is false'))
-            ->when($status === 'archived', fn (Builder $q) => $q->onlyTrashed())
-            ->when(! $status || $status === 'active' || $status === 'inactive', fn (Builder $q) => $q->whereNull('deleted_at'))
-            ->when($search, fn (Builder $q) => $q->where(function (Builder $q) use ($search) {
-                $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhere(DB::raw('lower(phone)'), 'like', '%'.mb_strtolower($search).'%')
-                    ->orWhere(DB::raw('lower(id_card_number)'), 'like', '%'.mb_strtolower($search).'%');
-            }))
-            ->orderBy($sort, $direction)
-            ->paginate($perPage);
+            ));
+
+        $result = $table->paginate($query, $request, 'tenants');
 
         $availableRooms = Room::query()
             ->with('property.city')
@@ -87,13 +80,8 @@ class TenantController extends Controller
             ->get();
 
         return Inertia::render('tenants/index', [
-            'tenants' => $tenants,
+            ...$result,
             'availableRooms' => $availableRooms,
-            'search' => $search,
-            'status' => $status,
-            'sort' => $sort,
-            'direction' => $direction,
-            'per_page' => $perPage,
         ]);
     }
 
