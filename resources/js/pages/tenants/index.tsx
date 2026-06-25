@@ -15,6 +15,7 @@ import { SearchInput } from '@/components/data-table/search-input';
 import Heading from '@/components/heading';
 import MoveOutSheet from '@/components/move-out-sheet';
 import TenantDetailSheet from '@/components/tenant-detail-sheet';
+import TenantDocumentsSheet from '@/components/tenant-documents-sheet';
 import TenantFormSheet from '@/components/tenant-form-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,6 +81,7 @@ type TenantDocument = {
     type: string;
     original_name: string;
     size: number;
+    mime_type: string;
     created_at: string;
     download_url: string;
 };
@@ -129,6 +131,9 @@ export default function Index({
 
     const [moveOutOpen, setMoveOutOpen] = useState(false);
     const [moveOutTenant, setMoveOutTenant] = useState<Tenant | null>(null);
+
+    const [documentsOpen, setDocumentsOpen] = useState(false);
+    const [documentsTenant, setDocumentsTenant] = useState<Tenant | null>(null);
 
     const table = useTable({
         routeFn: () => tenants.index(),
@@ -186,6 +191,16 @@ export default function Index({
         setMoveOutTenant(viewingTenant);
         setDetailOpen(false);
         setMoveOutOpen(true);
+    }
+
+    function openDocuments() {
+        if (!viewingTenant) {
+            return;
+        }
+
+        setDocumentsTenant(viewingTenant);
+        setDetailOpen(false);
+        setDocumentsOpen(true);
     }
 
     function archive(tenant: Tenant) {
@@ -346,6 +361,7 @@ export default function Index({
                 onEdit={editFromDetail}
                 onAssignToRoom={openAssignRoom}
                 onMoveOut={openMoveOut}
+                onDocuments={openDocuments}
             />
 
             <TenantFormSheet
@@ -362,6 +378,12 @@ export default function Index({
                     onOpenChange={setAssignRoomOpen}
                 />
             )}
+
+            <TenantDocumentsSheet
+                tenant={documentsTenant}
+                open={documentsOpen}
+                onOpenChange={setDocumentsOpen}
+            />
 
             <MoveOutSheet
                 lease={

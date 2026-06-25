@@ -1,7 +1,4 @@
 import { router } from '@inertiajs/react';
-import { FileDown, Trash2, Upload } from 'lucide-react';
-import type { FormEvent } from 'react';
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,15 +39,6 @@ type Lease = {
     primary_tenant: TenantInfo | null;
 };
 
-type TenantDocument = {
-    id: number;
-    type: string;
-    original_name: string;
-    size: number;
-    created_at: string;
-    download_url: string;
-};
-
 type Tenant = {
     id: number;
     name: string;
@@ -63,7 +51,6 @@ type Tenant = {
     deleted_at: string | null;
     active_leases_count: number;
     leases: Lease[];
-    documents: TenantDocument[];
 };
 
 function formatPrice(cents: string): string {
@@ -85,26 +72,6 @@ function formatDate(dateStr: string): string {
     });
 }
 
-function formatSize(bytes: number): string {
-    if (bytes < 1024) {
-return bytes + ' B';
-}
-
-    if (bytes < 1024 * 1024) {
-return (bytes / 1024).toFixed(0) + ' KB';
-}
-
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
-
-const TYPE_LABELS: Record<string, string> = {
-    ktp: 'KTP',
-    passport: 'Passport',
-    lease: 'Lease/Agreement',
-    supporting: 'Supporting',
-    other: 'Other',
-};
-
 export default function TenantDetailSheet({
     tenant,
     open,
@@ -112,6 +79,7 @@ export default function TenantDetailSheet({
     onEdit,
     onAssignToRoom,
     onMoveOut,
+    onDocuments,
 }: {
     tenant?: Tenant | null;
     open: boolean;
@@ -119,9 +87,8 @@ export default function TenantDetailSheet({
     onEdit: () => void;
     onAssignToRoom?: () => void;
     onMoveOut?: () => void;
+    onDocuments?: () => void;
 }) {
-    const [uploading, setUploading] = useState(false);
-
     function archive() {
         if (!tenant) {
             return;
@@ -134,44 +101,8 @@ export default function TenantDetailSheet({
         }
     }
 
-    function handleUpload(e: FormEvent<HTMLFormElement>) {
-        e.preventDefault();
-
-        if (!tenant) {
-            return;
-        }
-
-        const form = e.currentTarget;
-        const formData = new FormData(form);
-
-        setUploading(true);
-        router.post(tenants.documents.store.url(tenant), formData, {
-            preserveState: true,
-            replace: true,
-            onFinish: () => {
-                setUploading(false);
-                form.reset();
-            },
-        });
-    }
-
-    function handleDelete(document: TenantDocument) {
-        if (!tenant || !confirm('Delete this document?')) {
-            return;
-        }
-
-        router.delete(
-            tenants.documents.destroy.url({
-                tenant: tenant.id,
-                document: document.id,
-            }),
-            { preserveState: true, replace: true },
-        );
-    }
-
     const activeLease = tenant?.leases?.[0];
     const isArchived = Boolean(tenant?.deleted_at);
-    const isOwnerOrStaff = true;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
@@ -235,19 +166,33 @@ export default function TenantDetailSheet({
                                                 /mo
                                             </span>
                                         </div>
-                                        {(activeLease.tenants ?? []).length > 1 && (
+                                        {(activeLease.tenants ?? []).length >
+                                            1 && (
                                             <div className="border-t pt-2">
                                                 <p className="mb-1 text-xs text-muted-foreground">
                                                     Co-tenants
                                                 </p>
                                                 <div className="space-y-1">
                                                     {activeLease.tenants
-                                                        .filter((t) => !t.pivot?.is_primary)
+                                                        .filter(
+                                                            (t) =>
+                                                                !t.pivot
+                                                                    ?.is_primary,
+                                                        )
                                                         .map((t) => (
-                                                            <div key={t.id} className="flex items-center justify-between text-sm">
-                                                                <span>{t.name}</span>
+                                                            <div
+                                                                key={t.id}
+                                                                className="flex items-center justify-between text-sm"
+                                                            >
+                                                                <span>
+                                                                    {t.name}
+                                                                </span>
                                                                 {t.phone && (
-                                                                    <span className="text-xs text-muted-foreground">{t.phone}</span>
+                                                                    <span className="text-xs text-muted-foreground">
+                                                                        {
+                                                                            t.phone
+                                                                        }
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         ))}
@@ -311,97 +256,13 @@ export default function TenantDetailSheet({
                             )}
 
                             {!isArchived && (
-                                <div className="rounded-lg border p-4">
-                                    <p className="mb-3 text-xs font-medium text-muted-foreground uppercase">
-                                        Documents
-                                    </p>
-
-                                    <div className="space-y-2">
-                                        {(tenant.documents ?? []).map((doc) => (
-                                            <div
-                                                key={doc.id}
-                                                className="flex items-center justify-between gap-2 rounded-md border bg-muted/20 px-3 py-2"
-                                            >
-                                                <p className="min-w-0 flex-1 text-xs text-muted-foreground">
-                                                    {TYPE_LABELS[doc.type] ??
-                                                        doc.type}
-                                                    {' · '}
-                                                    {formatSize(doc.size)}
-                                                    {' · '}
-                                                    {formatDate(
-                                                        doc.created_at,
-                                                    )}
-                                                </p>
-                                                <div className="flex shrink-0 items-center gap-1">
-                                                    <a
-                                                        href={tenants.documents.show.url({ tenant: tenant.id, document: doc.id })}
-                                                        download={doc.original_name}
-                                                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-                                                    >
-                                                        <FileDown className="size-4" />
-                                                    </a>
-                                                    {isOwnerOrStaff && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleDelete(doc)
-                                                            }
-                                                            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                                                        >
-                                                            <Trash2 className="size-4" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {(tenant.documents ?? []).length === 0 && (
-                                        <p className="mb-3 text-sm text-muted-foreground">
-                                            No documents
-                                        </p>
-                                    )}
-
-                                    <form
-                                        onSubmit={handleUpload}
-                                        className="mt-3 flex items-center gap-2"
-                                    >
-                                        <select
-                                            name="type"
-                                            required
-                                            className="block w-40 shrink-0 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                        >
-                                            <option value="">
-                                                Select type...
-                                            </option>
-                                            <option value="ktp">KTP</option>
-                                            <option value="passport">
-                                                Passport
-                                            </option>
-                                            <option value="lease">
-                                                Lease/Agreement
-                                            </option>
-                                            <option value="supporting">
-                                                Supporting
-                                            </option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                        <input
-                                            type="file"
-                                            name="file"
-                                            required
-                                            className="min-w-0 flex-1 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
-                                        />
-                                        <Button
-                                            type="submit"
-                                            size="icon"
-                                            disabled={uploading}
-                                            className="shrink-0"
-                                        >
-                                            <Upload className="size-4" />
-                                        </Button>
-                                    </form>
-                                </div>
+                                <Button
+                                    variant="outline"
+                                    onClick={onDocuments}
+                                    className="w-full"
+                                >
+                                    Documents
+                                </Button>
                             )}
                         </div>
 
