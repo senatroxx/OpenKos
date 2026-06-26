@@ -8,6 +8,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { formatDate, formatPrice } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
 import type { TenantInfo } from '@/types';
 
@@ -15,7 +16,7 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string;
+    rent_amount: string;
     room: {
         id: number;
         name: string;
@@ -45,25 +46,6 @@ type Tenant = {
     leases?: Lease[];
     documents?: { id: number; type: string; original_name: string; size: number; mime_type: string; created_at: string; download_url: string }[];
 };
-
-function formatPrice(cents: string): string {
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
-
-function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
 
 export default function TenantDetailSheet({
     tenant,
@@ -154,7 +136,7 @@ export default function TenantDetailSheet({
                                             </span>
                                             <span className="font-medium tabular-nums">
                                                 {formatPrice(
-                                                    activeLease.monthly_rent,
+                                                    activeLease.rent_amount,
                                                 )}
                                                 /mo
                                             </span>
@@ -162,34 +144,69 @@ export default function TenantDetailSheet({
                                         {(activeLease.tenants ?? []).length >
                                             1 && (
                                             <div className="border-t pt-2">
-                                                <p className="mb-1 text-xs text-muted-foreground">
-                                                    Co-tenants
-                                                </p>
-                                                <div className="space-y-1">
-                                                    {activeLease.tenants
-                                                        .filter(
-                                                            (t) =>
-                                                                !t.pivot
-                                                                    ?.is_primary,
-                                                        )
-                                                        .map((t) => (
-                                                            <div
-                                                                key={t.id}
-                                                                className="flex items-center justify-between text-sm"
-                                                            >
-                                                                <span>
-                                                                    {t.name}
-                                                                </span>
-                                                                {t.phone && (
-                                                                    <span className="text-xs text-muted-foreground">
-                                                                        {
-                                                                            t.phone
+                                                {activeLease.primary_tenant
+                                                    ?.id === tenant.id ? (
+                                                    <>
+                                                        <p className="mb-1 text-xs text-muted-foreground">
+                                                            Co-tenants
+                                                        </p>
+                                                        <div className="space-y-1">
+                                                            {activeLease.tenants
+                                                                .filter(
+                                                                    (t) =>
+                                                                        !t.pivot
+                                                                            ?.is_primary,
+                                                                )
+                                                                .map((t) => (
+                                                                    <div
+                                                                        key={
+                                                                            t.id
                                                                         }
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                </div>
+                                                                        className="flex items-center justify-between text-sm"
+                                                                    >
+                                                                        <span>
+                                                                            {
+                                                                                t.name
+                                                                            }
+                                                                        </span>
+                                                                        {t.phone && (
+                                                                            <span className="text-xs text-muted-foreground">
+                                                                                {
+                                                                                    t.phone
+                                                                                }
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                        </div>
+                                                    </>
+                                                ) : activeLease.primary_tenant ? (
+                                                    <>
+                                                        <p className="mb-1 text-xs text-muted-foreground">
+                                                            Main tenant
+                                                        </p>
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span>
+                                                                {
+                                                                    activeLease
+                                                                        .primary_tenant
+                                                                        .name
+                                                                }
+                                                            </span>
+                                                            {activeLease
+                                                                .primary_tenant
+                                                                .phone && (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {
+                                                                        activeLease
+                                                                            .primary_tenant
+                                                                            .phone
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                ) : null}
                                             </div>
                                         )}
                                     </div>

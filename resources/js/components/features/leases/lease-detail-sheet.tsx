@@ -7,34 +7,8 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 
+import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease } from '@/types';
-
-function formatPrice(cents: string | null): string {
-    if (!cents) {
-        return '—';
-    }
-
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
-
-function formatDate(date: string | null): string {
-    if (!date) {
-        return '—';
-    }
-
-    return new Date(date).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
 
 const DUE_DAY_LABELS: Record<number, string> = {
     1: '1st',

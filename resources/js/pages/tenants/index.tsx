@@ -57,7 +57,7 @@ type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
-    monthly_rent: string;
+    rent_amount: string;
     room: RoomWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
