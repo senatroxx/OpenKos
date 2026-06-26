@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
-import Heading from '@/components/heading';
-import RoleForm from '@/components/role-form';
+import { RoleForm } from '@/components/features';
+import { Heading } from '@/components/shared';
 import roles from '@/routes/roles';
 
 type PermissionEntry = { value: string; label: string; description: string };
