@@ -7,16 +7,18 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import AssignRoomSheet from '@/components/assign-room-sheet';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import Heading from '@/components/heading';
-import MoveOutSheet from '@/components/move-out-sheet';
-import TenantDetailSheet from '@/components/tenant-detail-sheet';
-import TenantDocumentsSheet from '@/components/tenant-documents-sheet';
-import TenantFormSheet from '@/components/tenant-form-sheet';
+import {
+    AssignRoomSheet,
+    MoveOutSheet,
+    TenantDetailSheet,
+    TenantDocumentsSheet,
+    TenantFormSheet,
+} from '@/components/features';
+import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { PaginatedData, TableMeta } from '@/types';
+import type { PaginatedData, TableMeta, AvailableRoom, TenantInfo } from '@/types';
 
 type Property = {
     id: number;
@@ -39,31 +41,16 @@ type Room = {
     id: number;
     name: string;
     floor: string | null;
-};
-
-type AvailableRoom = {
-    id: number;
-    name: string;
-    property_id: number;
+    description: string | null;
+    size_sqm: string | null;
     capacity: number;
-    occupied_count: number;
-    property: {
-        id: number;
-        name: string;
-        city: { name: string } | null;
-    } | null;
+    status: string;
+    notes: string | null;
 };
 
 type RoomWithProperty = Room & {
     property_id: number;
     property: Property | null;
-};
-
-type TenantInfo = {
-    id: number;
-    name: string;
-    phone: string | null;
-    pivot?: { is_primary: boolean };
 };
 
 type Lease = {
@@ -74,16 +61,6 @@ type Lease = {
     room: RoomWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-};
-
-type TenantDocument = {
-    id: number;
-    type: string;
-    original_name: string;
-    size: number;
-    mime_type: string;
-    created_at: string;
-    download_url: string;
 };
 
 type Tenant = {
@@ -98,7 +75,6 @@ type Tenant = {
     deleted_at: string | null;
     active_leases_count: number;
     leases: Lease[];
-    documents: TenantDocument[];
 };
 
 type PageProps = {

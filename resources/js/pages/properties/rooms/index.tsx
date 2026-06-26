@@ -12,12 +12,14 @@ import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import Heading from '@/components/heading';
-import LeaseFormSheet from '@/components/lease-form-sheet';
-import MoveOutSheet from '@/components/move-out-sheet';
-import MoveRoomSheet from '@/components/move-room-sheet';
-import RoomDetailSheet from '@/components/room-detail-sheet';
-import RoomFormSheet from '@/components/room-form-sheet';
+import {
+    LeaseFormSheet,
+    MoveOutSheet,
+    MoveRoomSheet,
+    RoomDetailSheet,
+    RoomFormSheet,
+} from '@/components/features';
+import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,64 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import properties from '@/routes/properties';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type TenantInfo = {
-    id: number;
-    name: string;
-    phone: string | null;
-    pivot?: {
-        is_primary: boolean;
-    };
-};
-
-type LeaseInfo = {
-    id: number;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    billing_interval: number;
-    billing_unit: string;
-    monthly_equivalent: string;
-    billing_label: string;
-    deposit_amount: string;
-    deposit_paid_at: string | null;
-    deposit_refund_amount: string | null;
-    deposit_refunded_at: string | null;
-    rent_due_day: number;
-    status: string;
-    notes: string | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-type RoomRate = {
-    id: number;
-    billing_interval: number;
-    billing_unit: 'day' | 'week' | 'month' | 'year';
-    amount: string;
-};
-
-type Room = {
-    id: number;
-    name: string;
-    floor: string | null;
-    description: string | null;
-    active_rates: RoomRate[];
-    size_sqm: string | null;
-    capacity: number;
-    status: string;
-    notes: string | null;
-    active_leases: number;
-    leases: LeaseInfo[];
-};
-
-type Property = {
-    id: number;
-    name: string;
-    slug: string;
-    city: string | null;
-};
+import type { LeaseInfo, PaginatedData, Property, Room, TableMeta } from '@/types';
 
 type PageProps = {
     property: Property;
@@ -261,7 +206,7 @@ export default function Index({
                 property: {
                     id: property.id,
                     name: property.name,
-                    city: property.city ? { name: property.city } : null,
+                    city: property.city && typeof property.city === 'string' ? { name: property.city } : null,
                 },
             },
         });
@@ -338,9 +283,9 @@ export default function Index({
             key: '_tenant',
             label: 'Tenant',
             render: (r) => {
-                const hasActiveLease = r.active_leases > 0;
+                const hasActiveLease = (r.active_leases ?? 0) > 0;
                 const occupants = hasActiveLease
-                    ? r.leases.flatMap(
+                    ? (r.leases ?? []).flatMap(
                           (l) =>
                               l.tenants ??
                               (l.primary_tenant ? [l.primary_tenant] : []),
@@ -364,9 +309,9 @@ export default function Index({
             key: '_actions',
             label: '',
             render: (r) => {
-                const hasActiveLease = r.active_leases > 0;
+                const hasActiveLease = (r.active_leases ?? 0) > 0;
                 const occupants = hasActiveLease
-                    ? r.leases.flatMap(
+                    ? (r.leases ?? []).flatMap(
                           (l) =>
                               l.tenants ??
                               (l.primary_tenant ? [l.primary_tenant] : []),

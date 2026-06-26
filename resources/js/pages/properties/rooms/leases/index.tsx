@@ -1,8 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import Heading from '@/components/heading';
-import LeaseDetailSheet from '@/components/lease-detail-sheet';
-import MoveOutSheet from '@/components/move-out-sheet';
+import { LeaseDetailSheet, MoveOutSheet } from '@/components/features';
+import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import properties from '@/routes/properties';
 
