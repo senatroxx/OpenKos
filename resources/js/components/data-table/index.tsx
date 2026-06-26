@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { DataTablePagination } from '@/components/data-table/pagination';
 import { SortHeader } from '@/components/data-table/sort-header';
-import EmptyState from '@/components/empty-state';
+import { EmptyState } from '@/components/shared';
 import type { PaginatedData } from '@/types';
 
 export type TableColumn<T> = {

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
@@ -40,5 +41,10 @@ class Tenant extends Model
         return $this->belongsToMany(Lease::class)
             ->withPivot('is_primary')
             ->withTimestamps();
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(TenantDocument::class);
     }
 }
