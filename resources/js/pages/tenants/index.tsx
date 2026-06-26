@@ -7,15 +7,18 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import AssignRoomSheet from '@/components/assign-room-sheet';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import Heading from '@/components/heading';
-import MoveOutSheet from '@/components/move-out-sheet';
-import TenantDetailSheet from '@/components/tenant-detail-sheet';
-import TenantFormSheet from '@/components/tenant-form-sheet';
+import {
+    AssignRoomSheet,
+    MoveOutSheet,
+    TenantDetailSheet,
+    TenantDocumentsSheet,
+    TenantFormSheet,
+} from '@/components/features';
+import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,7 +29,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { PaginatedData, TableMeta } from '@/types';
+import type { PaginatedData, TableMeta, AvailableRoom, TenantInfo } from '@/types';
 
 type Property = {
     id: number;
@@ -38,31 +41,16 @@ type Room = {
     id: number;
     name: string;
     floor: string | null;
-};
-
-type AvailableRoom = {
-    id: number;
-    name: string;
-    property_id: number;
+    description: string | null;
+    size_sqm: string | null;
     capacity: number;
-    occupied_count: number;
-    property: {
-        id: number;
-        name: string;
-        city: { name: string } | null;
-    } | null;
+    status: string;
+    notes: string | null;
 };
 
 type RoomWithProperty = Room & {
     property_id: number;
     property: Property | null;
-};
-
-type TenantInfo = {
-    id: number;
-    name: string;
-    phone: string | null;
-    pivot?: { is_primary: boolean };
 };
 
 type Lease = {
@@ -120,6 +108,9 @@ export default function Index({
     const [moveOutOpen, setMoveOutOpen] = useState(false);
     const [moveOutTenant, setMoveOutTenant] = useState<Tenant | null>(null);
 
+    const [documentsOpen, setDocumentsOpen] = useState(false);
+    const [documentsTenant, setDocumentsTenant] = useState<Tenant | null>(null);
+
     const table = useTable({
         routeFn: () => tenants.index(),
         params: {
@@ -176,6 +167,16 @@ export default function Index({
         setMoveOutTenant(viewingTenant);
         setDetailOpen(false);
         setMoveOutOpen(true);
+    }
+
+    function openDocuments() {
+        if (!viewingTenant) {
+            return;
+        }
+
+        setDocumentsTenant(viewingTenant);
+        setDetailOpen(false);
+        setDocumentsOpen(true);
     }
 
     function archive(tenant: Tenant) {
@@ -336,6 +337,7 @@ export default function Index({
                 onEdit={editFromDetail}
                 onAssignToRoom={openAssignRoom}
                 onMoveOut={openMoveOut}
+                onDocuments={openDocuments}
             />
 
             <TenantFormSheet
@@ -352,6 +354,12 @@ export default function Index({
                     onOpenChange={setAssignRoomOpen}
                 />
             )}
+
+            <TenantDocumentsSheet
+                tenant={documentsTenant}
+                open={documentsOpen}
+                onOpenChange={setDocumentsOpen}
+            />
 
             <MoveOutSheet
                 lease={
