@@ -237,18 +237,18 @@ export default function AssignRoomSheet({
 
                                     <div className="mt-4 grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="monthly_rent">
+                                            <Label htmlFor="rent_amount">
                                                 Monthly Rent (IDR)
                                             </Label>
                                             <Input
-                                                id="monthly_rent"
-                                                name="monthly_rent"
+                                                id="rent_amount"
+                                                name="rent_amount"
                                                 type="number"
                                                 min={0}
                                                 placeholder="Leave empty for room price"
                                             />
                                             <InputError
-                                                message={errors.monthly_rent}
+                                                message={errors.rent_amount}
                                             />
                                         </div>
                                         <div className="grid gap-2">
