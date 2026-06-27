@@ -124,25 +124,53 @@ class Lease extends Model
         $payments = $this->payments;
         $dueDay = $this->rent_due_day;
         $start = Carbon::parse($this->start_date);
+        $interval = $this->billing_interval ?? 1;
+        $advanceMonths = match ($this->billing_unit) {
+            BillingUnit::Year => $interval * 12,
+            BillingUnit::Month => $interval,
+            default => 0,
+        };
         $end = $this->end_date
             ? Carbon::parse($this->end_date)->startOfMonth()
             : now()->startOfMonth()->addMonthsNoOverflow(max(0, $months - 1));
 
         $cursor = $start->copy()->startOfMonth();
         if ($start->day > $dueDay) {
-            $cursor->addMonthNoOverflow();
+            $cursor->addMonthsNoOverflow($advanceMonths ?: 1);
         }
 
         $schedule = collect();
 
         while ($cursor <= $end) {
+            $effectiveDueDay = min($dueDay, $cursor->daysInMonth);
             $periodStart = $cursor->copy()->startOfMonth();
-            $periodEnd = $cursor->copy()->endOfMonth();
-            $dueDate = $cursor->copy()->setDay(min($dueDay, $cursor->daysInMonth));
+            $periodEnd = $advanceMonths
+                ? $cursor->copy()->addMonthsNoOverflow($advanceMonths)->subDay()
+                : match ($this->billing_unit) {
+                    BillingUnit::Week => $cursor->copy()->addWeeks($interval)->subDay(),
+                    BillingUnit::Day => $cursor->copy(),
+                    default => $cursor->copy()->endOfMonth(),
+                };
+            $dueDate = $cursor->copy()->setDay($effectiveDueDay);
 
-            $paid = $payments->first(fn ($p) => $p->period_start
-                && $p->period_start->isSameDay($periodStart)
-                && $p->status !== 'cancelled');
+            if ($this->end_date) {
+                $endDateCarbon = Carbon::parse($this->end_date);
+                if ($periodEnd > $endDateCarbon) {
+                    $periodEnd = $endDateCarbon;
+                }
+                if ($dueDate > $endDateCarbon) {
+                    $dueDate = $endDateCarbon;
+                }
+            }
+
+            $paid = $advanceMonths
+                ? $payments->first(fn ($p) => $p->period_start
+                    && $p->period_start >= $periodStart
+                    && $p->period_start <= $periodEnd
+                    && $p->status !== 'cancelled')
+                : $payments->first(fn ($p) => $p->period_start
+                    && $p->period_start->isSameDay($periodStart)
+                    && $p->status !== 'cancelled');
 
             $status = $paid
                 ? 'paid'
@@ -160,7 +188,7 @@ class Lease extends Model
                 'status' => $status,
             ]);
 
-            $cursor->addMonthNoOverflow();
+            $cursor->addMonthsNoOverflow($advanceMonths ?: 1);
         }
 
         return $schedule;
