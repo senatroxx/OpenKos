@@ -41,6 +41,7 @@ enum Permission: string
     case LeasesDelete = 'leases.delete';
     case LeasesMove = 'leases.move';
     case LeasesMoveOut = 'leases.move_out';
+    case LeasesRenew = 'leases.renew';
 
     case PaymentsCreate = 'payments.create';
 
@@ -61,6 +62,7 @@ enum Permission: string
             'export' => 'Export',
             'move' => 'Move Room',
             'move_out' => 'Move Out',
+            'renew' => 'Renew Lease',
             'clone' => 'Clone',
             default => $action,
         };
@@ -106,6 +108,7 @@ enum Permission: string
             self::LeasesDelete => 'Terminate lease agreements.',
             self::LeasesMove => 'Move a tenant to a different room.',
             self::LeasesMoveOut => 'Process tenant move-out.',
+            self::LeasesRenew => 'Renew a lease agreement.',
 
             self::PaymentsCreate => 'Record rent payments for leases.',
             self::FinancialsView => 'View financial reports and payment data.',

@@ -7,6 +7,7 @@ enum LeaseStatus: string
     case Active = 'active';
     case Expired = 'expired';
     case Terminated = 'terminated';
+    case Renewed = 'renewed';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum LeaseStatus: string
             self::Active => 'Active',
             self::Expired => 'Expired',
             self::Terminated => 'Terminated',
+            self::Renewed => 'Renewed',
         };
     }
 

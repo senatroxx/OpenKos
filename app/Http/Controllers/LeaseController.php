@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Leases\RenewLease;
 use App\Enums\RoomStatus;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
+use App\Http\Requests\Lease\RenewLeaseRequest;
 use App\Http\Requests\Lease\StoreLeaseRequest;
 use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Lease;
@@ -433,6 +435,23 @@ class LeaseController extends Controller
         }
 
         return back();
+    }
+
+    public function renew(RenewLeaseRequest $request, Lease $lease, RenewLease $action): RedirectResponse
+    {
+        $this->authorize('renew', $lease);
+
+        $result = $action->execute($lease, $request->toData());
+
+        if ($result->failed()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => $result->error]);
+
+            return back();
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease renewed. New lease created.')]);
+
+        return to_route('leases.index');
     }
 
     public function move(MoveLeaseRequest $request, Property $property, Room $room, Lease $lease): RedirectResponse

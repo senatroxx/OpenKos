@@ -40,6 +40,11 @@ class LeasePolicy
             && $user->properties->contains($targetRoom->property_id);
     }
 
+    public function renew(User $user, Lease $lease): bool
+    {
+        return $user->properties->contains($lease->room->property_id);
+    }
+
     public function moveOut(User $user, Lease $lease, ?Room $targetRoom = null): bool
     {
         if (! $user->properties->contains($lease->room->property_id)) {
