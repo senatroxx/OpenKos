@@ -180,12 +180,15 @@ describe('Lease', function () {
 });
 
 describe('Payment', function () {
-    it('belongs to a lease', function () {
+    it('belongs to a paymentable (lease)', function () {
         $lease = Lease::factory()->create();
-        $payment = Payment::factory()->for($lease)->create();
+        $payment = Payment::factory()->create([
+            'paymentable_id' => $lease->id,
+            'paymentable_type' => Lease::class,
+        ]);
 
-        expect($payment->lease)->toBeInstanceOf(Lease::class);
-        expect($payment->lease->id)->toBe($lease->id);
+        expect($payment->paymentable)->toBeInstanceOf(Lease::class);
+        expect($payment->paymentable->id)->toBe($lease->id);
     });
 
     it('can be confirmed by a user', function () {
@@ -194,6 +197,14 @@ describe('Payment', function () {
 
         expect($payment->confirmedBy)->toBeInstanceOf(User::class);
         expect($payment->confirmedBy->id)->toBe($user->id);
+    });
+
+    it('can be recorded by a user', function () {
+        $user = User::factory()->create();
+        $payment = Payment::factory()->create(['recorded_by' => $user->id]);
+
+        expect($payment->recordedBy)->toBeInstanceOf(User::class);
+        expect($payment->recordedBy->id)->toBe($user->id);
     });
 });
 
