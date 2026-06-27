@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[Fillable([
-    'lease_id',
+    'paymentable_id',
+    'paymentable_type',
     'amount',
     'payment_date',
     'period_start',
@@ -18,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'notes',
     'status',
     'confirmed_by',
+    'recorded_by',
+    'proof_path',
 ])]
 class Payment extends Model
 {
@@ -33,13 +37,18 @@ class Payment extends Model
         ];
     }
 
-    public function lease(): BelongsTo
+    public function paymentable(): MorphTo
     {
-        return $this->belongsTo(Lease::class);
+        return $this->morphTo();
     }
 
     public function confirmedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }

@@ -1,3 +1,5 @@
+import { Banknote } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -6,9 +8,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-
+import { RecordPaymentSheet } from '@/components/features';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { Lease } from '@/types';
+import type { Lease, Payment } from '@/types';
 
 const DUE_DAY_LABELS: Record<number, string> = {
     1: '1st',
@@ -35,7 +37,25 @@ export default function LeaseDetailSheet({
     onMoveRoom?: () => void;
     onEdit?: () => void;
 }) {
+    const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
     const isActive = lease?.status === 'active';
+    const payments = (lease?.payments ?? []) as Payment[];
+
+    const PAYMENT_METHOD_LABELS: Record<string, string> = {
+        cash: 'Cash',
+        transfer: 'Bank Transfer',
+        ewallet: 'E-Wallet',
+        other: 'Other',
+    };
+
+    function formatPeriod(periodStart: string): string {
+        const date = new Date(periodStart);
+
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+        });
+    }
     const roomName = lease?.room?.name ?? '—';
     const propertyName = lease?.room?.property?.name ?? '—';
     const propertyCity = lease?.room?.property?.city?.name ?? '';
@@ -282,6 +302,55 @@ export default function LeaseDetailSheet({
                                 </div>
                             </section>
 
+                            {/* Payment History */}
+                            <section>
+                                <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                    Payment History
+                                </h3>
+
+                                {payments.length === 0 ? (
+                                    <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                                        No payments recorded yet.
+                                    </p>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {payments.map((payment) => (
+                                            <div
+                                                key={payment.id}
+                                                className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                                            >
+                                                <div>
+                                                    <p className="font-medium">
+                                                        {formatPeriod(
+                                                            payment.period_start,
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {PAYMENT_METHOD_LABELS[
+                                                            payment
+                                                                .payment_method
+                                                        ] ?? payment.payment_method}
+                                                        {payment
+                                                            .confirmed_by_user &&
+                                                            ` · by ${payment.confirmed_by_user.name}`}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-medium tabular-nums">
+                                                        {formatPrice(
+                                                            payment.amount,
+                                                        )}
+                                                    </p>
+                                                    <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">
+                                                        Paid
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
                             {/* Notes */}
                             {lease.notes && (
                                 <section>
@@ -299,6 +368,15 @@ export default function LeaseDetailSheet({
                             {onEdit && (
                                 <Button variant="outline" onClick={onEdit}>
                                     Edit
+                                </Button>
+                            )}
+                            {isActive && (
+                                <Button
+                                    variant="default"
+                                    onClick={() => setRecordPaymentOpen(true)}
+                                >
+                                    <Banknote className="mr-1.5 size-4" />
+                                    Record Payment
                                 </Button>
                             )}
                             {isActive && onMoveOut && (
@@ -324,6 +402,12 @@ export default function LeaseDetailSheet({
                     </div>
                 )}
             </SheetContent>
+
+            <RecordPaymentSheet
+                lease={lease}
+                open={recordPaymentOpen}
+                onOpenChange={setRecordPaymentOpen}
+            />
         </Sheet>
     );
 }
