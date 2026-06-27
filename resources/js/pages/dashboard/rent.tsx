@@ -1,7 +1,6 @@
 import { Head } from '@inertiajs/react';
 import {
     AlertTriangle,
-    Banknote,
     Bell,
     CalendarClock,
     CheckCircle,
