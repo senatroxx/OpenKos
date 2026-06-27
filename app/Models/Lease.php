@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BillingUnit;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 
 #[Fillable([
     'primary_tenant_id',
@@ -92,7 +94,7 @@ class Lease extends Model
             BillingUnit::Day => number_format($amount * 365 / 12 / $interval, 2, '.', ''),
             BillingUnit::Week => number_format($amount * 52 / 12 / $interval, 2, '.', ''),
             BillingUnit::Month => number_format($amount / $interval, 2, '.', ''),
-            BillingUnit::Year => number_format($amount * 12 / $interval, 2, '.', ''),
+            BillingUnit::Year => number_format($amount / 12 / $interval, 2, '.', ''),
         };
     }
 
@@ -111,5 +113,56 @@ class Lease extends Model
             BillingUnit::Month => "/ {$interval} months",
             BillingUnit::Year => '/year',
         };
+    }
+
+    public function schedule(?int $months = 12): Collection
+    {
+        if (! $this->rent_amount || ! $this->rent_due_day || ! $this->start_date) {
+            return collect();
+        }
+
+        $payments = $this->payments;
+        $dueDay = $this->rent_due_day;
+        $start = Carbon::parse($this->start_date);
+        $end = $this->end_date
+            ? Carbon::parse($this->end_date)->startOfMonth()
+            : now()->startOfMonth()->addMonthsNoOverflow(max(0, $months - 1));
+
+        $cursor = $start->copy()->startOfMonth();
+        if ($start->day > $dueDay) {
+            $cursor->addMonthNoOverflow();
+        }
+
+        $schedule = collect();
+
+        while ($cursor <= $end) {
+            $periodStart = $cursor->copy()->startOfMonth();
+            $periodEnd = $cursor->copy()->endOfMonth();
+            $dueDate = $cursor->copy()->setDay(min($dueDay, $cursor->daysInMonth));
+
+            $paid = $payments->first(fn ($p) => $p->period_start
+                && $p->period_start->isSameDay($periodStart)
+                && $p->status !== 'cancelled');
+
+            $status = $paid
+                ? 'paid'
+                : ($dueDate->copy()->endOfDay()->isPast()
+                    ? 'overdue'
+                    : ($periodStart->isFuture()
+                        ? 'upcoming'
+                        : 'due'));
+
+            $schedule->push((object) [
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'due_date' => $dueDate,
+                'amount' => $this->rent_amount,
+                'status' => $status,
+            ]);
+
+            $cursor->addMonthNoOverflow();
+        }
+
+        return $schedule;
     }
 }
