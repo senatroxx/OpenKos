@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import { Banknote, ChevronDown, FileText, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { RecordPaymentSheet } from '@/components/features';
@@ -14,7 +15,6 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease, Payment, RentScheduleEntry } from '@/types';
-import { usePage } from '@inertiajs/react';
 
 const DUE_DAY_LABELS: Record<number, string> = {
     1: '1st',

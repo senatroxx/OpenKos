@@ -55,6 +55,7 @@ type RoomInfo = {
 
 type Lease = {
     id: number;
+    reference: string | null;
     start_date: string;
     end_date: string | null;
     rent_amount: string | null;
@@ -78,6 +79,7 @@ type Lease = {
     room: RoomInfo | null;
     payments?: Array<{
         id: number;
+        lease_id: number;
         amount: string;
         payment_date: string;
         period_start: string;
@@ -91,7 +93,7 @@ type Lease = {
         verified_by: number | null;
         verified_by_user?: { id: number; name: string } | null;
         verified_at: string | null;
-        proofs: Array<{ id: number; path: string; original_name: string; mime_type: string; created_at: string }>;
+        proofs: Array<{ id: number; payment_id: number; path: string; original_name: string; mime_type: string; created_at: string }>;
     }>;
 };
 
