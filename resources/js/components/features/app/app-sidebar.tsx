@@ -5,6 +5,7 @@ import {
     FileText,
     FolderGit2,
     LayoutGrid,
+    Receipt,
     Shield,
     UserCog,
     Users,
@@ -23,6 +24,7 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { rent as dashboardRent } from '@/routes/dashboard';
 import leases from '@/routes/leases';
 import properties from '@/routes/properties';
 import roles from '@/routes/roles';
@@ -38,7 +40,16 @@ export function AppSidebar() {
 
     const mainNavItems: NavItem[] = [
         ...(isOwner || permissions.includes('dashboard.view')
-            ? [{ title: 'Dashboard', href: dashboard(), icon: LayoutGrid }]
+            ? [
+                  {
+                      title: 'Dashboard',
+                      icon: LayoutGrid,
+                      children: [
+                          { title: 'Overview', icon: LayoutGrid, href: dashboard() },
+                          { title: 'Rent', icon: Receipt, href: dashboardRent() },
+                      ],
+                  },
+              ]
             : []),
         ...(isOwner || permissions.includes('properties.view')
             ? [
