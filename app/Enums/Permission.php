@@ -42,6 +42,8 @@ enum Permission: string
     case LeasesMove = 'leases.move';
     case LeasesMoveOut = 'leases.move_out';
 
+    case PaymentsCreate = 'payments.create';
+
     case FinancialsView = 'financials.view';
     case ReportsView = 'reports.view';
 
@@ -105,6 +107,7 @@ enum Permission: string
             self::LeasesMove => 'Move a tenant to a different room.',
             self::LeasesMoveOut => 'Process tenant move-out.',
 
+            self::PaymentsCreate => 'Record rent payments for leases.',
             self::FinancialsView => 'View financial reports and payment data.',
             self::ReportsView => 'Access generated reports.',
         };

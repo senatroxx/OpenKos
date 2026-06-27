@@ -84,6 +84,7 @@ class UserFactory extends Factory
                 Permission::LeasesDelete->value,
                 Permission::LeasesMove->value,
                 Permission::LeasesMoveOut->value,
+                Permission::PaymentsCreate->value,
                 Permission::FinancialsView->value,
                 Permission::ReportsView->value,
                 Permission::UsersView->value,
