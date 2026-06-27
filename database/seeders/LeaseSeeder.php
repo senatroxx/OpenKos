@@ -25,6 +25,11 @@ class LeaseSeeder extends Seeder
         ['property' => 'Kos Dahlia Permai', 'room' => 'A4', 'tenant' => 'Maya Anggraini'],
     ];
 
+    private array $sharedAssignments = [
+        ['property' => 'Kos Melati Indah', 'room' => 'B1', 'primary_tenant' => 'Eko Wahyudi', 'extra_tenants' => ['Dian Permata']],
+        ['property' => 'Kos Melati Indah', 'room' => 'B2', 'primary_tenant' => 'Fajar Nugroho', 'extra_tenants' => ['Ratna Sari', 'Bayu Aji']],
+    ];
+
     private array $historicalAssignments = [
         ['property' => 'Kos Melati Indah', 'room' => 'A3', 'tenant' => 'Fitri Handayani', 'months_ago' => 7],
         ['property' => 'Kos Mawar Putih',  'room' => 'B3', 'tenant' => 'Hendra Gunawan', 'months_ago' => 5],
@@ -80,6 +85,50 @@ class LeaseSeeder extends Seeder
             $lease->tenants()->attach($tenantId, ['is_primary' => DB::raw('true')]);
         }
 
+        foreach ($this->sharedAssignments as $assignment) {
+            $property = $properties->get($assignment['property']);
+            $tenantIds = collect($assignment['extra_tenants'])
+                ->push($assignment['primary_tenant'])
+                ->map(fn (string $name) => $tenants->get($name));
+
+            if (! $property || $tenantIds->contains(null)) {
+                continue;
+            }
+
+            $room = $property->rooms->firstWhere('name', $assignment['room']);
+
+            if (! $room) {
+                continue;
+            }
+
+            $rate = $room->activeRates->first();
+            $startDate = $now->copy()->subMonths(fake()->numberBetween(1, 6));
+            $primaryId = $tenantIds->pop();
+
+            $lease = Lease::create([
+                'primary_tenant_id' => $primaryId,
+                'room_id' => $room->id,
+                'start_date' => $startDate,
+                'end_date' => null,
+                'rent_amount' => $rate?->amount ?? 1_500_000,
+                'billing_interval' => $rate?->billing_interval ?? 1,
+                'billing_unit' => $rate?->billing_unit ?? 'month',
+                'is_custom_price' => DB::raw('false'),
+                'room_rate_id' => $rate?->id ?? null,
+                'deposit_amount' => fake()->randomElement([500_000, 1_000_000, 1_500_000]),
+                'deposit_paid_at' => $startDate,
+                'rent_due_day' => fake()->randomElement([1, 5, 10, 15, 20, 25]),
+                'status' => 'active',
+                'notes' => null,
+            ]);
+
+            $lease->tenants()->attach($primaryId, ['is_primary' => DB::raw('true')]);
+
+            foreach ($tenantIds as $extraId) {
+                $lease->tenants()->attach($extraId, ['is_primary' => DB::raw('false')]);
+            }
+        }
+
         foreach ($this->historicalAssignments as $assignment) {
             $property = $properties->get($assignment['property']);
             $tenantId = $tenants->get($assignment['tenant']);
@@ -123,6 +172,33 @@ class LeaseSeeder extends Seeder
             ]);
 
             $lease->tenants()->attach($tenantId, ['is_primary' => DB::raw('true')]);
+        }
+
+        // Ensure dashboard rent status coverage, then create payments for the rest
+        $activeLeases = Lease::where('status', 'active')->get();
+        $today = (int) $now->day;
+
+        if ($activeLeases->isNotEmpty()) {
+            $activeLeases->first()->update(['rent_due_day' => $today]); // Due Today
+        }
+
+        if ($activeLeases->count() > 1) {
+            $activeLeases->get(1)->update(['rent_due_day' => min($today + 3, 28)]); // Due Soon
+        }
+
+        // Create payments for ~half the active leases (makes them "Paid"), skip the first 2
+        foreach ($activeLeases as $i => $lease) {
+            if ($i > 1 && $i % 2 !== 0) {
+                $lease->payments()->create([
+                    'paymentable_type' => Lease::class,
+                    'amount' => $lease->rent_amount,
+                    'payment_date' => $now->copy()->setDay(min((int) $lease->rent_due_day, $now->daysInMonth)),
+                    'period_start' => $now->copy()->startOfMonth(),
+                    'period_end' => $now->copy()->endOfMonth(),
+                    'payment_method' => 'cash',
+                    'status' => 'confirmed',
+                ]);
+            }
         }
 
         Room::query()
