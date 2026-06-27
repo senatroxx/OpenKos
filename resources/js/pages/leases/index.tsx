@@ -247,6 +247,12 @@ export default function Index({
             ),
         },
         {
+            key: 'reference',
+            label: 'Reference',
+            className: 'font-mono text-xs',
+            render: (lease) => lease.reference ?? '\u2014',
+        },
+        {
             key: 'start_date',
             label: 'Start',
             sortable: true,
