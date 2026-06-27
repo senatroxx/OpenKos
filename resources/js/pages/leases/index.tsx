@@ -4,6 +4,9 @@ import {
     LogOut,
     EllipsisVertical,
     Pencil,
+    Building2,
+    Banknote,
+    AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
@@ -14,6 +17,10 @@ import { LeaseDetailSheet, LeaseEditSheet, MoveOutSheet } from '@/components/fea
 import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+} from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -64,6 +71,7 @@ type Lease = {
     termination_reason: string | null;
     notes: string | null;
     created_at: string;
+    payment_status?: string | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
     room: RoomInfo | null;
@@ -104,7 +112,23 @@ type PageProps = {
     status?: string;
     properties?: string;
     per_page?: number;
+    payment_status?: string;
     table: TableMeta;
+    stats?: {
+        active_leases: number;
+        collected_this_month: number;
+        overdue_amount: number;
+    };
+};
+
+const DUE_DAY_LABELS: Record<number, string> = {
+    1: '1st',
+    5: '5th',
+    10: '10th',
+    15: '15th',
+    20: '20th',
+    25: '25th',
+    31: 'Last day',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -146,8 +170,10 @@ export default function Index({
     search: currentSearch = '',
     status: currentStatus = '',
     properties: currentProperties = '',
+    payment_status: currentPaymentStatus = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
+    stats,
 }: PageProps) {
     const [detailLease, setDetailLease] = useState<Lease | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
@@ -162,6 +188,7 @@ export default function Index({
             per_page: String(currentPerPage),
             status: currentStatus,
             properties: currentProperties,
+            payment_status: currentPaymentStatus,
         },
         defaults: {
             sort: 'status,-start_date',
@@ -189,33 +216,33 @@ export default function Index({
             key: '_tenant',
             label: 'Tenant',
             className: 'font-medium',
-            render: (lease) =>
-                (lease.tenants ?? []).length > 0
-                    ? (lease.tenants.map((t) => t.name).join(', ') ||
-                          lease.tenants[0]?.name)
-                    : lease.primary_tenant?.name ?? '\u2014',
-        },
-        {
-            key: '_room',
-            label: 'Room',
-            render: (lease) =>
-                lease.room ? (
-                    <Link
-                        href={rooms.index({ property: lease.room.property_id })}
-                        className="text-blue-600 hover:underline"
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    >
-                        {lease.room.name ?? '\u2014'}
-                    </Link>
-                ) : (
-                    '\u2014'
-                ),
-        },
-        {
-            key: '_property',
-            label: 'Property',
-            className: 'text-muted-foreground',
-            render: (lease) => lease.room?.property?.name ?? '\u2014',
+            render: (lease) => (
+                <div>
+                    <p className="font-medium">
+                        {(lease.tenants ?? []).length > 0
+                            ? lease.tenants.map((t) => t.name).join(', ') ||
+                              lease.tenants[0]?.name
+                            : lease.primary_tenant?.name ?? '\u2014'}
+                    </p>
+                    {lease.room && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                            <Link
+                                href={rooms.index({
+                                    property: lease.room.property_id,
+                                })}
+                                onClick={(e: React.MouseEvent) =>
+                                    e.stopPropagation()
+                                }
+                                className="text-blue-600 hover:underline"
+                            >
+                                {lease.room.name}
+                            </Link>
+                            {' · '}
+                            {lease.room.property?.name ?? '\u2014'}
+                        </p>
+                    )}
+                </div>
+            ),
         },
         {
             key: 'start_date',
@@ -238,6 +265,36 @@ export default function Index({
             className: 'tabular-nums',
             render: (lease) =>
                 `${formatPrice(lease.rent_amount)} ${lease.billing_label ?? ''}`,
+        },
+        {
+            key: 'rent_due_day',
+            label: 'Due',
+            sortable: true,
+            className: 'tabular-nums',
+            render: (lease) =>
+                lease.status === 'active'
+                    ? (DUE_DAY_LABELS[lease.rent_due_day] ?? `${lease.rent_due_day}th`)
+                    : '—',
+        },
+        {
+            key: 'payment_status',
+            label: 'Payment',
+            render: (lease) =>
+                lease.status === 'active' && lease.payment_status ? (
+                    <Badge
+                        className={
+                            lease.payment_status === 'paid'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-red-600 text-white'
+                        }
+                    >
+                        {lease.payment_status === 'paid'
+                            ? 'Paid'
+                            : 'Overdue'}
+                    </Badge>
+                ) : (
+                    <span className="text-muted-foreground">—</span>
+                ),
         },
         {
             key: 'status',
@@ -312,6 +369,56 @@ export default function Index({
                         description="View all leases across properties"
                     />
                 </div>
+
+                {stats && (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+                        <Card>
+                            <CardContent className="flex items-center gap-4 px-6">
+                                <Building2 className="size-10 shrink-0 text-blue-600" />
+                                <div className="min-w-0">
+                                    <p className="text-sm text-muted-foreground">
+                                        Active Leases
+                                    </p>
+                                    <p className="truncate text-2xl font-bold tabular-nums">
+                                        {stats.active_leases}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="flex items-center gap-4 px-6">
+                                <Banknote className="size-10 shrink-0 text-green-600" />
+                                <div className="min-w-0">
+                                    <p className="text-sm text-muted-foreground">
+                                        Collected This Month
+                                    </p>
+                                    <p className="truncate text-2xl font-bold tabular-nums">
+                                        {formatPrice(
+                                            String(stats.collected_this_month),
+                                        )}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="flex items-center gap-4 px-6">
+                                <AlertTriangle className="size-10 shrink-0 text-red-600" />
+                                <div className="min-w-0">
+                                    <p className="text-sm text-muted-foreground">
+                                        Overdue
+                                    </p>
+                                    <p className="truncate text-2xl font-bold tabular-nums">
+                                        {formatPrice(
+                                            String(stats.overdue_amount),
+                                        )}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 <FilterBar
                     filters={tableMeta.filters}
