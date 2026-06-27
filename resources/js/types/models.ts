@@ -188,6 +188,17 @@ export type RentScheduleEntry = {
     status: 'paid' | 'overdue' | 'due' | 'upcoming';
 };
 
+export type RentDashboardEntry = {
+    id: number;
+    tenant_name: string;
+    room_name: string;
+    property_name: string;
+    rent_due_day: number;
+    days_overdue: number | null;
+    rent_amount: string;
+    rent_status: 'paid' | 'overdue' | 'due_today' | 'due_soon';
+};
+
 export type PermissionEntry = {
     value: string;
     label: string;

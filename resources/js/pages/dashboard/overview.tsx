@@ -22,12 +22,11 @@ type Stats = {
     properties: PropertyStats[];
 };
 
-export default function Dashboard({ stats }: { stats: Stats }) {
+export default function Overview({ stats }: { stats: Stats }) {
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                {/* Stat cards */}
                 <div className="grid gap-4 md:grid-cols-4">
                     <StatCard
                         label="Occupied Rooms"
@@ -52,7 +51,6 @@ export default function Dashboard({ stats }: { stats: Stats }) {
                     />
                 </div>
 
-                {/* Property breakdown */}
                 <div>
                     <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
                         Per Property
@@ -156,7 +154,7 @@ function PropertyCard({ property }: { property: PropertyStats }) {
     );
 }
 
-Dashboard.layout = {
+Overview.layout = {
     breadcrumbs: [
         {
             title: 'Dashboard',

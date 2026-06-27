@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Dashboard;
 
 use App\Enums\RoomStatus;
+use App\Http\Controllers\Controller;
 use App\Models\Property;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DashboardController extends Controller
+class OverviewController extends Controller
 {
-    public function index(Request $request): Response
+    public function __invoke(Request $request): Response
     {
         $properties = Property::query()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -40,7 +41,7 @@ class DashboardController extends Controller
         $maintenanceRooms = $properties->sum('maintenance_rooms_count');
         $unavailableRooms = $properties->sum('unavailable_rooms_count');
 
-        return Inertia::render('dashboard', [
+        return Inertia::render('dashboard/overview', [
             'stats' => [
                 'total_rooms' => $totalRooms,
                 'occupied_rooms' => $occupiedRooms,
