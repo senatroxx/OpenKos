@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Dashboard\OverviewController;
+use App\Http\Controllers\Dashboard\RentController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseRentScheduleController;
 use App\Http\Controllers\PaymentController;
@@ -23,7 +24,8 @@ Route::post('invitations/accept', [UserController::class, 'completeInvitation'])
     ->name('users.invitations.complete');
 
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('dashboard', OverviewController::class)->name('dashboard');
+    Route::get('dashboard/rent', RentController::class)->name('dashboard.rent');
 
     Route::prefix('properties')->name('properties.')->group(function () {
         Route::get('/', [PropertyController::class, 'index'])->name('index')->middleware('permission:properties.view');
