@@ -1,5 +1,6 @@
 import { Form } from '@inertiajs/react';
 import { useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -148,34 +149,33 @@ export default function RenewLeaseSheet({
                                 </div>
 
                                 {isOverdue && (
-                                    <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-4 text-sm">
-                                        <p className="font-medium text-amber-800">
-                                            Outstanding Balance
-                                        </p>
-                                        <p className="text-amber-700">
-                                            This lease has overdue payments. Renewal will proceed
-                                            with the existing balance.
-                                        </p>
-                                        <label className="flex items-start gap-3">
-                                            <input
-                                                type="checkbox"
-                                                checked={confirmedOutstanding}
-                                                onChange={(e) => {
-                                                    setConfirmedOutstanding(e.target.checked);
-                                                }}
-                                                className="mt-0.5 size-4"
-                                            />
-                                            <input
-                                                type="hidden"
-                                                name="confirmed_outstanding"
-                                                value={confirmedOutstanding ? '1' : '0'}
-                                            />
-                                            <span className="text-amber-800">
-                                                I confirm I want to renew despite the outstanding
-                                                balance
-                                            </span>
-                                        </label>
-                                    </div>
+                                    <Alert variant="destructive">
+                                        <AlertTitle>Outstanding Balance</AlertTitle>
+                                        <AlertDescription>
+                                            <p className="mb-3">
+                                                This lease has overdue payments. Renewal will proceed
+                                                with the existing balance.
+                                            </p>
+                                            <label className="flex items-start gap-3">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={confirmedOutstanding}
+                                                    onChange={(e) => {
+                                                        setConfirmedOutstanding(e.target.checked);
+                                                    }}
+                                                    className="mt-0.5 size-4"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="confirmed_outstanding"
+                                                    value={confirmedOutstanding ? '1' : '0'}
+                                                />
+                                                <span>
+                                                    I confirm I want to renew despite the outstanding balance
+                                                </span>
+                                            </label>
+                                        </AlertDescription>
+                                    </Alert>
                                 )}
 
                                 <div className="flex items-center justify-end gap-4 pt-2">

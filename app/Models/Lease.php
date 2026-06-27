@@ -34,10 +34,32 @@ use Illuminate\Support\Collection;
     'termination_reason',
     'notes',
     'previous_lease_id',
+    'reference',
 ])]
 class Lease extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Lease $lease) {
+            if ($lease->reference === null) {
+                $prefix = Setting::get()->lease_id_prefix ?? 'LSX';
+                $year = now()->format('Y');
+                $pattern = $prefix.$year.'%';
+
+                $max = static::where('reference', 'like', $pattern)
+                    ->orderBy('reference', 'desc')
+                    ->value('reference');
+
+                $seq = $max ? (int) substr($max, -4) + 1 : 1;
+
+                $lease->reference = $prefix.$year.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+            }
+        });
+    }
 
     protected $appends = ['monthly_equivalent', 'billing_label'];
 
