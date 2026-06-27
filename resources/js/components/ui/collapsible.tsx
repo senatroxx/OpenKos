@@ -13,6 +13,7 @@ function CollapsibleTrigger({
     <CollapsiblePrimitive.CollapsibleTrigger
       data-slot="collapsible-trigger"
       {...props}
+      className={`focus:outline-none ${props.className ?? ''}`}
     />
   )
 }
