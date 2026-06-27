@@ -206,3 +206,63 @@ it('denies schedule view for user not on property', function () {
 
     $this->getJson("/leases/{$lease->id}/rent-schedule")->assertForbidden();
 });
+
+it('generates one entry per year for yearly billing', function () {
+    $lease = createScheduleLease([
+        'start_date' => '2026-01-15',
+        'rent_due_day' => 1,
+        'billing_unit' => 'year',
+        'billing_interval' => 1,
+    ]);
+
+    Carbon::setTestNow('2026-06-27');
+
+    $schedule = $lease->schedule(months: 36);
+
+    expect($schedule)->toHaveCount(3);
+    expect($schedule[0]->period_start->format('Y-m-d'))->toBe('2027-01-01');
+    expect($schedule[0]->period_end->format('Y-m-d'))->toBe('2027-12-31');
+});
+
+it('clamps period and due date to lease end date', function () {
+    $lease = createScheduleLease([
+        'start_date' => '2026-01-01',
+        'end_date' => '2026-03-15',
+        'rent_due_day' => 25,
+    ]);
+
+    Carbon::setTestNow('2026-01-15');
+
+    $schedule = $lease->schedule(months: 12);
+
+    expect($schedule)->toHaveCount(3);
+    expect($schedule[2]->period_end->format('Y-m-d'))->toBe('2026-03-15');
+    expect($schedule[2]->due_date->format('Y-m-d'))->toBe('2026-03-15');
+});
+
+it('allows owner to view schedule without property assignment', function () {
+    $user = User::factory()->owner()->create();
+    $lease = createScheduleLease();
+
+    $this->actingAs($user);
+
+    $this->getJson("/leases/{$lease->id}/rent-schedule")->assertOk();
+});
+
+it('shows paid badge with pending payment', function () {
+    $lease = createScheduleLease(['start_date' => '2026-05-24', 'rent_due_day' => 1]);
+
+    Carbon::setTestNow('2026-06-27');
+
+    Payment::factory()->create([
+        'paymentable_id' => $lease->id,
+        'paymentable_type' => Lease::class,
+        'period_start' => '2026-06-01',
+        'period_end' => '2026-06-30',
+        'status' => 'pending',
+    ]);
+
+    $schedule = $lease->schedule(months: 3);
+
+    expect($schedule[0]->status)->toBe('paid');
+});
