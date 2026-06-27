@@ -113,6 +113,7 @@ export type TenantLease = {
 
 export type LeaseInfo = {
     id: number;
+    reference: string | null;
     start_date: string;
     end_date: string | null;
     rent_amount: string;
@@ -134,6 +135,7 @@ export type LeaseInfo = {
 
 export type Lease = {
     id: number;
+    reference: string | null;
     start_date: string;
     end_date: string | null;
     rent_amount: string | null;
