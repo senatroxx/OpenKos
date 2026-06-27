@@ -193,6 +193,16 @@ export default function LeaseDetailSheet({
                                     Agreement
                                 </h3>
                                 <div className="space-y-2 rounded-lg border p-4">
+                                    {lease.reference && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                Reference
+                                            </span>
+                                            <span className="font-mono text-xs">
+                                                {lease.reference}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
                                             Start date

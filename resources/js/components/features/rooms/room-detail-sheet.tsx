@@ -215,6 +215,14 @@ export default function RoomDetailSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
+                                                Reference
+                                            </span>
+                                            <span className="font-mono text-xs tabular-nums">
+                                                {room.leases[0].reference ?? '—'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
                                                 Monthly equivalent
                                             </span>
                                             <span className="tabular-nums">

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
@@ -32,10 +33,33 @@ use Illuminate\Support\Collection;
     'termination_date',
     'termination_reason',
     'notes',
+    'previous_lease_id',
+    'reference',
 ])]
 class Lease extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (Lease $lease) {
+            if ($lease->reference === null) {
+                $prefix = Setting::get()->lease_id_prefix ?? 'LSX';
+                $year = now()->format('Y');
+                $pattern = $prefix.$year.'%';
+
+                $max = static::where('reference', 'like', $pattern)
+                    ->orderBy('reference', 'desc')
+                    ->value('reference');
+
+                $seq = $max ? (int) substr($max, -4) + 1 : 1;
+
+                $lease->reference = $prefix.$year.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+            }
+        });
+    }
 
     protected $appends = ['monthly_equivalent', 'billing_label'];
 
@@ -82,6 +106,16 @@ class Lease extends Model
     public function payments(): MorphMany
     {
         return $this->morphMany(Payment::class, 'paymentable');
+    }
+
+    public function previousLease(): BelongsTo
+    {
+        return $this->belongsTo(Lease::class, 'previous_lease_id');
+    }
+
+    public function renewedLease(): HasOne
+    {
+        return $this->hasOne(Lease::class, 'previous_lease_id');
     }
 
     public function getMonthlyEquivalentAttribute(): string
