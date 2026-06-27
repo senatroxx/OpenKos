@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
     'locale',
     'currency',
     'timezone',
+    'lease_id_prefix',
 ])]
 class Setting extends Model
 {
@@ -25,6 +26,7 @@ class Setting extends Model
             'locale' => 'id',
             'currency' => 'IDR',
             'timezone' => 'Asia/Jakarta',
+            'lease_id_prefix' => 'LSX',
         ]);
     }
 }
