@@ -166,6 +166,15 @@ export type LeaseData = {
     room: RoomInfo | null;
 };
 
+export type PaymentProof = {
+    id: number;
+    payment_id: number;
+    path: string;
+    original_name: string;
+    mime_type: string;
+    created_at: string;
+};
+
 export type Payment = {
     id: number;
     lease_id: number;
@@ -180,7 +189,10 @@ export type Payment = {
     confirmed_by_user?: { id: number; name: string } | null;
     recorded_by: number | null;
     recorded_by_user?: { id: number; name: string } | null;
-    proof_path: string | null;
+    verified_by: number | null;
+    verified_by_user?: { id: number; name: string } | null;
+    verified_at: string | null;
+    proofs: PaymentProof[];
 };
 
 export type RentScheduleEntry = {
