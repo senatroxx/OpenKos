@@ -300,7 +300,7 @@ export default function Index({
                     </div>
                 ) : (
                     <span className="text-sm text-muted-foreground">
-                        \u2014
+                        —
                     </span>
                 );
             },

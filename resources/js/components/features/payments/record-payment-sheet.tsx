@@ -1,8 +1,9 @@
 import { router } from '@inertiajs/react';
-import { type FormEvent, useRef, useState } from 'react';
+import {  useRef, useState } from 'react';
+import type {FormEvent} from 'react';
+import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { InputError } from '@/components/shared';
 import { Label } from '@/components/ui/label';
 import {
     Select,
