@@ -48,6 +48,7 @@ type Lease = {
     } | null;
     payments?: Array<{
         id: number;
+        lease_id: number;
         amount: string;
         payment_date: string;
         period_start: string;
@@ -58,7 +59,11 @@ type Lease = {
         confirmed_by: number | null;
         confirmed_by_user?: { id: number; name: string } | null;
         recorded_by: number | null;
-        proof_path: string | null;
+        recorded_by_user?: { id: number; name: string } | null;
+        verified_by: number | null;
+        verified_by_user?: { id: number; name: string } | null;
+        verified_at: string | null;
+        proofs: Array<{ id: number; payment_id: number; path: string; original_name: string; mime_type: string; created_at: string }>;
     }>;
 };
 
