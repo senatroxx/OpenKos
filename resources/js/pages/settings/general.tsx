@@ -27,7 +27,6 @@ export default function General({ settings }: { settings: { lease_id_prefix: str
                     <Form
                         action={editGeneral()}
                         method="patch"
-                        preserveScroll
                     >
                         {({ processing, errors }) => (
                             <div className="space-y-4">

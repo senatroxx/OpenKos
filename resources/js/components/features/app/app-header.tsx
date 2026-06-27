@@ -116,7 +116,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             {rightNavItems.map((item) => (
                                                 <a
                                                     key={item.title}
-                                                    href={toUrl(item.href)}
+                                                    href={toUrl(item.href!)}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="flex items-center space-x-2 font-medium"
@@ -156,7 +156,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 whenCurrentUrl(
-                                                    item.href,
+                                                    item.href!,
                                                     activeItemStyles,
                                                 ),
                                                 'h-9 cursor-pointer px-3',
@@ -167,7 +167,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             )}
                                             {item.title}
                                         </Link>
-                                        {isCurrentUrl(item.href) && (
+                                        {isCurrentUrl(item.href!) && (
                                             <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
                                         )}
                                     </NavigationMenuItem>
@@ -190,7 +190,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     <Tooltip key={item.title}>
                                         <TooltipTrigger>
                                             <a
-                                                href={toUrl(item.href)}
+                                                href={toUrl(item.href!)}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="group inline-flex h-9 w-9 items-center justify-center rounded-md bg-transparent p-0 text-sm font-medium text-accent-foreground ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"

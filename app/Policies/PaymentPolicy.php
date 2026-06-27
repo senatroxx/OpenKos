@@ -31,4 +31,17 @@ class PaymentPolicy
 
         return $user->properties->contains($lease->room->property_id);
     }
+
+    public function verify(User $user, Payment $payment): bool
+    {
+        if (! $user->can('payments.verify')) {
+            return false;
+        }
+
+        if ($payment->status !== 'pending') {
+            return false;
+        }
+
+        return true;
+    }
 }

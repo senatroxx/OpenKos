@@ -169,6 +169,7 @@ export default function RecordPaymentSheet({
                                         />
                                     </div>
                                 </div>
+                                <InputError message={errors.period} />
                             </section>
 
                             <section>
