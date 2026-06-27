@@ -8,6 +8,7 @@ use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\StoreLeaseRequest;
 use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Lease;
+use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\RoomRate;
@@ -93,6 +94,21 @@ class LeaseController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['active', 'terminated'])
                     ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+                Filter::select('payment_status', 'Payment', [
+                    ['value' => 'paid', 'label' => 'Paid'],
+                    ['value' => 'overdue', 'label' => 'Overdue'],
+                ])
+                    ->query(fn (Builder $q, string $value) => $value === 'paid'
+                        ? $q->whereHas('payments', fn (Builder $q) => $q
+                            ->where('paymentable_type', Lease::class)
+                            ->where('status', 'confirmed')
+                            ->whereMonth('period_start', now()->month)
+                            ->whereYear('period_start', now()->year))
+                        : $q->where('status', 'active')->whereDoesntHave('payments', fn (Builder $q) => $q
+                            ->where('paymentable_type', Lease::class)
+                            ->where('status', 'confirmed')
+                            ->whereMonth('period_start', now()->month)
+                            ->whereYear('period_start', now()->year))),
                 Filter::select('properties', 'Property', $allProperties->map(fn (Property $p) => [
                     'value' => (string) $p->id,
                     'label' => $p->name,
@@ -106,6 +122,14 @@ class LeaseController extends Controller
 
         $query = Lease::query()
             ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
+            ->addSelect(['payment_status' => Payment::query()
+                ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'paid' ELSE 'overdue' END")
+                ->whereColumn('paymentable_id', 'leases.id')
+                ->where('paymentable_type', Lease::class)
+                ->where('status', 'confirmed')
+                ->whereMonth('period_start', now()->month)
+                ->whereYear('period_start', now()->year),
+            ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'room.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
@@ -141,9 +165,41 @@ class LeaseController extends Controller
             ->orderBy('name')
             ->get();
 
+        $accessibleQuery = fn (Builder $q) => $request->user()->isOwner()
+            ? $q
+            : $q->whereHas('room.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
+
+        $activeLeases = Lease::query()
+            ->where('status', 'active')
+            ->when($accessibleQuery)
+            ->count();
+
+        $collectedThisMonth = (float) Payment::query()
+            ->where('paymentable_type', Lease::class)
+            ->where('status', 'confirmed')
+            ->whereMonth('period_start', now()->month)
+            ->whereYear('period_start', now()->year)
+            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->where('status', 'active')->when($accessibleQuery))
+            ->sum('amount');
+
+        $overdueAmount = (float) Lease::query()
+            ->where('status', 'active')
+            ->whereDoesntHave('payments', fn (Builder $q) => $q
+                ->where('paymentable_type', Lease::class)
+                ->where('status', 'confirmed')
+                ->whereMonth('period_start', now()->month)
+                ->whereYear('period_start', now()->year))
+            ->when($accessibleQuery)
+            ->sum('rent_amount');
+
         return Inertia::render('leases/index', [
             ...$result,
             'availableRooms' => $availableRooms,
+            'stats' => [
+                'active_leases' => $activeLeases,
+                'collected_this_month' => $collectedThisMonth,
+                'overdue_amount' => $overdueAmount,
+            ],
         ]);
     }
 

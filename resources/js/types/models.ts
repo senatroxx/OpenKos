@@ -180,6 +180,14 @@ export type Payment = {
     proof_path: string | null;
 };
 
+export type RentScheduleEntry = {
+    period_start: string;
+    period_end: string;
+    due_date: string;
+    amount: string;
+    status: 'paid' | 'overdue' | 'due' | 'upcoming';
+};
+
 export type PermissionEntry = {
     value: string;
     label: string;

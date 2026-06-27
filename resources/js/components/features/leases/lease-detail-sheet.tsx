@@ -1,5 +1,5 @@
-import { Banknote } from 'lucide-react';
-import { useState } from 'react';
+import { Banknote, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { RecordPaymentSheet } from '@/components/features';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { Lease, Payment } from '@/types';
+import type { Lease, Payment, RentScheduleEntry } from '@/types';
 
 const DUE_DAY_LABELS: Record<number, string> = {
     1: '1st',
@@ -38,8 +38,28 @@ export default function LeaseDetailSheet({
     onEdit?: () => void;
 }) {
     const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
+    const [schedule, setSchedule] = useState<RentScheduleEntry[] | null>(null);
+    const [loadingSchedule, setLoadingSchedule] = useState(false);
     const isActive = lease?.status === 'active';
     const payments = (lease?.payments ?? []) as Payment[];
+
+    useEffect(() => {
+        if (open && lease) {
+            setSchedule(null);
+            setLoadingSchedule(true);
+            fetch(`/leases/${lease.id}/rent-schedule`)
+                .then((r) => r.json())
+                .then((d) => setSchedule(d.schedule))
+                .finally(() => setLoadingSchedule(false));
+        }
+    }, [open, lease]);
+
+    const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+        paid: { label: 'Paid', className: 'bg-green-600 text-white' },
+        overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
+        due: { label: 'Due', className: 'bg-yellow-500 text-white' },
+        upcoming: { label: 'Upcoming', className: 'bg-gray-400 text-white' },
+    };
 
     const PAYMENT_METHOD_LABELS: Record<string, string> = {
         cash: 'Cash',
@@ -350,6 +370,68 @@ export default function LeaseDetailSheet({
                                     </div>
                                 )}
                             </section>
+
+                            {/* Rent Schedule */}
+                            {isActive && (
+                                <section>
+                                    <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                        Rent Schedule
+                                    </h3>
+
+                                    {loadingSchedule ? (
+                                        <div className="flex items-center justify-center gap-2 rounded-lg border p-6 text-sm text-muted-foreground">
+                                            <Loader2 className="size-4 animate-spin" />
+                                            Loading schedule...
+                                        </div>
+                                    ) : schedule && schedule.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {schedule.map((entry, i) => {
+                                                const badge =
+                                                    STATUS_BADGE[
+                                                        entry.status
+                                                    ] ?? STATUS_BADGE.upcoming;
+
+                                                return (
+                                                    <div
+                                                        key={i}
+                                                        className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                                                    >
+                                                        <div>
+                                                            <p className="font-medium">
+                                                                {formatPeriod(
+                                                                    entry.period_start,
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Due{' '}
+                                                                {formatDate(
+                                                                    entry.due_date,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-medium tabular-nums">
+                                                                {formatPrice(
+                                                                    entry.amount,
+                                                                )}
+                                                            </p>
+                                                            <Badge
+                                                                className={`text-[10px] px-1.5 py-0 ${badge.className}`}
+                                                            >
+                                                                {badge.label}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                                            No schedule data available.
+                                        </p>
+                                    )}
+                                </section>
+                            )}
 
                             {/* Notes */}
                             {lease.notes && (
