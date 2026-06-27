@@ -44,6 +44,7 @@ enum Permission: string
     case LeasesRenew = 'leases.renew';
 
     case PaymentsCreate = 'payments.create';
+    case PaymentsVerify = 'payments.verify';
 
     case FinancialsView = 'financials.view';
     case ReportsView = 'reports.view';
@@ -55,6 +56,7 @@ enum Permission: string
         return match ($action) {
             'view' => 'View',
             'create' => 'Create',
+            'verify' => 'Verify',
             'update' => 'Update',
             'delete' => 'Delete',
             'reset_password' => 'Reset Password',
@@ -111,6 +113,7 @@ enum Permission: string
             self::LeasesRenew => 'Renew a lease agreement.',
 
             self::PaymentsCreate => 'Record rent payments for leases.',
+            self::PaymentsVerify => 'Verify or reject payment proof attachments.',
             self::FinancialsView => 'View financial reports and payment data.',
             self::ReportsView => 'Access generated reports.',
         };
