@@ -151,7 +151,7 @@ describe('payment recording', function () {
                 'period_month' => now()->month,
                 'period_year' => now()->year,
             ])
-            ->assertStatus(422);
+            ->assertSessionHasErrors('period');
     });
 
     it('prevents recording payment for inactive lease', function () {
@@ -167,7 +167,7 @@ describe('payment recording', function () {
                 'period_month' => now()->month,
                 'period_year' => now()->year,
             ])
-            ->assertStatus(422);
+            ->assertSessionHasErrors('lease');
     });
 
     it('requires positive amount', function () {

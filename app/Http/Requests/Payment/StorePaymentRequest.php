@@ -7,6 +7,7 @@ use App\Models\Lease;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class StorePaymentRequest extends FormRequest
 {
@@ -31,7 +32,9 @@ class StorePaymentRequest extends FormRequest
         $lease = $this->route('lease');
 
         if (! $lease instanceof Lease || $lease->status !== 'active') {
-            abort(422, __('Lease must be active to record payments.'));
+            throw ValidationException::withMessages([
+                'lease' => __('Lease must be active to record payments.'),
+            ]);
         }
     }
 
@@ -44,7 +47,9 @@ class StorePaymentRequest extends FormRequest
             ->exists();
 
         if ($exists) {
-            abort(422, __('A payment for this billing period already exists.'));
+            throw ValidationException::withMessages([
+                'period' => __('A payment for this billing period already exists.'),
+            ]);
         }
     }
 }

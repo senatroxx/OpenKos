@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[Fillable([
@@ -21,7 +22,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
     'status',
     'confirmed_by',
     'recorded_by',
-    'proof_path',
+    'verified_by',
 ])]
 class Payment extends Model
 {
@@ -34,12 +35,18 @@ class Payment extends Model
             'payment_date' => 'date',
             'period_start' => 'date',
             'period_end' => 'date',
+            'verified_at' => 'datetime',
         ];
     }
 
     public function paymentable(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public function proofs(): HasMany
+    {
+        return $this->hasMany(PaymentProof::class);
     }
 
     public function confirmedBy(): BelongsTo
@@ -50,5 +57,10 @@ class Payment extends Model
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }

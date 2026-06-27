@@ -73,6 +73,11 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::post('{lease}/payments', [PaymentController::class, 'store'])->name('payments.store')->middleware('permission:payments.create');
     });
 
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('{payment}/proof/{proof}', [PaymentController::class, 'proof'])->name('proof');
+        Route::post('{payment}/verify', [PaymentController::class, 'verify'])->name('verify')->middleware('permission:payments.verify');
+    });
+
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index')->middleware('permission:users.view');
         Route::post('/', [UserController::class, 'store'])->name('store')->middleware('permission:users.create');
