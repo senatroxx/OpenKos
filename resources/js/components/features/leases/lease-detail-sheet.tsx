@@ -1,5 +1,6 @@
 import { Banknote, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { RecordPaymentSheet } from '@/components/features';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,7 +9,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { RecordPaymentSheet } from '@/components/features';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease, Payment, RentScheduleEntry } from '@/types';
 
@@ -45,8 +45,7 @@ export default function LeaseDetailSheet({
 
     useEffect(() => {
         if (open && lease) {
-            setSchedule(null);
-            setLoadingSchedule(true);
+            Promise.resolve().then(() => setLoadingSchedule(true));
             fetch(`/leases/${lease.id}/rent-schedule`)
                 .then((r) => r.json())
                 .then((d) => setSchedule(d.schedule))
