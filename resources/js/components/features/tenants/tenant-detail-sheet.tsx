@@ -14,6 +14,7 @@ import type { TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
+    reference: string | null;
     start_date: string;
     end_date: string | null;
     rent_amount: string;
@@ -119,6 +120,11 @@ export default function TenantDetailSheet({
                                                 {activeLease.room?.name ??
                                                     'Unknown Room'}
                                             </span>
+                                            <span className="text-xs font-mono text-muted-foreground">
+                                                {activeLease.reference}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
                                             <span className="text-sm text-muted-foreground">
                                                 {activeLease.room?.property
                                                     ?.name ??

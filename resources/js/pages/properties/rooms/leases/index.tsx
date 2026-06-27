@@ -16,6 +16,7 @@ type TenantInfo = {
 
 type Lease = {
     id: number;
+    reference: string | null;
     start_date: string;
     end_date: string | null;
     rent_amount: string | null;
@@ -202,6 +203,9 @@ export default function Index({
                             <thead>
                                 <tr className="border-b bg-muted/50 text-left text-muted-foreground">
                                     <th className="px-4 py-3 font-medium">
+                                        Reference
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
                                         Tenant
                                     </th>
                                     <th className="px-4 py-3 font-medium">
@@ -234,6 +238,9 @@ export default function Index({
                                         className="cursor-pointer border-b last:border-0 hover:bg-muted/30"
                                         onClick={() => openDetail(lease)}
                                     >
+                                        <td className="px-4 py-3 font-mono text-xs">
+                                            {lease.reference ?? '—'}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {(lease.tenants ?? []).length > 0
                                                 ? lease.tenants.map((t) => (
