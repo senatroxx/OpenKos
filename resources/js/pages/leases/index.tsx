@@ -67,6 +67,20 @@ type Lease = {
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
     room: RoomInfo | null;
+    payments?: Array<{
+        id: number;
+        amount: string;
+        payment_date: string;
+        period_start: string;
+        period_end: string;
+        payment_method: string;
+        notes: string | null;
+        status: string;
+        confirmed_by: number | null;
+        confirmed_by_user?: { id: number; name: string } | null;
+        recorded_by: number | null;
+        proof_path: string | null;
+    }>;
 };
 
 type AvailableRoom = {
