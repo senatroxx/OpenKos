@@ -30,7 +30,7 @@ class LeaseController extends Controller
         $room->load('property.city');
 
         $leases = $room->leases()
-            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone'])
+            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -114,7 +114,7 @@ class LeaseController extends Controller
         $result = $table->paginate($query, $request, 'leases');
 
         $leases = $result['leases'];
-        $leases->loadMissing('room.property.city');
+        $leases->loadMissing(['room.property.city', 'payments.confirmedBy:id,name']);
 
         $availableRooms = Room::query()
             ->with('property.city')

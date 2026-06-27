@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeaseController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\RoomController;
@@ -64,6 +65,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('leases')->name('leases.')->group(function () {
         Route::get('/', [LeaseController::class, 'globalIndex'])->name('index')->middleware('permission:leases.view');
         Route::post('{lease}/move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
+        Route::post('{lease}/payments', [PaymentController::class, 'store'])->name('payments.store')->middleware('permission:payments.create');
     });
 
     Route::prefix('users')->name('users.')->group(function () {
