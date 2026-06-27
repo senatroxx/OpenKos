@@ -69,6 +69,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::get('/', [LeaseController::class, 'globalIndex'])->name('index')->middleware('permission:leases.view');
         Route::get('{lease}/rent-schedule', LeaseRentScheduleController::class)->name('rent-schedule')->middleware('permission:leases.view');
         Route::post('{lease}/move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
+        Route::post('{lease}/renew', [LeaseController::class, 'renew'])->name('renew')->middleware('permission:leases.renew');
         Route::post('{lease}/payments', [PaymentController::class, 'store'])->name('payments.store')->middleware('permission:payments.create');
     });
 

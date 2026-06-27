@@ -4,6 +4,7 @@ import {
     LogOut,
     EllipsisVertical,
     Pencil,
+    RefreshCw,
     Building2,
     Banknote,
     AlertTriangle,
@@ -13,7 +14,7 @@ import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import { LeaseDetailSheet, LeaseEditSheet, MoveOutSheet } from '@/components/features';
+import { LeaseDetailSheet, LeaseEditSheet, MoveOutSheet, RenewLeaseSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -179,6 +180,7 @@ export default function Index({
     const [detailOpen, setDetailOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
     const [moveOutOpen, setMoveOutOpen] = useState(false);
+    const [renewOpen, setRenewOpen] = useState(false);
 
     const table = useTable({
         routeFn: () => leases.index(),
@@ -340,17 +342,29 @@ export default function Index({
                             Edit
                         </DropdownMenuItem>
                         {lease.status === 'active' && (
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => {
-                                    setDetailLease(lease);
-                                    setDetailOpen(false);
-                                    setMoveOutOpen(true);
-                                }}
-                            >
-                                <LogOut className="size-4" />
-                                Move Out
-                            </DropdownMenuItem>
+                            <>
+                                <DropdownMenuItem
+                                    onClick={() => {
+                                        setDetailLease(lease);
+                                        setDetailOpen(false);
+                                        setRenewOpen(true);
+                                    }}
+                                >
+                                    <RefreshCw className="size-4" />
+                                    Renew
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => {
+                                        setDetailLease(lease);
+                                        setDetailOpen(false);
+                                        setMoveOutOpen(true);
+                                    }}
+                                >
+                                    <LogOut className="size-4" />
+                                    Move Out
+                                </DropdownMenuItem>
+                            </>
                         )}
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -485,6 +499,12 @@ export default function Index({
                 availableRooms={_availableRooms}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
+            />
+
+            <RenewLeaseSheet
+                lease={detailLease}
+                open={renewOpen}
+                onOpenChange={setRenewOpen}
             />
         </>
     );
