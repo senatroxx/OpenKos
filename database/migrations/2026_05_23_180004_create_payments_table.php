@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('lease_id')->constrained()->cascadeOnDelete();
+            $table->morphs('paymentable');
             $table->decimal('amount', 12, 2);
             $table->date('payment_date');
             $table->date('period_start');
@@ -20,6 +20,8 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->string('status')->default('pending');
             $table->foreignId('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('recorded_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->string('proof_path')->nullable();
             $table->timestamps();
             $table->index('status');
             $table->index('payment_date');

@@ -15,8 +15,11 @@ class PaymentFactory extends Factory
 
     public function definition(): array
     {
+        $lease = Lease::factory()->create();
+
         return [
-            'lease_id' => Lease::factory(),
+            'paymentable_id' => $lease->id,
+            'paymentable_type' => Lease::class,
             'amount' => fake()->numberBetween(500_000, 3_000_000),
             'payment_date' => fake()->dateTimeBetween('-6 months', 'now'),
             'period_start' => fake()->dateTimeBetween('-6 months', 'now'),
@@ -26,6 +29,7 @@ class PaymentFactory extends Factory
             'notes' => null,
             'status' => 'confirmed',
             'confirmed_by' => null,
+            'recorded_by' => null,
         ];
     }
 
