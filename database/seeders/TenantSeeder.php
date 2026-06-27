@@ -26,6 +26,11 @@ class TenantSeeder extends Seeder
             ['name' => 'Joko Susilo', 'phone' => '081234567802', 'id_card_number' => '3273010203040013'],
             ['name' => 'Kartika Sari', 'phone' => '081234567803', 'id_card_number' => '3273010203040014'],
             ['name' => 'Lukman Hakim', 'phone' => '081234567804', 'id_card_number' => '3273010203040015'],
+            ['name' => 'Eko Wahyudi', 'phone' => '081234567805', 'id_card_number' => '3273010203040016'],
+            ['name' => 'Dian Permata', 'phone' => '081234567806', 'id_card_number' => '3273010203040017'],
+            ['name' => 'Fajar Nugroho', 'phone' => '081234567807', 'id_card_number' => '3273010203040018'],
+            ['name' => 'Ratna Sari', 'phone' => '081234567808', 'id_card_number' => '3273010203040019'],
+            ['name' => 'Bayu Aji', 'phone' => '081234567809', 'id_card_number' => '3273010203040020'],
         ];
 
         foreach ($tenants as $data) {

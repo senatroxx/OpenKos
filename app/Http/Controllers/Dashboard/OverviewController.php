@@ -1,17 +1,20 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Dashboard;
 
 use App\Enums\RoomStatus;
+use App\Http\Controllers\Controller;
+use App\Models\Lease;
+use App\Models\Payment;
 use App\Models\Property;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DashboardController extends Controller
+class OverviewController extends Controller
 {
-    public function index(Request $request): Response
+    public function __invoke(Request $request): Response
     {
         $properties = Property::query()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -40,7 +43,50 @@ class DashboardController extends Controller
         $maintenanceRooms = $properties->sum('maintenance_rooms_count');
         $unavailableRooms = $properties->sum('unavailable_rooms_count');
 
-        return Inertia::render('dashboard', [
+        // Finance stats
+        $accessibleProperties = Property::query()
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
+            ->pluck('id');
+
+        $activeLeases = Lease::where('status', 'active')
+            ->whereHas('room.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
+
+        $monthlyPotential = (clone $activeLeases)->sum('rent_amount');
+
+        $now = now();
+        $revenueThisMonth = Payment::where('paymentable_type', Lease::class)
+            ->where('status', 'confirmed')
+            ->whereMonth('period_start', (int) $now->month)
+            ->whereYear('period_start', (int) $now->year)
+            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->whereIn('id', (clone $activeLeases)->pluck('id')))
+            ->sum('amount');
+
+        $paidIds = Payment::where('paymentable_type', Lease::class)
+            ->where('status', 'confirmed')
+            ->whereMonth('period_start', (int) $now->month)
+            ->whereYear('period_start', (int) $now->year)
+            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->whereIn('id', (clone $activeLeases)->pluck('id')))
+            ->distinct('paymentable_id')
+            ->pluck('paymentable_id');
+
+        $outstanding = (clone $activeLeases)
+            ->whereNotIn('id', $paidIds)
+            ->sum('rent_amount');
+
+        $collectionRate = $monthlyPotential > 0
+            ? round(($revenueThisMonth / $monthlyPotential) * 100)
+            : 0;
+
+        return Inertia::render('dashboard/overview', [
+            'finance' => [
+                'revenue_this_month' => (int) $revenueThisMonth,
+                'monthly_potential' => (int) $monthlyPotential,
+                'outstanding' => (int) $outstanding,
+                'collection_rate' => $collectionRate,
+            ],
             'stats' => [
                 'total_rooms' => $totalRooms,
                 'occupied_rooms' => $occupiedRooms,

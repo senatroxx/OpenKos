@@ -12,6 +12,13 @@ type PropertyStats = {
     occupancy_percentage: number;
 };
 
+type Finance = {
+    revenue_this_month: number;
+    monthly_potential: number;
+    outstanding: number;
+    collection_rate: number;
+};
+
 type Stats = {
     total_rooms: number;
     occupied_rooms: number;
@@ -22,12 +29,20 @@ type Stats = {
     properties: PropertyStats[];
 };
 
-export default function Dashboard({ stats }: { stats: Stats }) {
+function formatRupiah(n: number): string {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    }).format(n);
+}
+
+export default function Overview({ finance, stats }: { finance: Finance; stats: Stats }) {
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                {/* Stat cards */}
                 <div className="grid gap-4 md:grid-cols-4">
                     <StatCard
                         label="Occupied Rooms"
@@ -52,7 +67,30 @@ export default function Dashboard({ stats }: { stats: Stats }) {
                     />
                 </div>
 
-                {/* Property breakdown */}
+                <div className="grid gap-4 md:grid-cols-4">
+                    <StatCard
+                        label="Revenue This Month"
+                        value={formatRupiah(finance.revenue_this_month)}
+                        bgColor="bg-emerald-50 dark:bg-emerald-950/20"
+                    />
+                    <StatCard
+                        label="Monthly Potential"
+                        value={formatRupiah(finance.monthly_potential)}
+                        bgColor="bg-violet-50 dark:bg-violet-950/20"
+                    />
+                    <StatCard
+                        label="Outstanding"
+                        value={formatRupiah(finance.outstanding)}
+                        bgColor="bg-rose-50 dark:bg-rose-950/20"
+                    />
+                    <StatCard
+                        label="Collection Rate"
+                        value={finance.collection_rate}
+                        bgColor="bg-cyan-50 dark:bg-cyan-950/20"
+                        isPercentage
+                    />
+                </div>
+
                 <div>
                     <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
                         Per Property
@@ -156,7 +194,7 @@ function PropertyCard({ property }: { property: PropertyStats }) {
     );
 }
 
-Dashboard.layout = {
+Overview.layout = {
     breadcrumbs: [
         {
             title: 'Dashboard',
