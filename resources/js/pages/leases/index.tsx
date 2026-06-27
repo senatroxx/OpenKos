@@ -215,6 +215,12 @@ export default function Index({
 
     const columns: TableColumn<Lease>[] = [
         {
+            key: 'reference',
+            label: 'Reference',
+            className: 'font-mono text-xs',
+            render: (lease) => lease.reference ?? '\u2014',
+        },
+        {
             key: '_tenant',
             label: 'Tenant',
             className: 'font-medium',
@@ -245,12 +251,6 @@ export default function Index({
                     )}
                 </div>
             ),
-        },
-        {
-            key: 'reference',
-            label: 'Reference',
-            className: 'font-mono text-xs',
-            render: (lease) => lease.reference ?? '\u2014',
         },
         {
             key: 'start_date',
