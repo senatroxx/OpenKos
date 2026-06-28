@@ -1,5 +1,7 @@
 <?php
 
+use App\Notifications\Drivers\LogDriver;
+
 return [
 
     /*
@@ -33,6 +35,10 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'whatsapp' => [
+        'driver' => env('WHATSAPP_DRIVER', LogDriver::class),
     ],
 
 ];

@@ -1,5 +1,4 @@
-import { router } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Banknote, ChevronDown, FileText, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { RecordPaymentSheet } from '@/components/features';
@@ -50,6 +49,7 @@ export default function LeaseDetailSheet({
     const isActive = lease?.status === 'active';
     const payments = (lease?.payments ?? []) as Payment[];
     const canVerify = auth.permissions.includes('payments.verify');
+    const canSendReminder = auth.permissions.includes('reminders.send');
 
     function handleVerify(payment: Payment, action: 'confirm' | 'reject') {
         setVerifyingId(payment.id);
@@ -606,6 +606,14 @@ export default function LeaseDetailSheet({
                             {isActive && onMoveRoom && (
                                 <Button variant="outline" onClick={onMoveRoom}>
                                     Move Room
+                                </Button>
+                            )}
+                            {isActive && canSendReminder && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => router.post(`/leases/${lease.id}/send-reminder`)}
+                                >
+                                    Send Reminder
                                 </Button>
                             )}
                             <Button

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Tenant;
 
 use App\Enums\TenantDocumentType;
 use Illuminate\Foundation\Http\FormRequest;
