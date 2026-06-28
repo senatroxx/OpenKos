@@ -123,6 +123,13 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        'whatsapp' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/whatsapp.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

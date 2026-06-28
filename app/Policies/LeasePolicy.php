@@ -57,4 +57,10 @@ class LeasePolicy
 
         return true;
     }
+
+    public function sendReminder(User $user, Lease $lease): bool
+    {
+        return $user->hasPermissionTo('reminders.send')
+            && $user->properties->contains($lease->room->property_id);
+    }
 }
