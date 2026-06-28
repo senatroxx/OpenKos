@@ -13,10 +13,23 @@ use Illuminate\Database\Eloquent\Model;
     'currency',
     'timezone',
     'lease_id_prefix',
+    'reminder_enabled',
+    'reminder_days_before',
+    'reminder_overdue_intervals',
+    'reminder_message_template',
 ])]
 class Setting extends Model
 {
     use HasFactory;
+
+    protected function casts(): array
+    {
+        return [
+            'reminder_enabled' => 'boolean',
+            'reminder_days_before' => 'integer',
+            'reminder_overdue_intervals' => 'array',
+        ];
+    }
 
     public static function get(): self
     {
@@ -27,6 +40,9 @@ class Setting extends Model
             'currency' => 'IDR',
             'timezone' => 'Asia/Jakarta',
             'lease_id_prefix' => 'LSX',
+            'reminder_enabled' => true,
+            'reminder_days_before' => 3,
+            'reminder_overdue_intervals' => [1, 3, 7],
         ]);
     }
 }
