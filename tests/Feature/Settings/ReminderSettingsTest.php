@@ -40,6 +40,12 @@ describe('Reminder settings page', function () {
         expect($settings->reminder_overdue_intervals)->toBe([2, 5, 10]);
     });
 
+    it('initial default is log channel', function () {
+        $setting = Setting::get();
+
+        expect($setting->reminder_channels)->toBe(['log']);
+    });
+
     it('updates reminder channels', function () {
         $owner = User::factory()->owner()->create();
 
@@ -47,11 +53,11 @@ describe('Reminder settings page', function () {
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 3,
                 'reminder_overdue_intervals' => [1, 3, 7],
-                'reminder_channels' => ['whatsapp', 'mail'],
+                'reminder_channels' => ['log', 'whatsapp', 'mail'],
             ])
             ->assertRedirect();
 
-        expect(Setting::get()->reminder_channels)->toBe(['whatsapp', 'mail']);
+        expect(Setting::get()->reminder_channels)->toBe(['log', 'whatsapp', 'mail']);
     });
 
     it('defaults to empty array when no channels selected', function () {

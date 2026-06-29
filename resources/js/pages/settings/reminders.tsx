@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { edit as editReminders } from '@/routes/settings/reminders';
 
 const channelOptions = [
+    { value: 'log', label: 'Log only' },
     { value: 'whatsapp', label: 'WhatsApp' },
     { value: 'mail', label: 'Email' },
 ] as const;
@@ -26,7 +27,7 @@ return null;
 
 export default function Reminders({ settings }: { settings: { reminder_enabled: boolean; reminder_days_before: number; reminder_overdue_intervals: number[]; reminder_message_template: string | null; reminder_channels: string[] } }) {
     const [enabled, setEnabled] = useState(settings.reminder_enabled);
-    const [channels, setChannels] = useState<string[]>(settings.reminder_channels ?? ['whatsapp']);
+    const [channels, setChannels] = useState<string[]>(settings.reminder_channels ?? ['log']);
     const [template, setTemplate] = useState(settings.reminder_message_template ?? '');
 
     const preview = {
