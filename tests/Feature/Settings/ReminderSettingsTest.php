@@ -40,6 +40,33 @@ describe('Reminder settings page', function () {
         expect($settings->reminder_overdue_intervals)->toBe([2, 5, 10]);
     });
 
+    it('updates reminder channels', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->patch(route('settings.reminders.update'), [
+                'reminder_days_before' => 3,
+                'reminder_overdue_intervals' => [1, 3, 7],
+                'reminder_channels' => ['whatsapp', 'mail'],
+            ])
+            ->assertRedirect();
+
+        expect(Setting::get()->reminder_channels)->toBe(['whatsapp', 'mail']);
+    });
+
+    it('defaults to empty array when no channels selected', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->patch(route('settings.reminders.update'), [
+                'reminder_days_before' => 3,
+                'reminder_overdue_intervals' => [1, 3, 7],
+            ])
+            ->assertRedirect();
+
+        expect(Setting::get()->reminder_channels)->toBe([]);
+    });
+
     it('validates reminder settings', function () {
         $owner = User::factory()->owner()->create();
 

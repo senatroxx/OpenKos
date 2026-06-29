@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
     'reminder_days_before',
     'reminder_overdue_intervals',
     'reminder_message_template',
+    'reminder_channels',
     'mail_driver',
     'mail_host',
     'mail_port',
@@ -36,6 +37,7 @@ class Setting extends Model
             'reminder_enabled' => 'boolean',
             'reminder_days_before' => 'integer',
             'reminder_overdue_intervals' => 'array',
+            'reminder_channels' => 'array',
             'mail_port' => 'integer',
             'mail_password' => 'encrypted',
         ];
@@ -53,6 +55,7 @@ class Setting extends Model
             'reminder_enabled' => true,
             'reminder_days_before' => 3,
             'reminder_overdue_intervals' => [1, 3, 7],
+            'reminder_channels' => ['whatsapp'],
             'mail_driver' => 'smtp',
         ]);
     }

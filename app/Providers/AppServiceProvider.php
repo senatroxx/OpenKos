@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\WhatsAppManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -59,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
     protected function configureAuthEvents(): void
     {
         Event::listen(Login::class, function (Login $event): void {
+            /** @var User $event->user */
             $event->user->forceFill(['last_login_at' => now()])->save();
         });
     }
