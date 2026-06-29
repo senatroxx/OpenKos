@@ -76,80 +76,63 @@ export default function WhatsApp({
 
             <Form action={updateWhatsApp()}>
                 {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Driver</CardTitle>
-                                <CardDescription>
-                                    Select the active WhatsApp driver. Only one driver can be active at a time.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="whatsapp_driver">Driver</Label>
-                                    <input type="hidden" name="whatsapp_driver" value={driver} />
-                                    <Select
-                                        value={driver}
-                                        onValueChange={(value) => setDriver(value)}
-                                        defaultValue={selectedDriver}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {drivers.map((d) => (
-                                                <SelectItem key={d.name} value={d.name}>
-                                                    {d.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.whatsapp_driver && (
-                                        <p className="text-sm text-red-600">{errors.whatsapp_driver}</p>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>WhatsApp Driver</CardTitle>
+                            <CardDescription>
+                                Select the active WhatsApp driver and configure its credentials.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid max-w-xs gap-2">
+                                <Label htmlFor="whatsapp_driver">Driver</Label>
+                                <input type="hidden" name="whatsapp_driver" value={driver} />
+                                <Select
+                                    value={driver}
+                                    onValueChange={(value) => setDriver(value)}
+                                    defaultValue={selectedDriver}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {drivers.map((d) => (
+                                            <SelectItem key={d.name} value={d.name}>
+                                                {d.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.whatsapp_driver && (
+                                    <p className="text-sm text-red-600">{errors.whatsapp_driver}</p>
+                                )}
+                            </div>
+
+                            {Object.keys(fields).length > 0 && Object.entries(fields).map(([key, field]) => (
+                                <div key={key} className="grid max-w-xs gap-2">
+                                    <Label htmlFor={`config-${key}`}>
+                                        {field.label}
+                                        {field.required && <span className="text-destructive"> *</span>}
+                                    </Label>
+                                    <Input
+                                        id={`config-${key}`}
+                                        name={`whatsapp_config[${driver}][${key}]`}
+                                        type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
+                                        defaultValue={driverConfig[key] ?? ''}
+                                        placeholder={field.placeholder ?? ''}
+                                    />
+                                    {errors[`whatsapp_config.${driver}.${key}`] && (
+                                        <p className="text-sm text-red-600">
+                                            {errors[`whatsapp_config.${driver}.${key}`]}
+                                        </p>
                                     )}
                                 </div>
-                            </CardContent>
-                            <CardFooter>
-                                <Button disabled={processing}>Save</Button>
-                            </CardFooter>
-                        </Card>
-
-                        {Object.keys(fields).length > 0 && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>{currentDriver!.label} Configuration</CardTitle>
-                                    <CardDescription>
-                                        Enter the credentials for the {currentDriver!.label} driver.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    {Object.entries(fields).map(([key, field]) => (
-                                        <div key={key} className="grid max-w-xs gap-2">
-                                            <Label htmlFor={`config-${key}`}>
-                                                {field.label}
-                                                {field.required && <span className="text-destructive"> *</span>}
-                                            </Label>
-                                            <Input
-                                                id={`config-${key}`}
-                                                name={`whatsapp_config[${driver}][${key}]`}
-                                                type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
-                                                defaultValue={driverConfig[key] ?? ''}
-                                                placeholder={field.placeholder ?? ''}
-                                            />
-                                            {errors[`whatsapp_config.${driver}.${key}`] && (
-                                                <p className="text-sm text-red-600">
-                                                    {errors[`whatsapp_config.${driver}.${key}`]}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ))}
-                                </CardContent>
-                                <CardFooter>
-                                    <Button disabled={processing}>Save</Button>
-                                </CardFooter>
-                            </Card>
-                        )}
-                    </div>
+                            ))}
+                        </CardContent>
+                        <CardFooter>
+                            <Button disabled={processing}>Save</Button>
+                        </CardFooter>
+                    </Card>
                 )}
             </Form>
 
