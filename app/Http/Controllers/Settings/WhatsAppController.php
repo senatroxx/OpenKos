@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\WhatsAppManager;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,6 +14,23 @@ use Inertia\Response;
 class WhatsAppController extends Controller
 {
     public function __construct(private WhatsAppManager $whatsapp) {}
+
+    public function pair(): JsonResponse
+    {
+        $qrCode = $this->whatsapp->getPairingQrCode();
+
+        if ($qrCode === null) {
+            $result = $this->whatsapp->health();
+
+            if ($result->healthy) {
+                return response()->json(['message' => 'Device is already connected.']);
+            }
+
+            return response()->json(['error' => 'Could not get QR code. Ensure the driver token is configured.'], 422);
+        }
+
+        return response()->json(['qr_code' => $qrCode]);
+    }
 
     public function edit(): Response
     {

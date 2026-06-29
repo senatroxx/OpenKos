@@ -42,6 +42,11 @@ class WhatsAppManager
         return $this->driver()->health();
     }
 
+    public function getPairingQrCode(): ?string
+    {
+        return $this->driver()->getPairingQrCode();
+    }
+
     private function resolveDefaultDriver(): string
     {
         try {

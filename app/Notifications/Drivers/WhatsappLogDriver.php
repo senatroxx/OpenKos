@@ -30,4 +30,9 @@ class WhatsappLogDriver implements WhatsAppDriver
     {
         return [];
     }
+
+    public function getPairingQrCode(): ?string
+    {
+        return null;
+    }
 }

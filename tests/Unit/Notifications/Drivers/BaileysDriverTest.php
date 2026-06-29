@@ -33,3 +33,9 @@ it('has url and api_key config schema', function () {
     expect($schema['url']['required'])->toBeTrue();
     expect($schema['api_key']['required'])->toBeFalse();
 });
+
+it('returns null qr code', function () {
+    $driver = new BaileysDriver;
+
+    expect($driver->getPairingQrCode())->toBeNull();
+});
