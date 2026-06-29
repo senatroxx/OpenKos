@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\WhatsAppManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -67,7 +68,11 @@ class AppServiceProvider extends ServiceProvider
 
     protected function configureMail(): void
     {
-        $setting = Setting::first();
+        try {
+            $setting = Setting::first();
+        } catch (QueryException) {
+            return;
+        }
 
         if (! $setting?->mail_host) {
             return;
