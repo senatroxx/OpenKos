@@ -26,7 +26,7 @@ class WhatsAppController extends Controller
                 return response()->json(['message' => 'Device is already connected.']);
             }
 
-            return response()->json(['error' => 'Could not get QR code. Ensure the driver token is configured.'], 422);
+            return response()->json(['error' => $result->message ?? 'Could not get QR code.'], 422);
         }
 
         return response()->json(['qr_code' => $qrCode]);
