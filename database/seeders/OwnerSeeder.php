@@ -15,6 +15,7 @@ class OwnerSeeder extends Seeder
             ['email' => 'budi@openkos.com'],
             [
                 'name' => 'Budi',
+                'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ],
         );

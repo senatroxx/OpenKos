@@ -34,7 +34,10 @@ class TenantSeeder extends Seeder
         ];
 
         foreach ($tenants as $data) {
-            Tenant::create($data);
+            Tenant::firstOrCreate(
+                ['id_card_number' => $data['id_card_number']],
+                $data,
+            );
         }
 
         DB::statement("UPDATE tenants SET is_active = false WHERE id_card_number = '3273010203040012'");
