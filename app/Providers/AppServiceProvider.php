@@ -21,9 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(WhatsAppManager::class, function ($app) {
-            return new WhatsAppManager($app->make(config('services.whatsapp.driver')));
-        });
+        $this->app->singleton(WhatsAppManager::class);
     }
 
     /**

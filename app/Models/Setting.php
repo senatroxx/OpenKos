@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\Model;
     'mail_encryption',
     'mail_from_address',
     'mail_from_name',
+    'whatsapp_driver',
+    'whatsapp_config',
 ])]
 class Setting extends Model
 {
@@ -40,6 +42,7 @@ class Setting extends Model
             'reminder_channels' => 'array',
             'mail_port' => 'integer',
             'mail_password' => 'encrypted',
+            'whatsapp_config' => 'encrypted:array',
         ];
     }
 

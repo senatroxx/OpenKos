@@ -1,20 +1,11 @@
 <?php
 
+use App\Notifications\Drivers\ApiCoIdDriver;
+use App\Notifications\Drivers\BaileysDriver;
+use App\Notifications\Drivers\FonnteDriver;
 use App\Notifications\Drivers\WhatsappLogDriver;
 
 return [
-
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
@@ -38,9 +29,27 @@ return [
     ],
 
     'whatsapp' => [
-        // Falls back to WhatsappLogDriver so selecting WhatsApp never crashes unconfigured.
-        // Swap to a real driver (e.g. FonnteDriver) when credentials are available.
-        'driver' => env('WHATSAPP_DRIVER', WhatsappLogDriver::class),
+        'default' => env('WHATSAPP_DRIVER', 'log'),
+
+        'drivers' => [
+            'log' => [
+                'class' => WhatsappLogDriver::class,
+            ],
+            'baileys' => [
+                'class' => BaileysDriver::class,
+                'url' => env('BAILEYS_URL'),
+                'api_key' => env('BAILEYS_API_KEY'),
+            ],
+            'fonnte' => [
+                'class' => FonnteDriver::class,
+                'token' => env('FONNTE_TOKEN'),
+            ],
+            'api_co_id' => [
+                'class' => ApiCoIdDriver::class,
+                'api_key' => env('API_CO_ID_KEY'),
+                'sender_name' => env('API_CO_ID_SENDER_NAME'),
+            ],
+        ],
     ],
 
 ];
