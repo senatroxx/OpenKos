@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\Notification;
 
 #[Fillable([
     'user_id',
@@ -22,13 +24,18 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 ])]
 class Tenant extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes;
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function routeNotificationForWhatsApp(Notification $notification): string
+    {
+        return $this->phone;
     }
 
     public function user(): BelongsTo
