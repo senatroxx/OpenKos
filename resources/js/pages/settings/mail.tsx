@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { edit as editMail, test as testMail } from '@/routes/settings/mail';
+import { edit as editMail, update as updateMail, test as testMail } from '@/routes/settings/mail';
 
 export default function Mail({ settings }: { settings: { mail_driver: string; mail_host: string | null; mail_port: number | null; mail_username: string | null; mail_encryption: string | null; mail_from_address: string | null; mail_from_name: string | null } }) {
     return (
@@ -16,7 +16,7 @@ export default function Mail({ settings }: { settings: { mail_driver: string; ma
                 </p>
             </div>
 
-            <Form action={editMail()} method="patch">
+            <Form action={updateMail()}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <Card>
