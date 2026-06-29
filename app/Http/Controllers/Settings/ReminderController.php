@@ -19,6 +19,7 @@ class ReminderController extends Controller
                 'reminder_days_before',
                 'reminder_overdue_intervals',
                 'reminder_message_template',
+                'reminder_channels',
             ),
         ]);
     }
@@ -31,9 +32,12 @@ class ReminderController extends Controller
             'reminder_overdue_intervals' => ['required', 'array'],
             'reminder_overdue_intervals.*' => ['integer', 'min:1', 'max:365'],
             'reminder_message_template' => ['nullable', 'string', 'max:1000'],
+            'reminder_channels' => ['nullable', 'array'],
+            'reminder_channels.*' => ['string', 'in:whatsapp,mail'],
         ]);
 
         $setting = Setting::get();
+        $validated['reminder_channels'] ??= [];
         $setting->update($validated);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Reminder settings updated.')]);
