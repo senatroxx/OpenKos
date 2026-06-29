@@ -9,6 +9,6 @@ class LogChannel
 {
     public function send(object $notifiable, Notification $notification): void
     {
-        Log::info('['.class_basename($notification).'] To: '.($notifiable->name ?? '—'));
+        Log::channel('reminders')->info('['.class_basename($notification).'] To: '.($notifiable->name ?? '—'));
     }
 }

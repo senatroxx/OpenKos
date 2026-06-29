@@ -123,9 +123,9 @@ return [
             'handler' => NullHandler::class,
         ],
 
-        'whatsapp' => [
+        'reminders' => [
             'driver' => 'single',
-            'path' => storage_path('logs/whatsapp.log'),
+            'path' => storage_path('logs/reminders.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
