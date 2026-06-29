@@ -55,7 +55,6 @@ class Setting extends Model
             'currency' => 'IDR',
             'timezone' => 'Asia/Jakarta',
             'lease_id_prefix' => 'LSX',
-            'reminder_enabled' => true,
             'reminder_days_before' => 3,
             'reminder_overdue_intervals' => [1, 3, 7],
             'reminder_channels' => ['log'],
