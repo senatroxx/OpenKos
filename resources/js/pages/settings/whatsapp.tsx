@@ -28,7 +28,7 @@ export default function WhatsApp({
     drivers: Driver[];
     settings: { whatsapp_driver: string | null; whatsapp_config: Record<string, Record<string, string>> | null };
 }) {
-    const selectedDriver = settings.whatsapp_driver ?? drivers.find((d) => d.name !== 'log')?.name ?? 'log';
+    const selectedDriver = settings.whatsapp_driver ?? 'log';
     const [driver, setDriver] = useState(selectedDriver);
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [pairingError, setPairingError] = useState<string | null>(null);
@@ -140,7 +140,6 @@ export default function WhatsApp({
                                                 type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
                                                 defaultValue={driverConfig[key] ?? ''}
                                                 placeholder={field.placeholder ?? ''}
-                                                required={field.required}
                                             />
                                             {errors[`whatsapp_config.${driver}.${key}`] && (
                                                 <p className="text-sm text-red-600">
