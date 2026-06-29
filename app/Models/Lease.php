@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\BillingUnit;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -147,6 +148,16 @@ class Lease extends Model
             BillingUnit::Month => "/ {$interval} months",
             BillingUnit::Year => '/year',
         };
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('status', 'active');
+    }
+
+    public function scheduleForReminder(): Collection
+    {
+        return $this->schedule(2);
     }
 
     public function schedule(?int $months = 12): Collection

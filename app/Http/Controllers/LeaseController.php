@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Leases\RenewLease;
+use App\Data\Reminder\ReminderEvent;
+use App\Enums\ReminderType;
 use App\Enums\RoomStatus;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
@@ -12,11 +14,14 @@ use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
+use App\Models\ReminderLog;
 use App\Models\Room;
 use App\Models\RoomRate;
+use App\Notifications\RentReminder;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -452,6 +457,66 @@ class LeaseController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease renewed. New lease created.')]);
 
         return to_route('leases.index');
+    }
+
+    public function sendReminder(Lease $lease): RedirectResponse
+    {
+        $this->authorize('sendReminder', $lease);
+
+        $lease->load(['primaryTenant', 'payments']);
+        $tenant = $lease->primaryTenant;
+
+        if (! $tenant?->phone) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Tenant has no phone number.')]);
+
+            return back();
+        }
+
+        $period = $lease->scheduleForReminder()->first(fn ($p) => $p->status !== 'paid');
+
+        if (! $period) {
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('All rent periods are paid.')]);
+
+            return back();
+        }
+
+        $today = now()->startOfDay();
+        $dueDate = Carbon::parse($period->due_date)->startOfDay();
+        $overdueDays = $dueDate->lessThan($today) ? (int) $dueDate->diffInDays($today) : null;
+
+        $type = match ($period->status) {
+            'upcoming' => ReminderType::Upcoming,
+            'due' => ReminderType::DueToday,
+            default => ReminderType::Overdue,
+        };
+
+        $event = new ReminderEvent(
+            lease: $lease,
+            type: $type,
+            periodStart: $period->period_start->toDateString(),
+            periodEnd: $period->period_end->toDateString(),
+            dueDate: $period->due_date->toDateString(),
+            amount: (int) ($lease->rent_amount * 100),
+            overdueDays: $overdueDays,
+        );
+
+        ReminderLog::create([
+            'lease_id' => $lease->id,
+            'period_start' => $event->periodStart,
+            'period_end' => $event->periodEnd,
+            'reminder_type' => $event->type->value,
+            'overdue_days' => $event->overdueDays,
+            'notification_class' => RentReminder::class,
+            'channel' => 'whatsapp',
+            'scheduled_for' => today(),
+            'sent_at' => now(),
+        ]);
+
+        $tenant->notifyNow(new RentReminder($event));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Reminder sent.')]);
+
+        return back();
     }
 
     public function move(MoveLeaseRequest $request, Property $property, Room $room, Lease $lease): RedirectResponse

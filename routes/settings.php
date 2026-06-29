@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\ReminderController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
@@ -28,4 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');
     Route::patch('settings/general', [GeneralController::class, 'update'])->name('settings.general.update');
+
+    Route::get('settings/reminders', [ReminderController::class, 'edit'])->name('settings.reminders.edit');
+    Route::patch('settings/reminders', [ReminderController::class, 'update'])->name('settings.reminders.update');
 });
