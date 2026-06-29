@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { edit as editReminders } from '@/routes/settings/reminders';
+import { edit as editReminders, update as updateReminders } from '@/routes/settings/reminders';
 
 const channelOptions = [
     { value: 'log', label: 'Log only' },
@@ -51,7 +51,7 @@ export default function Reminders({ settings }: { settings: { reminder_enabled: 
                 </p>
             </div>
 
-            <Form action={editReminders()} method="patch">
+            <Form action={updateReminders()}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <Card>
