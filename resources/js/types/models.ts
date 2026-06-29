@@ -2,6 +2,7 @@ export type Tenant = {
     id: number;
     name: string;
     phone: string | null;
+    email: string | null;
     id_card_number: string | null;
     emergency_contact_name: string | null;
     emergency_contact_phone: string | null;

@@ -34,25 +34,16 @@ class RentReminder extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $days = $this->event->overdueDays
-            ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
-
-        $amount = number_format($this->event->amount / 100, 0);
-        $date = Carbon::parse($this->event->dueDate)->format('d M Y');
-
-        $subject = $this->event->type === ReminderType::Upcoming
-            ? __('Rent Reminder')
-            : __('Rent Overdue');
+        $subject = match ($this->event->type) {
+            ReminderType::Upcoming => __('Rent Reminder'),
+            ReminderType::DueToday => __('Rent Due Today'),
+            ReminderType::Overdue => __('Rent Overdue'),
+        };
 
         return (new MailMessage)
             ->subject($subject)
             ->greeting(__('Hi :name', ['name' => $notifiable->name]))
-            ->line(__('Rent for :room — :amount', [
-                'room' => $this->event->lease->room?->name ?? '—',
-                'amount' => $amount,
-            ]))
-            ->line(__('Due date: :date', ['date' => $date]))
-            ->line(__('Days: :days', ['days' => $days]));
+            ->line($this->renderMessage($notifiable));
     }
 
     public function toLog(object $notifiable): string

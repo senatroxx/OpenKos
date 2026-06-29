@@ -33,14 +33,17 @@ class SendRentReminders
 
         $sent = collect();
 
+        $channels = $this->settings->get()->reminder_channels ?? ['log'];
+
         foreach ($leases as $lease) {
             $tenant = $lease->primaryTenant;
-            if (! $tenant?->phone) {
+            $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
+            if (! $hasContact) {
                 continue;
             }
 
             foreach ($this->scheduler->pendingFor($lease, $settings) as $event) {
-                $log = $this->repository->recordIfAbsent($event);
+                $log = $this->repository->recordIfAbsent($event, $channels);
 
                 if (! $log) {
                     continue;
