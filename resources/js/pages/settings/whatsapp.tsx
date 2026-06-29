@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { edit as editWhatsApp, test as testWhatsApp, pair as pairWhatsApp } from '@/routes/settings/whatsapp';
+import { edit as editWhatsApp, update as updateWhatsApp, test as testWhatsApp, pair as pairWhatsApp } from '@/routes/settings/whatsapp';
 
 type DriverSchemaField = {
     label: string;
@@ -74,10 +74,7 @@ export default function WhatsApp({
                 </p>
             </div>
 
-            <Form
-                action={editWhatsApp()}
-                method="patch"
-            >
+            <Form action={updateWhatsApp()}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <Card>
