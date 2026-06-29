@@ -97,6 +97,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::delete('{role}', [RoleController::class, 'destroy'])->name('destroy');
             Route::post('{role}/clone', [RoleController::class, 'clone'])->name('clone');
         });
+        Route::post('leases/{lease}/send-reminder', [LeaseController::class, 'sendReminder'])
+            ->middleware('can:reminders.send')
+            ->name('leases.send-reminder');
     });
 });
 

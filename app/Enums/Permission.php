@@ -46,6 +46,8 @@ enum Permission: string
     case PaymentsCreate = 'payments.create';
     case PaymentsVerify = 'payments.verify';
 
+    case RemindersSend = 'reminders.send';
+
     case FinancialsView = 'financials.view';
     case ReportsView = 'reports.view';
 
@@ -65,6 +67,7 @@ enum Permission: string
             'move' => 'Move Room',
             'move_out' => 'Move Out',
             'renew' => 'Renew Lease',
+            'send' => 'Send',
             'clone' => 'Clone',
             default => $action,
         };
@@ -114,6 +117,7 @@ enum Permission: string
 
             self::PaymentsCreate => 'Record rent payments for leases.',
             self::PaymentsVerify => 'Verify or reject payment proof attachments.',
+            self::RemindersSend => 'Send rent reminders to tenants.',
             self::FinancialsView => 'View financial reports and payment data.',
             self::ReportsView => 'Access generated reports.',
         };

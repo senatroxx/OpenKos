@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreTenantDocumentRequest;
+use App\Http\Requests\Tenant\StoreTenantDocumentRequest;
 use App\Models\Tenant;
 use App\Models\TenantDocument;
 use Illuminate\Http\RedirectResponse;
