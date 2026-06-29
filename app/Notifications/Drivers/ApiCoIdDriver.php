@@ -5,20 +5,19 @@ namespace App\Notifications\Drivers;
 use App\Contracts\WhatsAppDriver;
 use App\Data\WhatsApp\DriverHealthResult;
 use App\Data\WhatsApp\WhatsAppMessage;
-use Illuminate\Support\Facades\Log;
 
-class WhatsappLogDriver implements WhatsAppDriver
+class ApiCoIdDriver implements WhatsAppDriver
 {
     public function __construct(private array $config = []) {}
 
     public function send(WhatsAppMessage $message): void
     {
-        Log::channel('reminders')->info('[WhatsApp] To: '.$message->phone.' — '.$message->message);
+        throw new \RuntimeException('ApiCoId driver not implemented.');
     }
 
     public function health(): DriverHealthResult
     {
-        return new DriverHealthResult(true);
+        return new DriverHealthResult(false, 'ApiCoId driver not implemented');
     }
 
     public function supportsPairing(): bool
@@ -28,6 +27,9 @@ class WhatsappLogDriver implements WhatsAppDriver
 
     public function configurationSchema(): array
     {
-        return [];
+        return [
+            'api_key' => ['label' => 'API Key', 'type' => 'password', 'required' => true],
+            'sender_name' => ['label' => 'Sender Name', 'type' => 'text', 'required' => false, 'placeholder' => 'e.g. OpenKOS'],
+        ];
     }
 }
