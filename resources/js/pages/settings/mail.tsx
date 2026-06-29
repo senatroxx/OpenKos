@@ -134,9 +134,9 @@ export default function Mail({ settings }: { settings: { mail_driver: string; ma
                     </p>
                 </CardContent>
                 <CardFooter>
-                    <Link href={testMail.url()} method="post" as="button">
-                        <Button variant="secondary">Send Test Email</Button>
-                    </Link>
+                    <Button variant="secondary" asChild>
+                        <Link href={testMail.url()} method="post" as="button">Send Test Email</Link>
+                    </Button>
                 </CardFooter>
             </Card>
         </div>

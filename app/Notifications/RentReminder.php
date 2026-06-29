@@ -21,8 +21,6 @@ class RentReminder extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        $channels = Setting::get()->reminder_channels ?? ['whatsapp'];
-
         $map = [
             'log' => LogChannel::class,
             'whatsapp' => WhatsAppChannel::class,
