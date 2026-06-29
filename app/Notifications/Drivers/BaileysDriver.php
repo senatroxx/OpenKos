@@ -5,29 +5,31 @@ namespace App\Notifications\Drivers;
 use App\Contracts\WhatsAppDriver;
 use App\Data\WhatsApp\DriverHealthResult;
 use App\Data\WhatsApp\WhatsAppMessage;
-use Illuminate\Support\Facades\Log;
 
-class WhatsappLogDriver implements WhatsAppDriver
+class BaileysDriver implements WhatsAppDriver
 {
     public function __construct(private array $config = []) {}
 
     public function send(WhatsAppMessage $message): void
     {
-        Log::channel('reminders')->info('[WhatsApp] To: '.$message->phone.' — '.$message->message);
+        throw new \RuntimeException('Baileys driver not implemented.');
     }
 
     public function health(): DriverHealthResult
     {
-        return new DriverHealthResult(true);
+        return new DriverHealthResult(false, 'Baileys driver not implemented');
     }
 
     public function supportsPairing(): bool
     {
-        return false;
+        return true;
     }
 
     public function configurationSchema(): array
     {
-        return [];
+        return [
+            'url' => ['label' => 'Server URL', 'type' => 'url', 'required' => true, 'placeholder' => 'http://localhost:3000'],
+            'api_key' => ['label' => 'API Key', 'type' => 'password', 'required' => false],
+        ];
     }
 }
