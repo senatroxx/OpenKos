@@ -13,14 +13,18 @@ class ReminderController extends Controller
 {
     public function edit(): Response
     {
+        $settings = Setting::get()->only(
+            'reminder_enabled',
+            'reminder_days_before',
+            'reminder_overdue_intervals',
+            'reminder_message_template',
+            'reminder_channels',
+        );
+
+        $settings['reminder_channels'] ??= ['whatsapp'];
+
         return Inertia::render('settings/reminders', [
-            'settings' => Setting::get()->only(
-                'reminder_enabled',
-                'reminder_days_before',
-                'reminder_overdue_intervals',
-                'reminder_message_template',
-                'reminder_channels',
-            ),
+            'settings' => $settings,
         ]);
     }
 
