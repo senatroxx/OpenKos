@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Data\Reminder\ReminderEvent;
 use App\Enums\ReminderType;
 use App\Models\Setting;
+use App\Notifications\Channels\LogChannel;
 use App\Notifications\Channels\WhatsAppChannel;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -23,6 +24,7 @@ class RentReminder extends Notification implements ShouldQueue
         $channels = Setting::get()->reminder_channels ?? ['whatsapp'];
 
         $map = [
+            'log' => LogChannel::class,
             'whatsapp' => WhatsAppChannel::class,
             'mail' => 'mail',
         ];
