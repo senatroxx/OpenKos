@@ -57,7 +57,17 @@ class RentReminder extends Notification implements ShouldQueue
             ->line(__('Days: :days', ['days' => $days]));
     }
 
+    public function toLog(object $notifiable): string
+    {
+        return $this->renderMessage($notifiable);
+    }
+
     public function toWhatsApp(object $notifiable): string
+    {
+        return $this->renderMessage($notifiable);
+    }
+
+    private function renderMessage(object $notifiable): string
     {
         $days = $this->event->overdueDays
             ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
