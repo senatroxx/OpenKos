@@ -26,7 +26,7 @@ return null;
 
 export default function Reminders({ settings }: { settings: { reminder_enabled: boolean; reminder_days_before: number; reminder_overdue_intervals: number[]; reminder_message_template: string | null; reminder_channels: string[] } }) {
     const [enabled, setEnabled] = useState(settings.reminder_enabled);
-    const [channels, setChannels] = useState<string[]>(settings.reminder_channels);
+    const [channels, setChannels] = useState<string[]>(settings.reminder_channels ?? ['whatsapp']);
     const [template, setTemplate] = useState(settings.reminder_message_template ?? '');
 
     const preview = {
