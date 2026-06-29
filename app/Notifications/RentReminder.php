@@ -27,6 +27,8 @@ class RentReminder extends Notification implements ShouldQueue
             'mail' => 'mail',
         ];
 
+        $channels = Setting::get()->reminder_channels ?? ['log'];
+
         return array_values(array_intersect_key($map, array_flip($channels)));
     }
 

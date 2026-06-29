@@ -21,7 +21,7 @@ class ReminderController extends Controller
             'reminder_channels',
         );
 
-        $settings['reminder_channels'] ??= ['whatsapp'];
+        $settings['reminder_channels'] ??= ['log'];
 
         return Inertia::render('settings/reminders', [
             'settings' => $settings,
@@ -37,7 +37,7 @@ class ReminderController extends Controller
             'reminder_overdue_intervals.*' => ['integer', 'min:1', 'max:365'],
             'reminder_message_template' => ['nullable', 'string', 'max:1000'],
             'reminder_channels' => ['nullable', 'array'],
-            'reminder_channels.*' => ['string', 'in:whatsapp,mail'],
+            'reminder_channels.*' => ['string', 'in:log,whatsapp,mail'],
         ]);
 
         $setting = Setting::get();
