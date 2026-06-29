@@ -77,8 +77,6 @@ export default function WhatsApp({
             <Form
                 action={editWhatsApp()}
                 method="patch"
-                onSuccess={() => setDriver(driver)}
-                key={driver}
             >
                 {({ processing, errors }) => (
                     <div className="space-y-6">
@@ -120,7 +118,7 @@ export default function WhatsApp({
                         </Card>
 
                         {Object.keys(fields).length > 0 && (
-                            <Card key={driver}>
+                            <Card>
                                 <CardHeader>
                                     <CardTitle>{currentDriver!.label} Configuration</CardTitle>
                                     <CardDescription>
