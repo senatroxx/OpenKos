@@ -16,6 +16,7 @@ use Illuminate\Notifications\Notification;
     'user_id',
     'name',
     'phone',
+    'email',
     'id_card_number',
     'emergency_contact_name',
     'emergency_contact_phone',
@@ -36,6 +37,11 @@ class Tenant extends Model
     public function routeNotificationForWhatsApp(Notification $notification): string
     {
         return $this->phone;
+    }
+
+    public function routeNotificationForMail(Notification $notification): array
+    {
+        return [$this->email => $this->name];
     }
 
     public function user(): BelongsTo

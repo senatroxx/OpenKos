@@ -8,6 +8,7 @@ import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
+import { edit as editMail } from '@/routes/settings/mail';
 import { edit as editReminders } from '@/routes/settings/reminders';
 import type { NavItem } from '@/types';
 
@@ -28,6 +29,15 @@ const sidebarNavItems: NavItem[] = [
         title: 'Reminders',
         href: editReminders(),
     },
+    {
+        title: 'Credentials',
+        children: [
+            {
+                title: 'Mail',
+                href: editMail(),
+            },
+        ],
+    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -46,24 +56,50 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         className="flex flex-col space-y-1 space-x-0"
                         aria-label="Settings"
                     >
-                        {sidebarNavItems.map((item, index) => (
-                            <Button
-                                key={`${toUrl(item.href!)}-${index}`}
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                                className={cn('w-full justify-start', {
-                                    'bg-muted': isCurrentOrParentUrl(item.href!),
-                                })}
-                            >
-                                <Link href={item.href}>
-                                    {item.icon && (
-                                        <item.icon className="h-4 w-4" />
-                                    )}
-                                    {item.title}
-                                </Link>
-                            </Button>
-                        ))}
+                        {sidebarNavItems.map((item, index) =>
+                            item.children ? (
+                                <div key={`group-${index}`} className="space-y-1">
+                                    <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                                        {item.title}
+                                    </p>
+                                    {item.children.map((child, childIndex) => (
+                                        <Button
+                                            key={`${toUrl(child.href!)}-${childIndex}`}
+                                            size="sm"
+                                            variant="ghost"
+                                            asChild
+                                            className={cn('w-full justify-start pl-6', {
+                                                'bg-muted': isCurrentOrParentUrl(child.href!),
+                                            })}
+                                        >
+                                            <Link href={child.href}>
+                                                {child.icon && (
+                                                    <child.icon className="h-4 w-4" />
+                                                )}
+                                                {child.title}
+                                            </Link>
+                                        </Button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <Button
+                                    key={`${toUrl(item.href!)}-${index}`}
+                                    size="sm"
+                                    variant="ghost"
+                                    asChild
+                                    className={cn('w-full justify-start', {
+                                        'bg-muted': isCurrentOrParentUrl(item.href!),
+                                    })}
+                                >
+                                    <Link href={item.href}>
+                                        {item.icon && (
+                                            <item.icon className="h-4 w-4" />
+                                        )}
+                                        {item.title}
+                                    </Link>
+                                </Button>
+                            ),
+                        )}
                     </nav>
                 </aside>
 

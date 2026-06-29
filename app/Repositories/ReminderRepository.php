@@ -17,7 +17,7 @@ class ReminderRepository
             ->exists();
     }
 
-    public function recordIfAbsent(ReminderEvent $event): ?ReminderLog
+    public function recordIfAbsent(ReminderEvent $event, array $channels = ['whatsapp']): ?ReminderLog
     {
         if ($this->alreadySent($event)) {
             return null;
@@ -31,7 +31,7 @@ class ReminderRepository
                 'reminder_type' => $event->type->value,
                 'overdue_days' => $event->overdueDays,
                 'notification_class' => 'App\Notifications\RentReminder',
-                'channel' => 'whatsapp',
+                'channel' => implode(',', $channels),
                 'scheduled_for' => today(),
                 'sent_at' => now(),
             ]);

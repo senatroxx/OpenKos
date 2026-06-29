@@ -3,11 +3,14 @@
 namespace App\Notifications;
 
 use App\Data\Reminder\ReminderEvent;
+use App\Enums\ReminderType;
 use App\Models\Setting;
+use App\Notifications\Channels\LogChannel;
 use App\Notifications\Channels\WhatsAppChannel;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class RentReminder extends Notification implements ShouldQueue
@@ -18,10 +21,42 @@ class RentReminder extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return [WhatsAppChannel::class];
+        $map = [
+            'log' => LogChannel::class,
+            'whatsapp' => WhatsAppChannel::class,
+            'mail' => 'mail',
+        ];
+
+        $channels = Setting::get()->reminder_channels ?? ['log'];
+
+        return array_values(array_intersect_key($map, array_flip($channels)));
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        $subject = match ($this->event->type) {
+            ReminderType::Upcoming => __('Rent Reminder'),
+            ReminderType::DueToday => __('Rent Due Today'),
+            ReminderType::Overdue => __('Rent Overdue'),
+        };
+
+        return (new MailMessage)
+            ->subject($subject)
+            ->greeting(__('Hi :name', ['name' => $notifiable->name]))
+            ->line($this->renderMessage($notifiable));
+    }
+
+    public function toLog(object $notifiable): string
+    {
+        return $this->renderMessage($notifiable);
     }
 
     public function toWhatsApp(object $notifiable): string
+    {
+        return $this->renderMessage($notifiable);
+    }
+
+    private function renderMessage(object $notifiable): string
     {
         $days = $this->event->overdueDays
             ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
