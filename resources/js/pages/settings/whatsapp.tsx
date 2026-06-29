@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { edit as editWhatsApp, test as testWhatsApp } from '@/routes/settings/whatsapp';
+import { edit as editWhatsApp, test as testWhatsApp, pair as pairWhatsApp } from '@/routes/settings/whatsapp';
 
 type DriverSchemaField = {
     label: string;
@@ -30,10 +30,40 @@ export default function WhatsApp({
 }) {
     const selectedDriver = settings.whatsapp_driver ?? drivers.find((d) => d.name !== 'log')?.name ?? 'log';
     const [driver, setDriver] = useState(selectedDriver);
+    const [qrCode, setQrCode] = useState<string | null>(null);
+    const [pairingError, setPairingError] = useState<string | null>(null);
+    const [pairingLoading, setPairingLoading] = useState(false);
 
     const currentDriver = drivers.find((d) => d.name === driver);
     const fields = currentDriver?.configuration_schema ?? {};
     const driverConfig = settings.whatsapp_config?.[driver] ?? {};
+
+    const handlePair = async () => {
+        setPairingLoading(true);
+        setPairingError(null);
+        setQrCode(null);
+
+        try {
+            const res = await fetch(pairWhatsApp.url(), {
+                method: 'post',
+                headers: { 'X-CSRF-TOKEN': (document.querySelector('meta[name=csrf-token]') as HTMLMetaElement)?.content ?? '', Accept: 'application/json' },
+            });
+
+            const data = await res.json();
+
+            if (data.qr_code) {
+                setQrCode(data.qr_code);
+            } else if (data.message) {
+                setPairingError(data.message);
+            } else {
+                setPairingError(data.error ?? 'Failed to get QR code.');
+            }
+        } catch {
+            setPairingError('Could not connect to server.');
+        } finally {
+            setPairingLoading(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -128,6 +158,34 @@ export default function WhatsApp({
                     </div>
                 )}
             </Form>
+
+            {currentDriver?.supports_pairing && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Pair Device</CardTitle>
+                        <CardDescription>
+                            Scan the QR code below with your phone to connect your WhatsApp device.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {pairingError && (
+                            <p className="text-sm text-muted-foreground">{pairingError}</p>
+                        )}
+                        {qrCode && (
+                            <img
+                                src={`data:image/png;base64,${qrCode}`}
+                                alt="QR Code"
+                                className="mx-auto h-64 w-64"
+                            />
+                        )}
+                    </CardContent>
+                    <CardFooter>
+                        <Button onClick={handlePair} disabled={pairingLoading}>
+                            {pairingLoading ? 'Loading...' : 'Get QR Code'}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            )}
 
             <Card>
                 <CardHeader>

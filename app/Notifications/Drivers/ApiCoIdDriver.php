@@ -12,12 +12,12 @@ class ApiCoIdDriver implements WhatsAppDriver
 
     public function send(WhatsAppMessage $message): void
     {
-        throw new \RuntimeException('ApiCoId driver not implemented.');
+        throw new \RuntimeException('ApiCo.id driver not implemented.');
     }
 
     public function health(): DriverHealthResult
     {
-        return new DriverHealthResult(false, 'ApiCoId driver not implemented');
+        return new DriverHealthResult(false, 'ApiCo.id driver not implemented');
     }
 
     public function supportsPairing(): bool
@@ -29,7 +29,12 @@ class ApiCoIdDriver implements WhatsAppDriver
     {
         return [
             'api_key' => ['label' => 'API Key', 'type' => 'password', 'required' => true],
-            'sender_name' => ['label' => 'Sender Name', 'type' => 'text', 'required' => false, 'placeholder' => 'e.g. OpenKOS'],
+            'sender_name' => ['label' => 'Sender Name', 'type' => 'text', 'required' => false],
         ];
+    }
+
+    public function getPairingQrCode(): ?string
+    {
+        return null;
     }
 }

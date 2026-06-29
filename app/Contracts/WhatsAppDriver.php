@@ -14,4 +14,6 @@ interface WhatsAppDriver
     public function supportsPairing(): bool;
 
     public function configurationSchema(): array;
+
+    public function getPairingQrCode(): ?string;
 }
