@@ -59,7 +59,6 @@ export default function WhatsApp({
                                 <Select
                                     value={driver}
                                     onValueChange={(value) => setDriver(value)}
-                                    defaultValue={selectedDriver}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
