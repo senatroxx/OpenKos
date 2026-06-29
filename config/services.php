@@ -1,6 +1,6 @@
 <?php
 
-use App\Notifications\Drivers\LogDriver;
+use App\Notifications\Drivers\WhatsappLogDriver;
 
 return [
 
@@ -38,7 +38,9 @@ return [
     ],
 
     'whatsapp' => [
-        'driver' => env('WHATSAPP_DRIVER', LogDriver::class),
+        // Falls back to WhatsappLogDriver so selecting WhatsApp never crashes unconfigured.
+        // Swap to a real driver (e.g. FonnteDriver) when credentials are available.
+        'driver' => env('WHATSAPP_DRIVER', WhatsappLogDriver::class),
     ],
 
 ];
