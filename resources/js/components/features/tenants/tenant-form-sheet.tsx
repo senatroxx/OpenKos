@@ -78,6 +78,18 @@ export default function TenantFormSheet({
                                 </div>
 
                                 <div className="grid gap-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        defaultValue={tenant?.email ?? ''}
+                                        placeholder="e.g. budi@example.com"
+                                    />
+                                    <InputError message={errors.email} />
+                                </div>
+
+                                <div className="grid gap-2">
                                     <Label htmlFor="id_card_number">
                                         ID Card Number (KTP)
                                     </Label>
