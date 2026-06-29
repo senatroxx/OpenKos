@@ -86,10 +86,10 @@ it('returns unhealthy when token missing on health', function () {
     expect($driver->health()->message)->toBe('Fonnte token is not configured.');
 });
 
-it('supports pairing', function () {
+it('does not support pairing', function () {
     $driver = new FonnteDriver(['token' => 'valid-token']);
 
-    expect($driver->supportsPairing())->toBeTrue();
+    expect($driver->supportsPairing())->toBeFalse();
 });
 
 it('has token config schema', function () {
@@ -101,46 +101,7 @@ it('has token config schema', function () {
     expect($schema['token']['required'])->toBeTrue();
 });
 
-it('returns qr code base64 from fonnte api', function () {
-    Http::fake([
-        'api.fonnte.com/qr' => Http::response([
-            'status' => true,
-            'url' => 'iVBORw0KGgoAAAANSUhEUgAA...',
-        ]),
-    ]);
-
-    $driver = new FonnteDriver(['token' => 'valid-token']);
-
-    expect($driver->getPairingQrCode())->toBe('iVBORw0KGgoAAAANSUhEUgAA...');
-});
-
-it('returns null when qr api fails', function () {
-    Http::fake([
-        'api.fonnte.com/qr' => Http::response([
-            'status' => false,
-            'reason' => 'token invalid',
-        ]),
-    ]);
-
-    $driver = new FonnteDriver(['token' => 'bad-token']);
-
-    expect($driver->getPairingQrCode())->toBeNull();
-});
-
-it('returns null when token missing on qr', function () {
-    $driver = new FonnteDriver;
-
-    expect($driver->getPairingQrCode())->toBeNull();
-});
-
-it('returns null when device already connected', function () {
-    Http::fake([
-        'api.fonnte.com/qr' => Http::response([
-            'status' => false,
-            'reason' => 'device already connect',
-        ]),
-    ]);
-
+it('returns null for qr code', function () {
     $driver = new FonnteDriver(['token' => 'valid-token']);
 
     expect($driver->getPairingQrCode())->toBeNull();

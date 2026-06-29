@@ -58,7 +58,7 @@ class FonnteDriver implements WhatsAppDriver
 
     public function supportsPairing(): bool
     {
-        return true;
+        return false;
     }
 
     public function configurationSchema(): array
@@ -70,24 +70,6 @@ class FonnteDriver implements WhatsAppDriver
 
     public function getPairingQrCode(): ?string
     {
-        $token = $this->config['token'] ?? null;
-
-        if (! $token) {
-            return null;
-        }
-
-        $response = Http::withToken($token)
-            ->asMultipart()
-            ->post('https://api.fonnte.com/qr', [
-                'type' => 'qr',
-            ]);
-
-        $body = $response->json();
-
-        if (! ($body['status'] ?? false)) {
-            return null;
-        }
-
-        return $body['url'] ?? null;
+        return null;
     }
 }
