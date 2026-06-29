@@ -8,7 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { edit as editReminders } from '@/routes/settings/reminders';
 
 function renderTemplate(template: string | null, data: Record<string, string | number>): string | null {
-    if (!template) return null;
+    if (!template) {
+return null;
+}
+
     return Object.entries(data).reduce(
         (str, [key, val]) => str.replace(`:${key}`, String(val)),
         template,
