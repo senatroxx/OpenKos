@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Setting;
 use App\Services\WhatsAppManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -30,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureAuthEvents();
+        $this->configureMail();
     }
 
     /**
@@ -59,5 +61,27 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, function (Login $event): void {
             $event->user->forceFill(['last_login_at' => now()])->save();
         });
+    }
+
+    protected function configureMail(): void
+    {
+        $setting = Setting::first();
+
+        if (! $setting?->mail_host) {
+            return;
+        }
+
+        config()->set('mail.mailers.smtp.host', $setting->mail_host);
+        config()->set('mail.mailers.smtp.port', $setting->mail_port);
+        config()->set('mail.mailers.smtp.username', $setting->mail_username);
+        config()->set('mail.mailers.smtp.password', $setting->mail_password);
+        config()->set('mail.mailers.smtp.encryption', $setting->mail_encryption === 'null' ? null : $setting->mail_encryption);
+
+        if ($setting->mail_from_address) {
+            config()->set('mail.from.address', $setting->mail_from_address);
+            config()->set('mail.from.name', $setting->mail_from_name);
+        }
+
+        config()->set('mail.default', 'smtp');
     }
 }
