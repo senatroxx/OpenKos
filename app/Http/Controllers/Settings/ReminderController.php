@@ -13,13 +13,18 @@ class ReminderController extends Controller
 {
     public function edit(): Response
     {
+        $settings = Setting::get()->only(
+            'reminder_enabled',
+            'reminder_days_before',
+            'reminder_overdue_intervals',
+            'reminder_message_template',
+            'reminder_channels',
+        );
+
+        $settings['reminder_channels'] ??= ['log'];
+
         return Inertia::render('settings/reminders', [
-            'settings' => Setting::get()->only(
-                'reminder_enabled',
-                'reminder_days_before',
-                'reminder_overdue_intervals',
-                'reminder_message_template',
-            ),
+            'settings' => $settings,
         ]);
     }
 
@@ -31,6 +36,8 @@ class ReminderController extends Controller
             'reminder_overdue_intervals' => ['required', 'array'],
             'reminder_overdue_intervals.*' => ['integer', 'min:1', 'max:365'],
             'reminder_message_template' => ['nullable', 'string', 'max:1000'],
+            'reminder_channels' => ['required', 'array', 'min:1'],
+            'reminder_channels.*' => ['string', 'in:log,whatsapp,mail'],
         ]);
 
         $setting = Setting::get();

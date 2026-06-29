@@ -17,6 +17,7 @@ use App\Models\Property;
 use App\Models\ReminderLog;
 use App\Models\Room;
 use App\Models\RoomRate;
+use App\Models\Setting;
 use App\Notifications\RentReminder;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -466,8 +467,11 @@ class LeaseController extends Controller
         $lease->load(['primaryTenant', 'payments']);
         $tenant = $lease->primaryTenant;
 
-        if (! $tenant?->phone) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('Tenant has no phone number.')]);
+        $channels = Setting::get()->reminder_channels ?? ['log'];
+        $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
+
+        if (! $hasContact) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Tenant has no phone number or email address.')]);
 
             return back();
         }
@@ -507,7 +511,7 @@ class LeaseController extends Controller
             'reminder_type' => $event->type->value,
             'overdue_days' => $event->overdueDays,
             'notification_class' => RentReminder::class,
-            'channel' => 'whatsapp',
+            'channel' => implode(',', $channels),
             'scheduled_for' => today(),
             'sent_at' => now(),
         ]);

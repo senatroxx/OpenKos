@@ -2,10 +2,17 @@ import { Form } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { edit as editReminders } from '@/routes/settings/reminders';
+
+const channelOptions = [
+    { value: 'log', label: 'Log only' },
+    { value: 'whatsapp', label: 'WhatsApp' },
+    { value: 'mail', label: 'Email' },
+] as const;
 
 function renderTemplate(template: string | null, data: Record<string, string | number>): string | null {
     if (!template) {
@@ -18,8 +25,9 @@ return null;
     );
 }
 
-export default function Reminders({ settings }: { settings: { reminder_enabled: boolean; reminder_days_before: number; reminder_overdue_intervals: number[]; reminder_message_template: string | null } }) {
+export default function Reminders({ settings }: { settings: { reminder_enabled: boolean; reminder_days_before: number; reminder_overdue_intervals: number[]; reminder_message_template: string | null; reminder_channels: string[] } }) {
     const [enabled, setEnabled] = useState(settings.reminder_enabled);
+    const [channels, setChannels] = useState<string[]>(settings.reminder_channels ?? ['log']);
     const [template, setTemplate] = useState(settings.reminder_message_template ?? '');
 
     const preview = {
@@ -140,6 +148,36 @@ Amount: ${preview.amount}`}
                                         </pre>
                                     </div>
                                 )}
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Notification Channels</CardTitle>
+                                <CardDescription>
+                                    Choose how reminders are delivered. Reminders are always logged regardless of channel selection.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-wrap gap-6">
+                                    {channelOptions.map(({ value, label }) => (
+                                        <label key={value} className="flex items-center gap-2 text-sm">
+                                            <Checkbox
+                                                name={`reminder_channels[]`}
+                                                value={value}
+                                                checked={channels.includes(value)}
+                                                onCheckedChange={(checked) => {
+                                                    setChannels(
+                                                        checked
+                                                            ? [...channels, value]
+                                                            : channels.filter((c) => c !== value),
+                                                    );
+                                                }}
+                                            />
+                                            {label}
+                                        </label>
+                                    ))}
+                                </div>
                             </CardContent>
                         </Card>
 
