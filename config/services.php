@@ -1,7 +1,5 @@
 <?php
 
-use App\Notifications\Drivers\LogDriver;
-
 return [
 
     /*
@@ -38,7 +36,7 @@ return [
     ],
 
     'whatsapp' => [
-        'driver' => env('WHATSAPP_DRIVER', LogDriver::class),
+        'driver' => env('WHATSAPP_DRIVER'),
     ],
 
 ];
