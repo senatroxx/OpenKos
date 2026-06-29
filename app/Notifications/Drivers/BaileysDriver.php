@@ -28,8 +28,13 @@ class BaileysDriver implements WhatsAppDriver
     public function configurationSchema(): array
     {
         return [
-            'url' => ['label' => 'Server URL', 'type' => 'url', 'required' => true, 'placeholder' => 'http://localhost:3000'],
+            'url' => ['label' => 'WebSocket URL', 'type' => 'url', 'required' => true, 'placeholder' => 'ws://localhost:3000'],
             'api_key' => ['label' => 'API Key', 'type' => 'password', 'required' => false],
         ];
+    }
+
+    public function getPairingQrCode(): ?string
+    {
+        return null;
     }
 }

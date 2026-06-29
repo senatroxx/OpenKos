@@ -111,4 +111,21 @@ describe('WhatsApp settings page', function () {
             ])
             ->assertSessionHasErrors(['whatsapp_driver']);
     });
+
+    it('pair endpoint reports log driver as connected', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->postJson(route('settings.whatsapp.pair'))
+            ->assertOk()
+            ->assertJson(['message' => 'Device is already connected.']);
+    });
+
+    it('pair endpoint is owner-only', function () {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('settings.whatsapp.pair'))
+            ->assertForbidden();
+    });
 });

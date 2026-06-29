@@ -43,5 +43,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('settings/whatsapp', [WhatsAppController::class, 'edit'])->name('settings.whatsapp.edit');
         Route::patch('settings/whatsapp', [WhatsAppController::class, 'update'])->name('settings.whatsapp.update');
         Route::post('settings/whatsapp/test', [WhatsAppController::class, 'test'])->name('settings.whatsapp.test');
+        Route::post('settings/whatsapp/pair', [WhatsAppController::class, 'pair'])->name('settings.whatsapp.pair');
     });
 });

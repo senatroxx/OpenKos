@@ -2,7 +2,6 @@
 
 use App\Data\WhatsApp\WhatsAppMessage;
 use App\Notifications\Drivers\WhatsappLogDriver;
-use Illuminate\Support\Facades\Log;
 
 it('sends without exception', function () {
     $driver = new WhatsappLogDriver;
@@ -28,4 +27,10 @@ it('has empty configuration schema', function () {
     $driver = new WhatsappLogDriver;
 
     expect($driver->configurationSchema())->toBe([]);
+});
+
+it('returns null qr code', function () {
+    $driver = new WhatsappLogDriver;
+
+    expect($driver->getPairingQrCode())->toBeNull();
 });

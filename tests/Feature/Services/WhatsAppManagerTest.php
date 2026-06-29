@@ -1,6 +1,9 @@
 <?php
 
 use App\Contracts\WhatsAppDriver;
+use App\Data\WhatsApp\DriverHealthResult;
+use App\Data\WhatsApp\WhatsAppMessage;
+use App\Notifications\Drivers\WhatsappLogDriver;
 use App\Services\WhatsAppManager;
 
 beforeEach(function () {
@@ -8,7 +11,7 @@ beforeEach(function () {
         'default' => 'log',
         'drivers' => [
             'log' => [
-                'class' => \App\Notifications\Drivers\WhatsappLogDriver::class,
+                'class' => WhatsappLogDriver::class,
             ],
             'test_driver' => [
                 'class' => TestWhatsAppDriver::class,
@@ -60,20 +63,26 @@ it('health delegates to resolved driver', function () {
     expect($result->healthy)->toBeTrue();
 });
 
+it('getPairingQrCode delegates to resolved driver', function () {
+    $result = $this->manager->getPairingQrCode();
+
+    expect($result)->toBeNull();
+});
+
 class TestWhatsAppDriver implements WhatsAppDriver
 {
     public string $sent = '';
 
     public function __construct(private array $config = []) {}
 
-    public function send(\App\Data\WhatsApp\WhatsAppMessage $message): void
+    public function send(WhatsAppMessage $message): void
     {
         $this->sent = $message->phone;
     }
 
-    public function health(): \App\Data\WhatsApp\DriverHealthResult
+    public function health(): DriverHealthResult
     {
-        return new \App\Data\WhatsApp\DriverHealthResult(true);
+        return new DriverHealthResult(true);
     }
 
     public function supportsPairing(): bool
@@ -84,5 +93,10 @@ class TestWhatsAppDriver implements WhatsAppDriver
     public function configurationSchema(): array
     {
         return [];
+    }
+
+    public function getPairingQrCode(): ?string
+    {
+        return null;
     }
 }

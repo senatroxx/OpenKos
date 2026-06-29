@@ -33,3 +33,9 @@ it('has api_key and sender_name config schema', function () {
     expect($schema['api_key']['required'])->toBeTrue();
     expect($schema['sender_name']['required'])->toBeFalse();
 });
+
+it('returns null qr code', function () {
+    $driver = new ApiCoIdDriver;
+
+    expect($driver->getPairingQrCode())->toBeNull();
+});
