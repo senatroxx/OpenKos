@@ -47,6 +47,16 @@ class WhatsAppManager
         return $this->driver()->getPairingQrCode();
     }
 
+    public function pair(): void
+    {
+        $this->driver()->pair();
+    }
+
+    public function disconnect(): void
+    {
+        $this->driver()->disconnect();
+    }
+
     private function resolveDefaultDriver(): string
     {
         try {

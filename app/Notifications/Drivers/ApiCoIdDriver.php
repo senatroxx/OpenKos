@@ -37,4 +37,14 @@ class ApiCoIdDriver implements WhatsAppDriver
     {
         return null;
     }
+
+    public function pair(): void
+    {
+        throw new \RuntimeException('Pairing not supported.');
+    }
+
+    public function disconnect(): void
+    {
+        throw new \RuntimeException('Pairing not supported.');
+    }
 }
