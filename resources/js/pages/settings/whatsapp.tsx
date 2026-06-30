@@ -53,6 +53,18 @@ export default function WhatsApp({
         }
     };
 
+    const fetchStatus = async () => {
+        try {
+            const response = await fetch(statusWhatsApp().url);
+            const data = await response.json();
+            setConnectionStatus(data.healthy ? 'connected' : 'disconnected');
+            setDevicePhone(data.phone ?? null);
+            setDeviceLastConnected(data.lastConnected ?? null);
+        } catch {
+            setConnectionStatus('disconnected');
+        }
+    };
+
     const pollQr = async () => {
         try {
             const response = await fetch(qrWhatsApp().url);
@@ -73,7 +85,7 @@ export default function WhatsApp({
 
     useEffect(() => {
         if (isBaileys) {
-            pollQr();
+            fetchStatus();
         } else {
             stopPolling();
             setQrCode(null);
@@ -94,15 +106,16 @@ export default function WhatsApp({
             const response = await fetch(pairWhatsApp().url, { method: 'POST' });
             const data = await response.json();
 
-            if (data.state === 'connected') {
+            if (data.state === 'connected' || data.message === 'Device is already connected.') {
                 setConnectionStatus('connected');
-                setDevicePhone(data.phone ?? null);
-                setDeviceLastConnected(data.lastConnected ?? null);
+                await fetchStatus();
             } else {
-                setConnectionStatus(data.state ?? 'connecting');
+                setConnectionStatus(data.state ?? 'disconnected');
                 setQrCode(data.qr_code ?? null);
 
-                pollingRef.current = setInterval(pollQr, 2000);
+                if (data.qr_code) {
+                    pollingRef.current = setInterval(pollQr, 2000);
+                }
             }
         } catch {
             setPairingError('Failed to initiate pairing.');
