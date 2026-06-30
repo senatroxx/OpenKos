@@ -16,4 +16,8 @@ interface WhatsAppDriver
     public function configurationSchema(): array;
 
     public function getPairingQrCode(): ?string;
+
+    public function pair(): void;
+
+    public function disconnect(): void;
 }

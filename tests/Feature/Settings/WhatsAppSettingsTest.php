@@ -112,4 +112,31 @@ describe('WhatsApp settings page', function () {
             ->assertSessionHasErrors(['whatsapp_driver']);
     });
 
+    it('returns status json', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->get(route('settings.whatsapp.status'))
+            ->assertOk()
+            ->assertJsonStructure(['healthy', 'message', 'phone', 'lastConnected']);
+    });
+
+    it('disconnects baileys driver', function () {
+        $owner = User::factory()->owner()->create();
+        $setting = Setting::get();
+        $setting->whatsapp_driver = 'baileys';
+        $setting->whatsapp_config = ['baileys' => ['url' => 'http://localhost:3000', 'api_key' => 'secret']];
+        $setting->save();
+
+        Http::fake([
+            '*/sessions' => Http::response(['meta' => ['success' => true]]),
+        ]);
+
+        $this->actingAs($owner)
+            ->delete(route('settings.whatsapp.disconnect'))
+            ->assertRedirect();
+
+        Http::assertSent(fn ($request) => $request->method() === 'DELETE');
+    });
+
 });
