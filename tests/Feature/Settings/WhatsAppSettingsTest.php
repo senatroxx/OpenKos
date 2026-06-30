@@ -129,7 +129,7 @@ describe('WhatsApp settings page', function () {
         $setting->save();
 
         Http::fake([
-            '*/sessions' => Http::response(['meta' => ['success' => true]]),
+            '*/api/sessions' => Http::response(['meta' => ['success' => true]]),
         ]);
 
         $this->actingAs($owner)
