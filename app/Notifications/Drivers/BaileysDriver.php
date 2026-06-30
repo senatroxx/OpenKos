@@ -13,7 +13,7 @@ class BaileysDriver implements WhatsAppDriver
 
     public function send(WhatsAppMessage $message): void
     {
-        $this->signedRequest('POST', '/send', [
+        $this->signedRequest('POST', '/api/send', [
             'to' => $message->phone,
             'text' => $message->message,
         ]);
@@ -22,7 +22,7 @@ class BaileysDriver implements WhatsAppDriver
     public function health(): DriverHealthResult
     {
         try {
-            $result = $this->signedRequest('GET', '/sessions/status');
+            $result = $this->signedRequest('GET', '/api/sessions');
         } catch (\RuntimeException $e) {
             return new DriverHealthResult(false, $e->getMessage());
         }
@@ -54,7 +54,7 @@ class BaileysDriver implements WhatsAppDriver
     public function getPairingQrCode(): ?string
     {
         try {
-            $result = $this->signedRequest('GET', '/sessions/qr');
+            $result = $this->signedRequest('GET', '/api/sessions/qr');
         } catch (\RuntimeException) {
             return null;
         }
@@ -70,12 +70,12 @@ class BaileysDriver implements WhatsAppDriver
 
     public function pair(): void
     {
-        $this->signedRequest('POST', '/sessions');
+        $this->signedRequest('POST', '/api/sessions');
     }
 
     public function disconnect(): void
     {
-        $this->signedRequest('DELETE', '/sessions');
+        $this->signedRequest('DELETE', '/api/sessions');
     }
 
     private function signedRequest(string $method, string $path, array $data = []): array

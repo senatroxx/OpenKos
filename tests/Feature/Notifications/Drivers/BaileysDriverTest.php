@@ -15,7 +15,7 @@ function fakeResponse(array $data = [], int $status = 200, bool $success = true,
 
 it('sends message via Baileys service', function () {
     Http::fake([
-        '*/send' => fakeResponse(),
+        '*/api/send' => fakeResponse(),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
@@ -25,7 +25,7 @@ it('sends message via Baileys service', function () {
     Http::assertSent(function ($request) {
         $body = json_decode($request->body(), true);
 
-        return $request->url() === 'http://localhost:3000/send'
+        return $request->url() === 'http://localhost:3000/api/send'
             && $request->method() === 'POST'
             && ($body['to'] ?? null) === '08123456789'
             && ($body['text'] ?? null) === 'Test message';
@@ -34,7 +34,7 @@ it('sends message via Baileys service', function () {
 
 it('includes HMAC signature headers', function () {
     Http::fake([
-        '*/send' => fakeResponse(),
+        '*/api/send' => fakeResponse(),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'test-secret']);
@@ -49,7 +49,7 @@ it('includes HMAC signature headers', function () {
 
 it('throws on send failure', function () {
     Http::fake([
-        '*/send' => fakeResponse([], 200, false, 'Invalid target number'),
+        '*/api/send' => fakeResponse([], 200, false, 'Invalid target number'),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
@@ -67,7 +67,7 @@ it('throws when url is not configured', function () {
 
 it('returns healthy when connected', function () {
     Http::fake([
-        '*/sessions/status' => fakeResponse([
+        '*/api/sessions' => fakeResponse([
             'state' => 'connected',
             'phone' => '628123456789',
             'lastConnected' => '2026-06-30T12:00:00.000Z',
@@ -84,7 +84,7 @@ it('returns healthy when connected', function () {
 
 it('returns unhealthy when disconnected', function () {
     Http::fake([
-        '*/sessions/status' => fakeResponse([
+        '*/api/sessions' => fakeResponse([
             'state' => 'disconnected',
             'phone' => null,
             'lastConnected' => null,
@@ -100,7 +100,7 @@ it('returns unhealthy when disconnected', function () {
 
 it('returns unhealthy on request error', function () {
     Http::fake([
-        '*/sessions/status' => Http::response(null, 500),
+        '*/api/sessions' => Http::response(null, 500),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
@@ -111,7 +111,7 @@ it('returns unhealthy on request error', function () {
 
 it('returns qr code', function () {
     Http::fake([
-        '*/sessions/qr' => fakeResponse(['qr' => 'data:image/png;base64,abc123']),
+        '*/api/sessions/qr' => fakeResponse(['qr' => 'data:image/png;base64,abc123']),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
@@ -122,7 +122,7 @@ it('returns qr code', function () {
 
 it('returns null qr when not available', function () {
     Http::fake([
-        '*/sessions/qr' => fakeResponse([], 400, false, 'No QR available'),
+        '*/api/sessions/qr' => fakeResponse([], 400, false, 'No QR available'),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
@@ -131,23 +131,23 @@ it('returns null qr when not available', function () {
     expect($qr)->toBeNull();
 });
 
-it('initiates pairing via POST /sessions', function () {
+it('initiates pairing via POST /api/sessions', function () {
     Http::fake([
-        '*/sessions' => fakeResponse(),
+        '*/api/sessions' => fakeResponse(),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
     $driver->pair();
 
     Http::assertSent(function ($request) {
-        return $request->url() === 'http://localhost:3000/sessions'
+        return $request->url() === 'http://localhost:3000/api/sessions'
             && $request->method() === 'POST';
     });
 });
 
 it('throws on pair failure', function () {
     Http::fake([
-        '*/sessions' => fakeResponse([], 400, false, 'Session error'),
+        '*/api/sessions' => fakeResponse([], 400, false, 'Session error'),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
@@ -155,16 +155,16 @@ it('throws on pair failure', function () {
     expect(fn () => $driver->pair())->toThrow(RuntimeException::class, 'Session error');
 });
 
-it('disconnects via DELETE /sessions', function () {
+it('disconnects via DELETE /api/sessions', function () {
     Http::fake([
-        '*/sessions' => fakeResponse(),
+        '*/api/sessions' => fakeResponse(),
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
     $driver->disconnect();
 
     Http::assertSent(function ($request) {
-        return $request->url() === 'http://localhost:3000/sessions'
+        return $request->url() === 'http://localhost:3000/api/sessions'
             && $request->method() === 'DELETE';
     });
 });
