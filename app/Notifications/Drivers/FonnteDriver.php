@@ -19,7 +19,7 @@ class FonnteDriver implements WhatsAppDriver
             throw new \RuntimeException('Fonnte token is not configured.');
         }
 
-        $response = Http::withToken($token)
+        $response = Http::withToken($token, '')
             ->asMultipart()
             ->post('https://api.fonnte.com/send', [
                 'target' => $message->phone,
@@ -41,7 +41,7 @@ class FonnteDriver implements WhatsAppDriver
             return new DriverHealthResult(false, 'Fonnte token is not configured.');
         }
 
-        $response = Http::withToken($token)->post('https://api.fonnte.com/device');
+        $response = Http::withToken($token, '')->post('https://api.fonnte.com/device');
 
         $body = $response->json();
 
