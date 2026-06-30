@@ -17,19 +17,37 @@ class WhatsAppController extends Controller
 
     public function pair(): JsonResponse
     {
-        $qrCode = $this->whatsapp->getPairingQrCode();
+        $health = $this->whatsapp->health();
 
-        if ($qrCode === null) {
-            $result = $this->whatsapp->health();
-
-            if ($result->healthy) {
-                return response()->json(['message' => 'Device is already connected.']);
-            }
-
-            return response()->json(['error' => $result->message ?? 'Could not get QR code.'], 422);
+        if ($health->healthy) {
+            return response()->json(['message' => 'Device is already connected.']);
         }
 
-        return response()->json(['qr_code' => $qrCode]);
+        $this->whatsapp->pair();
+
+        $qrCode = $this->whatsapp->getPairingQrCode();
+
+        return response()->json([
+            'qr_code' => $qrCode,
+            'state' => $qrCode ? 'connecting' : 'disconnected',
+        ]);
+    }
+
+    public function qr(): JsonResponse
+    {
+        $health = $this->whatsapp->health();
+        $qrCode = $this->whatsapp->getPairingQrCode();
+
+        return response()->json([
+            'qr_code' => $qrCode,
+            'state' => match (true) {
+                $health->healthy => 'connected',
+                $health->message && str_contains($health->message, 'connecting') => 'connecting',
+                default => 'disconnected',
+            },
+            'phone' => $health->phone,
+            'lastConnected' => $health->lastConnected,
+        ]);
     }
 
     public function edit(): Response
@@ -89,6 +107,27 @@ class WhatsAppController extends Controller
         } else {
             Inertia::flash('toast', ['type' => 'error', 'message' => $result->message ?? __('WhatsApp connection failed.')]);
         }
+
+        return to_route('settings.whatsapp.edit');
+    }
+
+    public function status(): JsonResponse
+    {
+        $result = $this->whatsapp->health();
+
+        return response()->json([
+            'healthy' => $result->healthy,
+            'message' => $result->message,
+            'phone' => $result->phone,
+            'lastConnected' => $result->lastConnected,
+        ]);
+    }
+
+    public function disconnect(): RedirectResponse
+    {
+        $this->whatsapp->disconnect();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Device disconnected.')]);
 
         return to_route('settings.whatsapp.edit');
     }

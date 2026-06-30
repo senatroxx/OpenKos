@@ -99,4 +99,8 @@ class TestWhatsAppDriver implements WhatsAppDriver
     {
         return null;
     }
+
+    public function pair(): void {}
+
+    public function disconnect(): void {}
 }
