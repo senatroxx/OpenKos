@@ -154,9 +154,9 @@ class WhatsAppController extends Controller
     {
         return match ($name) {
             'log' => 'Log',
-            'baileys' => 'Baileys',
-            'fonnte' => 'Fonnte',
-            'api_co_id' => 'ApiCo.id',
+            'baileys' => 'Baileys (Unofficial, Unstable)',
+            'fonnte' => 'Fonnte (Unofficial)',
+            'whatsapp_cloud' => 'WhatsApp Cloud API (Official, Untested)',
             default => $name,
         };
     }
