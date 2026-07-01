@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Business\Roles\RoleGuard;
 use App\Enums\Permission;
 use App\Http\Requests\Role\CloneRoleRequest;
 use App\Http\Requests\Role\StoreRoleRequest;
@@ -123,11 +124,11 @@ class RoleController extends Controller
         return to_route('roles.index');
     }
 
-    public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
+    public function update(UpdateRoleRequest $request, Role $role, RoleGuard $guard): RedirectResponse
     {
         $validated = $request->validated();
 
-        if (! $role->is_system) {
+        if (! $guard->isSystem($role)) {
             $role->update([
                 'label' => $validated['label'] ?? $role->label,
                 'description' => $validated['description'] ?? $role->description,
@@ -143,9 +144,9 @@ class RoleController extends Controller
         return to_route('roles.index');
     }
 
-    public function destroy(Role $role): RedirectResponse
+    public function destroy(Role $role, RoleGuard $guard): RedirectResponse
     {
-        if ($role->is_system) {
+        if ($guard->isSystem($role)) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('System roles cannot be deleted.')]);
 
             return to_route('roles.index');
