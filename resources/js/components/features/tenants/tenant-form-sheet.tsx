@@ -77,17 +77,6 @@ export default function TenantFormSheet({
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        defaultValue={tenant?.name ?? ''}
-                                        placeholder="e.g. John Doe"
-                                    />
-                                    <InputError message={errors.name} />
-                                </div>
-
-                                <div className="grid gap-2">
                                     <Label htmlFor="email">Email</Label>
                                     <Input
                                         id="email"
@@ -95,21 +84,6 @@ export default function TenantFormSheet({
                                         type="email"
                                         defaultValue={tenant?.email ?? ''}
                                         placeholder="e.g. john@example.com"
-                                    />
-                                    <InputError message={errors.email} />
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="emergency_contact_phone">
-                                        Emergency Contact Phone
-                                    </Label>
-                                    <PhoneInput
-                                        name="emergency_contact_phone"
-                                        defaultValue={
-                                            tenant?.emergency_contact_phone ??
-                                            ''
-                                        }
-                                        placeholder="e.g. 81234567890"
                                     />
                                     <InputError message={errors.email} />
                                 </div>
@@ -131,46 +105,39 @@ export default function TenantFormSheet({
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="emergency_contact_name">
-                                            Emergency Contact Name
-                                        </Label>
-                                        <Input
-                                            id="emergency_contact_name"
-                                            name="emergency_contact_name"
-                                            defaultValue={
-                                                tenant?.emergency_contact_name ??
-                                                ''
-                                            }
-                                            placeholder="e.g. Siti Nurhaliza"
-                                        />
-                                        <InputError
-                                            message={
-                                                errors.emergency_contact_name
-                                            }
-                                        />
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="emergency_contact_phone">
+                                        Emergency Contact Phone
+                                    </Label>
+                                    <PhoneInput
+                                        name="emergency_contact_phone"
+                                        defaultValue={
+                                            tenant?.emergency_contact_phone ??
+                                            ''
+                                        }
+                                        placeholder="e.g. 81234567890"
+                                    />
+                                    <InputError message={errors.emergency_contact_phone} />
+                                </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="emergency_contact_phone">
-                                            Emergency Contact Phone
-                                        </Label>
-                                        <Input
-                                            id="emergency_contact_phone"
-                                            name="emergency_contact_phone"
-                                            defaultValue={
-                                                tenant?.emergency_contact_phone ??
-                                                ''
-                                            }
-                                            placeholder="e.g. 081234567891"
-                                        />
-                                        <InputError
-                                            message={
-                                                errors.emergency_contact_phone
-                                            }
-                                        />
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="emergency_contact_name">
+                                        Emergency Contact Name
+                                    </Label>
+                                    <Input
+                                        id="emergency_contact_name"
+                                        name="emergency_contact_name"
+                                        defaultValue={
+                                            tenant?.emergency_contact_name ??
+                                            ''
+                                        }
+                                        placeholder="e.g. Siti Nurhaliza"
+                                    />
+                                    <InputError
+                                        message={
+                                            errors.emergency_contact_name
+                                        }
+                                    />
                                 </div>
 
                                 <div className="grid gap-2">

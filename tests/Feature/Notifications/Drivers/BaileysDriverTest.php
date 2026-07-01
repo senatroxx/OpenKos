@@ -20,14 +20,14 @@ it('sends message via Baileys service', function () {
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
 
-    $driver->send(new WhatsAppMessage('08123456789', 'Test message'));
+    $driver->send(new WhatsAppMessage('+628123456789', 'Test message'));
 
     Http::assertSent(function ($request) {
         $body = json_decode($request->body(), true);
 
         return $request->url() === 'http://localhost:3000/api/send'
             && $request->method() === 'POST'
-            && ($body['to'] ?? null) === '628123456789'
+            && ($body['to'] ?? null) === '+628123456789'
             && ($body['text'] ?? null) === 'Test message';
     });
 });
@@ -38,7 +38,7 @@ it('includes HMAC signature headers', function () {
     ]);
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'test-secret']);
-    $driver->send(new WhatsAppMessage('08123456789', 'Test'));
+    $driver->send(new WhatsAppMessage('+628123456789', 'Test'));
 
     Http::assertSent(function ($request) {
         return $request->hasHeader('X-Timestamp')
@@ -47,7 +47,7 @@ it('includes HMAC signature headers', function () {
     });
 });
 
-it('normalizes phone number before sending', function () {
+it('normalizes phone number to E.164', function () {
     Http::fake([
         '*/api/send' => fakeResponse(),
     ]);
@@ -59,7 +59,7 @@ it('normalizes phone number before sending', function () {
     Http::assertSent(function ($request) {
         $body = json_decode($request->body(), true);
 
-        return ($body['to'] ?? null) === '6281234567890';
+        return ($body['to'] ?? null) === '+6281234567890';
     });
 });
 
@@ -70,14 +70,14 @@ it('throws on send failure', function () {
 
     $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
 
-    expect(fn () => $driver->send(new WhatsAppMessage('08123456789', 'Test')))
+    expect(fn () => $driver->send(new WhatsAppMessage('+628123456789', 'Test')))
         ->toThrow(RuntimeException::class, 'Invalid target number');
 });
 
 it('throws when url is not configured', function () {
     $driver = new BaileysDriver([]);
 
-    expect(fn () => $driver->send(new WhatsAppMessage('08123456789', 'Test')))
+    expect(fn () => $driver->send(new WhatsAppMessage('+628123456789', 'Test')))
         ->toThrow(RuntimeException::class, 'Baileys URL is not configured');
 });
 
