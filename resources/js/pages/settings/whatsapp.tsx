@@ -26,17 +26,21 @@ type Driver = {
 export default function WhatsApp({
     drivers,
     settings,
+    connection,
 }: {
     drivers: Driver[];
     settings: { whatsapp_driver: string | null; whatsapp_config: Record<string, Record<string, string>> | null };
+    connection: { state: string; phone: string | null; lastConnected: string | null } | null;
 }) {
     const [driver, setDriver] = useState(settings.whatsapp_driver ?? 'log');
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [pairingLoading, setPairingLoading] = useState(false);
     const [pairingError, setPairingError] = useState<string | null>(null);
-    const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'disconnected' | 'connecting' | 'connected'>('unknown');
-    const [devicePhone, setDevicePhone] = useState<string | null>(null);
-    const [deviceLastConnected, setDeviceLastConnected] = useState<string | null>(null);
+    const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'disconnected' | 'connecting' | 'connected'>(
+        (connection?.state as 'connected' | 'disconnected') ?? 'unknown',
+    );
+    const [devicePhone, setDevicePhone] = useState<string | null>(connection?.phone ?? null);
+    const [deviceLastConnected, setDeviceLastConnected] = useState<string | null>(connection?.lastConnected ?? null);
 
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -207,9 +211,9 @@ export default function WhatsApp({
                                 </>
                             ) : connectionStatus === 'connecting' ? (
                                 <Badge variant="secondary">Connecting</Badge>
-                            ) : (
+                            ) : connectionStatus === 'disconnected' ? (
                                 <Badge variant="destructive">Disconnected</Badge>
-                            )}
+                            ) : null}
                         </div>
 
                         {pairingError && (
