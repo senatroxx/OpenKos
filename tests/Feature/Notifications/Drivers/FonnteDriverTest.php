@@ -10,7 +10,7 @@ it('sends message via fonnte api', function () {
     ]);
 
     $driver = new FonnteDriver(['token' => 'valid-token']);
-    $driver->send(new WhatsAppMessage('08123456789', 'Hello'));
+    $driver->send(new WhatsAppMessage('+628123456789', 'Hello'));
 
     Http::assertSent(function ($request) {
         return $request->url() === 'https://api.fonnte.com/send'
@@ -25,14 +25,14 @@ it('throws on failed send', function () {
 
     $driver = new FonnteDriver(['token' => 'valid-token']);
 
-    expect(fn () => $driver->send(new WhatsAppMessage('08123456789', 'Hello')))
+    expect(fn () => $driver->send(new WhatsAppMessage('+628123456789', 'Hello')))
         ->toThrow(RuntimeException::class, 'insufficient quota');
 });
 
 it('throws when token missing on send', function () {
     $driver = new FonnteDriver;
 
-    expect(fn () => $driver->send(new WhatsAppMessage('08123456789', 'Hello')))
+    expect(fn () => $driver->send(new WhatsAppMessage('+628123456789', 'Hello')))
         ->toThrow(RuntimeException::class, 'token is not configured');
 });
 

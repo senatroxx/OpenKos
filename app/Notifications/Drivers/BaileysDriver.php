@@ -121,14 +121,6 @@ class BaileysDriver implements WhatsAppDriver
     {
         $phone = preg_replace('/[^0-9]/', '', $phone);
 
-        if (str_starts_with($phone, '0')) {
-            $phone = substr($phone, 1);
-        }
-
-        if (! str_starts_with($phone, '62')) {
-            $phone = '62'.$phone;
-        }
-
-        return $phone;
+        return '+'.$phone;
     }
 }
