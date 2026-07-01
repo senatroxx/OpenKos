@@ -68,7 +68,10 @@ class WhatsAppManager
 
     private function resolveCredentials(string $name, array $config): array
     {
-        $envDefaults = array_filter($config, fn ($key) => $key !== 'class', ARRAY_FILTER_USE_KEY);
+        $envDefaults = array_filter(
+            array_filter($config, fn ($key) => $key !== 'class', ARRAY_FILTER_USE_KEY),
+            fn ($value) => $value !== null,
+        );
 
         try {
             $dbConfig = Setting::get()->whatsapp_config[$name] ?? [];
