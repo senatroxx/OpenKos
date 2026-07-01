@@ -14,11 +14,11 @@ use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
-use App\Models\ReminderLog;
 use App\Models\Room;
 use App\Models\RoomRate;
 use App\Models\Setting;
 use App\Notifications\RentReminder;
+use App\Repositories\ReminderRepository;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -504,17 +504,13 @@ class LeaseController extends Controller
             overdueDays: $overdueDays,
         );
 
-        ReminderLog::create([
-            'lease_id' => $lease->id,
-            'period_start' => $event->periodStart,
-            'period_end' => $event->periodEnd,
-            'reminder_type' => $event->type->value,
-            'overdue_days' => $event->overdueDays,
-            'notification_class' => RentReminder::class,
-            'channel' => implode(',', $channels),
-            'scheduled_for' => today(),
-            'sent_at' => now(),
-        ]);
+        $log = app(ReminderRepository::class)->recordIfAbsent($event, $channels);
+
+        if (! $log) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Reminder already sent for this period.')]);
+
+            return back();
+        }
 
         $tenant->notifyNow(new RentReminder($event));
 
