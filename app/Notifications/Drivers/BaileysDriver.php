@@ -14,7 +14,7 @@ class BaileysDriver implements WhatsAppDriver
     public function send(WhatsAppMessage $message): void
     {
         $this->signedRequest('POST', '/api/send', [
-            'to' => $message->phone,
+            'to' => $this->normalizePhone($message->phone),
             'text' => $message->message,
         ]);
     }
@@ -115,5 +115,20 @@ class BaileysDriver implements WhatsAppDriver
         }
 
         return $json;
+    }
+
+    private function normalizePhone(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        if (str_starts_with($phone, '0')) {
+            $phone = substr($phone, 1);
+        }
+
+        if (! str_starts_with($phone, '62')) {
+            $phone = '62'.$phone;
+        }
+
+        return $phone;
     }
 }

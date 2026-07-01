@@ -177,7 +177,7 @@ export default function PropertyFormSheet({
                                         name="phone"
                                         type="tel"
                                         defaultValue={property?.phone ?? ''}
-                                        placeholder="Phone number"
+                                        placeholder="e.g. 628123456789"
                                     />
                                     <InputError message={errors.phone} />
                                 </div>
