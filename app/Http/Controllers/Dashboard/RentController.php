@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Business\Dashboard\RentStatsCalculator;
 use App\Http\Controllers\Controller;
 use App\Models\Lease;
 use App\Models\Payment;
@@ -11,13 +12,12 @@ use App\Tables\Filter;
 use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RentController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, RentStatsCalculator $stats): Response
     {
         $accessibleQuery = function (Builder $q) use ($request): void {
             if (! $request->user()->isOwner()) {
@@ -38,7 +38,7 @@ class RentController extends Controller
 
         $allActive = (clone $baseQuery)->get();
 
-        $stats = $this->computeStats($allActive, $today, $currentMonth, $currentYear);
+        $statsResult = $stats->computeStats($allActive, $today, $currentMonth, $currentYear);
 
         $table = Table::make()
             ->columns([
@@ -111,7 +111,7 @@ class RentController extends Controller
         $result = $table->paginate($query, $request, 'entries');
 
         $entries = collect($result['entries']->items())
-            ->map(fn (Lease $lease) => $this->transformEntry($lease, $today))
+            ->map(fn (Lease $lease) => $stats->transformEntry($lease, $today))
             ->filter(fn (?array $entry) => $entry !== null)
             ->values();
 
@@ -119,100 +119,7 @@ class RentController extends Controller
 
         return Inertia::render('dashboard/rent', [
             ...$result,
-            'stats' => $stats,
+            'stats' => $statsResult,
         ]);
-    }
-
-    /**
-     * @return array{overdue: array{count: int, amount: float}, due_today: int, due_soon: int, paid: int}
-     */
-    private function computeStats(Collection $leases, int $today, int $currentMonth, int $currentYear): array
-    {
-        $leaseIds = $leases->pluck('id')->all();
-
-        $paidLeaseIds = Payment::query()
-            ->where('paymentable_type', Lease::class)
-            ->whereNotIn('status', ['cancelled'])
-            ->whereMonth('period_start', $currentMonth)
-            ->whereYear('period_start', $currentYear)
-            ->whereIn('paymentable_id', $leaseIds)
-            ->distinct()
-            ->pluck('paymentable_id')
-            ->toArray();
-
-        $paidSet = array_flip($paidLeaseIds);
-
-        $overdueCount = 0;
-        $overdueAmount = 0.0;
-        $dueTodayCount = 0;
-        $dueSoonCount = 0;
-        $paidCount = 0;
-
-        foreach ($leases as $lease) {
-            if (isset($paidSet[$lease->id])) {
-                $paidCount++;
-
-                continue;
-            }
-
-            $dueDay = $lease->rent_due_day;
-
-            if ($dueDay < $today) {
-                $overdueCount++;
-                $overdueAmount += (float) $lease->rent_amount;
-            } elseif ($dueDay === $today) {
-                $dueTodayCount++;
-            } elseif ($dueDay <= $today + 7) {
-                $dueSoonCount++;
-            }
-        }
-
-        return [
-            'overdue' => ['count' => $overdueCount, 'amount' => $overdueAmount],
-            'due_today' => $dueTodayCount,
-            'due_soon' => $dueSoonCount,
-            'paid' => $paidCount,
-        ];
-    }
-
-    private function transformEntry(Lease $lease, int $today): ?array
-    {
-        $hasPayment = $lease->has_payment_this_month ?? false;
-
-        if ($hasPayment) {
-            $status = 'paid';
-            $daysOverdue = null;
-        } else {
-            $dueDay = $lease->rent_due_day;
-
-            if ($dueDay < $today) {
-                $status = 'overdue';
-                $dueDateThisMonth = now()->setDay(min($dueDay, now()->daysInMonth));
-                $daysOverdue = (int) $dueDateThisMonth->diffInDays(now(), false);
-            } elseif ($dueDay === $today) {
-                $status = 'due_today';
-                $daysOverdue = null;
-            } elseif ($dueDay <= $today + 7) {
-                $status = 'due_soon';
-                $daysOverdue = null;
-            } else {
-                return null;
-            }
-        }
-
-        $primaryTenant = $lease->primaryTenant;
-        $tenants = $lease->tenants;
-        $room = $lease->room;
-
-        return [
-            'id' => $lease->id,
-            'tenant_name' => $tenants->pluck('name')->join(', ') ?: ($primaryTenant?->name ?? '—'),
-            'room_name' => $room?->name ?? '—',
-            'property_name' => $room?->property?->name ?? '—',
-            'rent_due_day' => $lease->rent_due_day,
-            'days_overdue' => $daysOverdue,
-            'rent_amount' => (string) $lease->rent_amount,
-            'rent_status' => $status,
-        ];
     }
 }

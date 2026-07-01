@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\RoomStatus;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\City;
@@ -58,21 +57,9 @@ class PropertyController extends Controller
                 'users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
-            ->withCount([
-                'rooms',
-                'rooms as occupied_rooms_count' => fn (Builder $q) => $q->where(function (Builder $q) {
-                    $q->where('status', RoomStatus::Occupied)
-                        ->orWhereHas('leases', fn (Builder $q) => $q->where('status', 'active'));
-                }),
-            ])
-            ->addSelect([
-                'tenants_count' => DB::table('leases')
-                    ->selectRaw('COALESCE(COUNT(DISTINCT lease_tenant.tenant_id), 0)')
-                    ->join('lease_tenant', 'lease_tenant.lease_id', '=', 'leases.id')
-                    ->join('rooms', 'rooms.id', '=', 'leases.room_id')
-                    ->whereColumn('rooms.property_id', 'properties.id')
-                    ->where('leases.status', 'active'),
-            ]);
+            ->withCount('rooms')
+            ->withOccupiedRoomsCount()
+            ->withTenantsCount();
 
         $result = $table->paginate($query, $request, 'properties');
 
