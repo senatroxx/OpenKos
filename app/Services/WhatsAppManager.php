@@ -76,6 +76,6 @@ class WhatsAppManager
             $dbConfig = [];
         }
 
-        return array_merge($envDefaults, $dbConfig);
+        return array_merge($dbConfig, $envDefaults);
     }
 }
