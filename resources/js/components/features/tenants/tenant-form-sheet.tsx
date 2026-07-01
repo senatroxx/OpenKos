@@ -72,9 +72,20 @@ export default function TenantFormSheet({
                                         id="phone"
                                         name="phone"
                                         defaultValue={tenant?.phone ?? ''}
-                                        placeholder="e.g. 081234567890"
+                                        placeholder="e.g. 628123456789"
                                     />
                                     <InputError message={errors.phone} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="name">Name</Label>
+                                    <Input
+                                        id="name"
+                                        name="name"
+                                        defaultValue={tenant?.name ?? ''}
+                                        placeholder="e.g. John Doe"
+                                    />
+                                    <InputError message={errors.name} />
                                 </div>
 
                                 <div className="grid gap-2">
@@ -84,7 +95,23 @@ export default function TenantFormSheet({
                                         name="email"
                                         type="email"
                                         defaultValue={tenant?.email ?? ''}
-                                        placeholder="e.g. budi@example.com"
+                                        placeholder="e.g. john@example.com"
+                                    />
+                                    <InputError message={errors.email} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="emergency_contact_phone">
+                                        Emergency Contact Phone
+                                    </Label>
+                                    <Input
+                                        id="emergency_contact_phone"
+                                        name="emergency_contact_phone"
+                                        defaultValue={
+                                            tenant?.emergency_contact_phone ??
+                                            ''
+                                        }
+                                        placeholder="e.g. 628123456789"
                                     />
                                     <InputError message={errors.email} />
                                 </div>

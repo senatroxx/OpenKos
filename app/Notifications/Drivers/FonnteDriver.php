@@ -22,7 +22,7 @@ class FonnteDriver implements WhatsAppDriver
         $response = Http::withToken($token, '')
             ->asMultipart()
             ->post('https://api.fonnte.com/send', [
-                'target' => $message->phone,
+                'target' => $this->normalizePhone($message->phone),
                 'message' => $message->message,
             ]);
 
@@ -81,5 +81,20 @@ class FonnteDriver implements WhatsAppDriver
     public function disconnect(): void
     {
         throw new \RuntimeException('Pairing not supported.');
+    }
+
+    private function normalizePhone(string $phone): string
+    {
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        if (str_starts_with($phone, '0')) {
+            $phone = substr($phone, 1);
+        }
+
+        if (! str_starts_with($phone, '62')) {
+            $phone = '62'.$phone;
+        }
+
+        return $phone;
     }
 }
