@@ -31,7 +31,7 @@ describe('WhatsApp settings page', function () {
                 ->where('drivers.0.name', 'log')
                 ->where('drivers.1.name', 'baileys')
                 ->where('drivers.2.name', 'fonnte')
-                ->where('drivers.3.name', 'api_co_id')
+                ->where('drivers.3.name', 'whatsapp_cloud')
             );
     });
 

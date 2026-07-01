@@ -1,8 +1,8 @@
 <?php
 
-use App\Notifications\Drivers\ApiCoIdDriver;
 use App\Notifications\Drivers\BaileysDriver;
 use App\Notifications\Drivers\FonnteDriver;
+use App\Notifications\Drivers\WhatsAppCloudApiDriver;
 use App\Notifications\Drivers\WhatsappLogDriver;
 
 return [
@@ -44,10 +44,10 @@ return [
                 'class' => FonnteDriver::class,
                 'token' => env('FONNTE_TOKEN'),
             ],
-            'api_co_id' => [
-                'class' => ApiCoIdDriver::class,
-                'api_key' => env('API_CO_ID_KEY'),
-                'sender_name' => env('API_CO_ID_SENDER_NAME'),
+            'whatsapp_cloud' => [
+                'class' => WhatsAppCloudApiDriver::class,
+                'phone_number_id' => env('WHATSAPP_CLOUD_PHONE_NUMBER_ID'),
+                'access_token' => env('WHATSAPP_CLOUD_ACCESS_TOKEN'),
             ],
         ],
     ],
