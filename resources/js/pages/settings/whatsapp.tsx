@@ -57,18 +57,6 @@ export default function WhatsApp({
         }
     };
 
-    const fetchStatus = async () => {
-        try {
-            const response = await fetch(statusWhatsApp().url);
-            const data = await response.json();
-            setConnectionStatus(data.healthy ? 'connected' : 'disconnected');
-            setDevicePhone(data.phone ?? null);
-            setDeviceLastConnected(data.lastConnected ?? null);
-        } catch {
-            setConnectionStatus('disconnected');
-        }
-    };
-
     const pollQr = async () => {
         try {
             const response = await fetch(qrWhatsApp().url);
@@ -88,14 +76,15 @@ export default function WhatsApp({
     };
 
     useEffect(() => {
-        if (isBaileys) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            fetchStatus();
-        } else {
+        if (! isBaileys) {
             stopPolling();
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setQrCode(null);
+             
             setConnectionStatus('unknown');
+             
             setDevicePhone(null);
+             
             setDeviceLastConnected(null);
         }
 
