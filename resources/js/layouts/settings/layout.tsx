@@ -10,6 +10,7 @@ import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
 import { edit as editMail } from '@/routes/settings/mail';
 import { edit as editReminders } from '@/routes/settings/reminders';
+import { edit as editWhatsApp } from '@/routes/settings/whatsapp';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
@@ -35,6 +36,10 @@ const sidebarNavItems: NavItem[] = [
             {
                 title: 'Mail',
                 href: editMail(),
+            },
+            {
+                title: 'WhatsApp',
+                href: editWhatsApp(),
             },
         ],
     },

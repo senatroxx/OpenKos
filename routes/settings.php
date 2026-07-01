@@ -5,6 +5,7 @@ use App\Http\Controllers\Settings\MailController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\ReminderController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\WhatsAppController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
@@ -38,5 +39,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('settings/mail', [MailController::class, 'edit'])->name('settings.mail.edit');
         Route::patch('settings/mail', [MailController::class, 'update'])->name('settings.mail.update');
         Route::post('settings/mail/test', [MailController::class, 'test'])->name('settings.mail.test');
+
+        Route::get('settings/whatsapp', [WhatsAppController::class, 'edit'])->name('settings.whatsapp.edit');
+        Route::patch('settings/whatsapp', [WhatsAppController::class, 'update'])->name('settings.whatsapp.update');
+        Route::post('settings/whatsapp/test', [WhatsAppController::class, 'test'])->name('settings.whatsapp.test');
+        Route::post('settings/whatsapp/pair', [WhatsAppController::class, 'pair'])->name('settings.whatsapp.pair');
+        Route::get('settings/whatsapp/qr', [WhatsAppController::class, 'qr'])->name('settings.whatsapp.qr');
+        Route::get('settings/whatsapp/status', [WhatsAppController::class, 'status'])->name('settings.whatsapp.status');
+        Route::delete('settings/whatsapp/disconnect', [WhatsAppController::class, 'disconnect'])->name('settings.whatsapp.disconnect');
     });
 });

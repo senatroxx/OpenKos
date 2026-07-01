@@ -29,7 +29,7 @@ describe('Reminder settings page', function () {
             ->patch(route('settings.reminders.update'), [
                 'reminder_enabled' => true,
                 'reminder_days_before' => 5,
-                'reminder_overdue_intervals' => [2, 5, 10],
+                'reminder_overdue_intervals' => '2, 5, 10',
                 'reminder_channels' => ['log'],
             ])
             ->assertRedirect(route('settings.reminders.edit'));
@@ -53,7 +53,7 @@ describe('Reminder settings page', function () {
         $this->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 3,
-                'reminder_overdue_intervals' => [1, 3, 7],
+                'reminder_overdue_intervals' => '1, 3, 7',
                 'reminder_channels' => ['log', 'whatsapp', 'mail'],
             ])
             ->assertRedirect();
@@ -67,7 +67,7 @@ describe('Reminder settings page', function () {
         $this->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 3,
-                'reminder_overdue_intervals' => [1, 3, 7],
+                'reminder_overdue_intervals' => '1, 3, 7',
                 'reminder_channels' => [],
             ])
             ->assertSessionHasErrors(['reminder_channels']);
@@ -79,9 +79,9 @@ describe('Reminder settings page', function () {
         $this->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 100,
-                'reminder_overdue_intervals' => ['invalid'],
+                'reminder_overdue_intervals' => 'invalid',
                 'reminder_channels' => ['log'],
             ])
-            ->assertSessionHasErrors(['reminder_days_before', 'reminder_overdue_intervals.0']);
+            ->assertSessionHasErrors(['reminder_days_before', 'reminder_overdue_intervals']);
     });
 });

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'site_name',
@@ -26,6 +27,8 @@ use Illuminate\Database\Eloquent\Model;
     'mail_encryption',
     'mail_from_address',
     'mail_from_name',
+    'whatsapp_driver',
+    'whatsapp_config',
 ])]
 class Setting extends Model
 {
@@ -40,6 +43,7 @@ class Setting extends Model
             'reminder_channels' => 'array',
             'mail_port' => 'integer',
             'mail_password' => 'encrypted',
+            'whatsapp_config' => 'encrypted:array',
         ];
     }
 
@@ -52,7 +56,7 @@ class Setting extends Model
             'currency' => 'IDR',
             'timezone' => 'Asia/Jakarta',
             'lease_id_prefix' => 'LSX',
-            'reminder_enabled' => true,
+            'reminder_enabled' => DB::raw('true'),
             'reminder_days_before' => 3,
             'reminder_overdue_intervals' => [1, 3, 7],
             'reminder_channels' => ['log'],
