@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Business\Users\UserGuard;
 use App\Enums\Role;
 use App\Http\Requests\User\CompleteInvitationRequest;
 use App\Http\Requests\User\StoreUserInvitationRequest;
@@ -81,7 +82,7 @@ class UserController extends Controller
                 'name' => $property->name,
             ])->values(),
             'is_active' => $user->is_active,
-            'status' => $this->statusFor($user),
+            'status' => $user->invited_at ? 'invited' : ($user->is_active ? 'active' : 'disabled'),
             'invited_at' => $user->invited_at?->toISOString(),
             'email_verified_at' => $user->email_verified_at?->toISOString(),
             'last_login_at' => $user->last_login_at?->toISOString(),
@@ -127,13 +128,13 @@ class UserController extends Controller
         return to_route('users.index');
     }
 
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
+    public function update(UpdateUserRequest $request, User $user, UserGuard $guard): RedirectResponse
     {
         $this->ensureNotTenant($user);
 
         $validated = $request->validated();
 
-        if (! $validated['is_active'] && $this->isLastActiveOwner($user)) {
+        if (! $validated['is_active'] && $guard->isLastActiveOwner($user)) {
             return back()->withErrors(['is_active' => __('At least one active owner must remain.')]);
         }
 
@@ -160,11 +161,11 @@ class UserController extends Controller
         return to_route('users.index');
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(User $user, UserGuard $guard): RedirectResponse
     {
         $this->ensureNotTenant($user);
 
-        if ($this->isLastActiveOwner($user)) {
+        if ($guard->isLastActiveOwner($user)) {
             return back()->withErrors(['user' => __('At least one active owner must remain.')]);
         }
 
@@ -258,26 +259,11 @@ class UserController extends Controller
         abort_if($user->hasTenantProfile(), 404);
     }
 
-    private function isLastActiveOwner(User $user): bool
-    {
-        return $user->isOwner()
-            && User::role(Role::Owner->value)->whereRaw('is_active is true')->whereKeyNot($user->id)->doesntExist();
-    }
-
     private function createInvitationToken(User $user): string
     {
         /** @var PasswordBroker $broker */
         $broker = Password::broker();
 
         return $broker->createToken($user);
-    }
-
-    private function statusFor(User $user): string
-    {
-        if ($user->invited_at) {
-            return 'invited';
-        }
-
-        return $user->is_active ? 'active' : 'disabled';
     }
 }

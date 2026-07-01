@@ -2,55 +2,43 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Payments\RecordPayment;
+use App\Data\Payment\RecordPaymentData;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Lease;
 use App\Models\Payment;
-use App\Models\PaymentProof;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
-    public function store(StorePaymentRequest $request, Lease $lease): RedirectResponse
+    public function store(StorePaymentRequest $request, Lease $lease, RecordPayment $action): RedirectResponse
     {
         $this->authorize('create', [Payment::class, $lease]);
 
         $request->ensureLeaseIsActive();
         $request->ensureNoDuplicatePayment($lease);
 
+        $data = new RecordPaymentData(
+            amount: (int) $request->amount,
+            paymentDate: $request->paid_at,
+            periodMonth: (int) $request->period_month,
+            periodYear: (int) $request->period_year,
+            paymentMethod: $request->payment_method,
+            notes: $request->notes,
+            proof: $request->file('proof'),
+        );
+
+        $result = $action->execute($lease, $data, $request->user());
+
+        if ($result->failed()) {
+            abort(422, $result->error);
+        }
+
+        $payment = $result->payment;
+
         $periodStart = sprintf('%04d-%02d-01', $request->period_year, $request->period_month);
-        $periodEnd = date('Y-m-t', strtotime($periodStart));
-
-        $user = $request->user();
-        $hasProof = $request->hasFile('proof');
-        $canAutoVerify = $hasProof && $user->can('payments.verify');
-
-        $payment = DB::transaction(function () use ($request, $lease, $periodStart, $periodEnd, $user, $hasProof, $canAutoVerify) {
-            $payment = $lease->payments()->create([
-                'amount' => $request->amount,
-                'payment_date' => $request->paid_at,
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
-                'payment_method' => $request->payment_method,
-                'notes' => $request->notes,
-                'status' => $hasProof && ! $canAutoVerify ? 'pending' : 'confirmed',
-                'confirmed_by' => $canAutoVerify || ! $hasProof ? $user->id : null,
-                'recorded_by' => $user->id,
-                'verified_by' => $canAutoVerify ? $user->id : null,
-                'verified_at' => $canAutoVerify ? now() : null,
-            ]);
-
-            if ($hasProof) {
-                $this->storeProof($request, $payment);
-            }
-
-            return $payment;
-        });
-
-        $payment->load('confirmedBy:id,name', 'recordedBy:id,name', 'proofs');
 
         Inertia::flash('toast', [
             'type' => 'success',
@@ -101,22 +89,5 @@ class PaymentController extends Controller
         ]);
 
         return back();
-    }
-
-    private function storeProof(StorePaymentRequest $request, Payment $payment): void
-    {
-        $file = $request->file('proof');
-        $extension = $file->getClientOriginalExtension();
-        $path = $file->storeAs(
-            'payment-proofs/'.$payment->id,
-            (string) Str::uuid().'.'.$extension,
-            'local',
-        );
-
-        $payment->proofs()->create([
-            'path' => $path,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
-        ]);
     }
 }
