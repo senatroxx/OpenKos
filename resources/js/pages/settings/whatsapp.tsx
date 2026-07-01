@@ -85,6 +85,7 @@ export default function WhatsApp({
 
     useEffect(() => {
         if (isBaileys) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchStatus();
         } else {
             stopPolling();
@@ -95,7 +96,7 @@ export default function WhatsApp({
         }
 
         return () => stopPolling();
-    }, [driver]);
+    }, [driver, isBaileys]);
 
     const handlePair = async () => {
         setPairingLoading(true);

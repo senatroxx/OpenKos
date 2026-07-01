@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import { InputError } from '@/components/shared';
+import { InputError, PhoneInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,11 +68,10 @@ export default function TenantFormSheet({
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="phone">Phone</Label>
-                                    <Input
-                                        id="phone"
+                                    <PhoneInput
                                         name="phone"
                                         defaultValue={tenant?.phone ?? ''}
-                                        placeholder="e.g. 628123456789"
+                                        placeholder="e.g. 81234567890"
                                     />
                                     <InputError message={errors.phone} />
                                 </div>
@@ -104,14 +103,13 @@ export default function TenantFormSheet({
                                     <Label htmlFor="emergency_contact_phone">
                                         Emergency Contact Phone
                                     </Label>
-                                    <Input
-                                        id="emergency_contact_phone"
+                                    <PhoneInput
                                         name="emergency_contact_phone"
                                         defaultValue={
                                             tenant?.emergency_contact_phone ??
                                             ''
                                         }
-                                        placeholder="e.g. 628123456789"
+                                        placeholder="e.g. 81234567890"
                                     />
                                     <InputError message={errors.email} />
                                 </div>
