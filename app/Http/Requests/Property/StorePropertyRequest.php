@@ -19,7 +19,7 @@ class StorePropertyRequest extends FormRequest
             'region_id' => ['nullable', 'integer', 'exists:regions,id'],
             'city_id' => ['nullable', 'integer', 'exists:cities,id'],
             'postal_code' => ['nullable', 'string', 'max:20'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'description' => ['nullable', 'string', 'max:65535'],
             'is_active' => ['nullable', 'boolean'],
         ];

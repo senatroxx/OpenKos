@@ -68,7 +68,7 @@ describe('CRUD', function () {
 
         $this->actingAs($user)->post(route('tenants.store'), [
             'name' => 'Budi Santoso',
-            'phone' => '081234567890',
+            'phone' => '+6281234567890',
             'email' => 'budi@example.com',
             'id_card_number' => '3273010203040005',
         ]);
@@ -77,7 +77,7 @@ describe('CRUD', function () {
 
         expect($tenant)->not->toBeNull();
         expect($tenant->name)->toBe('Budi Santoso');
-        expect($tenant->phone)->toBe('081234567890');
+        expect($tenant->phone)->toBe('+6281234567890');
     });
 
     it('validates required fields on create', function () {
