@@ -71,9 +71,24 @@ class WhatsAppController extends Controller
 
         $settings = Setting::get()->only('whatsapp_driver', 'whatsapp_config');
 
+        $connection = null;
+        if (($settings['whatsapp_driver'] ?? null) === 'baileys') {
+            try {
+                $result = $this->whatsapp->health();
+                $connection = [
+                    'state' => $result->healthy ? 'connected' : 'disconnected',
+                    'phone' => $result->phone,
+                    'lastConnected' => $result->lastConnected,
+                ];
+            } catch (\Throwable) {
+                $connection = ['state' => 'disconnected', 'phone' => null, 'lastConnected' => null];
+            }
+        }
+
         return Inertia::render('settings/whatsapp', [
             'drivers' => $drivers,
             'settings' => $settings,
+            'connection' => $connection,
         ]);
     }
 
