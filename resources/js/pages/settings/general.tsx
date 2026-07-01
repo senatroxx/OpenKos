@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { edit as editGeneral } from '@/routes/settings/general';
+import { edit as editGeneral, update as updateGeneral } from '@/routes/settings/general';
 
 export default function General({ settings }: { settings: { lease_id_prefix: string } }) {
     return (
@@ -25,8 +25,7 @@ export default function General({ settings }: { settings: { lease_id_prefix: str
                 </CardHeader>
                 <CardContent>
                     <Form
-                        action={editGeneral()}
-                        method="patch"
+                        action={updateGeneral()}
                     >
                         {({ processing, errors }) => (
                             <div className="space-y-4">

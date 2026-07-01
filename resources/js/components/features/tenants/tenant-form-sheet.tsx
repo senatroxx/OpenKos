@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import { InputError } from '@/components/shared';
+import { InputError, PhoneInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,11 +68,10 @@ export default function TenantFormSheet({
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="phone">Phone</Label>
-                                    <Input
-                                        id="phone"
+                                    <PhoneInput
                                         name="phone"
                                         defaultValue={tenant?.phone ?? ''}
-                                        placeholder="e.g. 081234567890"
+                                        placeholder="e.g. 81234567890"
                                     />
                                     <InputError message={errors.phone} />
                                 </div>
@@ -84,7 +83,7 @@ export default function TenantFormSheet({
                                         name="email"
                                         type="email"
                                         defaultValue={tenant?.email ?? ''}
-                                        placeholder="e.g. budi@example.com"
+                                        placeholder="e.g. john@example.com"
                                     />
                                     <InputError message={errors.email} />
                                 </div>
@@ -106,46 +105,39 @@ export default function TenantFormSheet({
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="emergency_contact_name">
-                                            Emergency Contact Name
-                                        </Label>
-                                        <Input
-                                            id="emergency_contact_name"
-                                            name="emergency_contact_name"
-                                            defaultValue={
-                                                tenant?.emergency_contact_name ??
-                                                ''
-                                            }
-                                            placeholder="e.g. Siti Nurhaliza"
-                                        />
-                                        <InputError
-                                            message={
-                                                errors.emergency_contact_name
-                                            }
-                                        />
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="emergency_contact_phone">
+                                        Emergency Contact Phone
+                                    </Label>
+                                    <PhoneInput
+                                        name="emergency_contact_phone"
+                                        defaultValue={
+                                            tenant?.emergency_contact_phone ??
+                                            ''
+                                        }
+                                        placeholder="e.g. 81234567890"
+                                    />
+                                    <InputError message={errors.emergency_contact_phone} />
+                                </div>
 
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="emergency_contact_phone">
-                                            Emergency Contact Phone
-                                        </Label>
-                                        <Input
-                                            id="emergency_contact_phone"
-                                            name="emergency_contact_phone"
-                                            defaultValue={
-                                                tenant?.emergency_contact_phone ??
-                                                ''
-                                            }
-                                            placeholder="e.g. 081234567891"
-                                        />
-                                        <InputError
-                                            message={
-                                                errors.emergency_contact_phone
-                                            }
-                                        />
-                                    </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="emergency_contact_name">
+                                        Emergency Contact Name
+                                    </Label>
+                                    <Input
+                                        id="emergency_contact_name"
+                                        name="emergency_contact_name"
+                                        defaultValue={
+                                            tenant?.emergency_contact_name ??
+                                            ''
+                                        }
+                                        placeholder="e.g. Siti Nurhaliza"
+                                    />
+                                    <InputError
+                                        message={
+                                            errors.emergency_contact_name
+                                        }
+                                    />
                                 </div>
 
                                 <div className="grid gap-2">

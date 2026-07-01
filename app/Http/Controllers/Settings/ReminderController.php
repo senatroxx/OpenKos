@@ -33,12 +33,16 @@ class ReminderController extends Controller
         $validated = $request->validate([
             'reminder_enabled' => ['boolean'],
             'reminder_days_before' => ['required', 'integer', 'min:0', 'max:30'],
-            'reminder_overdue_intervals' => ['required', 'array'],
-            'reminder_overdue_intervals.*' => ['integer', 'min:1', 'max:365'],
+            'reminder_overdue_intervals' => ['required', 'string', 'regex:/^\d+(?:\s*,\s*\d+)*$/'],
             'reminder_message_template' => ['nullable', 'string', 'max:1000'],
             'reminder_channels' => ['required', 'array', 'min:1'],
             'reminder_channels.*' => ['string', 'in:log,whatsapp,mail'],
         ]);
+
+        $validated['reminder_overdue_intervals'] = array_map(
+            fn ($v) => (int) trim($v),
+            explode(',', $validated['reminder_overdue_intervals']),
+        );
 
         $setting = Setting::get();
         $setting->update($validated);

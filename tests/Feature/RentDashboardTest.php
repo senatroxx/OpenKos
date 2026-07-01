@@ -164,12 +164,14 @@ test('rent dashboard search filters by tenant name', function () {
     $tenantA = Tenant::factory()->create(['name' => 'Budi Santoso']);
     Lease::factory()->create([
         'primary_tenant_id' => $tenantA->id,
+        'start_date' => now()->subMonths(2),
         'rent_due_day' => 5,
     ]);
 
     $tenantB = Tenant::factory()->create(['name' => 'Siti Rahma']);
     Lease::factory()->create([
         'primary_tenant_id' => $tenantB->id,
+        'start_date' => now()->subMonths(2),
         'rent_due_day' => 3,
     ]);
 
@@ -224,6 +226,7 @@ test('rent dashboard scopes to user properties for non-owner', function () {
     Lease::factory()->create([
         'room_id' => Room::factory()->create(['property_id' => $propertyA->id])->id,
         'primary_tenant_id' => $tenantA->id,
+        'start_date' => now()->subMonths(2),
         'rent_due_day' => 5,
     ]);
 
@@ -232,6 +235,7 @@ test('rent dashboard scopes to user properties for non-owner', function () {
     Lease::factory()->create([
         'room_id' => Room::factory()->create(['property_id' => $propertyB->id])->id,
         'primary_tenant_id' => $tenantB->id,
+        'start_date' => now()->subMonths(2),
         'rent_due_day' => 3,
     ]);
 

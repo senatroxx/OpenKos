@@ -1,7 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
 import { useState } from 'react';
-import { InputError, SearchableSelect } from '@/components/shared';
+import { InputError, PhoneInput, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -172,12 +172,10 @@ export default function PropertyFormSheet({
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="phone">Phone</Label>
-                                    <Input
-                                        id="phone"
+                                    <PhoneInput
                                         name="phone"
-                                        type="tel"
                                         defaultValue={property?.phone ?? ''}
-                                        placeholder="Phone number"
+                                        placeholder="e.g. 81234567890"
                                     />
                                     <InputError message={errors.phone} />
                                 </div>
