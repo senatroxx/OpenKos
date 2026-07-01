@@ -148,6 +148,13 @@ export default function WhatsApp({
                                 )}
                             </div>
 
+                                            {Object.keys(fields).length > 0 && (
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                    Values set via environment variables override the fields below and cannot be
+                                    changed here.
+                                </div>
+                            )}
+
                             {Object.keys(fields).length > 0 && Object.entries(fields).map(([key, field]) => (
                                 <div key={key} className="grid max-w-xs gap-2">
                                     <Label htmlFor={`config-${key}`}>
