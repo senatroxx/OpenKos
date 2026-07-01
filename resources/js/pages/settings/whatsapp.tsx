@@ -104,22 +104,13 @@ export default function WhatsApp({
         setQrCode(null);
 
         try {
-            const response = await fetch(pairWhatsApp().url, { method: 'POST' });
-            const data = await response.json();
-
-            if (data.state === 'connected' || data.message === 'Device is already connected.') {
-                setConnectionStatus('connected');
-                await fetchStatus();
-            } else {
-                setConnectionStatus(data.state ?? 'connecting');
-                setQrCode(data.qr_code ?? null);
-                pollingRef.current = setInterval(pollQr, 2000);
-            }
+            await fetch(pairWhatsApp().url, { method: 'POST' });
         } catch {
             setPairingError('Failed to initiate pairing.');
         }
 
         setPairingLoading(false);
+        pollingRef.current = setInterval(pollQr, 2000);
     };
 
     return (
