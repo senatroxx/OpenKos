@@ -111,12 +111,9 @@ export default function WhatsApp({
                 setConnectionStatus('connected');
                 await fetchStatus();
             } else {
-                setConnectionStatus(data.state ?? 'disconnected');
+                setConnectionStatus(data.state ?? 'connecting');
                 setQrCode(data.qr_code ?? null);
-
-                if (data.qr_code) {
-                    pollingRef.current = setInterval(pollQr, 2000);
-                }
+                pollingRef.current = setInterval(pollQr, 2000);
             }
         } catch {
             setPairingError('Failed to initiate pairing.');
