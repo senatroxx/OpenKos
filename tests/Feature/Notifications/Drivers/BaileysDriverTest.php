@@ -27,7 +27,7 @@ it('sends message via Baileys service', function () {
 
         return $request->url() === 'http://localhost:3000/api/send'
             && $request->method() === 'POST'
-            && ($body['to'] ?? null) === '08123456789'
+            && ($body['to'] ?? null) === '628123456789'
             && ($body['text'] ?? null) === 'Test message';
     });
 });
@@ -44,6 +44,22 @@ it('includes HMAC signature headers', function () {
         return $request->hasHeader('X-Timestamp')
             && $request->hasHeader('X-Signature')
             && $request->header('X-Key-Id') === [];
+    });
+});
+
+it('normalizes phone number before sending', function () {
+    Http::fake([
+        '*/api/send' => fakeResponse(),
+    ]);
+
+    $driver = new BaileysDriver(['url' => 'http://localhost:3000', 'api_key' => 'secret']);
+
+    $driver->send(new WhatsAppMessage('+62 812-3456-7890', 'Test'));
+
+    Http::assertSent(function ($request) {
+        $body = json_decode($request->body(), true);
+
+        return ($body['to'] ?? null) === '6281234567890';
     });
 });
 
