@@ -23,13 +23,16 @@ class WhatsAppController extends Controller
             return response()->json(['message' => 'Device is already connected.']);
         }
 
-        $this->whatsapp->pair();
+        try {
+            $this->whatsapp->pair();
+        } catch (\RuntimeException) {
+        }
 
         $qrCode = $this->whatsapp->getPairingQrCode();
 
         return response()->json([
             'qr_code' => $qrCode,
-            'state' => $qrCode ? 'connecting' : 'disconnected',
+            'state' => $qrCode ? 'connecting' : 'connecting',
         ]);
     }
 
