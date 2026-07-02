@@ -25,7 +25,23 @@ import { Textarea } from '@/components/ui/textarea';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
-type RoomOption = { id: number; name: string; property_id: number; status: string; active_lease_count: number };
+type RoomOption = { id: number; name: string; property_id: number; status: string; active_lease_count: number; leases?: { tenants: { id: number; name: string }[] }[] };
+
+function formatRoomOption(r: RoomOption): string {
+    const tenants = r.leases?.[0]?.tenants ?? [];
+    const roomName = r.name.length > 20 ? r.name.slice(0, 19) + '...' : r.name;
+
+    if (tenants.length === 0) {
+        return roomName;
+    }
+
+    const names = tenants.map((t) => t.name);
+    if (names.length > 2) {
+        return `${roomName} - ${names.slice(0, 2).join(', ')}, +${names.length - 2}`;
+    }
+
+    return `${roomName} - ${names.join(', ')}`;
+}
 
 export default function TicketFormSheet({
     open,
@@ -165,7 +181,7 @@ export default function TicketFormSheet({
                                                         <SelectContent>
                                                             {filteredRooms.map((r) => (
                                                                 <SelectItem key={r.id} value={String(r.id)}>
-                                                                    {r.name}
+                                                                    {formatRoomOption(r)}
                                                                 </SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -318,7 +334,7 @@ export default function TicketFormSheet({
                                                 <SelectContent>
                                                     {availableMoveRooms.map((r) => (
                                                         <SelectItem key={r.id} value={String(r.id)}>
-                                                            {r.name}
+                                                            {formatRoomOption(r)}
                                                         </SelectItem>
                                                     ))}
                                                 </SelectContent>
