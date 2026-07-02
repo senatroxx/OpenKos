@@ -62,7 +62,7 @@ export default function Index({
 }: {
     tickets: { data: MaintenanceTicket[] };
     properties: { id: number; name: string }[];
-    rooms: { id: number; name: string; property_id: number }[];
+    rooms: { id: number; name: string; property_id: number; status: string; active_lease_count: number }[];
     can: { create: boolean; update: boolean; delete: boolean; assign: boolean };
     table: { filters: TableFilterMeta[] };
     sort?: string;

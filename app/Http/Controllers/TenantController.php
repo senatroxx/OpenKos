@@ -71,6 +71,7 @@ class TenantController extends Controller
                     }),
             ])
             ->whereNull('deleted_at')
+            ->whereNotIn('status', ['maintenance'])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))
             ->where(function (Builder $q) {
                 $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
@@ -93,6 +94,8 @@ class TenantController extends Controller
 
         DB::transaction(function () use ($validated, $tenant) {
             $room = Room::lockForUpdate()->findOrFail($validated['room_id']);
+
+            abort_if($room->status === RoomStatus::Maintenance, 422, __('This room is under maintenance and cannot be assigned.'));
 
             $tenantIds = isset($validated['tenant_ids'])
                 ? array_values(array_unique($validated['tenant_ids']))
