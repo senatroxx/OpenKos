@@ -15,7 +15,28 @@ return new class extends Migration
             $table->string('location')->nullable()->after('room_id');
         });
 
-        DB::statement('ALTER TABLE maintenance_tickets ALTER COLUMN room_id DROP NOT NULL');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE maintenance_tickets ALTER COLUMN room_id DROP NOT NULL');
+        } elseif (DB::getDriverName() === 'sqlite') {
+            Schema::table('maintenance_tickets', function (Blueprint $table) {
+                $table->dropForeign(['room_id']);
+            });
+
+            Schema::table('maintenance_tickets', function (Blueprint $table) {
+                $table->unsignedBigInteger('room_id_new')->nullable()->after('location');
+            });
+
+            DB::statement('UPDATE maintenance_tickets SET room_id_new = room_id');
+
+            Schema::table('maintenance_tickets', function (Blueprint $table) {
+                $table->dropColumn('room_id');
+                $table->renameColumn('room_id_new', 'room_id');
+            });
+
+            Schema::table('maintenance_tickets', function (Blueprint $table) {
+                $table->foreign('room_id')->references('id')->on('rooms')->cascadeOnDelete();
+            });
+        }
     }
 
     public function down(): void
@@ -28,6 +49,8 @@ return new class extends Migration
             $table->dropColumn('location');
         });
 
-        DB::statement('ALTER TABLE maintenance_tickets ALTER COLUMN room_id SET NOT NULL');
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE maintenance_tickets ALTER COLUMN room_id SET NOT NULL');
+        }
     }
 };
