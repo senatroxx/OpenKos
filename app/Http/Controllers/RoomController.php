@@ -68,6 +68,7 @@ class RoomController extends Controller
                     }),
             ])
             ->whereNull('deleted_at')
+            ->whereNotIn('status', ['maintenance'])
             ->where(function (Builder $q) {
                 $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
                     ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');

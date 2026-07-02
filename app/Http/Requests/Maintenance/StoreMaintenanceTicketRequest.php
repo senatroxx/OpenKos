@@ -19,6 +19,8 @@ class StoreMaintenanceTicketRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'priority' => ['required', 'string', Rule::in(MaintenancePriority::values())],
+            'block_room' => ['nullable', 'boolean'],
+            'move_tenant_to_room_id' => ['nullable', 'integer', 'exists:rooms,id'],
         ];
     }
 }

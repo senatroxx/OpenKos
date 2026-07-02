@@ -59,6 +59,7 @@ class LeaseController extends Controller
                     }),
             ])
             ->whereNull('deleted_at')
+            ->whereNotIn('status', ['maintenance'])
             ->where(function (Builder $q) {
                 $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
                     ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
@@ -166,6 +167,7 @@ class LeaseController extends Controller
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
             ->whereNull('deleted_at')
+            ->whereNotIn('status', ['maintenance'])
             ->where(function (Builder $q) {
                 $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
                     ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
@@ -220,6 +222,8 @@ class LeaseController extends Controller
 
         $lease = DB::transaction(function () use ($room, $request, $tenantIds) {
             $room = Room::lockForUpdate()->findOrFail($room->id);
+
+            abort_if($room->status === RoomStatus::Maintenance, 422, __('This room is under maintenance and cannot be leased.'));
 
             $existingLease = $room->leases()->where('status', 'active')->first();
 
@@ -316,7 +320,7 @@ class LeaseController extends Controller
 
             $room->unsetRelation('leases');
 
-            if ($room->leases()->where('status', 'active')->doesntExist()) {
+            if ($room->leases()->where('status', 'active')->doesntExist() && $room->status !== RoomStatus::Maintenance) {
                 $room->update(['status' => RoomStatus::Available]);
             }
         });
@@ -343,6 +347,8 @@ class LeaseController extends Controller
         DB::transaction(function () use ($lease, $validated, $targetRoom, $depositRefundAmount) {
             if ($validated['move_to_another_room'] ?? false) {
                 $targetRoom = Room::lockForUpdate()->findOrFail($targetRoom->id);
+
+                abort_if($targetRoom->status === RoomStatus::Maintenance, 422, __('Target room is under maintenance.'));
 
                 $lease->load('tenants');
 
@@ -376,7 +382,7 @@ class LeaseController extends Controller
 
             $oldRoom->unsetRelation('leases');
 
-            if ($oldRoom->leases()->where('status', 'active')->doesntExist()) {
+            if ($oldRoom->leases()->where('status', 'active')->doesntExist() && $oldRoom->status !== RoomStatus::Maintenance) {
                 $oldRoom->update(['status' => RoomStatus::Available]);
             }
 
@@ -528,6 +534,8 @@ class LeaseController extends Controller
         DB::transaction(function () use ($lease, $targetRoom, $room) {
             $targetRoom = Room::lockForUpdate()->findOrFail($targetRoom->id);
 
+            abort_if($targetRoom->status === RoomStatus::Maintenance, 422, __('This room is under maintenance and cannot be moved into.'));
+
             $lease->load('tenants');
 
             $activeTenantsCount = DB::table('lease_tenant')
@@ -555,7 +563,7 @@ class LeaseController extends Controller
 
             $room->unsetRelation('leases');
 
-            if ($room->leases()->where('status', 'active')->doesntExist()) {
+            if ($room->leases()->where('status', 'active')->doesntExist() && $room->status !== RoomStatus::Maintenance) {
                 $room->update(['status' => RoomStatus::Available]);
             }
 
