@@ -23,7 +23,10 @@ describe('authorization', function () {
         $property = Property::factory()->create();
         $admin->properties()->sync([$property->id]);
         $room = Room::factory()->for($property)->create();
-        $ticket = MaintenanceTicket::factory()->create(['room_id' => $room->id]);
+        $ticket = MaintenanceTicket::factory()->create([
+            'room_id' => $room->id,
+            'property_id' => $property->id,
+        ]);
 
         expect($admin->can('view', $ticket))->toBeTrue();
     });
@@ -34,7 +37,10 @@ describe('authorization', function () {
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
         $room = Room::factory()->for($propertyB)->create();
-        $ticket = MaintenanceTicket::factory()->create(['room_id' => $room->id]);
+        $ticket = MaintenanceTicket::factory()->create([
+            'room_id' => $room->id,
+            'property_id' => $propertyB->id,
+        ]);
 
         expect($admin->can('view', $ticket))->toBeFalse();
     });

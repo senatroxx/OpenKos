@@ -1,6 +1,7 @@
 export * from './app';
 export * from './auth';
 export * from './leases';
+export * from './maintenance';
 export * from './payments';
 export * from './properties';
 export * from './roles';
