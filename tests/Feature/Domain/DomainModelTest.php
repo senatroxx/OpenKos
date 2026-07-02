@@ -221,8 +221,8 @@ describe('MaintenanceTicket', function () {
         $user = User::factory()->create();
         $ticket = MaintenanceTicket::factory()->create(['assigned_to' => $user->id]);
 
-        expect($ticket->assignedTo)->toBeInstanceOf(User::class);
-        expect($ticket->assignedTo->id)->toBe($user->id);
+        expect($ticket->assignee)->toBeInstanceOf(User::class);
+        expect($ticket->assignee->id)->toBe($user->id);
     });
 });
 
