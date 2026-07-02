@@ -5,6 +5,13 @@ import { useState } from 'react';
 import { DocumentPreview } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Sheet,
     SheetContent,
     SheetDescription,
@@ -52,6 +59,7 @@ export default function TenantDocumentsSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const [uploading, setUploading] = useState(false);
+    const [docType, setDocType] = useState('');
     const [previewDoc, setPreviewDoc] = useState<TenantDocument | null>(null);
 
     function handleUpload(e: FormEvent<HTMLFormElement>) {
@@ -70,6 +78,7 @@ export default function TenantDocumentsSheet({
             replace: true,
             onFinish: () => {
                 setUploading(false);
+                setDocType('');
                 form.reset();
             },
         });
@@ -181,24 +190,19 @@ export default function TenantDocumentsSheet({
                                     onSubmit={handleUpload}
                                     className="flex flex-row items-end gap-2"
                                 >
-                                    <select
-                                        name="type"
-                                        required
-                                        className="block shrink-0 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                    >
-                                        <option value="">
-                                            Select type...
-                                        </option>
-                                        <option value="ktp">KTP</option>
-                                        <option value="passport">Passport</option>
-                                        <option value="lease">
-                                            Lease/Agreement
-                                        </option>
-                                        <option value="supporting">
-                                            Supporting
-                                        </option>
-                                        <option value="other">Other</option>
-                                    </select>
+                                    <input type="hidden" name="type" value={docType} />
+                                    <Select value={docType} onValueChange={setDocType}>
+                                        <SelectTrigger className="shrink-0 w-[160px]">
+                                            <SelectValue placeholder="Select type..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="ktp">KTP</SelectItem>
+                                            <SelectItem value="passport">Passport</SelectItem>
+                                            <SelectItem value="lease">Lease/Agreement</SelectItem>
+                                            <SelectItem value="supporting">Supporting</SelectItem>
+                                            <SelectItem value="other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <input
                                         type="file"
                                         name="file"
