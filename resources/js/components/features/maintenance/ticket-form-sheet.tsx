@@ -1,5 +1,5 @@
 import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -88,22 +88,14 @@ export default function TicketFormSheet({
         )
         : [];
 
-    const handleSubmit = (e: React.FormEvent) => {
-        if (!isEdit && blockRoom && selectedRoomOccupied) {
-            e.preventDefault();
-            setShowOccupiedDialog(true);
-            return;
-        }
-    };
+    const formRef = useRef<HTMLFormElement>(null);
 
-    const buildFormData = () => {
-        const form = new FormData();
-        if (isEdit) {
-            if (ticket?.title) form.append('title', ticket.title);
+    const handleCreateClick = () => {
+        if (!isEdit && blockRoom && selectedRoomOccupied) {
+            setShowOccupiedDialog(true);
         } else {
-            form.append('title', '');
+            formRef.current?.requestSubmit();
         }
-        return form;
     };
 
     return (
@@ -119,10 +111,10 @@ export default function TicketFormSheet({
 
                     <div className="flex-1 overflow-y-auto px-4">
                         <Form
+                            ref={formRef}
                             action={formAction}
                             method={formMethod}
                             onSuccess={() => onOpenChange(false)}
-                            onSubmit={handleSubmit}
                         >
                             {({ processing, errors }) => (
                                 <div className="space-y-6 pt-4">
@@ -302,7 +294,9 @@ export default function TicketFormSheet({
                                         >
                                             Cancel
                                         </Button>
-                                        <Button disabled={processing}>{isEdit ? 'Save' : 'Create'}</Button>
+                                        <Button disabled={processing} type="button" onClick={handleCreateClick}>
+                                            {isEdit ? 'Save' : 'Create'}
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -356,16 +350,16 @@ export default function TicketFormSheet({
                         <Button
                             onClick={() => {
                                 setShowOccupiedDialog(false);
-                                const formEl = document.querySelector('form') as HTMLFormElement;
-                                if (formEl) {
+                                const form = formRef.current;
+                                if (form) {
                                     if (moveToRoomId) {
-                                        const moveInput = document.createElement('input');
-                                        moveInput.type = 'hidden';
-                                        moveInput.name = 'move_tenant_to_room_id';
-                                        moveInput.value = moveToRoomId;
-                                        formEl.appendChild(moveInput);
+                                        const input = document.createElement('input');
+                                        input.type = 'hidden';
+                                        input.name = 'move_tenant_to_room_id';
+                                        input.value = moveToRoomId;
+                                        form.appendChild(input);
                                     }
-                                    formEl.requestSubmit();
+                                    form.requestSubmit();
                                 }
                             }}
                         >
