@@ -4,6 +4,7 @@ use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseRentScheduleController;
+use App\Http\Controllers\MaintenanceTicketController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\RoleController;
@@ -76,6 +77,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('{payment}/proof/{proof}', [PaymentController::class, 'proof'])->name('proof');
         Route::post('{payment}/verify', [PaymentController::class, 'verify'])->name('verify')->middleware('permission:payments.verify');
+    });
+
+    Route::prefix('maintenance-tickets')->name('maintenance-tickets.')->group(function () {
+        Route::get('/', [MaintenanceTicketController::class, 'index'])->name('index')->middleware('permission:maintenance-tickets.view');
+        Route::post('/', [MaintenanceTicketController::class, 'store'])->name('store')->middleware('permission:maintenance-tickets.create');
+        Route::put('{ticket}', [MaintenanceTicketController::class, 'update'])->name('update')->middleware('permission:maintenance-tickets.update');
+        Route::delete('{ticket}', [MaintenanceTicketController::class, 'destroy'])->name('destroy')->middleware('permission:maintenance-tickets.delete');
+        Route::post('{ticket}/assign', [MaintenanceTicketController::class, 'assign'])->name('assign')->middleware('permission:maintenance-tickets.update');
     });
 
     Route::prefix('users')->name('users.')->group(function () {

@@ -221,3 +221,26 @@ export type PermissionEntry = {
     label: string;
     description: string;
 };
+
+export type MaintenanceTicket = {
+    id: number;
+    reference: string | null;
+    property_id: number;
+    room_id: number | null;
+    location: string | null;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    assigned_to: number | null;
+    created_by: number | null;
+    cost: string | null;
+    resolved_at: string | null;
+    resolution_notes: string | null;
+    created_at: string;
+    updated_at: string;
+    property?: { id: number; name: string } | null;
+    room?: { id: number; name: string } | null;
+    assignee?: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
+    creator?: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
+};

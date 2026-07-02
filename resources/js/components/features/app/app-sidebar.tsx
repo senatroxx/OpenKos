@@ -9,6 +9,7 @@ import {
     Shield,
     UserCog,
     Users,
+    Wrench,
 } from 'lucide-react';
 import AppLogo from '@/components/features/app/app-logo';
 import { NavFooter } from '@/components/features/app/nav-footer';
@@ -26,6 +27,7 @@ import {
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
 import leases from '@/routes/leases';
+import maintenanceTickets from '@/routes/maintenance-tickets';
 import properties from '@/routes/properties';
 import roles from '@/routes/roles';
 import tenants from '@/routes/tenants';
@@ -65,6 +67,9 @@ export function AppSidebar() {
             : []),
         ...(isOwner || permissions.includes('leases.view')
             ? [{ title: 'Leases', href: leases.index(), icon: FileText }]
+            : []),
+        ...(isOwner || permissions.includes('maintenance-tickets.view')
+            ? [{ title: 'Maintenance', href: maintenanceTickets.index(), icon: Wrench }]
             : []),
         ...(isOwner || permissions.includes('users.view')
             ? [{ title: 'Users', href: userRoutes.index(), icon: UserCog }]
