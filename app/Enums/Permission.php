@@ -51,6 +51,12 @@ enum Permission: string
     case FinancialsView = 'financials.view';
     case ReportsView = 'reports.view';
 
+    case MaintenanceTicketsView = 'maintenance-tickets.view';
+    case MaintenanceTicketsCreate = 'maintenance-tickets.create';
+    case MaintenanceTicketsUpdate = 'maintenance-tickets.update';
+    case MaintenanceTicketsDelete = 'maintenance-tickets.delete';
+    case MaintenanceTicketsAssign = 'maintenance-tickets.assign';
+
     public function label(): string
     {
         $action = explode('.', $this->value)[1] ?? '';
@@ -69,6 +75,7 @@ enum Permission: string
             'renew' => 'Renew Lease',
             'send' => 'Send',
             'clone' => 'Clone',
+            'assign' => 'Assign',
             default => $action,
         };
     }
@@ -120,6 +127,12 @@ enum Permission: string
             self::RemindersSend => 'Send rent reminders to tenants.',
             self::FinancialsView => 'View financial reports and payment data.',
             self::ReportsView => 'Access generated reports.',
+
+            self::MaintenanceTicketsView => 'View the maintenance ticket list.',
+            self::MaintenanceTicketsCreate => 'Report new maintenance issues.',
+            self::MaintenanceTicketsUpdate => 'Update existing maintenance ticket details.',
+            self::MaintenanceTicketsDelete => 'Delete maintenance tickets.',
+            self::MaintenanceTicketsAssign => 'Assign maintenance tickets to staff.',
         };
     }
 
