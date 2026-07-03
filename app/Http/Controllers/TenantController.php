@@ -21,6 +21,21 @@ use Inertia\Response;
 
 class TenantController extends Controller
 {
+    public function show(Tenant $tenant): Response
+    {
+        $this->authorize('view', $tenant);
+
+        $tenant->load([
+            'documents',
+            'leases' => fn ($q) => $q->where('status', 'active')
+                ->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+        ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
+
+        return Inertia::render('tenants/show', [
+            'tenant' => $tenant,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $table = Table::make()

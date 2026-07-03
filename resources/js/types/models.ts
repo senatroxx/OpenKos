@@ -89,6 +89,11 @@ export type RoomInfo = {
     } | null;
 };
 
+export type RoomWithProperty = Room & {
+    property_id: number;
+    property: Property | null;
+};
+
 export type AvailableRoom = {
     id: number;
     name: string;
@@ -212,23 +217,6 @@ export type RentScheduleEntry = {
     due_date: string;
     amount: string;
     status: 'paid' | 'overdue' | 'due' | 'upcoming';
-};
-
-export type RentDashboardEntry = {
-    id: number;
-    tenant_name: string;
-    room_name: string;
-    property_name: string;
-    rent_due_day: number;
-    days_overdue: number | null;
-    rent_amount: string;
-    rent_status: 'paid' | 'overdue' | 'due_today' | 'due_soon';
-};
-
-export type PermissionEntry = {
-    value: string;
-    label: string;
-    description: string;
 };
 
 export type MaintenanceTicket = {

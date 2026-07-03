@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { EllipsisVertical, Eye, Pencil, Trash2 } from 'lucide-react';
+import { EllipsisVertical, ExternalLink, Eye, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -168,6 +168,10 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
+                        <DropdownMenuItem onClick={() => router.get(properties.show.url(p))}>
+                            <ExternalLink className="size-4" />
+                            Open Workspace
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetail(p)}>
                             <Eye className="size-4" />
                             View
