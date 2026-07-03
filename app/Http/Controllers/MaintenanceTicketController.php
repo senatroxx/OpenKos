@@ -6,6 +6,7 @@ use App\Enums\MaintenanceStatus;
 use App\Enums\RoomStatus;
 use App\Http\Requests\Maintenance\StoreMaintenanceTicketRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceTicketRequest;
+use App\Models\LeaseRoomHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Room;
@@ -117,6 +118,9 @@ class MaintenanceTicketController extends Controller
             abort_if($targetRoom->status === RoomStatus::Maintenance, 422, __('Target room is under maintenance.'));
             abort_if($targetRoom->id === $room->id, 422, __('Cannot move to the same room.'));
 
+            $targetHasLease = $targetRoom->leases()->where('status', 'active')->exists();
+            abort_if($targetHasLease, 422, __('Target room already has an active lease.'));
+
             $activeLease->load('tenants');
 
             $activeTenantsCount = DB::table('lease_tenant')
@@ -125,50 +129,28 @@ class MaintenanceTicketController extends Controller
                 ->where('leases.status', 'active')
                 ->count();
 
-            $incomingTenantIds = $activeLease->tenants->pluck('id')->toArray();
-            $existingTargetLease = $targetRoom->leases()->where('status', 'active')->first();
-
-            $incomingCount = $existingTargetLease
-                ? count(array_diff($incomingTenantIds, $existingTargetLease->tenants()->pluck('tenants.id')->all()))
-                : count($incomingTenantIds);
+            $incomingCount = $activeLease->tenants->count();
 
             abort_if(($activeTenantsCount + $incomingCount) > $targetRoom->capacity, 422, __('Target room capacity exceeded.'));
 
-            $activeLease->update([
-                'end_date' => now(),
-                'status' => 'terminated',
-                'termination_date' => now(),
-                'termination_reason' => __('Moved to room :name (maintenance)', ['name' => $targetRoom->name]),
+            LeaseRoomHistory::create([
+                'lease_id' => $activeLease->id,
+                'from_room_id' => $room->id,
+                'to_room_id' => $targetRoom->id,
+                'transferred_by' => auth()->id(),
+                'reason' => 'maintenance',
+                'notes' => __('Room :from blocked for maintenance. Transfer to :to.', ['from' => $room->name, 'to' => $targetRoom->name]),
+                'effective_date' => now(),
             ]);
 
-            if ($existingTargetLease) {
-                $existingTenantIds = $existingTargetLease->tenants()->pluck('tenants.id');
-                foreach ($activeLease->tenants as $tenant) {
-                    if (! $existingTenantIds->contains($tenant->id)) {
-                        $existingTargetLease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('false')]);
-                    }
-                }
-            } else {
-                $newLease = $targetRoom->leases()->create([
-                    'primary_tenant_id' => $activeLease->primary_tenant_id,
-                    'start_date' => now(),
-                    'rent_amount' => $activeLease->rent_amount,
-                    'billing_interval' => $activeLease->billing_interval ?? 1,
-                    'billing_unit' => $activeLease->billing_unit ?? 'month',
-                    'is_custom_price' => $activeLease->is_custom_price ? DB::raw('true') : DB::raw('false'),
-                    'deposit_amount' => $activeLease->deposit_amount,
-                    'deposit_paid_at' => $activeLease->deposit_paid_at,
-                    'rent_due_day' => $activeLease->rent_due_day,
-                    'status' => 'active',
-                    'notes' => __('Moved from room :name (maintenance)', ['name' => $room->name]),
-                ]);
+            $notes = $activeLease->notes
+                ? $activeLease->notes."\n".__('Transferred from :from to :to (maintenance)', ['from' => $room->name, 'to' => $targetRoom->name])
+                : __('Transferred from :from to :to (maintenance)', ['from' => $room->name, 'to' => $targetRoom->name]);
 
-                foreach ($activeLease->tenants as $tenant) {
-                    $newLease->tenants()->attach($tenant->id, [
-                        'is_primary' => $tenant->id === $activeLease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
-                    ]);
-                }
-            }
+            $activeLease->update([
+                'room_id' => $targetRoom->id,
+                'notes' => $notes,
+            ]);
 
             $targetRoom->update(['status' => RoomStatus::Occupied]);
             $room->update(['status' => RoomStatus::Maintenance]);

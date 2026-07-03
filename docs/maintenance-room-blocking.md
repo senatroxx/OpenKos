@@ -79,13 +79,31 @@ When editing a ticket (status change via the Resolve or Cancel action), if the t
 2. Finds active lease if any
 3. If active lease + move target:
    - Locks target room with `lockForUpdate()`
-   - Validates target is not under maintenance
-   - Validates target is not the same room
+   - Validates target is not under maintenance, not same room, no active lease
    - Validates capacity
-   - Terminates old lease, creates/extends new lease on target
+   - **Transfers the lease**: updates `lease.room_id` to target room, appends transfer note
+   - Records `LeaseRoomHistory` entry (from_room, to_room, reason=maintenance, transferred_by)
    - Sets original room to `maintenance`, target to `occupied`
+   - Lease agreement remains intact — only the physical room changes
 4. If active lease + no move: sets room to `maintenance` with warning
 5. If no active lease: sets room to `maintenance`
+
+### Room Transfer History
+
+A `lease_room_histories` table tracks every room change within a lease:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `lease_id` | FK | The lease being transferred |
+| `from_room_id` | FK | Original room |
+| `to_room_id` | FK | Destination room |
+| `transferred_by` | FK | Admin who initiated the transfer |
+| `reason` | string | e.g. `maintenance`, `upgrade`, `downgrade` |
+| `effective_date` | timestamp | When the transfer took effect |
+
+The `Lease` model has a `roomHistories()` HasMany relationship.
+
+**Design rationale:** A lease is a legal agreement between tenant and property, not tenant and room. Moving to another room for maintenance does not terminate the agreement — rent, deposit, billing, and terms remain unchanged. The room transfer is tracked as a history entry rather than creating a new lease, preserving lease continuity and providing a complete audit trail.
 
 ### Frontend
 
