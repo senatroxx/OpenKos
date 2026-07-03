@@ -319,7 +319,9 @@ setDetailTicket(null);
                     }}
                     canUpdate={can.update}
                     canDelete={can.delete}
-                    rooms={rooms as { id: number; name: string; property_id: number; has_maintenance_transfer?: number }[]}
+                    onResolve={() => {
+                        setResolveTicket(detailTicket);
+                    }}
                     onEdit={() => {
                         setEditingTicket(detailTicket);
                         setDetailTicket(null);
