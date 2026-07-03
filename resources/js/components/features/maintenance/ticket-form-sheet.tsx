@@ -84,7 +84,8 @@ export default function TicketFormSheet({
         ? rooms.filter(
             (r) => r.property_id === Number(selectedProperty)
                 && r.id !== Number(selectedRoomId)
-                && r.status !== 'maintenance',
+                && r.status !== 'maintenance'
+                && r.active_lease_count === 0,
         )
         : [];
 
