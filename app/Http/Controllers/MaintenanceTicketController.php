@@ -11,6 +11,7 @@ use App\Models\LeaseRoomHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Room;
+use App\Models\User;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -112,6 +113,10 @@ class MaintenanceTicketController extends Controller
             ...$result,
             'properties' => $properties,
             'rooms' => $rooms,
+            'users' => User::query()
+                ->with('roles')
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'can' => [
                 'create' => $request->user()->can('maintenance-tickets.create'),
                 'update' => $request->user()->can('maintenance-tickets.update'),
