@@ -13,7 +13,6 @@ use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,22 +56,8 @@ class RoomController extends Controller
         $availableRooms = $property->rooms()
             ->with('property.city')
             ->select(['id', 'name', 'property_id', 'capacity'])
-            ->addSelect([
-                'occupied_count' => DB::table('lease_tenant')
-                    ->selectRaw('COALESCE(COUNT(*), 0)')
-                    ->whereIn('lease_id', function (\Illuminate\Database\Query\Builder $q) {
-                        $q->select('id')
-                            ->from('leases')
-                            ->whereColumn('room_id', 'rooms.id')
-                            ->where('status', 'active');
-                    }),
-            ])
-            ->whereNull('deleted_at')
-            ->whereNotIn('status', ['maintenance'])
-            ->where(function (Builder $q) {
-                $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
-                    ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE room_id = rooms.id AND status = \'active\'))');
-            })
+            ->withOccupiedCount()
+            ->availableForAssignment()
             ->orderBy('name')
             ->get();
 
