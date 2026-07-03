@@ -141,7 +141,7 @@ return null;
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 border-t py-3 [&_button]:cursor-pointer">
+                    <div className="flex flex-wrap items-center gap-2 border-t py-3 [&_button]:cursor-pointer">
                         {canUpdate && (
                             <Button size="sm" variant="outline" onClick={onEdit}>
                                 <Pencil className="size-3.5" />
@@ -175,6 +175,7 @@ return null;
                         {canDelete && (
                             <Button size="sm" variant="destructive" onClick={handleDelete}>
                                 <Trash2 className="size-3.5" />
+                                <span className="ml-1">Delete</span>
                             </Button>
                         )}
                     </div>
