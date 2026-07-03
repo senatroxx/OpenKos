@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
+use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Room;
 use App\Models\Tenant;
@@ -135,5 +136,23 @@ class RoomController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Room deleted.')]);
 
         return to_route('properties.rooms.index', $property);
+    }
+
+    public function maintenanceHistory(Property $property, Room $room): Response
+    {
+        $this->authorize('viewAny', MaintenanceTicket::class);
+
+        $room->load('property.city');
+
+        $tickets = $room->maintenanceTickets()
+            ->with(['property:id,name', 'assignee:id,name', 'creator:id,name'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return Inertia::render('properties/rooms/maintenance-history', [
+            'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
+            'room' => $room->only('id', 'name', 'floor'),
+            'tickets' => $tickets,
+        ]);
     }
 }
