@@ -36,6 +36,7 @@ function formatRoomOption(r: RoomOption): string {
     }
 
     const names = tenants.map((t) => t.name);
+
     if (names.length > 2) {
         return `${roomName} - ${names.slice(0, 2).join(', ')}, +${names.length - 2}`;
     }
@@ -94,6 +95,7 @@ export default function TicketFormSheet({
     const handleCreateClick = (e: React.MouseEvent) => {
         if (isEdit && restoreRoom && ticket?.room_id) {
             const room = rooms.find((r) => r.id === ticket.room_id);
+
             if (room?.has_maintenance_transfer) {
                 e.preventDefault();
                 setShowMoveBackDialog(true);
@@ -101,6 +103,7 @@ export default function TicketFormSheet({
 
             return;
         }
+
         if (!isEdit && blockRoom && selectedRoomOccupied) {
             e.preventDefault();
             setShowOccupiedDialog(true);
@@ -281,7 +284,10 @@ export default function TicketFormSheet({
                                         (() => {
                                             const room = rooms.find((r) => r.id === ticket.room_id);
                                             const isBlocked = room?.status === 'maintenance';
-                                            if (! isBlocked) {return null;}
+
+                                            if (! isBlocked) {
+return null;
+}
 
                                             return (
                                                 <div className="flex items-center gap-2">
@@ -360,14 +366,20 @@ export default function TicketFormSheet({
                             onClick={() => {
                                 setShowOccupiedDialog(false);
                                 const formEl = document.getElementById('ticket-form');
-                                if (!formEl) {return;}
+
+                                if (!formEl) {
+return;
+}
+
                                 const data: Record<string, string> = {};
                                 new FormData(formEl as HTMLFormElement).forEach((v, k) => {
                                     data[k] = String(v);
                                 });
+
                                 if (moveToRoomId) {
                                     data.move_tenant_to_room_id = moveToRoomId;
                                 }
+
                                 router.visit(formAction, {
                                     method: formMethod,
                                     data,
@@ -393,7 +405,11 @@ export default function TicketFormSheet({
                         <Button variant="outline" onClick={() => {
                             setShowMoveBackDialog(false);
                             const formEl = document.getElementById('ticket-form');
-                            if (!formEl) {return;}
+
+                            if (!formEl) {
+return;
+}
+
                             const data: Record<string, string> = {};
                             new FormData(formEl as HTMLFormElement).forEach((v, k) => {
                                 data[k] = String(v);
@@ -409,7 +425,11 @@ export default function TicketFormSheet({
                         <Button onClick={() => {
                             setShowMoveBackDialog(false);
                             const formEl = document.getElementById('ticket-form');
-                            if (!formEl) {return;}
+
+                            if (!formEl) {
+return;
+}
+
                             const data: Record<string, string> = {};
                             new FormData(formEl as HTMLFormElement).forEach((v, k) => {
                                 data[k] = String(v);
