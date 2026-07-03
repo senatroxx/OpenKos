@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { Maximize2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -82,7 +83,7 @@ export default function TenantDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg">
+            <SheetContent className="sm:max-w-lg" expandTo={tenant ? tenants.show.url(tenant) : undefined}>
                 <SheetHeader>
                     <SheetTitle>{tenant?.name}</SheetTitle>
                     <SheetDescription>Tenant details</SheetDescription>

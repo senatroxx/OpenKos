@@ -32,22 +32,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTable } from '@/hooks/use-table';
 import roles, { destroy, clone } from '@/routes/roles';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type RoleData = {
-    id: number;
-    name: string;
-    label: string;
-    description: string | null;
-    color: string | null;
-    guard_name: string;
-    is_system: boolean;
-    is_active: boolean;
-    users_count: number;
-    permissions_count: number;
-    permissions: string[];
-    created_at: string | null;
-};
+import type { PaginatedData, RoleData, TableMeta } from '@/types';
 
 type PageProps = {
     roles: PaginatedData<RoleData>;

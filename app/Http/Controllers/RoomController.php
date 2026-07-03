@@ -19,6 +19,19 @@ use Inertia\Response;
 
 class RoomController extends Controller
 {
+    public function show(Property $property, Room $room): Response
+    {
+        $this->authorize('view', $room);
+
+        $room->load(['property.city', 'activeRates'])
+            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')]);
+
+        return Inertia::render('properties/rooms/show', [
+            'property' => $property,
+            'room' => $room,
+        ]);
+    }
+
     public function index(Request $request, Property $property): Response
     {
         $this->authorize('viewAny', [Room::class, $property]);

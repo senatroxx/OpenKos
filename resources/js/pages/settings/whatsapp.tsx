@@ -8,20 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { edit as editWhatsApp, update as updateWhatsApp, test as testWhatsApp, pair as pairWhatsApp, qr as qrWhatsApp, disconnect as disconnectWhatsApp } from '@/routes/settings/whatsapp';
-
-type DriverSchemaField = {
-    label: string;
-    type: string;
-    required: boolean;
-    placeholder?: string;
-};
-
-type Driver = {
-    name: string;
-    label: string;
-    configuration_schema: Record<string, DriverSchemaField>;
-    supports_pairing: boolean;
-};
+import type { Driver, DriverSchemaField } from '@/types';
 
 export default function WhatsApp({
     drivers,

@@ -140,4 +140,19 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    .workspace-enter {
+        animation: workspace-enter 0.2s ease-out;
+    }
+}
+
+@keyframes workspace-enter {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

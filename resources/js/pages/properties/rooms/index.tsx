@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
+    ExternalLink,
     Eye,
     Move,
     Pencil,
@@ -341,6 +342,12 @@ export default function Index({
                             }
                         >
                             <DropdownMenuItem
+                            onClick={() => router.get(properties.rooms.show.url({ property: property.id, room: r.id }))}
+                        >
+                            <ExternalLink className="size-4" />
+                            Open Workspace
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
                                 onClick={() => openDetail(r)}
                             >
                                 <Eye className="size-4" />

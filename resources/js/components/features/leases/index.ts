@@ -5,3 +5,4 @@ export { default as LeaseFormSheet } from './lease-form-sheet';
 export { default as MoveOutSheet } from './move-out-sheet';
 export { default as MoveRoomSheet } from './move-room-sheet';
 export { default as RenewLeaseSheet } from './renew-lease-sheet';
+export { default as LeaseOverview } from './lease-overview';
