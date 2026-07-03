@@ -84,7 +84,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::post('/', [MaintenanceTicketController::class, 'store'])->name('store')->middleware('permission:maintenance-tickets.create');
         Route::put('{ticket}', [MaintenanceTicketController::class, 'update'])->name('update')->middleware('permission:maintenance-tickets.update');
         Route::delete('{ticket}', [MaintenanceTicketController::class, 'destroy'])->name('destroy')->middleware('permission:maintenance-tickets.delete');
-        Route::post('{ticket}/assign', [MaintenanceTicketController::class, 'assign'])->name('assign')->middleware('permission:maintenance-tickets.update');
+        Route::post('{ticket}/assign', [MaintenanceTicketController::class, 'assign'])->name('assign');
     });
 
     Route::prefix('users')->name('users.')->group(function () {
