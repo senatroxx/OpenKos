@@ -155,7 +155,7 @@ class MaintenanceTicketController extends Controller
                     'rent_amount' => $activeLease->rent_amount,
                     'billing_interval' => $activeLease->billing_interval ?? 1,
                     'billing_unit' => $activeLease->billing_unit ?? 'month',
-                    'is_custom_price' => $activeLease->is_custom_price,
+                    'is_custom_price' => $activeLease->is_custom_price ? DB::raw('true') : DB::raw('false'),
                     'deposit_amount' => $activeLease->deposit_amount,
                     'deposit_paid_at' => $activeLease->deposit_paid_at,
                     'rent_due_day' => $activeLease->rent_due_day,
