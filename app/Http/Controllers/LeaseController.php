@@ -243,7 +243,7 @@ class LeaseController extends Controller
 
             $room->unsetRelation('leases');
 
-            if ($room->leases()->where('status', 'active')->doesntExist()) {
+            if ($room->leases()->where('status', 'active')->doesntExist() && $room->status !== RoomStatus::Maintenance) {
                 $room->update(['status' => RoomStatus::Available]);
             }
         });
