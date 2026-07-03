@@ -1,15 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
 import { Check, Pencil, Trash2, UserPlus } from 'lucide-react';
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
@@ -42,10 +33,9 @@ export default function TicketDetailSheet({
     canUpdate: boolean;
     canDelete: boolean;
     onEdit?: () => void;
-    rooms?: { id: number; name: string; property_id: number; has_maintenance_transfer?: number }[];
+    onResolve?: () => void;
 }) {
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
-    const [showResolveDialog, setShowResolveDialog] = useState(false);
 
     if (! ticket) {
 return null;
@@ -63,15 +53,12 @@ return null;
     };
 
     const handleStatusChange = (status: string) => {
-        if (status === 'resolved' && rooms) {
-            const room = rooms.find((r) => r.id === ticket.room_id);
-            if (room?.has_maintenance_transfer) {
-                setShowResolveDialog(true);
+        if (status === 'resolved' && onResolve) {
+            onResolve();
 
-                return;
-            }
+            return;
         }
-        router.put(maintenanceTickets.update.url(ticket.id), { status }, { preserveState: false });
+        router.put(maintenanceTickets.update.url(ticket.id), { status });
     };
 
     const handleAssignToMe = () => {
@@ -88,7 +75,6 @@ return null;
     };
 
     return (
-        <>
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
@@ -178,38 +164,5 @@ return null;
                 </div>
             </SheetContent>
         </Sheet>
-
-        <Dialog open={showResolveDialog} onOpenChange={setShowResolveDialog}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Restore Occupant?</DialogTitle>
-                    <DialogDescription>
-                        This room was vacated for maintenance. Move the occupant back?
-                    </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => {
-                        setShowResolveDialog(false);
-                        router.put(maintenanceTickets.update.url(ticket.id), {
-                            status: 'resolved',
-                            restore_room: '1',
-                        }, { preserveState: false });
-                    }}>
-                        Keep in current room
-                    </Button>
-                    <Button onClick={() => {
-                        setShowResolveDialog(false);
-                        router.put(maintenanceTickets.update.url(ticket.id), {
-                            status: 'resolved',
-                            restore_room: '1',
-                            move_back: '1',
-                        }, { preserveState: false });
-                    }}>
-                        Move back
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-        </>
     );
 }
