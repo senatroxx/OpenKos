@@ -26,6 +26,7 @@ export default function TicketDetailSheet({
     canUpdate,
     canDelete,
     onEdit,
+    onStatusChange,
 }: {
     ticket: MaintenanceTicket | null;
     open: boolean;
