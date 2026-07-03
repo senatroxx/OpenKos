@@ -60,6 +60,10 @@ class MaintenanceTicketController extends Controller
             $query->where('property_id', (int) $propertyId);
         }
 
+        if (! $request->user()->isOwner()) {
+            $query->whereHas('property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
+        }
+
         $result = $table->paginate($query, $request, 'tickets');
 
         $properties = Property::query()
