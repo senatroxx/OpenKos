@@ -300,14 +300,18 @@ class MaintenanceTicketController extends Controller
 
     public function assign(Request $request, MaintenanceTicket $ticket): RedirectResponse
     {
-        $this->authorize('update', $ticket);
-
         $validated = $request->validate([
             'assigned_to' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        if ((int) $validated['assigned_to'] !== $request->user()->id) {
+        $isSelfAssign = (int) $validated['assigned_to'] === $request->user()->id;
+
+        if ($isSelfAssign) {
+            $this->authorize('update', $ticket);
+            abort_unless($request->user()->can('maintenance-tickets.update'), 403, __('You do not have permission to self-assign tickets.'));
+        } else {
             $this->authorize('assign', $ticket);
+            abort_unless($request->user()->can('maintenance-tickets.assign'), 403, __('You do not have permission to assign tickets to others.'));
         }
 
         $ticket->update(['assigned_to' => $validated['assigned_to']]);
