@@ -214,9 +214,11 @@ it('moves tenant and blocks room when move_tenant_to_room_id provided', function
         ->assertRedirect();
 
     expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
-    expect($lease->fresh()->status)->toBe('terminated');
+    expect($lease->fresh()->status)->toBe('active');
+    expect($lease->fresh()->room_id)->toBe($targetRoom->id);
     expect($targetRoom->fresh()->status)->toBe(RoomStatus::Occupied);
     expect($targetRoom->leases()->where('status', 'active')->count())->toBe(1);
+    expect($lease->fresh()->roomHistories()->count())->toBe(1);
 });
 
 it('prevents leasing a maintenance room', function () {
