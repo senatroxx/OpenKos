@@ -9,6 +9,7 @@ import { TicketDetailSheet, TicketFormSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/formatters';
 import {
     Dialog,
     DialogContent,
@@ -104,6 +105,7 @@ export default function Index({
     const handleStatusChange = (ticket: MaintenanceTicket, status: string) => {
         if (status === 'resolved') {
             const room = rooms.find((r) => r.id === ticket.room_id);
+
             if (room?.has_maintenance_transfer) {
                 setResolveTicket(ticket);
 
@@ -168,7 +170,7 @@ export default function Index({
             key: 'created_at',
             label: 'Created',
             sortable: true,
-            render: (ticket) => new Date(ticket.created_at).toLocaleDateString(),
+            render: (ticket) => formatDate(ticket.created_at),
         },
         {
             key: 'actions',
@@ -288,7 +290,9 @@ export default function Index({
                     empty={{
                         message: 'No maintenance tickets yet.',
                         createLabel: can.create ? 'Report an issue' : undefined,
-                        onCreate: can.create ? () => { setFormVersion((v) => v + 1); setFormOpen(true); } : undefined,
+                        onCreate: can.create ? () => {
+ setFormVersion((v) => v + 1); setFormOpen(true); 
+} : undefined,
                     }}
                 />
 
@@ -337,6 +341,7 @@ setDetailTicket(null);
                             <Button variant="outline" onClick={() => {
                                 const ticket = resolveTicket;
                                 setResolveTicket(null);
+
                                 if (ticket) {
                                     router.put(maintenanceTickets.update.url(ticket.id), {
                                         status: 'resolved',
@@ -349,6 +354,7 @@ setDetailTicket(null);
                             <Button onClick={() => {
                                 const ticket = resolveTicket;
                                 setResolveTicket(null);
+
                                 if (ticket) {
                                     router.put(maintenanceTickets.update.url(ticket.id), {
                                         status: 'resolved',
