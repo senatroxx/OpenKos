@@ -30,7 +30,10 @@ class MaintenanceTicketController extends Controller
         $table = Table::make()
             ->columns([
                 Column::make('title', 'Title')->sortable()->searchable(),
-                Column::make('property_name', 'Property')->sortable(),
+                Column::make('property_name', 'Property')->sortable(function (Builder $q, string $direction) {
+                    $q->leftJoin('properties', 'maintenance_tickets.property_id', '=', 'properties.id')
+                        ->orderBy('properties.name', $direction);
+                }),
                 Column::make('priority', 'Priority')->sortable(),
                 Column::make('status', 'Status')->sortable(),
                 Column::make('created_at', 'Created')->sortable(),
