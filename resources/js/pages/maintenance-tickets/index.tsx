@@ -111,9 +111,7 @@ export default function Index({
             }
         }
 
-        router.put(maintenanceTickets.update.url(ticket.id), { status }, {
-            preserveState: false,
-        });
+        router.put(maintenanceTickets.update.url(ticket.id), { status });
     };
 
     const handleAssignToMe = (ticket: MaintenanceTicket) => {
@@ -319,9 +317,7 @@ setDetailTicket(null);
                     }}
                     canUpdate={can.update}
                     canDelete={can.delete}
-                    onResolve={() => {
-                        setResolveTicket(detailTicket);
-                    }}
+                    onStatusChange={handleStatusChange}
                     onEdit={() => {
                         setEditingTicket(detailTicket);
                         setDetailTicket(null);
@@ -345,7 +341,7 @@ setDetailTicket(null);
                                     router.put(maintenanceTickets.update.url(ticket.id), {
                                         status: 'resolved',
                                         restore_room: '1',
-                                    }, { preserveState: false });
+                                    });
                                 }
                             }}>
                                 Keep in current room
@@ -358,7 +354,7 @@ setDetailTicket(null);
                                         status: 'resolved',
                                         restore_room: '1',
                                         move_back: '1',
-                                    }, { preserveState: false });
+                                    });
                                 }
                             }}>
                                 Move back
