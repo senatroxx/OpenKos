@@ -2,20 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import properties from '@/routes/properties';
-import type { MaintenanceTicket } from '@/types';
-
-type Property = {
-    id: number;
-    name: string;
-    slug: string;
-    city: string | null;
-};
-
-type Room = {
-    id: number;
-    name: string;
-    floor: string | null;
-};
+import type { MaintenanceTicket, Property, Room } from '@/types';
 
 type PageProps = {
     property: Property;

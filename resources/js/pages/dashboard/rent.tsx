@@ -14,18 +14,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useTable } from '@/hooks/use-table';
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type RentDashboardEntry = {
-    id: number;
-    tenant_name: string;
-    room_name: string;
-    property_name: string;
-    rent_due_day: number;
-    days_overdue: number | null;
-    rent_amount: string;
-    rent_status: 'paid' | 'overdue' | 'due_today' | 'due_soon';
-};
+import type { PaginatedData, RentDashboardEntry, TableMeta } from '@/types';
 
 type PageProps = {
     entries: PaginatedData<RentDashboardEntry>;

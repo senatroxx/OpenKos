@@ -30,6 +30,24 @@ use Inertia\Response;
 
 class LeaseController extends Controller
 {
+    public function show(Lease $lease): Response
+    {
+        $this->authorize('view', $lease);
+
+        $lease->load([
+            'tenants:id,name,phone',
+            'primaryTenant:id,name,phone',
+            'room.property.city',
+            'payments.confirmedBy:id,name',
+            'payments.proofs',
+            'roomHistories.transferredBy:id,name',
+        ]);
+
+        return Inertia::render('leases/show', [
+            'lease' => $lease,
+        ]);
+    }
+
     public function index(Property $property, Room $room): Response
     {
         $this->authorize('viewAny', [Lease::class, $property]);

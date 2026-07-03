@@ -20,6 +20,21 @@ use Inertia\Response;
 
 class PropertyController extends Controller
 {
+    public function show(Property $property): Response
+    {
+        $this->authorize('view', $property);
+
+        $property = Property::with(['city', 'region'])
+            ->withCount('rooms')
+            ->withOccupiedRoomsCount()
+            ->withTenantsCount()
+            ->findOrFail($property->id);
+
+        return Inertia::render('properties/show', [
+            'property' => $property,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $table = Table::make()
