@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Maintenance\BlockRoom;
+use App\Actions\Maintenance\ResolveTicket;
+use App\Business\Maintenance\TransitionValidator;
 use App\Enums\MaintenanceStatus;
-use App\Enums\RoomStatus;
 use App\Http\Requests\Maintenance\StoreMaintenanceTicketRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceTicketRequest;
-use App\Models\Lease;
 use App\Models\LeaseRoomHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
@@ -18,12 +19,17 @@ use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class MaintenanceTicketController extends Controller
 {
+    public function __construct(
+        private TransitionValidator $transitionValidator,
+        private BlockRoom $blockRoom,
+        private ResolveTicket $resolveTicket,
+    ) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', MaintenanceTicket::class);
@@ -142,70 +148,12 @@ class MaintenanceTicketController extends Controller
         MaintenanceTicket::create($data);
 
         if ($blockRoom && ! empty($data['room_id'])) {
-            $this->blockRoom($data['room_id'], $moveToRoomId);
+            $this->blockRoom->execute($data['room_id'], $moveToRoomId);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket created.')]);
 
         return to_route('maintenance-tickets.index');
-    }
-
-    private function blockRoom(int $roomId, ?int $moveToRoomId): void
-    {
-        $room = Room::lockForUpdate()->findOrFail($roomId);
-        $activeLease = $room->leases()->where('status', 'active')->first();
-
-        if ($activeLease && $moveToRoomId) {
-            $targetRoom = Room::lockForUpdate()->findOrFail($moveToRoomId);
-
-            abort_if($targetRoom->status === RoomStatus::Maintenance, 422, __('Target room is under maintenance.'));
-            abort_if($targetRoom->id === $room->id, 422, __('Cannot move to the same room.'));
-
-            $targetHasLease = $targetRoom->leases()->where('status', 'active')->exists();
-            abort_if($targetHasLease, 422, __('Target room already has an active lease.'));
-
-            $activeLease->load('tenants');
-
-            $activeTenantsCount = DB::table('lease_tenant')
-                ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
-                ->where('leases.room_id', $targetRoom->id)
-                ->where('leases.status', 'active')
-                ->count();
-
-            $incomingCount = $activeLease->tenants->count();
-
-            abort_if(($activeTenantsCount + $incomingCount) > $targetRoom->capacity, 422, __('Target room capacity exceeded.'));
-
-            LeaseRoomHistory::create([
-                'lease_id' => $activeLease->id,
-                'from_room_id' => $room->id,
-                'to_room_id' => $targetRoom->id,
-                'transferred_by' => auth()->id(),
-                'reason' => 'maintenance',
-                'notes' => __('Room :from blocked for maintenance. Transfer to :to.', ['from' => $room->name, 'to' => $targetRoom->name]),
-                'effective_date' => now(),
-            ]);
-
-            $notes = $activeLease->notes
-                ? $activeLease->notes."\n".__('Transferred from :from to :to (maintenance)', ['from' => $room->name, 'to' => $targetRoom->name])
-                : __('Transferred from :from to :to (maintenance)', ['from' => $room->name, 'to' => $targetRoom->name]);
-
-            $activeLease->update([
-                'room_id' => $targetRoom->id,
-                'notes' => $notes,
-            ]);
-
-            $targetRoom->update(['status' => RoomStatus::Occupied]);
-            $room->update(['status' => RoomStatus::Maintenance]);
-
-            Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to :room. Ticket created.', ['name' => $targetRoom->name])]);
-        } elseif ($activeLease) {
-            $room->update(['status' => RoomStatus::Maintenance]);
-
-            Inertia::flash('toast', ['type' => 'warning', 'message' => __('Ticket created. Room :name is blocked but still has an active lease.', ['name' => $room->name])]);
-        } else {
-            $room->update(['status' => RoomStatus::Maintenance]);
-        }
     }
 
     public function update(UpdateMaintenanceTicketRequest $request, MaintenanceTicket $ticket): RedirectResponse
@@ -216,7 +164,7 @@ class MaintenanceTicketController extends Controller
 
         if (isset($validated['status'])) {
             $newStatus = MaintenanceStatus::from($validated['status']);
-            $this->validateTransition($ticket->status, $newStatus);
+            $this->transitionValidator->validate($ticket->status, $newStatus);
 
             if ($newStatus === MaintenanceStatus::Resolved) {
                 $validated['resolved_at'] ??= now();
@@ -230,71 +178,10 @@ class MaintenanceTicketController extends Controller
         $ticket->update($validated);
 
         if ($restoreRoom && $ticket->room_id) {
-            $staysMaintenance = MaintenanceTicket::query()
-                ->where('room_id', $ticket->room_id)
-                ->whereKeyNot($ticket->id)
-                ->whereNotIn('status', ['resolved', 'cancelled'])
-                ->exists();
+            $this->resolveTicket->execute($ticket, $moveBack);
 
-            if ($staysMaintenance) {
-                Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Room has other open tickets — not restored.')]);
-
-                return to_route('maintenance-tickets.index');
-            }
-
-            $room = Room::lockForUpdate()->findOrFail($ticket->room_id);
-
-            if ($moveBack) {
-                $transfer = LeaseRoomHistory::query()
-                    ->where('from_room_id', $ticket->room_id)
-                    ->where('reason', 'maintenance')
-                    ->orderBy('effective_date', 'desc')
-                    ->first();
-
-                if ($transfer) {
-                    $movedLease = Lease::where('status', 'active')
-                        ->where('room_id', $transfer->to_room_id)
-                        ->first();
-
-                    if ($movedLease) {
-                        $targetHasLease = $room->leases()
-                            ->where('status', 'active')
-                            ->whereKeyNot($movedLease->id)
-                            ->exists();
-
-                        abort_if($targetHasLease, 422, __('Original room now has an active lease. Cannot move back.'));
-
-                        LeaseRoomHistory::create([
-                            'lease_id' => $movedLease->id,
-                            'from_room_id' => $transfer->to_room_id,
-                            'to_room_id' => $room->id,
-                            'transferred_by' => auth()->id(),
-                            'reason' => 'maintenance_resolved',
-                            'notes' => __('Ticket :ref resolved. Transfer back to :room.', ['ref' => $ticket->reference, 'room' => $room->name]),
-                            'effective_date' => now(),
-                        ]);
-
-                        $notes = $movedLease->notes
-                            ? $movedLease->notes."\n".__('Transferred back to :room (maintenance resolved)', ['room' => $room->name])
-                            : __('Transferred back to :room (maintenance resolved)', ['room' => $room->name]);
-
-                        $movedLease->update([
-                            'room_id' => $room->id,
-                            'notes' => $notes,
-                        ]);
-
-                        $targetRoom = Room::lockForUpdate()->findOrFail($transfer->to_room_id);
-                        $targetRoomStillOccupied = $targetRoom->leases()->where('status', 'active')->exists();
-                        $targetRoom->update(['status' => $targetRoomStillOccupied ? RoomStatus::Occupied : RoomStatus::Available]);
-                    }
-                }
-            }
-
-            $hasActiveLease = $room->leases()->where('status', 'active')->exists();
-            $newRoomStatus = $hasActiveLease ? RoomStatus::Occupied : RoomStatus::Available;
-            $room->update(['status' => $newRoomStatus]);
-
-            Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Room :name restored.', ['name' => $room->name])]);
+            $roomName = Room::find($ticket->room_id)?->name ?? '';
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Room :name restored.', ['name' => $roomName])]);
 
             return to_route('maintenance-tickets.index');
         }
@@ -336,19 +223,5 @@ class MaintenanceTicketController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket deleted.')]);
 
         return to_route('maintenance-tickets.index');
-    }
-
-    private function validateTransition(MaintenanceStatus $current, MaintenanceStatus $next): void
-    {
-        $allowed = match ($current) {
-            MaintenanceStatus::Reported => [MaintenanceStatus::InProgress, MaintenanceStatus::Cancelled],
-            MaintenanceStatus::InProgress => [MaintenanceStatus::Resolved, MaintenanceStatus::Cancelled],
-            default => [],
-        };
-
-        abort_unless(in_array($next, $allowed), 422, __('Cannot transition from :current to :next.', [
-            'current' => $current->label(),
-            'next' => $next->label(),
-        ]));
     }
 }
