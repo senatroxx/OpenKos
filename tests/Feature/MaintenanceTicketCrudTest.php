@@ -3,6 +3,7 @@
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Enums\RoomStatus;
+use App\Models\LeaseRoomHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Room;
@@ -362,7 +363,7 @@ it('moves tenant back when resolving ticket with move_back flag', function () {
     ]);
     $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
 
-    \App\Models\LeaseRoomHistory::create([
+    LeaseRoomHistory::create([
         'lease_id' => $lease->id,
         'from_room_id' => $room->id,
         'to_room_id' => $targetRoom->id,
