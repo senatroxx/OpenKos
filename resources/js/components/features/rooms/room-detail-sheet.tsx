@@ -306,20 +306,36 @@ export default function RoomDetailSheet({
                                 </Button>
                             )}
                             {room && property && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => {
-                                        onOpenChange(false);
-                                        router.get(
-                                            properties.rooms.leases.index.url({
-                                                property: property.id,
-                                                room: room.id,
-                                            }),
-                                        );
-                                    }}
-                                >
-                                    Lease History
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            onOpenChange(false);
+                                            router.get(
+                                                properties.rooms.leases.index.url({
+                                                    property: property.id,
+                                                    room: room.id,
+                                                }),
+                                            );
+                                        }}
+                                    >
+                                        Lease History
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            onOpenChange(false);
+                                            router.get(
+                                                properties.rooms.maintenanceHistory.url({
+                                                    property: property.id,
+                                                    room: room.id,
+                                                }),
+                                            );
+                                        }}
+                                    >
+                                        Maintenance History
+                                    </Button>
+                                </>
                             )}
                             <Button
                                 variant="ghost"
