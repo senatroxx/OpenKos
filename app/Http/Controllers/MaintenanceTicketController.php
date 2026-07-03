@@ -111,6 +111,7 @@ class MaintenanceTicketController extends Controller
 
         return Inertia::render('maintenance-tickets/index', [
             ...$result,
+            'property_id' => $request->query('property_id'),
             'properties' => $properties,
             'rooms' => $rooms,
             'users' => User::query()
