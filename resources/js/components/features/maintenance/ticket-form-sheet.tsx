@@ -1,5 +1,5 @@
-import { Form } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { Form, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -88,13 +88,10 @@ export default function TicketFormSheet({
         )
         : [];
 
-    const formRef = useRef<HTMLFormElement>(null);
-
-    const handleCreateClick = () => {
+    const handleCreateClick = (e: React.MouseEvent) => {
         if (!isEdit && blockRoom && selectedRoomOccupied) {
+            e.preventDefault();
             setShowOccupiedDialog(true);
-        } else {
-            formRef.current?.requestSubmit();
         }
     };
 
@@ -111,7 +108,7 @@ export default function TicketFormSheet({
 
                     <div className="flex-1 overflow-y-auto px-4">
                         <Form
-                            ref={formRef}
+                            id="ticket-form"
                             action={formAction}
                             method={formMethod}
                             onSuccess={() => onOpenChange(false)}
@@ -294,7 +291,7 @@ export default function TicketFormSheet({
                                         >
                                             Cancel
                                         </Button>
-                                        <Button disabled={processing} type="button" onClick={handleCreateClick}>
+                                        <Button disabled={processing} type="submit" onClick={handleCreateClick}>
                                             {isEdit ? 'Save' : 'Create'}
                                         </Button>
                                     </div>
@@ -350,17 +347,20 @@ export default function TicketFormSheet({
                         <Button
                             onClick={() => {
                                 setShowOccupiedDialog(false);
-                                const form = formRef.current;
-                                if (form) {
-                                    if (moveToRoomId) {
-                                        const input = document.createElement('input');
-                                        input.type = 'hidden';
-                                        input.name = 'move_tenant_to_room_id';
-                                        input.value = moveToRoomId;
-                                        form.appendChild(input);
-                                    }
-                                    form.requestSubmit();
+                                const formEl = document.getElementById('ticket-form');
+                                if (!formEl) {return;}
+                                const data: Record<string, string> = {};
+                                new FormData(formEl as HTMLFormElement).forEach((v, k) => {
+                                    data[k] = String(v);
+                                });
+                                if (moveToRoomId) {
+                                    data.move_tenant_to_room_id = moveToRoomId;
                                 }
+                                router.visit(formAction, {
+                                    method: formMethod,
+                                    data,
+                                    onSuccess: () => onOpenChange(false),
+                                });
                             }}
                         >
                             Continue
