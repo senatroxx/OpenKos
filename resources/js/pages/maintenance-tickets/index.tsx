@@ -76,6 +76,7 @@ export default function Index({
     per_page: currentPerPage = '15',
     status: currentStatus = '',
     priority: currentPriority = '',
+    propertyId: currentPropertyId = '',
 }: {
     tickets: { data: MaintenanceTicket[] };
     properties: { id: number; name: string }[];
@@ -88,6 +89,7 @@ export default function Index({
     per_page?: number | string;
     status?: string;
     priority?: string;
+    property_id?: string;
 }) {
     const [formOpen, setFormOpen] = useState(false);
     const [formVersion, setFormVersion] = useState(0);
@@ -106,6 +108,7 @@ export default function Index({
             per_page: String(currentPerPage),
             status: currentStatus,
             priority: currentPriority,
+            property_id: currentPropertyId,
         },
         defaults: {
             sort: '-created_at',
