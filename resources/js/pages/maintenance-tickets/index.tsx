@@ -10,13 +10,29 @@ import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useTable } from '@/hooks/use-table';
+import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
@@ -52,6 +68,7 @@ export default function Index({
     tickets: data,
     properties,
     rooms,
+    users,
     can,
     table: tableMeta,
     sort: currentSort = '-created_at',
@@ -59,10 +76,12 @@ export default function Index({
     per_page: currentPerPage = '15',
     status: currentStatus = '',
     priority: currentPriority = '',
+    propertyId: currentPropertyId = '',
 }: {
     tickets: { data: MaintenanceTicket[] };
     properties: { id: number; name: string }[];
-    rooms: { id: number; name: string; property_id: number }[];
+    rooms: { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] }[];
+    users: { id: number; name: string; roles?: { name: string; label?: string }[] }[];
     can: { create: boolean; update: boolean; delete: boolean; assign: boolean };
     table: { filters: TableFilterMeta[] };
     sort?: string;
@@ -70,10 +89,15 @@ export default function Index({
     per_page?: number | string;
     status?: string;
     priority?: string;
+    property_id?: string;
 }) {
     const [formOpen, setFormOpen] = useState(false);
+    const [formVersion, setFormVersion] = useState(0);
     const [editingTicket, setEditingTicket] = useState<MaintenanceTicket | null>(null);
     const [detailTicket, setDetailTicket] = useState<MaintenanceTicket | null>(null);
+    const [resolveTicket, setResolveTicket] = useState<MaintenanceTicket | null>(null);
+    const [assignTicket, setAssignTicket] = useState<MaintenanceTicket | null>(null);
+    const [assigneeId, setAssigneeId] = useState('');
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
     const table = useTable({
@@ -84,6 +108,7 @@ export default function Index({
             per_page: String(currentPerPage),
             status: currentStatus,
             priority: currentPriority,
+            property_id: currentPropertyId,
         },
         defaults: {
             sort: '-created_at',
@@ -92,6 +117,16 @@ export default function Index({
     });
 
     const handleStatusChange = (ticket: MaintenanceTicket, status: string) => {
+        if (status === 'resolved') {
+            const room = rooms.find((r) => r.id === ticket.room_id);
+
+            if (room?.has_maintenance_transfer) {
+                setResolveTicket(ticket);
+
+                return;
+            }
+        }
+
         router.put(maintenanceTickets.update.url(ticket.id), { status });
     };
 
@@ -149,7 +184,7 @@ export default function Index({
             key: 'created_at',
             label: 'Created',
             sortable: true,
-            render: (ticket) => new Date(ticket.created_at).toLocaleDateString(),
+            render: (ticket) => formatDate(ticket.created_at),
         },
         {
             key: 'actions',
@@ -187,6 +222,15 @@ export default function Index({
                             <DropdownMenuItem onClick={() => handleAssignToMe(ticket)}>
                                 <UserPlus className="size-4" />
                                 Assign to me
+                            </DropdownMenuItem>
+                        )}
+                        {can.assign && (
+                            <DropdownMenuItem onClick={() => {
+                                setAssignTicket(ticket);
+                                setAssigneeId('');
+                            }}>
+                                <UserPlus className="size-4" />
+                                Assign to...
                             </DropdownMenuItem>
                         )}
                         {(can.update || can.delete) && (
@@ -234,7 +278,7 @@ export default function Index({
                     />
                     {can.create && (
                         <Button onClick={() => {
- setEditingTicket(null); setFormOpen(true); 
+ setEditingTicket(null); setFormVersion((v) => v + 1); setFormOpen(true); 
 }}>New Ticket</Button>
                     )}
                 </div>
@@ -269,11 +313,14 @@ export default function Index({
                     empty={{
                         message: 'No maintenance tickets yet.',
                         createLabel: can.create ? 'Report an issue' : undefined,
-                        onCreate: can.create ? () => setFormOpen(true) : undefined,
+                        onCreate: can.create ? () => {
+ setFormVersion((v) => v + 1); setFormOpen(true); 
+} : undefined,
                     }}
                 />
 
                 <TicketFormSheet
+                    key={editingTicket ? `edit-${editingTicket.id}` : `create-${formVersion}`}
                     open={formOpen}
                     onOpenChange={(open) => {
                         setFormOpen(open);
@@ -297,12 +344,115 @@ setDetailTicket(null);
                     }}
                     canUpdate={can.update}
                     canDelete={can.delete}
+                    canAssign={can.assign}
+                    onStatusChange={handleStatusChange}
+                    onAssignTo={() => {
+                        setAssignTicket(detailTicket);
+                        setAssigneeId('');
+                    }}
                     onEdit={() => {
                         setEditingTicket(detailTicket);
                         setDetailTicket(null);
                         setFormOpen(true);
                     }}
                 />
+
+                <Dialog open={resolveTicket !== null} onOpenChange={() => setResolveTicket(null)}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Restore Occupant?</DialogTitle>
+                            <DialogDescription>
+                                This room was vacated for maintenance. Move the occupant back?
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                                const ticket = resolveTicket;
+                                setResolveTicket(null);
+
+                                if (ticket) {
+                                    router.put(maintenanceTickets.update.url(ticket.id), {
+                                        status: 'resolved',
+                                        restore_room: '1',
+                                    });
+                                }
+                            }}>
+                                Keep in current room
+                            </Button>
+                            <Button onClick={() => {
+                                const ticket = resolveTicket;
+                                setResolveTicket(null);
+
+                                if (ticket) {
+                                    router.put(maintenanceTickets.update.url(ticket.id), {
+                                        status: 'resolved',
+                                        restore_room: '1',
+                                        move_back: '1',
+                                    });
+                                }
+                            }}>
+                                Move back
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={assignTicket !== null} onOpenChange={() => {
+                    setAssignTicket(null);
+                    setAssigneeId('');
+                }}>
+                    <DialogContent className="sm:max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle>Assign Ticket</DialogTitle>
+                            <DialogDescription>
+                                Select a staff member to assign this ticket to.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Select value={assigneeId} onValueChange={setAssigneeId}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select staff..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {users.filter((u) => u.id !== auth.user.id).map((u) => {
+                                        const role = u.roles?.[0];
+                                        const label = role ? ` — ${role.label ?? role.name}` : '';
+
+                                        return (
+                                            <SelectItem key={u.id} value={String(u.id)}>
+                                                {u.name}{label}
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                                setAssignTicket(null);
+                                setAssigneeId('');
+                            }}>
+                                Cancel
+                            </Button>
+                            <Button
+                                disabled={! assigneeId}
+                                onClick={() => {
+                                    const ticket = assignTicket;
+                                    setAssignTicket(null);
+                                    setAssigneeId('');
+
+                                    if (ticket && assigneeId) {
+                                        router.post(maintenanceTickets.assign.url(ticket.id), {
+                                            assigned_to: Number(assigneeId),
+                                        });
+                                    }
+                                }}
+                            >
+                                Assign
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );

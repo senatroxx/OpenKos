@@ -578,6 +578,52 @@ export default function LeaseDetailSheet({
                                     </section>
                                 </Collapsible>
                             )}
+
+                            {/* Room History */}
+                            {lease.room_histories && lease.room_histories.length > 0 && (
+                                <Collapsible defaultOpen>
+                                    <section>
+                                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
+                                            <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                                Room History
+                                            </h3>
+                                            <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent className="mt-3">
+                                            <div className="rounded-lg border">
+                                                {lease.room_histories.map((h, i) => (
+                                                    <div
+                                                        key={h.id}
+                                                        className={`flex items-start gap-3 p-3 text-sm ${
+                                                            i > 0 ? 'border-t' : ''
+                                                        }`}
+                                                    >
+                                                        <div className="mt-0.5 size-2 shrink-0 rounded-full bg-muted-foreground/30" />
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="font-medium">{h.from_room?.name ?? '—'}</span>
+                                                                <span className="text-muted-foreground">→</span>
+                                                                <span className="font-medium">{h.to_room?.name ?? '—'}</span>
+                                                            </div>
+                                                            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                                                                {h.reason && (
+                                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                                                        {h.reason}
+                                                                    </Badge>
+                                                                )}
+                                                                <span>{formatDate(h.effective_date)}</span>
+                                                                {h.transferred_by && (
+                                                                    <span>by {h.transferred_by.name}{h.transferred_by.roles?.[0] ? ` — ${h.transferred_by.roles[0].label ?? h.transferred_by.roles[0].name}` : ''}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CollapsibleContent>
+                                    </section>
+                                </Collapsible>
+                            )}
                         </div>
 
                         <div className="flex flex-wrap items-center justify-end gap-4">

@@ -1,4 +1,11 @@
 import { Button } from '@/components/ui/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import type { PaginatedData } from '@/types';
 
 type DataTablePaginationProps<T> = {
@@ -27,19 +34,21 @@ export function DataTablePagination<T>({
                     <span className="text-xs text-muted-foreground">
                         Per page
                     </span>
-                    <select
-                        className="rounded-md border border-input bg-transparent px-2 py-1 text-xs shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                        value={perPage}
-                        onChange={(e) =>
-                            onPerPageChange(Number(e.target.value))
-                        }
+                    <Select
+                        value={String(perPage)}
+                        onValueChange={(v) => onPerPageChange(Number(v))}
                     >
-                        {[10, 15, 25, 50].map((n) => (
-                            <option key={n} value={n}>
-                                {n}
-                            </option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="h-8 w-16 text-xs">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {[10, 15, 25, 50].map((n) => (
+                                <SelectItem key={n} value={String(n)}>
+                                    {n}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 

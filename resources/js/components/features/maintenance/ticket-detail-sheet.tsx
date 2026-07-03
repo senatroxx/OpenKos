@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Check, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
@@ -25,14 +26,20 @@ export default function TicketDetailSheet({
     onOpenChange,
     canUpdate,
     canDelete,
+    canAssign,
     onEdit,
+    onStatusChange,
+    onAssignTo,
 }: {
     ticket: MaintenanceTicket | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     canUpdate: boolean;
     canDelete: boolean;
+    canAssign?: boolean;
     onEdit?: () => void;
+    onStatusChange?: (ticket: MaintenanceTicket, status: string) => void;
+    onAssignTo?: () => void;
 }) {
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
@@ -52,7 +59,9 @@ return null;
     };
 
     const handleStatusChange = (status: string) => {
-        router.put(maintenanceTickets.update.url(ticket.id), { status });
+        if (onStatusChange) {
+            onStatusChange(ticket, status);
+        }
     };
 
     const handleAssignToMe = () => {
@@ -104,9 +113,17 @@ return null;
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">Created At</p>
-                                    <p className="text-sm">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                                    <p className="text-sm">{formatDate(ticket.created_at)}</p>
                                 </div>
                             </div>
+
+                            {ticket.maintenance_transfer_to && (
+                                <div className="rounded-lg border p-3 text-sm">
+                                    <span className="text-muted-foreground">Occupant moved to </span>
+                                    <span className="font-medium">{ticket.maintenance_transfer_to}</span>
+                                    <span className="text-muted-foreground"> during maintenance</span>
+                                </div>
+                            )}
 
                             {ticket.description && (
                                 <div>
@@ -124,7 +141,7 @@ return null;
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 border-t py-3 [&_button]:cursor-pointer">
+                    <div className="flex flex-wrap items-center gap-2 border-t py-3 [&_button]:cursor-pointer">
                         {canUpdate && (
                             <Button size="sm" variant="outline" onClick={onEdit}>
                                 <Pencil className="size-3.5" />
@@ -149,9 +166,16 @@ return null;
                                 <span className="ml-1">Assign to me</span>
                             </Button>
                         )}
+                        {canAssign && (
+                            <Button size="sm" variant="outline" onClick={onAssignTo}>
+                                <UserPlus className="size-3.5" />
+                                <span className="ml-1">Assign to...</span>
+                            </Button>
+                        )}
                         {canDelete && (
                             <Button size="sm" variant="destructive" onClick={handleDelete}>
                                 <Trash2 className="size-3.5" />
+                                <span className="ml-1">Delete</span>
                             </Button>
                         )}
                     </div>
