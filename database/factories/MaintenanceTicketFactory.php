@@ -15,11 +15,11 @@ class MaintenanceTicketFactory extends Factory
 
     public function definition(): array
     {
-        $room = Room::factory()->create();
-
         return [
-            'property_id' => $room->property_id,
-            'room_id' => $room->id,
+            'room_id' => Room::factory(),
+            'property_id' => function (array $attributes) {
+                return Room::find($attributes['room_id'])?->property_id;
+            },
             'title' => fake()->sentence(4),
             'description' => fake()->paragraph(),
             'status' => 'reported',
