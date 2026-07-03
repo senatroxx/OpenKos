@@ -24,6 +24,13 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useTable } from '@/hooks/use-table';
 import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
@@ -61,6 +68,7 @@ export default function Index({
     tickets: data,
     properties,
     rooms,
+    users,
     can,
     table: tableMeta,
     sort: currentSort = '-created_at',
@@ -72,6 +80,7 @@ export default function Index({
     tickets: { data: MaintenanceTicket[] };
     properties: { id: number; name: string }[];
     rooms: { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] }[];
+    users: { id: number; name: string; roles?: { name: string; label?: string }[] }[];
     can: { create: boolean; update: boolean; delete: boolean; assign: boolean };
     table: { filters: TableFilterMeta[] };
     sort?: string;
@@ -85,6 +94,8 @@ export default function Index({
     const [editingTicket, setEditingTicket] = useState<MaintenanceTicket | null>(null);
     const [detailTicket, setDetailTicket] = useState<MaintenanceTicket | null>(null);
     const [resolveTicket, setResolveTicket] = useState<MaintenanceTicket | null>(null);
+    const [assignTicket, setAssignTicket] = useState<MaintenanceTicket | null>(null);
+    const [assigneeId, setAssigneeId] = useState('');
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
     const table = useTable({
@@ -210,6 +221,15 @@ export default function Index({
                                 Assign to me
                             </DropdownMenuItem>
                         )}
+                        {can.assign && (
+                            <DropdownMenuItem onClick={() => {
+                                setAssignTicket(ticket);
+                                setAssigneeId('');
+                            }}>
+                                <UserPlus className="size-4" />
+                                Assign to...
+                            </DropdownMenuItem>
+                        )}
                         {(can.update || can.delete) && (
                             <DropdownMenuSeparator />
                         )}
@@ -321,7 +341,12 @@ setDetailTicket(null);
                     }}
                     canUpdate={can.update}
                     canDelete={can.delete}
+                    canAssign={can.assign}
                     onStatusChange={handleStatusChange}
+                    onAssignTo={() => {
+                        setAssignTicket(detailTicket);
+                        setAssigneeId('');
+                    }}
                     onEdit={() => {
                         setEditingTicket(detailTicket);
                         setDetailTicket(null);
@@ -364,6 +389,63 @@ setDetailTicket(null);
                                 }
                             }}>
                                 Move back
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={assignTicket !== null} onOpenChange={() => {
+                    setAssignTicket(null);
+                    setAssigneeId('');
+                }}>
+                    <DialogContent className="sm:max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle>Assign Ticket</DialogTitle>
+                            <DialogDescription>
+                                Select a staff member to assign this ticket to.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Select value={assigneeId} onValueChange={setAssigneeId}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select staff..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {users.filter((u) => u.id !== auth.user.id).map((u) => {
+                                        const role = u.roles?.[0];
+                                        const label = role ? ` — ${role.label ?? role.name}` : '';
+
+                                        return (
+                                            <SelectItem key={u.id} value={String(u.id)}>
+                                                {u.name}{label}
+                                            </SelectItem>
+                                        );
+                                    })}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                                setAssignTicket(null);
+                                setAssigneeId('');
+                            }}>
+                                Cancel
+                            </Button>
+                            <Button
+                                disabled={! assigneeId}
+                                onClick={() => {
+                                    const ticket = assignTicket;
+                                    setAssignTicket(null);
+                                    setAssigneeId('');
+
+                                    if (ticket && assigneeId) {
+                                        router.post(maintenanceTickets.assign.url(ticket.id), {
+                                            assigned_to: Number(assigneeId),
+                                        });
+                                    }
+                                }}
+                            >
+                                Assign
                             </Button>
                         </DialogFooter>
                     </DialogContent>

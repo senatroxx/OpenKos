@@ -26,16 +26,20 @@ export default function TicketDetailSheet({
     onOpenChange,
     canUpdate,
     canDelete,
+    canAssign,
     onEdit,
     onStatusChange,
+    onAssignTo,
 }: {
     ticket: MaintenanceTicket | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     canUpdate: boolean;
     canDelete: boolean;
+    canAssign?: boolean;
     onEdit?: () => void;
     onStatusChange?: (ticket: MaintenanceTicket, status: string) => void;
+    onAssignTo?: () => void;
 }) {
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
@@ -160,6 +164,12 @@ return null;
                             <Button size="sm" variant="outline" onClick={handleAssignToMe}>
                                 <UserPlus className="size-3.5" />
                                 <span className="ml-1">Assign to me</span>
+                            </Button>
+                        )}
+                        {canAssign && (
+                            <Button size="sm" variant="outline" onClick={onAssignTo}>
+                                <UserPlus className="size-3.5" />
+                                <span className="ml-1">Assign to...</span>
                             </Button>
                         )}
                         {canDelete && (
