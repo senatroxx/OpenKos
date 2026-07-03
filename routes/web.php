@@ -50,6 +50,10 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::delete('{lease}', [LeaseController::class, 'destroy'])->name('destroy')->middleware('permission:leases.delete');
                     Route::post('{lease}/move', [LeaseController::class, 'move'])->name('move')->middleware('permission:leases.move');
                 });
+
+                Route::get('{room}/maintenance-history', [RoomController::class, 'maintenanceHistory'])
+                    ->name('maintenance-history')
+                    ->middleware('permission:maintenance-tickets.view');
             });
         });
     });
