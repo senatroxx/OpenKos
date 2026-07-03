@@ -42,6 +42,7 @@ export default function RoomFormSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const isEdit = Boolean(room);
+    const [status, setStatus] = useState(room?.status ?? 'available');
     const formAction = isEdit
         ? properties.rooms.update.url({ property: property.id, room: room!.id })
         : properties.rooms.store.url(property.id);
@@ -287,40 +288,24 @@ export default function RoomFormSheet({
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="status">Status</Label>
-                                        <select
-                                            id="status"
-                                            name="status"
-                                            defaultValue={
-                                                room?.status ?? 'available'
-                                            }
-                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                        >
-                                            {[
-                                                {
-                                                    value: 'available',
-                                                    label: 'Available',
-                                                },
-                                                {
-                                                    value: 'occupied',
-                                                    label: 'Occupied',
-                                                },
-                                                {
-                                                    value: 'maintenance',
-                                                    label: 'Maintenance',
-                                                },
-                                                {
-                                                    value: 'unavailable',
-                                                    label: 'Unavailable',
-                                                },
-                                            ].map((opt) => (
-                                                <option
-                                                    key={opt.value}
-                                                    value={opt.value}
-                                                >
-                                                    {opt.label}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <input type="hidden" name="status" value={status} />
+                                        <Select value={status} onValueChange={setStatus}>
+                                            <SelectTrigger id="status" className="w-full">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {[
+                                                    { value: 'available', label: 'Available' },
+                                                    { value: 'occupied', label: 'Occupied' },
+                                                    { value: 'maintenance', label: 'Maintenance' },
+                                                    { value: 'unavailable', label: 'Unavailable' },
+                                                ].map((opt) => (
+                                                    <SelectItem key={opt.value} value={opt.value}>
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                         <InputError message={errors.status} />
                                     </div>
                                 </div>

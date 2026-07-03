@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Maintenance\BlockRoom;
+use App\Actions\Maintenance\ResolveTicket;
+use App\Business\Maintenance\TransitionValidator;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Maintenance\StoreMaintenanceTicketRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceTicketRequest;
+use App\Models\LeaseRoomHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Room;
+use App\Models\User;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -19,6 +24,12 @@ use Inertia\Response;
 
 class MaintenanceTicketController extends Controller
 {
+    public function __construct(
+        private TransitionValidator $transitionValidator,
+        private BlockRoom $blockRoom,
+        private ResolveTicket $resolveTicket,
+    ) {}
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', MaintenanceTicket::class);
@@ -26,7 +37,10 @@ class MaintenanceTicketController extends Controller
         $table = Table::make()
             ->columns([
                 Column::make('title', 'Title')->sortable()->searchable(),
-                Column::make('property_name', 'Property')->sortable(),
+                Column::make('property_name', 'Property')->sortable(function (Builder $q, string $direction) {
+                    $q->leftJoin('properties', 'maintenance_tickets.property_id', '=', 'properties.id')
+                        ->orderBy('properties.name', $direction);
+                }),
                 Column::make('priority', 'Priority')->sortable(),
                 Column::make('status', 'Status')->sortable(),
                 Column::make('created_at', 'Created')->sortable(),
@@ -40,11 +54,24 @@ class MaintenanceTicketController extends Controller
             ->defaultSort('-created_at');
 
         $query = MaintenanceTicket::query()
-            ->with(['property:id,name', 'room:id,name', 'assignee.roles', 'creator.roles']);
+            ->with(['property:id,name', 'room:id,name', 'assignee.roles', 'creator.roles'])
+            ->addSelect([
+                'maintenance_transfer_to' => LeaseRoomHistory::query()
+                    ->select('rooms.name')
+                    ->join('rooms', 'lease_room_histories.to_room_id', '=', 'rooms.id')
+                    ->whereColumn('lease_room_histories.from_room_id', 'maintenance_tickets.room_id')
+                    ->where('lease_room_histories.reason', 'maintenance')
+                    ->orderByDesc('lease_room_histories.effective_date')
+                    ->limit(1),
+            ]);
 
         $propertyId = $request->query('property_id');
         if ($propertyId) {
             $query->where('property_id', (int) $propertyId);
+        }
+
+        if (! $request->user()->isOwner()) {
+            $query->whereHas('property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
         }
 
         $result = $table->paginate($query, $request, 'tickets');
@@ -58,14 +85,45 @@ class MaintenanceTicketController extends Controller
             ->get(['id', 'name']);
 
         $rooms = Room::query()
-            ->select(['id', 'name', 'property_id'])
+            ->select(['id', 'name', 'property_id', 'status'])
+            ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', 'active')])
+            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenants:id,name')])
+            ->addSelect([
+                'has_maintenance_transfer' => LeaseRoomHistory::query()
+                    ->selectRaw('1')
+                    ->whereColumn('from_room_id', 'rooms.id')
+                    ->where('reason', 'maintenance')
+                    ->limit(1),
+            ])
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
+                'property.users',
+                fn (Builder $q) => $q->whereKey($request->user()->id),
+            ))
             ->orderBy('name')
             ->get();
 
+        $transfers = LeaseRoomHistory::query()
+            ->with('toRoom:id,name')
+            ->where('reason', 'maintenance')
+            ->whereIn('from_room_id', $rooms->pluck('id'))
+            ->orderBy('effective_date', 'desc')
+            ->get()
+            ->keyBy('from_room_id');
+
+        foreach ($rooms as $room) {
+            $transfer = $transfers->get($room->id);
+            $room->transfer_to_room_name = $transfer?->toRoom?->name;
+        }
+
         return Inertia::render('maintenance-tickets/index', [
             ...$result,
+            'property_id' => $request->query('property_id'),
             'properties' => $properties,
             'rooms' => $rooms,
+            'users' => User::query()
+                ->with('roles')
+                ->orderBy('name')
+                ->get(['id', 'name']),
             'can' => [
                 'create' => $request->user()->can('maintenance-tickets.create'),
                 'update' => $request->user()->can('maintenance-tickets.update'),
@@ -83,7 +141,15 @@ class MaintenanceTicketController extends Controller
         $data['created_by'] = $request->user()->id;
         $data['status'] = MaintenanceStatus::Reported->value;
 
+        $blockRoom = ! empty($data['block_room']);
+        $moveToRoomId = $data['move_tenant_to_room_id'] ?? null;
+        unset($data['block_room'], $data['move_tenant_to_room_id']);
+
         MaintenanceTicket::create($data);
+
+        if ($blockRoom && ! empty($data['room_id'])) {
+            $this->blockRoom->execute($data['room_id'], $moveToRoomId);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket created.')]);
 
@@ -98,14 +164,27 @@ class MaintenanceTicketController extends Controller
 
         if (isset($validated['status'])) {
             $newStatus = MaintenanceStatus::from($validated['status']);
-            $this->validateTransition($ticket->status, $newStatus);
+            $this->transitionValidator->validate($ticket->status, $newStatus);
 
             if ($newStatus === MaintenanceStatus::Resolved) {
                 $validated['resolved_at'] ??= now();
             }
         }
 
+        $restoreRoom = ! empty($validated['restore_room']);
+        $moveBack = ! empty($validated['move_back']);
+        unset($validated['restore_room'], $validated['move_back']);
+
         $ticket->update($validated);
+
+        if ($restoreRoom && $ticket->room_id) {
+            $this->resolveTicket->execute($ticket, $moveBack);
+
+            $roomName = Room::find($ticket->room_id)?->name ?? '';
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Room :name restored.', ['name' => $roomName])]);
+
+            return to_route('maintenance-tickets.index');
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket updated.')]);
 
@@ -114,14 +193,18 @@ class MaintenanceTicketController extends Controller
 
     public function assign(Request $request, MaintenanceTicket $ticket): RedirectResponse
     {
-        $this->authorize('update', $ticket);
-
         $validated = $request->validate([
             'assigned_to' => ['required', 'integer', 'exists:users,id'],
         ]);
 
-        if ((int) $validated['assigned_to'] !== $request->user()->id) {
+        $isSelfAssign = (int) $validated['assigned_to'] === $request->user()->id;
+
+        if ($isSelfAssign) {
+            $this->authorize('update', $ticket);
+            abort_unless($request->user()->can('maintenance-tickets.update'), 403, __('You do not have permission to self-assign tickets.'));
+        } else {
             $this->authorize('assign', $ticket);
+            abort_unless($request->user()->can('maintenance-tickets.assign'), 403, __('You do not have permission to assign tickets to others.'));
         }
 
         $ticket->update(['assigned_to' => $validated['assigned_to']]);
@@ -140,19 +223,5 @@ class MaintenanceTicketController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket deleted.')]);
 
         return to_route('maintenance-tickets.index');
-    }
-
-    private function validateTransition(MaintenanceStatus $current, MaintenanceStatus $next): void
-    {
-        $allowed = match ($current) {
-            MaintenanceStatus::Reported => [MaintenanceStatus::InProgress, MaintenanceStatus::Cancelled],
-            MaintenanceStatus::InProgress => [MaintenanceStatus::Resolved, MaintenanceStatus::Cancelled],
-            default => [],
-        };
-
-        abort_unless(in_array($next, $allowed), 422, __('Cannot transition from :current to :next.', [
-            'current' => $current->label(),
-            'next' => $next->label(),
-        ]));
     }
 }

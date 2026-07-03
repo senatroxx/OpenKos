@@ -47,7 +47,7 @@ class MoveOutLease
 
         $oldRoom->unsetRelation('leases');
 
-        if ($oldRoom->leases()->where('status', 'active')->doesntExist()) {
+        if ($oldRoom->leases()->where('status', 'active')->doesntExist() && $oldRoom->status !== RoomStatus::Maintenance) {
             $oldRoom->update(['status' => RoomStatus::Available]);
         }
 
@@ -57,6 +57,9 @@ class MoveOutLease
     private function transfer(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
         $targetRoom = Room::lockForUpdate()->findOrFail($data->targetRoomId);
+
+        abort_if($targetRoom->status === RoomStatus::Maintenance, 422, __('Target room is under maintenance.'));
+
         $lease->load('tenants');
 
         $incomingTenantIds = $lease->tenants->pluck('id')->toArray();
@@ -88,7 +91,7 @@ class MoveOutLease
 
         $oldRoom->unsetRelation('leases');
 
-        if ($oldRoom->leases()->where('status', 'active')->doesntExist()) {
+        if ($oldRoom->leases()->where('status', 'active')->doesntExist() && $oldRoom->status !== RoomStatus::Maintenance) {
             $oldRoom->update(['status' => RoomStatus::Available]);
         }
 

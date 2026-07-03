@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -117,6 +118,11 @@ class Lease extends Model
     public function renewedLease(): HasOne
     {
         return $this->hasOne(Lease::class, 'previous_lease_id');
+    }
+
+    public function roomHistories(): HasMany
+    {
+        return $this->hasMany(LeaseRoomHistory::class)->orderBy('effective_date');
     }
 
     public function getMonthlyEquivalentAttribute(): string

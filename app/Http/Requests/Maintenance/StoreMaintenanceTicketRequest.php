@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Maintenance;
 
 use App\Enums\MaintenancePriority;
+use App\Models\Property;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -13,12 +14,40 @@ class StoreMaintenanceTicketRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'property_id' => ['required', 'integer', 'exists:properties,id'],
-            'room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'property_id' => [
+                'required',
+                'integer',
+                Rule::exists('properties', 'id'),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->user()->isOwner()) {
+                        return;
+                    }
+
+                    $accessible = Property::query()
+                        ->whereKey($value)
+                        ->whereHas('users', fn ($q) => $q->whereKey($this->user()->id))
+                        ->exists();
+
+                    if (! $accessible) {
+                        $fail(__('You do not have access to this property.'));
+                    }
+                },
+            ],
+            'room_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('rooms', 'id')->where('property_id', $this->input('property_id')),
+            ],
             'location' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'priority' => ['required', 'string', Rule::in(MaintenancePriority::values())],
+            'block_room' => ['nullable', 'boolean'],
+            'move_tenant_to_room_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('rooms', 'id')->where('property_id', $this->input('property_id')),
+            ],
         ];
     }
 }

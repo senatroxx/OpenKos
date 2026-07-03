@@ -22,6 +22,8 @@ class CreateLease
         return DB::transaction(function () use ($room, $data, $tenantIds) {
             $room = Room::lockForUpdate()->findOrFail($room->id);
 
+            abort_if($room->status === RoomStatus::Maintenance, 422, __('This room is under maintenance and cannot be leased.'));
+
             $existingLease = $room->leases()->where('status', 'active')->first();
             $activeTenantsCount = $this->occupancy->activeOccupantCount($room);
 
