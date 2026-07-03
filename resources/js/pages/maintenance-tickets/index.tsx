@@ -10,6 +10,14 @@ import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -72,8 +80,10 @@ export default function Index({
     priority?: string;
 }) {
     const [formOpen, setFormOpen] = useState(false);
+    const [formVersion, setFormVersion] = useState(0);
     const [editingTicket, setEditingTicket] = useState<MaintenanceTicket | null>(null);
     const [detailTicket, setDetailTicket] = useState<MaintenanceTicket | null>(null);
+    const [resolveTicket, setResolveTicket] = useState<MaintenanceTicket | null>(null);
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
     const table = useTable({
@@ -92,7 +102,18 @@ export default function Index({
     });
 
     const handleStatusChange = (ticket: MaintenanceTicket, status: string) => {
-        router.put(maintenanceTickets.update.url(ticket.id), { status });
+        if (status === 'resolved') {
+            const room = rooms.find((r) => r.id === ticket.room_id);
+            if (room?.has_maintenance_transfer) {
+                setResolveTicket(ticket);
+
+                return;
+            }
+        }
+
+        router.put(maintenanceTickets.update.url(ticket.id), { status }, {
+            preserveState: false,
+        });
     };
 
     const handleAssignToMe = (ticket: MaintenanceTicket) => {
@@ -234,7 +255,7 @@ export default function Index({
                     />
                     {can.create && (
                         <Button onClick={() => {
- setEditingTicket(null); setFormOpen(true); 
+ setEditingTicket(null); setFormVersion((v) => v + 1); setFormOpen(true); 
 }}>New Ticket</Button>
                     )}
                 </div>
@@ -269,11 +290,12 @@ export default function Index({
                     empty={{
                         message: 'No maintenance tickets yet.',
                         createLabel: can.create ? 'Report an issue' : undefined,
-                        onCreate: can.create ? () => setFormOpen(true) : undefined,
+                        onCreate: can.create ? () => { setFormVersion((v) => v + 1); setFormOpen(true); } : undefined,
                     }}
                 />
 
                 <TicketFormSheet
+                    key={editingTicket ? `edit-${editingTicket.id}` : `create-${formVersion}`}
                     open={formOpen}
                     onOpenChange={(open) => {
                         setFormOpen(open);
@@ -297,12 +319,51 @@ setDetailTicket(null);
                     }}
                     canUpdate={can.update}
                     canDelete={can.delete}
+                    rooms={rooms as { id: number; name: string; property_id: number; has_maintenance_transfer?: number }[]}
                     onEdit={() => {
                         setEditingTicket(detailTicket);
                         setDetailTicket(null);
                         setFormOpen(true);
                     }}
                 />
+
+                <Dialog open={resolveTicket !== null} onOpenChange={() => setResolveTicket(null)}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Restore Occupant?</DialogTitle>
+                            <DialogDescription>
+                                This room was vacated for maintenance. Move the occupant back?
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                                const ticket = resolveTicket;
+                                setResolveTicket(null);
+                                if (ticket) {
+                                    router.put(maintenanceTickets.update.url(ticket.id), {
+                                        status: 'resolved',
+                                        restore_room: '1',
+                                    }, { preserveState: false });
+                                }
+                            }}>
+                                Keep in current room
+                            </Button>
+                            <Button onClick={() => {
+                                const ticket = resolveTicket;
+                                setResolveTicket(null);
+                                if (ticket) {
+                                    router.put(maintenanceTickets.update.url(ticket.id), {
+                                        status: 'resolved',
+                                        restore_room: '1',
+                                        move_back: '1',
+                                    }, { preserveState: false });
+                                }
+                            }}>
+                                Move back
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </>
     );
