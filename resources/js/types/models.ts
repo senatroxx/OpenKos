@@ -252,4 +252,5 @@ export type MaintenanceTicket = {
     room?: { id: number; name: string } | null;
     assignee?: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
     creator?: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
+    maintenance_transfer_to?: string | null;
 };

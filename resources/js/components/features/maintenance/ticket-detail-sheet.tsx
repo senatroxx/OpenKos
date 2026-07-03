@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Check, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
@@ -108,9 +109,17 @@ return null;
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">Created At</p>
-                                    <p className="text-sm">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                                    <p className="text-sm">{formatDate(ticket.created_at)}</p>
                                 </div>
                             </div>
+
+                            {ticket.maintenance_transfer_to && (
+                                <div className="rounded-lg border p-3 text-sm">
+                                    <span className="text-muted-foreground">Occupant moved to </span>
+                                    <span className="font-medium">{ticket.maintenance_transfer_to}</span>
+                                    <span className="text-muted-foreground"> during maintenance</span>
+                                </div>
+                            )}
 
                             {ticket.description && (
                                 <div>

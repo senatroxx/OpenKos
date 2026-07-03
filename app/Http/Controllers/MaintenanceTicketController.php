@@ -44,7 +44,16 @@ class MaintenanceTicketController extends Controller
             ->defaultSort('-created_at');
 
         $query = MaintenanceTicket::query()
-            ->with(['property:id,name', 'room:id,name', 'assignee.roles', 'creator.roles']);
+            ->with(['property:id,name', 'room:id,name', 'assignee.roles', 'creator.roles'])
+            ->addSelect([
+                'maintenance_transfer_to' => LeaseRoomHistory::query()
+                    ->select('rooms.name')
+                    ->join('rooms', 'lease_room_histories.to_room_id', '=', 'rooms.id')
+                    ->whereColumn('lease_room_histories.from_room_id', 'maintenance_tickets.room_id')
+                    ->where('lease_room_histories.reason', 'maintenance')
+                    ->orderByDesc('lease_room_histories.effective_date')
+                    ->limit(1),
+            ]);
 
         $propertyId = $request->query('property_id');
         if ($propertyId) {
@@ -78,6 +87,19 @@ class MaintenanceTicketController extends Controller
             ))
             ->orderBy('name')
             ->get();
+
+        $transfers = LeaseRoomHistory::query()
+            ->with('toRoom:id,name')
+            ->where('reason', 'maintenance')
+            ->whereIn('from_room_id', $rooms->pluck('id'))
+            ->orderBy('effective_date', 'desc')
+            ->get()
+            ->keyBy('from_room_id');
+
+        foreach ($rooms as $room) {
+            $transfer = $transfers->get($room->id);
+            $room->transfer_to_room_name = $transfer?->toRoom?->name;
+        }
 
         return Inertia::render('maintenance-tickets/index', [
             ...$result,
