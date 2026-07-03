@@ -613,7 +613,7 @@ export default function LeaseDetailSheet({
                                                                 )}
                                                                 <span>{formatDate(h.effective_date)}</span>
                                                                 {h.transferred_by && (
-                                                                    <span>by {h.transferred_by.name}</span>
+                                                                    <span>by {h.transferred_by.name}{h.transferred_by.roles?.[0] ? ` — ${h.transferred_by.roles[0].label ?? h.transferred_by.roles[0].name}` : ''}</span>
                                                                 )}
                                                             </div>
                                                         </div>

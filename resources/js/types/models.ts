@@ -163,7 +163,7 @@ export type Lease = {
         id: number;
         from_room: { id: number; name: string } | null;
         to_room: { id: number; name: string } | null;
-        transferred_by: { id: number; name: string } | null;
+        transferred_by: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
         reason: string | null;
         notes: string | null;
         effective_date: string;
