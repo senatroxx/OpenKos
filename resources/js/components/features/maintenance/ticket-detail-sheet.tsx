@@ -33,7 +33,7 @@ export default function TicketDetailSheet({
     canUpdate: boolean;
     canDelete: boolean;
     onEdit?: () => void;
-    onResolve?: () => void;
+    onStatusChange?: (ticket: MaintenanceTicket, status: string) => void;
 }) {
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
@@ -53,12 +53,9 @@ return null;
     };
 
     const handleStatusChange = (status: string) => {
-        if (status === 'resolved' && onResolve) {
-            onResolve();
-
-            return;
+        if (onStatusChange) {
+            onStatusChange(ticket, status);
         }
-        router.put(maintenanceTickets.update.url(ticket.id), { status });
     };
 
     const handleAssignToMe = () => {
