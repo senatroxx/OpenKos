@@ -345,3 +345,45 @@ it('preserves maintenance status on lease termination', function () {
 
     expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
 });
+
+it('moves tenant back when resolving ticket with move_back flag', function () {
+    $owner = User::factory()->owner()->create();
+    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
+    $targetRoom = Room::factory()->create([
+        'property_id' => $room->property_id,
+        'status' => RoomStatus::Occupied,
+    ]);
+    $tenant = Tenant::factory()->create();
+    $lease = $targetRoom->leases()->create([
+        'primary_tenant_id' => $tenant->id,
+        'start_date' => now(),
+        'rent_amount' => 1_000_000,
+        'status' => 'active',
+    ]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+
+    \App\Models\LeaseRoomHistory::create([
+        'lease_id' => $lease->id,
+        'from_room_id' => $room->id,
+        'to_room_id' => $targetRoom->id,
+        'reason' => 'maintenance',
+        'effective_date' => now(),
+    ]);
+
+    $ticket = MaintenanceTicket::factory()->create([
+        'room_id' => $room->id,
+        'status' => MaintenanceStatus::InProgress->value,
+    ]);
+
+    $this->actingAs($owner)
+        ->put(route('maintenance-tickets.update', $ticket), [
+            'status' => MaintenanceStatus::Resolved->value,
+            'restore_room' => true,
+            'move_back' => true,
+        ])
+        ->assertRedirect();
+
+    expect($room->fresh()->status)->toBe(RoomStatus::Occupied);
+    expect($lease->fresh()->room_id)->toBe($room->id);
+    expect($targetRoom->fresh()->status)->toBe(RoomStatus::Available);
+});

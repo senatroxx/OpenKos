@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
-type RoomOption = { id: number; name: string; property_id: number; status: string; active_lease_count: number; leases?: { tenants: { id: number; name: string }[] }[] };
+type RoomOption = { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] };
 
 function formatRoomOption(r: RoomOption): string {
     const tenants = r.leases?.[0]?.tenants ?? [];
@@ -69,6 +69,8 @@ export default function TicketFormSheet({
     const [blockRoom, setBlockRoom] = useState(false);
     const [showOccupiedDialog, setShowOccupiedDialog] = useState(false);
     const [moveToRoomId, setMoveToRoomId] = useState('');
+    const [restoreRoom, setRestoreRoom] = useState(false);
+    const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
     const filteredRooms = selectedProperty
         ? rooms.filter((r) => r.property_id === Number(selectedProperty))
@@ -90,6 +92,15 @@ export default function TicketFormSheet({
         : [];
 
     const handleCreateClick = (e: React.MouseEvent) => {
+        if (isEdit && restoreRoom && ticket?.room_id) {
+            const room = rooms.find((r) => r.id === ticket.room_id);
+            if (room?.has_maintenance_transfer) {
+                e.preventDefault();
+                setShowMoveBackDialog(true);
+            }
+
+            return;
+        }
         if (!isEdit && blockRoom && selectedRoomOccupied) {
             e.preventDefault();
             setShowOccupiedDialog(true);
@@ -274,7 +285,7 @@ export default function TicketFormSheet({
 
                                             return (
                                                 <div className="flex items-center gap-2">
-                                                    <Checkbox id="restore_room" name="restore_room" value="1" />
+                                                    <Checkbox id="restore_room" name="restore_room" value="1" checked={restoreRoom} onCheckedChange={(v) => setRestoreRoom(Boolean(v))} />
                                                     <Label htmlFor="restore_room" className="cursor-pointer text-sm font-normal">
                                                         Restore room availability
                                                     </Label>
@@ -365,6 +376,52 @@ export default function TicketFormSheet({
                             }}
                         >
                             Continue
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showMoveBackDialog} onOpenChange={setShowMoveBackDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Restore Occupant?</DialogTitle>
+                        <DialogDescription>
+                            This room was vacated for maintenance. Move the occupant back?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                            setShowMoveBackDialog(false);
+                            const formEl = document.getElementById('ticket-form');
+                            if (!formEl) {return;}
+                            const data: Record<string, string> = {};
+                            new FormData(formEl as HTMLFormElement).forEach((v, k) => {
+                                data[k] = String(v);
+                            });
+                            router.visit(formAction, {
+                                method: formMethod,
+                                data,
+                                onSuccess: () => onOpenChange(false),
+                            });
+                        }}>
+                            Keep in current room
+                        </Button>
+                        <Button onClick={() => {
+                            setShowMoveBackDialog(false);
+                            const formEl = document.getElementById('ticket-form');
+                            if (!formEl) {return;}
+                            const data: Record<string, string> = {};
+                            new FormData(formEl as HTMLFormElement).forEach((v, k) => {
+                                data[k] = String(v);
+                            });
+                            data.move_back = '1';
+                            router.visit(formAction, {
+                                method: formMethod,
+                                data,
+                                onSuccess: () => onOpenChange(false),
+                            });
+                        }}>
+                            Move back
                         </Button>
                     </DialogFooter>
                 </DialogContent>
