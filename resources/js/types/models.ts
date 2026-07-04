@@ -105,6 +105,7 @@ export type AvailableRoom = {
     property_id: number;
     capacity: number;
     occupied_count: number;
+    active_rates?: RoomRate[];
     property: {
         id: number;
         name: string;

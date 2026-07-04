@@ -242,3 +242,36 @@ describe('cross-property access', function () {
             ->assertForbidden();
     });
 });
+
+describe('room assignment pricing', function () {
+    it('ships available rooms with their active rates for the picker', function () {
+        $user = User::factory()->owner()->create();
+        Tenant::factory()->create();
+        Room::factory()->create(); // auto-creates a monthly rate from base_price
+
+        $this->actingAs($user)
+            ->get(route('tenants.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('availableRooms.0.active_rates.0.amount'));
+    });
+
+    it('derives rent from the selected room rate', function () {
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $room = Room::factory()->create(['base_price' => 1_750_000]);
+        $rate = $room->rates()->first();
+
+        $this->actingAs($user)->post(route('tenants.assign-room', $tenant), [
+            'room_id' => $room->id,
+            'room_rate_id' => $rate->id,
+            'start_date' => '2026-06-01',
+        ]);
+
+        $lease = Lease::first();
+
+        expect($lease->room_rate_id)->toBe($rate->id)
+            ->and((float) $lease->rent_amount)->toBe(1_750_000.0)
+            ->and($lease->is_custom_price)->toBeFalse();
+    });
+});
