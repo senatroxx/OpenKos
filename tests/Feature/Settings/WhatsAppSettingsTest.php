@@ -2,6 +2,9 @@
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\Drivers\WhatsappLogDriver;
+use OpenKOS\Platform\Notification\NotificationDriverRegistration;
+use OpenKOS\Platform\Notification\NotificationRegistry;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -32,6 +35,24 @@ describe('WhatsApp settings page', function () {
                 ->where('drivers.1.name', 'baileys')
                 ->where('drivers.2.name', 'fonnte')
                 ->where('drivers.3.name', 'whatsapp_cloud')
+            );
+    });
+
+    it('lists a driver registered at runtime by a plugin', function () {
+        app(NotificationRegistry::class)->registerDriver(new NotificationDriverRegistration(
+            name: 'custom_gateway',
+            channel: 'whatsapp',
+            driverClass: WhatsappLogDriver::class,
+            label: 'Custom Gateway',
+        ));
+
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->get(route('settings.whatsapp.edit'))
+            ->assertInertia(fn ($page) => $page
+                ->where('drivers.4.name', 'custom_gateway')
+                ->where('drivers.4.label', 'Custom Gateway')
             );
     });
 

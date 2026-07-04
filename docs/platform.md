@@ -27,6 +27,7 @@ src/
 │   ├── Notification/         NotificationRegistry
 │   └── Payment/              PaymentRegistry
 └── Plugins/
+    ├── WhatsApp/             Core plugin: registers built-in WhatsApp drivers
     └── Example/              Reference plugin (enabled in config/platform.php)
 ```
 
@@ -42,7 +43,7 @@ Six registries, each bound as a **container singleton** (no static state) in `Pl
 | `DashboardRegistry` | Dashboard pages | `DashboardPage(key, title, href, permission?)` |
 | `WorkspaceRegistry` | Tabs on entity workspace pages | `WorkspaceTab(key, label, permission?, meta[])` |
 | `SettingsRegistry` | Settings pages | `SettingsPage(key, title, href, permission?)` |
-| `NotificationRegistry` | Notification drivers by name | class-string or instance of `NotificationDriver` |
+| `NotificationRegistry` | Notification drivers by name | `NotificationDriverRegistration(name, channel, driverClass, label, config[])` |
 | `PaymentRegistry` | Payment gateways by key | class-string or instance of `PaymentGateway` |
 
 Conventions:
@@ -111,14 +112,19 @@ Then list it in `config/platform.php`:
 
 For now plugins are listed explicitly in config. `OpenKOS\Core\Contracts\PluginDiscovery` (`discover(): array` of plugin class-strings) is the seam for future Composer-based discovery — interface only, no implementation.
 
-## Notification & Payment Contracts
+## Notifications (WhatsApp) — consumed
 
-Interfaces only — no implementations exist yet:
+`NotificationRegistry` is now the **runtime source of truth** for WhatsApp drivers, replacing the old `config('services.whatsapp.drivers')` lookups:
 
-- `NotificationDriver` — `name()`, `channel()` (e.g. `'whatsapp'`), `send(recipient, message, options)`, `configurationSchema()`. Deliberately mirrors the conventions of the existing `App\Contracts\WhatsAppDriver`, which is **untouched**; a future adapter can wrap the existing WhatsApp drivers (Meta, Fonnte, Baileys) into platform plugins.
-- `PaymentGateway` — `key()`, `displayName()`, `createPayment(array): array`, `handleCallback(array): array`, `configurationSchema()`. Loose array payloads until a real gateway forces the shape.
+- **`WhatsAppPlugin`** (`src/Plugins/WhatsApp/`, enabled in `config/platform.php`) seeds the registry from `config/services.php` at boot — each entry becomes a `NotificationDriverRegistration(name, channel: 'whatsapp', driverClass, label, config)`. Config is now just seed data; a third-party plugin can register additional whatsapp-channel drivers the same way and they appear everywhere automatically.
+- **`WhatsAppManager`** resolves the selected driver from the registry (`$registry->get($name)`) instead of config, then instantiates `driverClass` with merged credentials (DB `whatsapp_config` over registration defaults). The existing `App\Contracts\WhatsAppDriver` interface and the four driver classes are **unchanged**.
+- **The WhatsApp settings page** (`WhatsAppController`) lists drivers via `$registry->forChannel('whatsapp')` and validates the selection against it.
 
-Both registries accept class-strings or instances; resolution is deferred until real drivers exist.
+`NotificationDriverRegistration.driverClass` is a plain class-string, not a typed contract, because WhatsApp drivers implement the stateful `WhatsAppDriver` (pairing/health) while the generic `OpenKOS\Core\Contracts\NotificationDriver` (`name`, `channel`, `send`, `configurationSchema`) suits simpler channels — the owning channel decides the type. `NotificationDriver` remains the prepared seam for future email/SMS channels.
+
+## Payment Contracts — interface only
+
+`PaymentGateway` (`key()`, `displayName()`, `createPayment(array): array`, `handleCallback(array): array`, `configurationSchema()`) and `PaymentRegistry` exist but have no implementations. Deliberately dormant until a real gateway (Midtrans/Xendit) forces the payload shape — the first integration should define the interface, not a guess.
 
 ## How Registrations Reach the UI
 

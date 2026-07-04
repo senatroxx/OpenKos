@@ -31,21 +31,27 @@ return [
     'whatsapp' => [
         'default' => env('WHATSAPP_DRIVER', 'log'),
 
+        // Seed data for the WhatsAppPlugin, which registers these into the
+        // platform NotificationRegistry (the runtime source of truth).
         'drivers' => [
             'log' => [
                 'class' => WhatsappLogDriver::class,
+                'label' => 'Log',
             ],
             'baileys' => [
                 'class' => BaileysDriver::class,
+                'label' => 'Baileys (Unofficial, Unstable)',
                 'url' => env('BAILEYS_URL'),
                 'api_key' => env('BAILEYS_API_KEY'),
             ],
             'fonnte' => [
                 'class' => FonnteDriver::class,
+                'label' => 'Fonnte (Unofficial)',
                 'token' => env('FONNTE_TOKEN'),
             ],
             'whatsapp_cloud' => [
                 'class' => WhatsAppCloudApiDriver::class,
+                'label' => 'WhatsApp Cloud API (Official, Untested)',
                 'phone_number_id' => env('WHATSAPP_CLOUD_PHONE_NUMBER_ID'),
                 'access_token' => env('WHATSAPP_CLOUD_ACCESS_TOKEN'),
             ],

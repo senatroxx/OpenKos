@@ -10,10 +10,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use OpenKOS\Platform\Notification\NotificationDriverRegistration;
+use OpenKOS\Platform\Notification\NotificationRegistry;
 
 class WhatsAppController extends Controller
 {
-    public function __construct(private WhatsAppManager $whatsapp) {}
+    public function __construct(
+        private WhatsAppManager $whatsapp,
+        private NotificationRegistry $registry,
+    ) {}
 
     public function pair(): JsonResponse
     {
@@ -55,19 +60,19 @@ class WhatsAppController extends Controller
 
     public function edit(): Response
     {
-        $drivers = config('services.whatsapp.drivers', []);
+        $drivers = collect($this->registry->forChannel('whatsapp'))
+            ->map(function (NotificationDriverRegistration $registration) {
+                $class = $registration->driverClass;
+                $instance = new $class([]);
 
-        $drivers = collect($drivers)->map(function ($config, $name) {
-            $class = $config['class'];
-            $instance = new $class([]);
-
-            return [
-                'name' => $name,
-                'label' => $this->driverLabel($name),
-                'configuration_schema' => $instance->configurationSchema(),
-                'supports_pairing' => $instance->supportsPairing(),
-            ];
-        })->values();
+                return [
+                    'name' => $registration->name,
+                    'label' => $registration->label,
+                    'configuration_schema' => $instance->configurationSchema(),
+                    'supports_pairing' => $instance->supportsPairing(),
+                ];
+            })
+            ->values();
 
         $settings = Setting::get()->only('whatsapp_driver', 'whatsapp_config');
 
@@ -94,7 +99,10 @@ class WhatsAppController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $driverNames = array_keys(config('services.whatsapp.drivers', []));
+        $driverNames = array_map(
+            fn (NotificationDriverRegistration $r) => $r->name,
+            $this->registry->forChannel('whatsapp'),
+        );
 
         $validated = $request->validate([
             'whatsapp_driver' => ['nullable', 'string', 'in:'.implode(',', $driverNames)],
@@ -148,16 +156,5 @@ class WhatsAppController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Device disconnected.')]);
 
         return to_route('settings.whatsapp.edit');
-    }
-
-    private function driverLabel(string $name): string
-    {
-        return match ($name) {
-            'log' => 'Log',
-            'baileys' => 'Baileys (Unofficial, Unstable)',
-            'fonnte' => 'Fonnte (Unofficial)',
-            'whatsapp_cloud' => 'WhatsApp Cloud API (Official, Untested)',
-            default => $name,
-        };
     }
 }

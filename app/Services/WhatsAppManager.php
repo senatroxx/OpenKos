@@ -8,10 +8,13 @@ use App\Data\WhatsApp\WhatsAppMessage;
 use App\Models\Setting;
 use Illuminate\Database\QueryException;
 use InvalidArgumentException;
+use OpenKOS\Platform\Notification\NotificationRegistry;
 
 class WhatsAppManager
 {
     private array $drivers = [];
+
+    public function __construct(private NotificationRegistry $registry) {}
 
     public function driver(?string $name = null): WhatsAppDriver
     {
@@ -21,15 +24,15 @@ class WhatsAppManager
             return $this->drivers[$name];
         }
 
-        $config = config("services.whatsapp.drivers.{$name}");
+        $registration = $this->registry->get($name);
 
-        if (! $config) {
+        if (! $registration || $registration->channel !== 'whatsapp') {
             throw new InvalidArgumentException("WhatsApp driver [{$name}] not found.");
         }
 
-        $class = $config['class'];
+        $class = $registration->driverClass;
 
-        return $this->drivers[$name] = new $class($this->resolveCredentials($name, $config));
+        return $this->drivers[$name] = new $class($this->resolveCredentials($name, $registration->config));
     }
 
     public function send(string $phone, string $message): void
@@ -66,12 +69,9 @@ class WhatsAppManager
         }
     }
 
-    private function resolveCredentials(string $name, array $config): array
+    private function resolveCredentials(string $name, array $defaults): array
     {
-        $envDefaults = array_filter(
-            array_filter($config, fn ($key) => $key !== 'class', ARRAY_FILTER_USE_KEY),
-            fn ($value) => $value !== null,
-        );
+        $envDefaults = array_filter($defaults, fn ($value) => $value !== null);
 
         try {
             $dbConfig = Setting::get()->whatsapp_config[$name] ?? [];

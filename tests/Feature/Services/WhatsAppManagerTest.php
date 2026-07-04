@@ -3,22 +3,22 @@
 use App\Contracts\WhatsAppDriver;
 use App\Data\WhatsApp\DriverHealthResult;
 use App\Data\WhatsApp\WhatsAppMessage;
-use App\Notifications\Drivers\WhatsappLogDriver;
 use App\Services\WhatsAppManager;
+use OpenKOS\Platform\Notification\NotificationDriverRegistration;
+use OpenKOS\Platform\Notification\NotificationRegistry;
 
 beforeEach(function () {
-    config()->set('services.whatsapp', [
-        'default' => 'log',
-        'drivers' => [
-            'log' => [
-                'class' => WhatsappLogDriver::class,
-            ],
-            'test_driver' => [
-                'class' => TestWhatsAppDriver::class,
-                'api_key' => 'env-default-key',
-            ],
-        ],
-    ]);
+    // 'log' (+ baileys/fonnte/whatsapp_cloud) are registered by WhatsAppPlugin
+    // at boot from config; register an extra test driver into the same registry.
+    app(NotificationRegistry::class)->registerDriver(new NotificationDriverRegistration(
+        name: 'test_driver',
+        channel: 'whatsapp',
+        driverClass: TestWhatsAppDriver::class,
+        label: 'Test',
+        config: ['api_key' => 'env-default-key'],
+    ));
+
+    config()->set('services.whatsapp.default', 'log');
 
     $this->manager = app(WhatsAppManager::class);
 });
