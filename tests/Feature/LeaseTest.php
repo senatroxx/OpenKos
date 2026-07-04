@@ -16,9 +16,8 @@ uses()->beforeEach(function () {
 function createPropertyWithRoom(): array
 {
     $property = Property::factory()->create();
-    $room = Room::factory()->create([
+    $room = Room::factory()->withRate(1_000_000)->create([
         'property_id' => $property->id,
-        'base_price' => 1_000_000,
     ]);
 
     return [$property, $room];
@@ -215,9 +214,8 @@ describe('termination', function () {
 describe('move room', function () {
     it('moves a tenant to a new room', function () {
         [$property, $roomA] = createPropertyWithRoom();
-        $roomB = Room::factory()->create([
+        $roomB = Room::factory()->withRate(1_200_000)->create([
             'property_id' => $property->id,
-            'base_price' => 1_200_000,
         ]);
 
         $user = User::factory()->owner()->create();

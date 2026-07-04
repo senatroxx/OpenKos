@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PropertyType;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\City;
@@ -36,6 +37,7 @@ class PropertyController extends Controller
         $table = Table::make()
             ->columns([
                 Column::make('name', 'Name')->sortable()->searchable(),
+                Column::make('type', 'Type')->sortable(),
                 Column::make('city', 'City')->sortable(
                     fn (Builder $q, string $dir) => $q->orderBy(
                         City::select('name')->whereColumn('cities.id', 'properties.city_id'),
@@ -60,6 +62,8 @@ class PropertyController extends Controller
                         'archived' => $q->whereRaw('is_active is false'),
                         default => $q,
                     }),
+                Filter::select('type', 'Type', PropertyType::values())
+                    ->query(fn (Builder $q, string $value) => $q->where('type', $value)),
             ])
             ->defaultSort('name');
 
