@@ -28,7 +28,7 @@ src/
 │   └── Payment/              PaymentRegistry
 └── Plugins/
     ├── WhatsApp/             Core plugin: registers built-in WhatsApp drivers
-    └── Example/              Reference plugin (enabled in config/platform.php)
+    └── Example/              Reference plugin — disabled by default (see below)
 ```
 
 `src/Core/` currently holds only contracts. It is the designated future home for domain code migrating out of `app/` — nothing has been moved yet, deliberately.
@@ -134,7 +134,16 @@ For now plugins are listed explicitly in config. `OpenKOS\Core\Contracts\PluginD
 4. **Workspace tabs are URL-routed.** Every workspace (`property`, `tenant`, `lease`, `room`, `maintenance-ticket`, `user`, `role`) uses route-per-tab navigation — clicking a tab navigates (e.g. `/tenants/5/leases`). A platform tab therefore **must** provide `meta: ['href' => ...]`; `{id}` is replaced with the entity id client-side (`{propertyId}` is also available on `room`). Tabs without `meta.href` are skipped. A real plugin registers its own route + Inertia page and points the tab's href at it.
 5. **PluginRegion** — named extension slots (`workspace-header-badge`, `workspace-tabs-before/after`, `workspace-tab-{key}` around built-in tab content, etc.). In-repo plugin frontend code lives in `resources/js/plugins/{name}/` and calls `registerRegion(name, Component)` (loaded via a side-effect import in `app.tsx`).
 
-`ExamplePlugin` (gated by `OPENKOS_EXAMPLE_PLUGIN`, default on — set `false` in production) demonstrates a sidebar nav item, a Dashboard sub-page, a settings nav entry, and a `workspace-header-badge` region component; its source shows a commented workspace-tab registration.
+### ExamplePlugin (disabled by default)
+
+`ExamplePlugin` (`src/Plugins/Example/`) is a working reference that demonstrates every consumed registry — a sidebar nav item, a Dashboard sub-page, a settings nav entry, and a `workspace-header-badge` region component (client half in `resources/js/plugins/example/`). Its source also shows a commented workspace-tab registration.
+
+It ships **disabled** so the demo stays out of the real UI. To enable it, uncomment all three spots:
+
+1. `// ExamplePlugin::class,` and its `use` import in `config/platform.php` (backend registrations)
+2. `// import './example';` in `resources/js/plugins/index.ts` (the client-side header badge)
+
+The backend and client halves are independent — the nav/dashboard/settings entries come from (1), the header badge from (2).
 
 ### Future work
 
