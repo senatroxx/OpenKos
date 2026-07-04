@@ -10,9 +10,10 @@ use Illuminate\Contracts\Support\Arrayable;
  * with their resolved credentials by the owning channel/manager.
  *
  * `driverClass` is a plain class-string rather than a typed contract because
- * channels differ: WhatsApp drivers implement App\Contracts\WhatsAppDriver
- * (stateful: pairing, health), while simpler channels can implement
- * OpenKOS\Core\Contracts\NotificationDriver. The channel owns the type.
+ * each channel brings its own driver interface shaped to its needs — e.g.
+ * WhatsApp drivers implement App\Contracts\WhatsAppDriver (stateful: pairing,
+ * health). A future SMS channel would define App\Contracts\SmsDriver and its
+ * own manager the same way. The channel owns the type.
  */
 final readonly class NotificationDriverRegistration implements Arrayable
 {

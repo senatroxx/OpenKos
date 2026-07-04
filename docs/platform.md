@@ -14,7 +14,7 @@ Platform code lives in `src/` under the `OpenKOS\` namespace (PSR-4 mapped in `c
 ```
 src/
 ├── Core/
-│   └── Contracts/            Platform-facing interfaces (NotificationDriver, PaymentGateway, PluginDiscovery)
+│   └── Contracts/            Platform-facing interfaces (PaymentGateway, PluginDiscovery)
 ├── Platform/
 │   ├── OpenKOSManager.php    Central manager — the object plugins receive
 │   ├── PlatformServiceProvider.php
@@ -120,7 +120,7 @@ For now plugins are listed explicitly in config. `OpenKOS\Core\Contracts\PluginD
 - **`WhatsAppManager`** resolves the selected driver from the registry (`$registry->get($name)`) instead of config, then instantiates `driverClass` with merged credentials (DB `whatsapp_config` over registration defaults). The existing `App\Contracts\WhatsAppDriver` interface and the four driver classes are **unchanged**.
 - **The WhatsApp settings page** (`WhatsAppController`) lists drivers via `$registry->forChannel('whatsapp')` and validates the selection against it.
 
-`NotificationDriverRegistration.driverClass` is a plain class-string, not a typed contract, because WhatsApp drivers implement the stateful `WhatsAppDriver` (pairing/health) while the generic `OpenKOS\Core\Contracts\NotificationDriver` (`name`, `channel`, `send`, `configurationSchema`) suits simpler channels — the owning channel decides the type. `NotificationDriver` remains the prepared seam for future email/SMS channels.
+`NotificationDriverRegistration.driverClass` is a plain class-string, not a typed contract, because each channel brings its own driver interface shaped to its needs — WhatsApp drivers implement the stateful `App\Contracts\WhatsAppDriver` (pairing/health). A future SMS/Telegram/push channel follows the same pattern: define a channel-specific driver contract (e.g. `App\Contracts\SmsDriver`), register implementations into `NotificationRegistry` with that `channel`, and add a small manager (parallel to `WhatsAppManager`) that resolves and calls them. The registry, registration, and settings-page listing are channel-agnostic and reused as-is; only the per-channel contract and manager are new.
 
 ## Payment Contracts — interface only
 
