@@ -2,14 +2,16 @@
 
 namespace OpenKOS\Plugins\Example;
 
+use OpenKOS\Platform\Dashboard\DashboardPage;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Settings\SettingsPage;
 
 /**
- * Reference plugin exercising the platform boot path. The frontend does not
- * consume registries yet, so these registrations have no visible effect.
+ * Reference plugin exercising the platform boot path. Demonstrates each
+ * consumed registry: a sidebar nav item, a Dashboard sub-page, a settings
+ * page, and a workspace-header badge (client side).
  */
 class ExamplePlugin extends Plugin
 {
@@ -19,6 +21,12 @@ class ExamplePlugin extends Plugin
             title: 'Example Plugin',
             href: '/example',
             icon: 'puzzle',
+        ));
+
+        $platform->dashboard()->registerPage(new DashboardPage(
+            key: 'example',
+            title: 'Example',
+            href: '/dashboard/example',
         ));
 
         // Workspace tabs are URL-routed: meta.href is required, and
