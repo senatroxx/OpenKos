@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { Platform } from '@/types/platform';
 
 declare module 'react' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -21,6 +22,7 @@ declare module 'react' {
                     timezone: string;
                 };
                 sidebarOpen: boolean;
+                platform: Platform;
             };
         }
     }
