@@ -172,7 +172,6 @@ describe('cross-property access', function () {
         $this->actingAs($admin)
             ->post(route('properties.rooms.store', $propertyB), [
                 'name' => 'Room 101',
-                'base_price' => 1_000_000,
                 'capacity' => 1,
             ])
             ->assertForbidden();
@@ -188,7 +187,6 @@ describe('cross-property access', function () {
         $this->actingAs($admin)
             ->put(route('properties.rooms.update', [$propertyB, $room]), [
                 'name' => 'Hacked',
-                'base_price' => 1_000_000,
                 'capacity' => 1,
             ])
             ->assertForbidden();

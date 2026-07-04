@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PropertyType;
 use App\Models\City;
 use App\Models\Property;
 use App\Models\Region;
@@ -113,6 +114,52 @@ describe('CRUD', function () {
         $property->refresh();
 
         expect($property->is_active)->toBeFalse();
+    });
+});
+
+describe('type', function () {
+    it('defaults to kos when no type is given', function () {
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)->post(route('properties.store'), [
+            'name' => 'Kos Melati',
+        ]);
+
+        expect(Property::first()->type)->toBe(PropertyType::Kos);
+    });
+
+    it('stores an explicit type', function () {
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)->post(route('properties.store'), [
+            'name' => 'Villa Bali',
+            'type' => 'villa',
+        ]);
+
+        expect(Property::first()->type)->toBe(PropertyType::Villa);
+    });
+
+    it('updates the type', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create(['type' => PropertyType::Kos]);
+
+        $this->actingAs($user)->put(route('properties.update', $property), [
+            'name' => $property->name,
+            'type' => 'hotel',
+        ]);
+
+        expect($property->refresh()->type)->toBe(PropertyType::Hotel);
+    });
+
+    it('rejects an invalid type', function () {
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.store'), [
+                'name' => 'Kos Melati',
+                'type' => 'mansion',
+            ])
+            ->assertSessionHasErrors('type');
     });
 });
 

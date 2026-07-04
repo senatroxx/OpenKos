@@ -32,7 +32,7 @@ export function SegmentedToggle({ value, onChange, options, className }: Segment
                     type="button"
                     onClick={() => onChange(option.value)}
                     className={cn(
-                        'relative z-10 flex flex-1 items-center justify-center rounded-full text-sm font-medium transition-colors duration-200',
+                        'relative z-10 flex flex-1 cursor-pointer items-center justify-center rounded-full text-sm font-medium transition-colors duration-200',
                         option.value === value
                             ? 'text-primary'
                             : 'text-primary-foreground',

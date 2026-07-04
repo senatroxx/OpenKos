@@ -29,7 +29,6 @@ class Room extends Model
     protected function casts(): array
     {
         return [
-            'base_price' => 'decimal:2',
             'size_sqm' => 'decimal:2',
             'capacity' => 'integer',
             'status' => RoomStatus::class,
