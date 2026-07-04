@@ -13,6 +13,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import leases from '@/routes/leases';
 import type { Lease, Payment, RentScheduleEntry } from '@/types';
 
 const DUE_DAY_LABELS: Record<number, string> = {
@@ -94,11 +95,12 @@ export default function LeaseDetailSheet({
     }
     const roomName = lease?.room?.name ?? '—';
     const propertyName = lease?.room?.property?.name ?? '—';
-    const propertyCity = lease?.room?.property?.city?.name ?? '';
+    const city = lease?.room?.property?.city;
+    const propertyCity = city && typeof city === 'object' ? city.name : city ?? '';
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg">
+            <SheetContent className="sm:max-w-lg" expandTo={lease ? leases.show.url(lease) : undefined}>
                 <SheetHeader>
                     <SheetTitle>
                         {isActive ? 'Active Lease' : 'Lease Details'}

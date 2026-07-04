@@ -1,9 +1,10 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import { Heading } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { platformPageNavItems } from '@/lib/platform';
 import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
@@ -11,7 +12,8 @@ import { edit as editSecurity } from '@/routes/security';
 import { edit as editMail } from '@/routes/settings/mail';
 import { edit as editReminders } from '@/routes/settings/reminders';
 import { edit as editWhatsApp } from '@/routes/settings/whatsapp';
-import type { NavItem } from '@/types';
+import type { Auth, NavItem } from '@/types';
+import type { Platform } from '@/types/platform';
 
 const sidebarNavItems: NavItem[] = [
     {
@@ -47,6 +49,13 @@ const sidebarNavItems: NavItem[] = [
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
+    const { auth, platform } = usePage<{ auth: Auth; platform: Platform }>()
+        .props;
+
+    const navItems: NavItem[] = [
+        ...sidebarNavItems,
+        ...platformPageNavItems(platform.settings, auth),
+    ];
 
     return (
         <div className="px-4 py-6">
@@ -61,7 +70,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                         className="flex flex-col space-y-1 space-x-0"
                         aria-label="Settings"
                     >
-                        {sidebarNavItems.map((item, index) =>
+                        {navItems.map((item, index) =>
                             item.children ? (
                                 <div key={`group-${index}`} className="space-y-1">
                                     <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider pt-2">

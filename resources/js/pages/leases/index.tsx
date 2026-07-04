@@ -1,5 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
+    ExternalLink,
     Eye,
     LogOut,
     EllipsisVertical,
@@ -31,71 +32,7 @@ import {
 import { useTable } from '@/hooks/use-table';
 import leases from '@/routes/leases';
 import rooms from '@/routes/properties/rooms';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type TenantInfo = {
-    id: number;
-    name: string;
-    phone: string | null;
-    pivot?: {
-        is_primary: boolean;
-    };
-};
-
-type RoomInfo = {
-    id: number;
-    name: string;
-    property_id: number;
-    property: {
-        id: number;
-        name: string;
-        city: { name: string } | null;
-    } | null;
-};
-
-type Lease = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string | null;
-    billing_interval: number;
-    billing_unit: string;
-    monthly_equivalent: string;
-    billing_label: string;
-    deposit_amount: string;
-    deposit_paid_at: string | null;
-    deposit_refund_amount: string | null;
-    deposit_refunded_at: string | null;
-    rent_due_day: number;
-    status: string;
-    termination_date: string | null;
-    termination_reason: string | null;
-    notes: string | null;
-    created_at: string;
-    payment_status?: string | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-    room: RoomInfo | null;
-    payments?: Array<{
-        id: number;
-        lease_id: number;
-        amount: string;
-        payment_date: string;
-        period_start: string;
-        period_end: string;
-        payment_method: string;
-        notes: string | null;
-        status: string;
-        confirmed_by: number | null;
-        confirmed_by_user?: { id: number; name: string } | null;
-        recorded_by: number | null;
-        verified_by: number | null;
-        verified_by_user?: { id: number; name: string } | null;
-        verified_at: string | null;
-        proofs: Array<{ id: number; payment_id: number; path: string; original_name: string; mime_type: string; created_at: string }>;
-    }>;
-};
+import type { Lease, PaginatedData, TableMeta } from '@/types';
 
 type AvailableRoom = {
     id: number;
@@ -338,6 +275,10 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
+                        <DropdownMenuItem onClick={() => router.get(leases.show.url(lease))}>
+                            <ExternalLink className="size-4" />
+                            Open Workspace
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetail(lease)}>
                             <Eye className="size-4" />
                             View
