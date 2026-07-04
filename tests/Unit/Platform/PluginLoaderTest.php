@@ -87,7 +87,7 @@ describe('dependency resolution', function () {
             loaderPlugin('a', ['b']),
             loaderPlugin('b', ['a']),
         ], '0.1.0');
-    })->throws(InvalidArgumentException::class, 'Circular plugin dependency');
+    })->throws(InvalidArgumentException::class, 'Circular plugin dependency involving [a].');
 
     it('throws on a duplicate id', function () {
         (new PluginLoader)->prepare([loaderPlugin('a'), loaderPlugin('a')], '0.1.0');
