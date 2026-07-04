@@ -2,14 +2,19 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
-import type { Lease } from '@/types';
+
+export type WorkspaceLease = {
+    id: number;
+    reference: string | null;
+    status: string;
+};
 
 export function LeaseLayout({
     lease,
     activeTab,
     children,
 }: {
-    lease: Lease;
+    lease: WorkspaceLease;
     activeTab: string;
     children: ReactNode;
 }) {

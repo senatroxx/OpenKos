@@ -188,6 +188,7 @@ export type Payment = {
     period_start: string;
     period_end: string;
     payment_method: string;
+    reference: string | null;
     notes: string | null;
     status: string;
     confirmed_by: number | null;
