@@ -15,7 +15,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
-    const { isCurrentUrl } = useCurrentUrl();
+    const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
 
     function isAnyChildActive(children: NavItem[]): boolean {
         return children.some((child) => isCurrentUrl(child.href ?? ''));
@@ -72,7 +72,12 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
                                 asChild
-                                isActive={isCurrentUrl(item.href ?? '')}
+                                // parent match keeps the item active on workspace child pages, e.g. /properties/5/rooms
+                                isActive={
+                                    item.href
+                                        ? isCurrentOrParentUrl(item.href)
+                                        : false
+                                }
                                 tooltip={{ children: item.title }}
                             >
                                 <Link href={item.href ?? '#'} prefetch>
