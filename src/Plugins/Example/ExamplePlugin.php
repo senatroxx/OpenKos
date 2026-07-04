@@ -6,6 +6,7 @@ use OpenKOS\Platform\Dashboard\DashboardPage;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
+use OpenKOS\Platform\Plugin\PluginManifest;
 use OpenKOS\Platform\Settings\SettingsPage;
 
 /**
@@ -15,6 +16,17 @@ use OpenKOS\Platform\Settings\SettingsPage;
  */
 class ExamplePlugin extends Plugin
 {
+    public function manifest(): PluginManifest
+    {
+        return new PluginManifest(
+            id: 'openkos/example',
+            name: 'Example Plugin',
+            version: '1.0.0',
+            description: 'Reference plugin demonstrating every extension point.',
+            coreVersion: '^0.1',
+        );
+    }
+
     public function register(OpenKOSManager $platform): void
     {
         $platform->navigation()->registerItem(new NavigationItem(
