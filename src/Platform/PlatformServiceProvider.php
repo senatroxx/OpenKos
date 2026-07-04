@@ -4,10 +4,12 @@ namespace OpenKOS\Platform;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use OpenKOS\Platform\Console\SyncPluginPermissionsCommand;
 use OpenKOS\Platform\Dashboard\DashboardRegistry;
 use OpenKOS\Platform\Navigation\NavigationRegistry;
 use OpenKOS\Platform\Notification\NotificationRegistry;
 use OpenKOS\Platform\Payment\PaymentRegistry;
+use OpenKOS\Platform\Permission\PermissionRegistry;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginLoader;
 use OpenKOS\Platform\Settings\SettingsRegistry;
@@ -24,11 +26,16 @@ class PlatformServiceProvider extends ServiceProvider
         $this->app->singleton(SettingsRegistry::class);
         $this->app->singleton(NotificationRegistry::class);
         $this->app->singleton(PaymentRegistry::class);
+        $this->app->singleton(PermissionRegistry::class);
         $this->app->singleton(OpenKOSManager::class);
     }
 
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            $this->commands([SyncPluginPermissionsCommand::class]);
+        }
+
         $manager = $this->app->make(OpenKOSManager::class);
 
         /** @var array<int, Plugin> $plugins */
