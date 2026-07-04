@@ -137,7 +137,7 @@ class TenantController extends Controller
         $result = $table->paginate($query, $request, 'tenants');
 
         $availableRooms = Room::query()
-            ->with('property.city')
+            ->with(['property.city', 'activeRates'])
             ->select(['id', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
