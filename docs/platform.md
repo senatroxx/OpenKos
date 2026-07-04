@@ -168,9 +168,9 @@ src/Plugins/MyPlugin/
   `coreVersion`, `dependencies`. It's a PHP value object, not a JSON file — type-safe
   and IDE-navigable; a JSON manifest can wrap it later if external discovery needs one.
 - **Version compatibility**: `coreVersion` is checked against `config('platform.version')`
-  (currently `0.1.0`). Supported constraints: `*`, exact `x.y.z`, and caret `^x.y`
-  (for a `0.x` core the minor is the compatibility boundary). Incompatible plugins fail
-  fast at boot rather than half-loading.
+  (currently `0.1.0`). Supported constraints: any Composer semver constraint supported by `composer/semver`
+  (`*`, `^`, `~`, ranges, wildcards like `1.*`, `||`, …). Incompatible plugins fail fast at boot rather than
+  half-loading.
 - **Dependencies**: a plugin lists other plugin **ids**; the loader guarantees they're
   present and loaded first. Missing deps and cycles are hard errors.
 
