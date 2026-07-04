@@ -2,6 +2,7 @@
 
 namespace OpenKOS\Platform\Plugin;
 
+use Composer\Semver\Semver;
 use InvalidArgumentException;
 
 /**
@@ -54,20 +55,13 @@ class PluginLoader
     }
 
     /**
-     * ponytail: supports '*', exact 'x.y.z', and caret '^x.y[.z]' only —
-     * enough for a 0.x core. Swap in composer/semver if constraints get richer.
+     * Uses Composer's own constraint engine, so a plugin's coreVersion means
+     * exactly what the same constraint means in composer.json (^, ~, ranges,
+     * ||, wildcards, …).
      */
     public function satisfies(string $version, string $constraint): bool
     {
-        if ($constraint === '*' || $constraint === '') {
-            return true;
-        }
-
-        if (str_starts_with($constraint, '^')) {
-            return $this->caretSatisfies($version, ltrim($constraint, '^'));
-        }
-
-        return $version === $constraint;
+        return $constraint === '' || Semver::satisfies($version, $constraint);
     }
 
     /**
@@ -103,28 +97,5 @@ class PluginLoader
         }
 
         return array_values($sorted);
-    }
-
-    private function caretSatisfies(string $version, string $min): bool
-    {
-        $v = $this->parts($version);
-        $m = $this->parts($min);
-
-        // Semver caret: for 0.x the minor is the compatibility boundary.
-        if ($m[0] === 0) {
-            return $v[0] === 0 && $v[1] === $m[1] && ($v <=> $m) >= 0;
-        }
-
-        return $v[0] === $m[0] && ($v <=> $m) >= 0;
-    }
-
-    /**
-     * @return array{0:int,1:int,2:int}
-     */
-    private function parts(string $version): array
-    {
-        $p = array_map('intval', explode('.', $version.'.0.0'));
-
-        return [$p[0], $p[1], $p[2]];
     }
 }

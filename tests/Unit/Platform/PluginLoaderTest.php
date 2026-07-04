@@ -53,6 +53,16 @@ describe('version compatibility', function () {
             ->and($loader->satisfies('2.0.0', '^1.0'))->toBeFalse();
     });
 
+    it('supports the full composer constraint grammar', function () {
+        $loader = new PluginLoader;
+
+        expect($loader->satisfies('1.3.0', '~1.2'))->toBeTrue()
+            ->and($loader->satisfies('1.5.0', '>=1.0 <2.0'))->toBeTrue()
+            ->and($loader->satisfies('2.1.0', '^1.0 || ^2.0'))->toBeTrue()
+            ->and($loader->satisfies('1.9.9', '1.*'))->toBeTrue()
+            ->and($loader->satisfies('2.0.0', '~1.2'))->toBeFalse();
+    });
+
     it('throws when a plugin requires an incompatible core', function () {
         (new PluginLoader)->prepare([loaderPlugin('a', coreVersion: '^0.2')], '0.1.0');
     })->throws(InvalidArgumentException::class, 'requires core ^0.2');
