@@ -20,6 +20,7 @@ use OpenKOS\Platform\OpenKOSManager;
  * @method static \OpenKOS\Platform\Settings\SettingsRegistry settings()
  * @method static \OpenKOS\Platform\Notification\NotificationRegistry notifications()
  * @method static \OpenKOS\Platform\Payment\PaymentRegistry payments()
+ * @method static \OpenKOS\Platform\Permission\PermissionRegistry permissions()
  *
  * @see OpenKOSManager
  */
