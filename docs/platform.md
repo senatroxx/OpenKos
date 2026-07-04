@@ -106,6 +106,10 @@ class MyPlugin extends Plugin
     // Register extensions on the platform registries. Runs in dependency order.
     public function register(OpenKOSManager $platform): void
     {
+        // Declare the permission this plugin introduces...
+        $platform->permissions()->register('my-feature.view', 'View My Feature');
+
+        // ...then gate a nav item on it.
         $platform->navigation()->registerItem(new NavigationItem(
             title: 'My Feature',
             href: '/my-feature',
@@ -194,10 +198,15 @@ Plugins run **in-process with full application access** — there is no sandbox.
 boundary is therefore *installation*: only enable plugins you trust, exactly like any
 Composer dependency. What the platform **does** enforce:
 
-- **UI/authorization gating** — every registry item carries an optional `permission`
-  (Spatie), so a plugin's nav item, dashboard page, settings page, or workspace tab is
-  only shown to users who hold it. Plugin routes should apply the same `permission:`
-  middleware.
+- **Permissions** — a plugin declares its own permissions via
+  `$platform->permissions()->register('my-feature.view', 'label')`;
+  `php artisan platform:permissions:sync` persists them into the Spatie permissions
+  table (run it after enabling a plugin, alongside `migrate`). Plugins never edit core
+  seeders.
+- **UI/authorization gating** — every registry item carries an optional `permission`,
+  so a plugin's nav item, dashboard page, settings page, or workspace tab is only shown
+  to users who hold it. Plugin routes apply the same `permission:` middleware (see the
+  example plugin's `routes/web.php`).
 - **No schema collisions** — plugins own their tables via their own migrations; they must
   not alter core tables. Core schema and business logic stay untouched.
 - **Fail-fast loading** — version/dependency validation stops an incompatible or broken
@@ -231,13 +240,14 @@ future concern.
 
 ### ExamplePlugin (disabled by default)
 
-`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `PaymentRecorded`), its own `routes/web.php` (a `/example` endpoint), and a `database/migrations/` migration.
+`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, a declared permission (`example.view`) gating its nav item and route, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `PaymentRecorded`), its own `routes/web.php` (an invokable-controller `/example` endpoint), and a `database/migrations/` migration.
 
 It ships **disabled** so the demo stays out of the real UI. To enable it:
 
 1. Uncomment `// ExamplePlugin::class,` and its `use` import in `config/platform.php` — activates the manifest, registry registrations, event listener, and route/migration loading.
 2. Uncomment `// import './example';` in `resources/js/plugins/index.ts` — the client-side header badge.
-3. Run `php artisan migrate` to create the plugin's `example_widgets` table.
+3. Run `php artisan migrate` to create the plugin's `example_widgets` table, and
+   `php artisan platform:permissions:sync` to create its `example.view` permission.
 
 The backend and client halves are independent: registry entries + route + listener come from (1), the header badge from (2).
 
