@@ -18,17 +18,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
-Route::get('invitations/{token}', [UserController::class, 'acceptInvitation'])
-    ->middleware('guest')
-    ->name('users.invitations.accept');
-
-Route::post('invitations/accept', [UserController::class, 'completeInvitation'])
-    ->middleware('guest')
-    ->name('users.invitations.complete');
+Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->group(function () {
+    Route::get('{token}', [UserController::class, 'acceptInvitation'])->name('accept');
+    Route::post('accept', [UserController::class, 'completeInvitation'])->name('complete');
+});
 
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {
-    Route::get('dashboard', OverviewController::class)->name('dashboard');
-    Route::get('dashboard/rent', RentController::class)->name('dashboard.rent');
+    Route::prefix('dashboard')->group(function () {
+        Route::get('/', OverviewController::class)->name('dashboard');
+        Route::get('rent', RentController::class)->name('dashboard.rent');
+    });
 
     Route::prefix('properties')->name('properties.')->group(function () {
         Route::get('/', [PropertyController::class, 'index'])->name('index')->middleware('permission:properties.view');
@@ -82,9 +81,11 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::get('documents', [TenantController::class, 'documents'])->name('workspace.documents')->middleware('permission:tenants.view');
             Route::post('assign-room', [TenantController::class, 'assignRoom'])->name('assign-room')->middleware('permission:tenants.update');
 
-            Route::post('documents', [TenantDocumentController::class, 'store'])->name('documents.store')->middleware('permission:tenants.update');
-            Route::get('documents/{document}', [TenantDocumentController::class, 'show'])->name('documents.show');
-            Route::delete('documents/{document}', [TenantDocumentController::class, 'destroy'])->name('documents.destroy')->middleware('permission:tenants.update');
+            Route::prefix('documents')->name('documents.')->group(function () {
+                Route::post('/', [TenantDocumentController::class, 'store'])->name('store')->middleware('permission:tenants.update');
+                Route::get('{document}', [TenantDocumentController::class, 'show'])->name('show');
+                Route::delete('{document}', [TenantDocumentController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.update');
+            });
         });
     });
 
@@ -93,12 +94,15 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
 
         Route::prefix('{lease}')->whereNumber('lease')->group(function () {
             Route::get('/', [LeaseController::class, 'show'])->name('show')->middleware('permission:leases.view');
-            Route::get('payments', [LeaseController::class, 'payments'])->name('workspace.payments')->middleware('permission:leases.view');
             Route::get('documents', [LeaseController::class, 'documents'])->name('workspace.documents')->middleware('permission:leases.view');
             Route::get('rent-schedule', LeaseRentScheduleController::class)->name('rent-schedule')->middleware('permission:leases.view');
             Route::post('move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
             Route::post('renew', [LeaseController::class, 'renew'])->name('renew')->middleware('permission:leases.renew');
-            Route::post('payments', [PaymentController::class, 'store'])->name('payments.store')->middleware('permission:payments.create');
+
+            Route::prefix('payments')->group(function () {
+                Route::get('/', [LeaseController::class, 'payments'])->name('workspace.payments')->middleware('permission:leases.view');
+                Route::post('/', [PaymentController::class, 'store'])->name('payments.store')->middleware('permission:payments.create');
+            });
         });
     });
 
