@@ -79,7 +79,7 @@ function computeMonthlyEquivalent(
             monthly = num / int;
             break;
         case 'year':
-            monthly = (num * 12) / int;
+            monthly = num / 12 / int;
             break;
         default:
             return '';
