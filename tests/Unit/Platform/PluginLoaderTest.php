@@ -65,7 +65,7 @@ describe('version compatibility', function () {
 
     it('throws when a plugin requires an incompatible core', function () {
         (new PluginLoader)->prepare([loaderPlugin('a', coreVersion: '^0.2')], '0.1.0');
-    })->throws(InvalidArgumentException::class, 'requires core ^0.2');
+    })->throws(InvalidArgumentException::class, 'Plugin [a] requires core ^0.2, but core is 0.1.0.');
 });
 
 describe('dependency resolution', function () {
