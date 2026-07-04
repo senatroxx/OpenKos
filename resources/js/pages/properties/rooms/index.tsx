@@ -32,7 +32,13 @@ import {
 import { useTable } from '@/hooks/use-table';
 import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
-import type { LeaseInfo, PaginatedData, Property, Room, TableMeta } from '@/types';
+import type {
+    LeaseInfo,
+    PaginatedData,
+    Property,
+    Room,
+    TableMeta,
+} from '@/types';
 
 type PageProps = {
     property: Property;
@@ -108,7 +114,11 @@ export default function Index({
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
         tenants: { id: number; name: string; phone: string | null }[];
-        primary_tenant: { id: number; name: string; phone: string | null } | null;
+        primary_tenant: {
+            id: number;
+            name: string;
+            phone: string | null;
+        } | null;
         room: {
             id: number;
             name: string;
@@ -207,7 +217,10 @@ export default function Index({
                 property: {
                     id: property.id,
                     name: property.name,
-                    city: property.city && typeof property.city === 'string' ? { name: property.city } : null,
+                    city:
+                        property.city && typeof property.city === 'string'
+                            ? { name: property.city }
+                            : null,
                 },
             },
         });
@@ -300,9 +313,7 @@ export default function Index({
                         ))}
                     </div>
                 ) : (
-                    <span className="text-sm text-muted-foreground">
-                        —
-                    </span>
+                    <span className="text-sm text-muted-foreground">—</span>
                 );
             },
         },
@@ -342,14 +353,19 @@ export default function Index({
                             }
                         >
                             <DropdownMenuItem
-                            onClick={() => router.get(properties.rooms.show.url({ property: property.id, room: r.id }))}
-                        >
-                            <ExternalLink className="size-4" />
-                            Open Workspace
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                                onClick={() => openDetail(r)}
+                                onClick={() =>
+                                    router.get(
+                                        properties.rooms.show.url({
+                                            property: property.id,
+                                            room: r.id,
+                                        }),
+                                    )
+                                }
                             >
+                                <ExternalLink className="size-4" />
+                                Open Workspace
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDetail(r)}>
                                 <Eye className="size-4" />
                                 View
                             </DropdownMenuItem>
@@ -385,9 +401,7 @@ export default function Index({
                             )}
                             {(r.capacity > occupants.length ||
                                 hasActiveLease) && <DropdownMenuSeparator />}
-                            <DropdownMenuItem
-                                onClick={() => openEdit(r)}
-                            >
+                            <DropdownMenuItem onClick={() => openEdit(r)}>
                                 <Pencil className="size-4" />
                                 Edit
                             </DropdownMenuItem>
@@ -409,47 +423,45 @@ export default function Index({
         <PropertyLayout property={property} activeTab="rooms">
             <Head title={`Rooms - ${property.name}`} />
 
-            <div className="flex items-center justify-between">
-                <div className="flex-1" />
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-end">
+                    <Button onClick={openCreate}>New Room</Button>
+                </div>
 
-                <Button onClick={openCreate}>
-                    New Room
-                </Button>
+                <FilterBar
+                    filters={tableMeta.filters}
+                    activeFilters={table.activeFilters}
+                    activeFilterCount={table.activeFilterCount}
+                    onToggleOption={table.toggleFilterOption}
+                    onClearAll={table.clearAllFilters}
+                    searchInput={
+                        <SearchInput
+                            value={table.searchValue}
+                            onChange={table.onSearchChange}
+                            onClear={table.clearSearch}
+                            placeholder="Search by name or floor..."
+                        />
+                    }
+                />
+
+                <DataTable
+                    columns={columns}
+                    rows={data.data}
+                    currentSort={currentSort}
+                    onSort={table.toggleSort}
+                    onRowClick={openDetail}
+                    paginator={data}
+                    perPage={currentPerPage}
+                    onPageChange={table.goToPage}
+                    onPerPageChange={table.setPerPage}
+                    noun="rooms"
+                    empty={{
+                        message: 'No rooms yet.',
+                        createLabel: 'Create your first room',
+                        onCreate: openCreate,
+                    }}
+                />
             </div>
-
-            <FilterBar
-                filters={tableMeta.filters}
-                activeFilters={table.activeFilters}
-                activeFilterCount={table.activeFilterCount}
-                onToggleOption={table.toggleFilterOption}
-                onClearAll={table.clearAllFilters}
-                searchInput={
-                    <SearchInput
-                        value={table.searchValue}
-                        onChange={table.onSearchChange}
-                        onClear={table.clearSearch}
-                        placeholder="Search by name or floor..."
-                    />
-                }
-            />
-
-            <DataTable
-                columns={columns}
-                rows={data.data}
-                currentSort={currentSort}
-                onSort={table.toggleSort}
-                onRowClick={openDetail}
-                paginator={data}
-                perPage={currentPerPage}
-                onPageChange={table.goToPage}
-                onPerPageChange={table.setPerPage}
-                noun="rooms"
-                empty={{
-                    message: 'No rooms yet.',
-                    createLabel: 'Create your first room',
-                    onCreate: openCreate,
-                }}
-            />
 
             <RoomDetailSheet
                 room={viewingRoom}

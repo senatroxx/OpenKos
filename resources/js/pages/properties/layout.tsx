@@ -27,10 +27,26 @@ export function PropertyLayout({
                 activeTab={activeTab}
                 hrefParams={{ id: property.id }}
                 tabs={[
-                    { key: 'overview', label: 'Overview', href: `/properties/${property.id}` },
-                    { key: 'rooms', label: 'Rooms', href: `/properties/${property.id}/rooms` },
-                    { key: 'leases', label: 'Leases', href: `/properties/${property.id}/leases` },
-                    { key: 'documents', label: 'Documents', href: `/properties/${property.id}/documents` },
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/properties/${property.id}`,
+                    },
+                    {
+                        key: 'rooms',
+                        label: 'Rooms',
+                        href: `/properties/${property.id}/rooms`,
+                    },
+                    {
+                        key: 'leases',
+                        label: 'Leases',
+                        href: `/properties/${property.id}/leases`,
+                    },
+                    {
+                        key: 'documents',
+                        label: 'Documents',
+                        href: `/properties/${property.id}/documents`,
+                    },
                 ]}
             />
 
