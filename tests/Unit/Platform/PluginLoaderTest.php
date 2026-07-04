@@ -80,7 +80,7 @@ describe('dependency resolution', function () {
 
     it('throws on a missing dependency', function () {
         (new PluginLoader)->prepare([loaderPlugin('app', ['missing'])], '0.1.0');
-    })->throws(InvalidArgumentException::class, 'depends on missing plugin [missing]');
+    })->throws(InvalidArgumentException::class, 'Plugin [app] depends on missing plugin [missing].');
 
     it('throws on a circular dependency', function () {
         (new PluginLoader)->prepare([
