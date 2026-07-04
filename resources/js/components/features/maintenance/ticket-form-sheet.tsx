@@ -255,14 +255,14 @@ export default function TicketFormSheet({
                                         <InputError message={errors.priority} />
                                     </div>
 
-                                    {isEdit && ticket.status === 'resolved' && (
+                                    {isEdit && ticket?.status === 'resolved' && (
                                         <>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="resolution_notes">Resolution Notes</Label>
                                                 <Textarea
                                                     id="resolution_notes"
                                                     name="resolution_notes"
-                                                    defaultValue={ticket.resolution_notes ?? ''}
+                                                    defaultValue={ticket?.resolution_notes ?? ''}
                                                 />
                                                 <InputError message={errors.resolution_notes} />
                                             </div>
@@ -273,16 +273,16 @@ export default function TicketFormSheet({
                                                     id="cost"
                                                     name="cost"
                                                     type="number"
-                                                    defaultValue={ticket.cost ?? ''}
+                                                    defaultValue={ticket?.cost ?? ''}
                                                 />
                                                 <InputError message={errors.cost} />
                                             </div>
                                         </>
                                     )}
 
-                                    {isEdit && ticket.status !== 'resolved' && ticket.room_id && (
+                                    {isEdit && ticket?.status !== 'resolved' && ticket?.room_id && (
                                         (() => {
-                                            const room = rooms.find((r) => r.id === ticket.room_id);
+                                            const room = rooms.find((r) => r.id === ticket!.room_id);
                                             const isBlocked = room?.status === 'maintenance';
 
                                             if (! isBlocked) {

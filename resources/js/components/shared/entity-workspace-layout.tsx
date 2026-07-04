@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { PluginRegion } from '@/components/shared/plugin-region';
 import { Heading } from '@/components/shared';
+import { PluginRegion } from '@/components/shared/plugin-region';
 
 export function EntityWorkspaceLayout({
     title,

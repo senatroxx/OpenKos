@@ -20,17 +20,13 @@ use Inertia\Response;
 
 class PropertyController extends Controller
 {
-    public function show(Property $property): Response
+    public function show(Request $request, Property $property): Response
     {
         $this->authorize('view', $property);
 
-        $property = Property::with(['city', 'region'])
-            ->withCount('rooms')
-            ->withOccupiedRoomsCount()
-            ->withTenantsCount()
-            ->findOrFail($property->id);
+        $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
-        return Inertia::render('properties/show', [
+        return Inertia::render('properties/overview', [
             'property' => $property,
         ]);
     }

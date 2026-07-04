@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { edit as editWhatsApp, update as updateWhatsApp, test as testWhatsApp, pair as pairWhatsApp, qr as qrWhatsApp, disconnect as disconnectWhatsApp } from '@/routes/settings/whatsapp';
-import type { Driver, DriverSchemaField } from '@/types';
+import type { Driver } from '@/types';
 
 export default function WhatsApp({
     drivers,

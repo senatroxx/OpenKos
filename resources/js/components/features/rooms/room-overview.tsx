@@ -3,6 +3,7 @@ import type { Room } from '@/types';
 
 function formatPrice(cents: string): string {
     const num = Number.parseFloat(cents);
+
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency: 'IDR',
