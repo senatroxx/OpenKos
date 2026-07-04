@@ -131,8 +131,10 @@ describe('CRUD', function () {
 
     it('searches tenants by phone', function () {
         $user = User::factory()->owner()->create();
-        Tenant::factory()->create(['name' => 'Budi', 'phone' => '081234567890']);
-        Tenant::factory()->create(['name' => 'Siti', 'phone' => '081234567891']);
+        // Pin id_card_number: search also matches it, and the factory's random
+        // 16-digit default could otherwise coincidentally contain '890'.
+        Tenant::factory()->create(['name' => 'Budi', 'phone' => '081234567890', 'id_card_number' => '1111111111111111']);
+        Tenant::factory()->create(['name' => 'Siti', 'phone' => '081234567891', 'id_card_number' => '2222222222222222']);
 
         $response = $this->actingAs($user)
             ->get(route('tenants.index', ['search' => '890']))
