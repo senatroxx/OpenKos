@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Room\StoreRoomRequest;
 use App\Http\Requests\Room\UpdateRoomRequest;
 use App\Models\MaintenanceTicket;
@@ -12,16 +13,71 @@ use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RoomController extends Controller
 {
-    public function index(Request $request, Property $property): Response
+    public function show(Property $property, Room $room): Response
+    {
+        $this->authorize('view', $room);
+
+        $room->load(['property.city', 'activeRates'])
+            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
+            ->load(['leases' => fn ($q) => $q->where('status', 'active')
+                ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            ]);
+
+        return Inertia::render('properties/rooms/show', [
+            'property' => $property,
+            'room' => $room,
+        ]);
+    }
+
+    public function leaseHistory(Request $request, Property $property, Room $room): Response
+    {
+        $this->authorize('view', $room);
+
+        $table = Table::make()
+            ->columns([
+                Column::make('reference', 'Reference')->sortable()->searchable(function (Builder $q, string $search): void {
+                    $s = '%'.mb_strtolower($search).'%';
+                    $q->where(DB::raw('lower(leases.reference)'), 'like', $s)
+                        ->orWhereHas('tenants', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', $s));
+                }),
+                Column::make('start_date', 'Start')->sortable(),
+                Column::make('end_date', 'End')->sortable(),
+                Column::make('rent_amount', 'Rent')->sortable(),
+                Column::make('status', 'Status')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'terminated'])
+                    ->query(fn (Builder $q, string $value) => $q->where('leases.status', $value)),
+            ])
+            ->defaultSort('-start_date');
+
+        $result = $table->paginate(
+            $room->leases()->withTrashed()->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            $request,
+            'leases',
+        );
+
+        return Inertia::render('properties/rooms/lease-history', [
+            ...$result,
+            'property' => $property->only('id', 'name'),
+            'room' => $room->only('id', 'name', 'floor'),
+        ]);
+    }
+
+    public function index(Request $request, Property $property): Response|JsonResponse
     {
         $this->authorize('viewAny', [Room::class, $property]);
+
+        $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
         $table = Table::make()
             ->columns([
@@ -45,6 +101,10 @@ class RoomController extends Controller
 
         $result = $table->paginate($query, $request, 'rooms');
 
+        if ($request->wantsJson()) {
+            return response()->json($result);
+        }
+
         $tenantsList = Tenant::whereRaw('is_active is true')
             ->whereNull('deleted_at')
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -64,7 +124,7 @@ class RoomController extends Controller
 
         return Inertia::render('properties/rooms/index', [
             ...$result,
-            'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
+            'property' => $property,
             'tenants' => $tenantsList,
             'availableRooms' => $availableRooms,
         ]);
@@ -138,21 +198,41 @@ class RoomController extends Controller
         return to_route('properties.rooms.index', $property);
     }
 
-    public function maintenanceHistory(Property $property, Room $room): Response
+    public function maintenanceHistory(Request $request, Property $property, Room $room): Response
     {
         $this->authorize('viewAny', MaintenanceTicket::class);
 
-        $room->load('property.city');
+        $table = Table::make()
+            ->columns([
+                Column::make('title', 'Title')->sortable()->searchable(function (Builder $q, string $search): void {
+                    $s = '%'.mb_strtolower($search).'%';
+                    $q->where(DB::raw('lower(title)'), 'like', $s)
+                        ->orWhere(DB::raw('lower(reference)'), 'like', $s);
+                }),
+                Column::make('priority', 'Priority')->sortable(),
+                Column::make('status', 'Status')->sortable(),
+                Column::make('cost', 'Cost')->sortable(),
+                Column::make('created_at', 'Created')->sortable(),
+                Column::make('resolved_at', 'Resolved')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', array_map(fn (MaintenanceStatus $s) => $s->value, MaintenanceStatus::cases()))
+                    ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+                Filter::select('priority', 'Priority', ['low', 'medium', 'high', 'urgent'])
+                    ->query(fn (Builder $q, string $value) => $q->where('priority', $value)),
+            ])
+            ->defaultSort('-created_at');
 
-        $tickets = $room->maintenanceTickets()
-            ->with(['property:id,name', 'assignee:id,name', 'creator:id,name'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        $result = $table->paginate(
+            $room->maintenanceTickets()->with(['property:id,name', 'assignee:id,name', 'creator:id,name']),
+            $request,
+            'tickets',
+        );
 
         return Inertia::render('properties/rooms/maintenance-history', [
-            'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
+            ...$result,
+            'property' => $property->only('id', 'name'),
             'room' => $room->only('id', 'name', 'floor'),
-            'tickets' => $tickets,
         ]);
     }
 }

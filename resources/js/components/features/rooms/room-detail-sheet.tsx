@@ -74,7 +74,7 @@ export default function RoomDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg">
+            <SheetContent className="sm:max-w-lg" expandTo={room && property ? properties.rooms.show.url({ property: property.id, room: room.id }) : undefined}>
                 <SheetHeader>
                     <SheetTitle>{room?.name}</SheetTitle>
                     <SheetDescription>

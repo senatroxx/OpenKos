@@ -1,7 +1,8 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
+    ExternalLink,
     Eye,
     Move,
     Pencil,
@@ -19,7 +20,6 @@ import {
     RoomDetailSheet,
     RoomFormSheet,
 } from '@/components/features';
-import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,8 +30,15 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
-import type { LeaseInfo, PaginatedData, Property, Room, TableMeta } from '@/types';
+import type {
+    LeaseInfo,
+    PaginatedData,
+    Property,
+    Room,
+    TableMeta,
+} from '@/types';
 
 type PageProps = {
     property: Property;
@@ -107,7 +114,11 @@ export default function Index({
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
         tenants: { id: number; name: string; phone: string | null }[];
-        primary_tenant: { id: number; name: string; phone: string | null } | null;
+        primary_tenant: {
+            id: number;
+            name: string;
+            phone: string | null;
+        } | null;
         room: {
             id: number;
             name: string;
@@ -206,7 +217,10 @@ export default function Index({
                 property: {
                     id: property.id,
                     name: property.name,
-                    city: property.city && typeof property.city === 'string' ? { name: property.city } : null,
+                    city:
+                        property.city && typeof property.city === 'string'
+                            ? { name: property.city }
+                            : null,
                 },
             },
         });
@@ -299,9 +313,7 @@ export default function Index({
                         ))}
                     </div>
                 ) : (
-                    <span className="text-sm text-muted-foreground">
-                        —
-                    </span>
+                    <span className="text-sm text-muted-foreground">—</span>
                 );
             },
         },
@@ -341,8 +353,19 @@ export default function Index({
                             }
                         >
                             <DropdownMenuItem
-                                onClick={() => openDetail(r)}
+                                onClick={() =>
+                                    router.get(
+                                        properties.rooms.show.url({
+                                            property: property.id,
+                                            room: r.id,
+                                        }),
+                                    )
+                                }
                             >
+                                <ExternalLink className="size-4" />
+                                Open Workspace
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDetail(r)}>
                                 <Eye className="size-4" />
                                 View
                             </DropdownMenuItem>
@@ -378,9 +401,7 @@ export default function Index({
                             )}
                             {(r.capacity > occupants.length ||
                                 hasActiveLease) && <DropdownMenuSeparator />}
-                            <DropdownMenuItem
-                                onClick={() => openEdit(r)}
-                            >
+                            <DropdownMenuItem onClick={() => openEdit(r)}>
                                 <Pencil className="size-4" />
                                 Edit
                             </DropdownMenuItem>
@@ -399,24 +420,11 @@ export default function Index({
     ];
 
     return (
-        <>
+        <PropertyLayout property={property} activeTab="rooms">
             <Head title={`Rooms - ${property.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Heading
-                            title={property.name}
-                            description="Manage rooms for this property"
-                        />
-                        <Link
-                            href={properties.index()}
-                            className="mt-1 inline-block text-xs text-muted-foreground hover:text-foreground"
-                        >
-                            &larr; Back to properties
-                        </Link>
-                    </div>
-
+            <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-end">
                     <Button onClick={openCreate}>New Room</Button>
                 </div>
 
@@ -500,18 +508,6 @@ export default function Index({
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
-        </>
+        </PropertyLayout>
     );
 }
-
-Index.layout = {
-    breadcrumbs: [
-        {
-            title: 'Properties',
-            href: properties.index(),
-        },
-        {
-            title: 'Rooms',
-        },
-    ],
-};

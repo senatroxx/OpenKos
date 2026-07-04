@@ -2,26 +2,13 @@ import { Head } from '@inertiajs/react';
 import { RoleForm } from '@/components/features';
 import { Heading } from '@/components/shared';
 import roles from '@/routes/roles';
-
-type PermissionEntry = { value: string; label: string; description: string };
-type PermissionGroup = Record<string, PermissionEntry[]>;
-
-type RoleData = {
-    id: number;
-    name: string;
-    label: string;
-    description: string | null;
-    color: string | null;
-    is_system: boolean;
-    is_active: boolean;
-    permissions: string[];
-};
+import type { PermissionGroup, RoleFormData } from '@/types';
 
 export default function Edit({
     role,
     permissionGroups,
 }: {
-    role: RoleData;
+    role: RoleFormData;
     permissionGroups: PermissionGroup;
 }) {
     return (

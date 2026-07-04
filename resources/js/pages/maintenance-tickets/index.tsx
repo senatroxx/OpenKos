@@ -1,8 +1,8 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Ban, Check, EllipsisVertical, Pencil, Play, Trash2, UserPlus } from 'lucide-react';
+import { Ban, Check, EllipsisVertical, Eye, Pencil, Play, Trash2, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
-import type { TableColumn, TableFilterMeta } from '@/components/data-table';
+import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { TicketDetailSheet, TicketFormSheet } from '@/components/features';
@@ -34,6 +34,7 @@ import {
 import { useTable } from '@/hooks/use-table';
 import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
+import type { PaginatedData, TableFilterMeta } from '@/types';
 import type { MaintenanceTicket } from '@/types';
 
 const priorityColors: Record<string, string> = {
@@ -76,9 +77,9 @@ export default function Index({
     per_page: currentPerPage = '15',
     status: currentStatus = '',
     priority: currentPriority = '',
-    propertyId: currentPropertyId = '',
+    property_id: currentPropertyId = '',
 }: {
-    tickets: { data: MaintenanceTicket[] };
+    tickets: PaginatedData<MaintenanceTicket>;
     properties: { id: number; name: string }[];
     rooms: { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] }[];
     users: { id: number; name: string; roles?: { name: string; label?: string }[] }[];
@@ -143,7 +144,7 @@ export default function Index({
             className: 'text-muted-foreground text-xs font-mono',
             render: (ticket) => ticket.reference ?? `#${ticket.id}`,
         },
-        { key: 'title', label: 'Title', sortable: true, searchable: true },
+        { key: 'title', label: 'Title', sortable: true },
         {
             key: 'property_name',
             label: 'Property',
@@ -197,6 +198,10 @@ export default function Index({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => router.visit(`/maintenance-tickets/${ticket.id}`)}>
+                            <Eye className="size-4" />
+                            Open
+                        </DropdownMenuItem>
                         {ticket.status === 'reported' && can.update && (
                             <DropdownMenuItem onClick={() => handleStatusChange(ticket, 'in_progress')}>
                                 <Play className="size-4" />

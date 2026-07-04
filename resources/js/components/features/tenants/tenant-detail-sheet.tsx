@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
-import type { TenantInfo } from '@/types';
+import type { RoomWithProperty, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -18,17 +18,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: {
-        id: number;
-        name: string;
-        floor: string | null;
-        property_id: number;
-        property: {
-            id: number;
-            name: string;
-            city: { name: string } | null;
-        } | null;
-    } | null;
+    room: RoomWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -82,7 +72,7 @@ export default function TenantDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg">
+            <SheetContent className="sm:max-w-lg" expandTo={tenant ? tenants.show.url(tenant) : undefined}>
                 <SheetHeader>
                     <SheetTitle>{tenant?.name}</SheetTitle>
                     <SheetDescription>Tenant details</SheetDescription>

@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
+    ExternalLink,
     Eye,
     Pencil,
     Trash2,
@@ -29,29 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { PaginatedData, TableMeta, AvailableRoom, TenantInfo } from '@/types';
-
-type Property = {
-    id: number;
-    name: string;
-    city: { name: string } | null;
-};
-
-type Room = {
-    id: number;
-    name: string;
-    floor: string | null;
-    description: string | null;
-    size_sqm: string | null;
-    capacity: number;
-    status: string;
-    notes: string | null;
-};
-
-type RoomWithProperty = Room & {
-    property_id: number;
-    property: Property | null;
-};
+import type { AvailableRoom, PaginatedData, RoomWithProperty, TableMeta, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -247,6 +226,10 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
+                        <DropdownMenuItem onClick={() => router.get(tenants.show.url(t))}>
+                            <ExternalLink className="size-4" />
+                            Open Workspace
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetail(t)}>
                             <Eye className="size-4" />
                             View

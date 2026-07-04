@@ -78,15 +78,9 @@ export type Room = {
     tenants?: TenantInfo[];
 };
 
-export type RoomInfo = {
-    id: number;
-    name: string;
+export type RoomWithProperty = Room & {
     property_id: number;
-    property: {
-        id: number;
-        name: string;
-        city: { name: string } | null;
-    } | null;
+    property: Property | null;
 };
 
 export type AvailableRoom = {
@@ -157,7 +151,7 @@ export type Lease = {
     notes: string | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-    room: RoomInfo | null;
+    room: RoomWithProperty | null;
     payments?: Payment[];
     room_histories?: {
         id: number;
@@ -174,7 +168,7 @@ export type LeaseData = {
     id: number;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-    room: RoomInfo | null;
+    room: { id: number; name: string } | null;
 };
 
 export type PaymentProof = {
@@ -194,6 +188,7 @@ export type Payment = {
     period_start: string;
     period_end: string;
     payment_method: string;
+    reference: string | null;
     notes: string | null;
     status: string;
     confirmed_by: number | null;
@@ -212,23 +207,6 @@ export type RentScheduleEntry = {
     due_date: string;
     amount: string;
     status: 'paid' | 'overdue' | 'due' | 'upcoming';
-};
-
-export type RentDashboardEntry = {
-    id: number;
-    tenant_name: string;
-    room_name: string;
-    property_name: string;
-    rent_due_day: number;
-    days_overdue: number | null;
-    rent_amount: string;
-    rent_status: 'paid' | 'overdue' | 'due_today' | 'due_soon';
-};
-
-export type PermissionEntry = {
-    value: string;
-    label: string;
-    description: string;
 };
 
 export type MaintenanceTicket = {

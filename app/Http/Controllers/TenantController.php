@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Leases\CreateLease;
 use App\Data\Lease\CreateLeaseData;
+use App\Enums\TenantDocumentType;
 use App\Http\Requests\Tenant\AssignRoomRequest;
 use App\Http\Requests\Tenant\StoreTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
@@ -21,6 +22,84 @@ use Inertia\Response;
 
 class TenantController extends Controller
 {
+    public function show(Tenant $tenant): Response
+    {
+        $this->authorize('view', $tenant);
+
+        $tenant->load([
+            'documents',
+            'leases' => fn ($q) => $q->where('status', 'active')
+                ->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+        ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
+
+        return Inertia::render('tenants/show', [
+            'tenant' => $tenant,
+        ]);
+    }
+
+    public function leases(Request $request, Tenant $tenant): Response
+    {
+        $this->authorize('view', $tenant);
+
+        $table = Table::make()
+            ->columns([
+                Column::make('reference', 'Reference')->sortable()->searchable(function (Builder $q, string $search): void {
+                    $s = '%'.mb_strtolower($search).'%';
+                    $q->where(DB::raw('lower(leases.reference)'), 'like', $s)
+                        ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', $s));
+                }),
+                Column::make('start_date', 'Start')->sortable(),
+                Column::make('end_date', 'End')->sortable(),
+                Column::make('rent_amount', 'Rent')->sortable(),
+                Column::make('status', 'Status')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'terminated'])
+                    ->query(fn (Builder $q, string $value) => $q->where('leases.status', $value)),
+            ])
+            ->defaultSort('-start_date');
+
+        $result = $table->paginate(
+            $tenant->leases()->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            $request,
+            'leases',
+        );
+
+        return Inertia::render('tenants/leases', [
+            ...$result,
+            'tenant' => $this->workspaceTenant($tenant),
+        ]);
+    }
+
+    public function documents(Request $request, Tenant $tenant): Response
+    {
+        $this->authorize('view', $tenant);
+
+        $table = Table::make()
+            ->columns([
+                Column::make('original_name', 'Name')->sortable()->searchable(),
+                Column::make('type', 'Type')->sortable(),
+                Column::make('created_at', 'Uploaded')->sortable(),
+            ])
+            ->filters([
+                Filter::select('type', 'Type', array_map(fn (TenantDocumentType $t) => $t->value, TenantDocumentType::cases()))
+                    ->query(fn (Builder $q, string $value) => $q->where('type', $value)),
+            ])
+            ->defaultSort('-created_at');
+
+        $result = $table->paginate($tenant->documents(), $request, 'documents');
+
+        return Inertia::render('tenants/documents', [
+            ...$result,
+            'tenant' => $this->workspaceTenant($tenant),
+        ]);
+    }
+
+    private function workspaceTenant(Tenant $tenant): Tenant
+    {
+        return $tenant->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
+    }
+
     public function index(Request $request): Response
     {
         $table = Table::make()

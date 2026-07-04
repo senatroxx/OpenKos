@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     Copy,
     EllipsisVertical,
+    Eye,
     Pencil,
     Plus,
     Trash2,
@@ -32,22 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTable } from '@/hooks/use-table';
 import roles, { destroy, clone } from '@/routes/roles';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type RoleData = {
-    id: number;
-    name: string;
-    label: string;
-    description: string | null;
-    color: string | null;
-    guard_name: string;
-    is_system: boolean;
-    is_active: boolean;
-    users_count: number;
-    permissions_count: number;
-    permissions: string[];
-    created_at: string | null;
-};
+import type { PaginatedData, RoleData, TableMeta } from '@/types';
 
 type PageProps = {
     roles: PaginatedData<RoleData>;
@@ -188,6 +174,12 @@ export default function Index({
                         align="end"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        <DropdownMenuItem asChild>
+                            <Link href={`/roles/${role.id}`}>
+                                <Eye className="size-4" />
+                                View
+                            </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                             <Link href={roles.edit(role)}>
                                 <Pencil className="size-4" />
