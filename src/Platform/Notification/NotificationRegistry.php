@@ -4,33 +4,45 @@ namespace OpenKOS\Platform\Notification;
 
 use Illuminate\Contracts\Support\Arrayable;
 use InvalidArgumentException;
-use OpenKOS\Core\Contracts\NotificationDriver;
 
 class NotificationRegistry implements Arrayable
 {
-    /** @var array<string, class-string<NotificationDriver>|NotificationDriver> */
+    /** @var array<string, NotificationDriverRegistration> */
     private array $drivers = [];
 
-    /**
-     * @param  class-string<NotificationDriver>|NotificationDriver  $driver
-     */
-    public function registerDriver(string $name, string|NotificationDriver $driver): static
+    public function registerDriver(NotificationDriverRegistration $driver): static
     {
-        if (isset($this->drivers[$name])) {
-            throw new InvalidArgumentException("Notification driver [{$name}] is already registered.");
+        if (isset($this->drivers[$driver->name])) {
+            throw new InvalidArgumentException("Notification driver [{$driver->name}] is already registered.");
         }
 
-        $this->drivers[$name] = $driver;
+        $this->drivers[$driver->name] = $driver;
 
         return $this;
     }
 
     /**
-     * @return array<string, class-string<NotificationDriver>|NotificationDriver>
+     * @return array<string, NotificationDriverRegistration>
      */
     public function drivers(): array
     {
         return $this->drivers;
+    }
+
+    /**
+     * @return array<int, NotificationDriverRegistration>
+     */
+    public function forChannel(string $channel): array
+    {
+        return array_values(array_filter(
+            $this->drivers,
+            fn (NotificationDriverRegistration $d) => $d->channel === $channel,
+        ));
+    }
+
+    public function get(string $name): ?NotificationDriverRegistration
+    {
+        return $this->drivers[$name] ?? null;
     }
 
     public function has(string $name): bool
@@ -40,6 +52,9 @@ class NotificationRegistry implements Arrayable
 
     public function toArray(): array
     {
-        return array_keys($this->drivers);
+        return array_values(array_map(
+            fn (NotificationDriverRegistration $d) => $d->toArray(),
+            $this->drivers,
+        ));
     }
 }
