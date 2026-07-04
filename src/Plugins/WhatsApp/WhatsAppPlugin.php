@@ -6,6 +6,7 @@ use Illuminate\Support\Arr;
 use OpenKOS\Platform\Notification\NotificationDriverRegistration;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
+use OpenKOS\Platform\Plugin\PluginManifest;
 
 /**
  * Core plugin that registers the built-in WhatsApp drivers into the platform
@@ -16,6 +17,17 @@ use OpenKOS\Platform\Plugin\Plugin;
  */
 class WhatsAppPlugin extends Plugin
 {
+    public function manifest(): PluginManifest
+    {
+        return new PluginManifest(
+            id: 'openkos/whatsapp',
+            name: 'WhatsApp Notifications',
+            version: '1.0.0',
+            description: 'Registers the built-in WhatsApp drivers as notification channels.',
+            coreVersion: '^0.1',
+        );
+    }
+
     public function register(OpenKOSManager $platform): void
     {
         foreach (config('services.whatsapp.drivers', []) as $name => $definition) {
