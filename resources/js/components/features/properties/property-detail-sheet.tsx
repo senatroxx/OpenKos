@@ -45,7 +45,7 @@ export default function PropertyDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg">
+            <SheetContent className="sm:max-w-lg" expandTo={property ? properties.show.url(property) : undefined}>
                 <SheetHeader>
                     <SheetTitle>{property?.name}</SheetTitle>
                     <SheetDescription>

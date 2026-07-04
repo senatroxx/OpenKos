@@ -1,33 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { dashboard } from '@/routes';
-
-type PropertyStats = {
-    id: number;
-    name: string;
-    total_rooms: number;
-    occupied_rooms: number;
-    available_rooms: number;
-    maintenance_rooms: number;
-    unavailable_rooms: number;
-    occupancy_percentage: number;
-};
-
-type Finance = {
-    revenue_this_month: number;
-    monthly_potential: number;
-    outstanding: number;
-    collection_rate: number;
-};
-
-type Stats = {
-    total_rooms: number;
-    occupied_rooms: number;
-    available_rooms: number;
-    maintenance_rooms: number;
-    unavailable_rooms: number;
-    occupancy_percentage: number;
-    properties: PropertyStats[];
-};
+import type { Finance, PropertyStats, Stats } from '@/types';
 
 function formatRupiah(n: number): string {
     return new Intl.NumberFormat('id-ID', {

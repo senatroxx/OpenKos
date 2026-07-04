@@ -20,6 +20,17 @@ use Inertia\Response;
 
 class PropertyController extends Controller
 {
+    public function show(Request $request, Property $property): Response
+    {
+        $this->authorize('view', $property);
+
+        $property = Property::withWorkspaceStats()->findOrFail($property->id);
+
+        return Inertia::render('properties/overview', [
+            'property' => $property,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $table = Table::make()

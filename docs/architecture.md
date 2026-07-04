@@ -21,6 +21,8 @@
 
 The application uses a **multi-layered domain-oriented** architecture. Files are organized by architectural concern (layer-first), not by feature.
 
+Application code lives in `app/` (`App\` namespace). The extensibility platform lives in `src/` (`OpenKOS\` namespace) — registries, the `OpenKOS` facade/manager, and the plugin system. See `docs/platform.md`.
+
 ```
 app/
 ├── Actions/          Single-responsibility operations (orchestration)
@@ -41,6 +43,11 @@ app/
 ├── Providers/        Service providers
 ├── Support/          Utility classes
 └── Tables/           Reusable table/filter/column builders
+
+src/
+├── Core/Contracts/   Platform-facing interfaces (NotificationDriver, PaymentGateway, PluginDiscovery)
+├── Platform/         Registries, OpenKOSManager, OpenKOS facade, Plugin base class
+└── Plugins/          Plugin implementations (config/platform.php lists enabled plugins)
 ```
 
 ### Layer Rules

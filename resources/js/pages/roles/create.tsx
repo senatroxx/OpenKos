@@ -2,9 +2,7 @@ import { Head } from '@inertiajs/react';
 import { RoleForm } from '@/components/features';
 import { Heading } from '@/components/shared';
 import roles from '@/routes/roles';
-
-type PermissionEntry = { value: string; label: string; description: string };
-type PermissionGroup = Record<string, PermissionEntry[]>;
+import type { PermissionGroup } from '@/types';
 
 export default function Create({
     permissionGroups,

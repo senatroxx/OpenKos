@@ -1,34 +1,11 @@
-import { Head, Link } from '@inertiajs/react';
-import { Heading } from '@/components/shared';
+import { router } from '@inertiajs/react';
+import type { TableColumn } from '@/components/data-table';
+import { PluginRegion } from '@/components/shared/plugin-region';
+import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
-import properties from '@/routes/properties';
-import type { MaintenanceTicket } from '@/types';
-
-type Property = {
-    id: number;
-    name: string;
-    slug: string;
-    city: string | null;
-};
-
-type Room = {
-    id: number;
-    name: string;
-    floor: string | null;
-};
-
-type PageProps = {
-    property: Property;
-    room: Room;
-    tickets: {
-        data: MaintenanceTicket[];
-        meta?: {
-            current_page: number;
-            last_page: number;
-            total: number;
-        };
-    };
-};
+import { formatDate, formatPrice } from '@/lib/formatters';
+import type { MaintenanceTicket, PaginatedData, TableMeta } from '@/types';
+import { RoomLayout } from './layout';
 
 const priorityColors: Record<string, string> = {
     low: 'bg-slate-100 text-slate-700',
@@ -58,125 +35,108 @@ const statusLabel: Record<string, string> = {
     cancelled: 'Cancelled',
 };
 
-function formatPrice(cents: string | null): string {
-    if (!cents) return '—';
+const columns: TableColumn<MaintenanceTicket>[] = [
+    {
+        key: '_reference',
+        label: 'ID',
+        className: 'font-mono text-xs text-muted-foreground',
+        render: (t) => t.reference ?? `#${t.id}`,
+    },
+    {
+        key: 'title',
+        label: 'Title',
+        sortable: true,
+        className: 'font-medium',
+    },
+    {
+        key: 'priority',
+        label: 'Priority',
+        sortable: true,
+        render: (t) => (
+            <Badge className={priorityColors[t.priority] ?? ''}>
+                {priorityLabel[t.priority] ?? t.priority}
+            </Badge>
+        ),
+    },
+    {
+        key: 'status',
+        label: 'Status',
+        sortable: true,
+        render: (t) => (
+            <Badge className={statusColors[t.status] ?? ''}>
+                {statusLabel[t.status] ?? t.status}
+            </Badge>
+        ),
+    },
+    {
+        key: 'cost',
+        label: 'Cost',
+        sortable: true,
+        className: 'tabular-nums',
+        render: (t) => (t.cost ? formatPrice(t.cost) : '—'),
+    },
+    {
+        key: '_assignee',
+        label: 'Assigned To',
+        className: 'text-muted-foreground',
+        render: (t) => t.assignee?.name ?? '—',
+    },
+    {
+        key: 'created_at',
+        label: 'Created',
+        sortable: true,
+        className: 'text-muted-foreground tabular-nums',
+        render: (t) => formatDate(t.created_at),
+    },
+    {
+        key: 'resolved_at',
+        label: 'Resolved',
+        sortable: true,
+        className: 'text-muted-foreground tabular-nums',
+        render: (t) => (t.resolved_at ? formatDate(t.resolved_at) : '—'),
+    },
+];
 
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
-
-function formatDate(date: string | null): string {
-    if (!date) return '—';
-
-    return new Date(date).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
-export default function MaintenanceHistory({ property, room, tickets }: PageProps) {
-    const backUrl = properties.rooms.index.url(property);
-
+export default function MaintenanceHistory({
+    property,
+    room,
+    tickets,
+    sort = '-created_at',
+    search = '',
+    status = '',
+    priority = '',
+    per_page = 15,
+    table,
+}: {
+    property: { id: number; name: string };
+    room: { id: number; name: string; floor?: string | number | null };
+    tickets: PaginatedData<MaintenanceTicket>;
+    sort?: string;
+    search?: string;
+    status?: string;
+    priority?: string;
+    per_page?: number;
+    table: TableMeta;
+}) {
     return (
-        <>
-            <Head title={`Maintenance History - ${room.name}`} />
-
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div>
-                    <div className="mb-1 inline-block text-xs text-muted-foreground">
-                        <Link href={backUrl} className="hover:text-foreground">
-                            &larr; Back to {property.name} rooms
-                        </Link>
-                    </div>
-                    <Heading
-                        title={`${room.name} — Maintenance History`}
-                        description={
-                            room.floor ? `Floor ${room.floor}` : undefined
-                        }
-                    />
-                </div>
-
-                {tickets.data.length === 0 ? (
-                    <div className="flex flex-1 items-center justify-center rounded-lg border py-16">
-                        <p className="text-muted-foreground">
-                            No maintenance history for this room.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto rounded-lg border">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b bg-muted/50 text-left text-muted-foreground">
-                                    <th className="px-4 py-3 font-medium">ID</th>
-                                    <th className="px-4 py-3 font-medium">Title</th>
-                                    <th className="px-4 py-3 font-medium">Priority</th>
-                                    <th className="px-4 py-3 font-medium">Status</th>
-                                    <th className="px-4 py-3 font-medium">Cost</th>
-                                    <th className="px-4 py-3 font-medium">Assigned To</th>
-                                    <th className="px-4 py-3 font-medium">Created</th>
-                                    <th className="px-4 py-3 font-medium">Resolved</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {tickets.data.map((ticket) => (
-                                    <tr
-                                        key={ticket.id}
-                                        className="border-b last:border-0 hover:bg-muted/30"
-                                    >
-                                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                                            {ticket.reference ?? `#${ticket.id}`}
-                                        </td>
-                                        <td className="px-4 py-3 font-medium">
-                                            {ticket.title}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge className={priorityColors[ticket.priority] ?? ''}>
-                                                {priorityLabel[ticket.priority] ?? ticket.priority}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <Badge className={statusColors[ticket.status] ?? ''}>
-                                                {statusLabel[ticket.status] ?? ticket.status}
-                                            </Badge>
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums">
-                                            {formatPrice(ticket.cost)}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {ticket.assignee?.name ?? '—'}
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                                            {formatDate(ticket.created_at)}
-                                        </td>
-                                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                                            {formatDate(ticket.resolved_at)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
-            </div>
-        </>
+        <RoomLayout property={property} room={room} activeTab="maintenance">
+            <PluginRegion name="workspace-tab-maintenance">
+                <WorkspaceTable
+                    url={`/properties/${property.id}/rooms/${room.id}/maintenance-history`}
+                    noun="tickets"
+                    rows={tickets}
+                    columns={columns}
+                    tableMeta={table}
+                    sort={sort}
+                    search={search}
+                    perPage={per_page}
+                    filterValues={{ status, priority }}
+                    defaultSort="-created_at"
+                    searchPlaceholder="Search by title or reference..."
+                    emptyMessage="No maintenance history for this room."
+                    onRowClick={(t) => router.get(`/maintenance-tickets/${t.id}`)}
+                />
+            </PluginRegion>
+        </RoomLayout>
     );
 }
-
-MaintenanceHistory.layout = {
-    breadcrumbs: [
-        {
-            title: 'Properties',
-            href: properties.index(),
-        },
-        {
-            title: 'Rooms',
-        },
-    ],
-};
