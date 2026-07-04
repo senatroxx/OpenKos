@@ -2,17 +2,23 @@
 
 namespace OpenKOS\Plugins\Example;
 
+use App\Events\PaymentRecorded;
 use OpenKOS\Platform\Dashboard\DashboardPage;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginManifest;
 use OpenKOS\Platform\Settings\SettingsPage;
+use OpenKOS\Plugins\Example\Listeners\LogPaymentRecorded;
 
 /**
- * Reference plugin exercising the platform boot path. Demonstrates each
- * consumed registry: a sidebar nav item, a Dashboard sub-page, a settings
- * page, and a workspace-header badge (client side).
+ * Reference plugin demonstrating every extension point:
+ *  - a manifest (id, version, core-version constraint)
+ *  - registry registrations: a sidebar nav item, a Dashboard sub-page,
+ *    a settings page (+ a workspace-header badge, client side)
+ *  - a domain-event subscription via listens()
+ *  - its own routes (routes/web.php) and migration (database/migrations/),
+ *    auto-loaded by convention when enabled.
  */
 class ExamplePlugin extends Plugin
 {
@@ -56,5 +62,12 @@ class ExamplePlugin extends Plugin
             title: 'Example',
             href: '/settings/example',
         ));
+    }
+
+    public function listens(): array
+    {
+        return [
+            PaymentRecorded::class => LogPaymentRecorded::class,
+        ];
     }
 }
