@@ -19,6 +19,12 @@ export function PluginRegion({
 }) {
     const components = regions.get(name) ?? [];
 
+    // Empty regions render nothing — an empty div would still be a flex
+    // item and produce phantom gaps in gap-* layouts.
+    if (!children && components.length === 0) {
+        return null;
+    }
+
     return (
         <div data-plugin-region={name}>
             {children}
