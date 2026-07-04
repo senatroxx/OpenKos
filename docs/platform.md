@@ -1,7 +1,7 @@
 # Platform Layer & Plugin System
 
-> **Status:** Foundation shipped and consumed (v0.1 Alpha) — registrations render in the sidebar, settings nav, and workspace tabs
-> **Purpose:** Describe the extensibility architecture: registries, the OpenKOS manager/facade, and the plugin lifecycle. For general layer conventions see `docs/architecture.md`.
+> **Status:** Foundation shipped and consumed (v0.1 Alpha) — registrations render in the sidebar, settings nav, and workspace tabs; plugins carry manifests, subscribe to domain events, and ship their own routes/migrations
+> **Purpose:** The plugin extension strategy — registries, the OpenKOS manager/facade, the plugin lifecycle, manifest/versioning/dependency rules, domain events, and extension boundaries. For general layer conventions see `docs/architecture.md`.
 
 ## Why
 
@@ -19,7 +19,7 @@ src/
 │   ├── OpenKOSManager.php    Central manager — the object plugins receive
 │   ├── PlatformServiceProvider.php
 │   ├── Facades/OpenKOS.php
-│   ├── Plugin/Plugin.php     Abstract base class for plugins
+│   ├── Plugin/               Plugin base, PluginManifest, PluginLoader
 │   ├── Dashboard/            DashboardRegistry + DashboardPage
 │   ├── Navigation/           NavigationRegistry + NavigationItem
 │   ├── Workspace/            WorkspaceRegistry + Workspace + WorkspaceTab
@@ -28,8 +28,11 @@ src/
 │   └── Payment/              PaymentRegistry
 └── Plugins/
     ├── WhatsApp/             Core plugin: registers built-in WhatsApp drivers
-    └── Example/              Reference plugin — disabled by default (see below)
+    └── Example/              Reference plugin (manifest, listener, routes/,
+                              database/migrations/) — disabled by default (see below)
 ```
+
+Core also dispatches domain events plugins can subscribe to, e.g. `App\Events\PaymentRecorded`.
 
 `src/Core/` currently holds only contracts. It is the designated future home for domain code migrating out of `app/` — nothing has been moved yet, deliberately.
 
@@ -76,29 +79,53 @@ OpenKOS::payments()->registerGateway(...);
 
 ## Writing a Plugin
 
+A plugin is a class extending `Plugin` that declares a **manifest** and registers
+extensions. The `src/Plugins/Example/` plugin is a working reference for everything below.
+
 ```php
+use App\Events\PaymentRecorded;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
+use OpenKOS\Platform\Plugin\PluginManifest;
 
 class MyPlugin extends Plugin
 {
+    // Identity + compatibility. Required.
+    public function manifest(): PluginManifest
+    {
+        return new PluginManifest(
+            id: 'acme/my-plugin',      // unique, vendor-namespaced
+            name: 'My Plugin',
+            version: '1.0.0',
+            coreVersion: '^0.1',        // constraint against config('platform.version')
+            dependencies: [],           // ids of plugins that must load first
+        );
+    }
+
+    // Register extensions on the platform registries. Runs in dependency order.
     public function register(OpenKOSManager $platform): void
     {
         $platform->navigation()->registerItem(new NavigationItem(
             title: 'My Feature',
             href: '/my-feature',
             icon: 'sparkles',
-            permission: 'my-feature.view',
+            permission: 'my-feature.view',   // Spatie permission gates visibility
         ));
     }
 
     // Optional — runs after ALL plugins have registered.
     public function boot(OpenKOSManager $platform): void {}
+
+    // Optional — subscribe to core domain events.
+    public function listens(): array
+    {
+        return [PaymentRecorded::class => MyListener::class];
+    }
 }
 ```
 
-Then list it in `config/platform.php`:
+Then list it in `config/platform.php` (order doesn't matter — dependencies decide it):
 
 ```php
 'plugins' => [
@@ -106,11 +133,79 @@ Then list it in `config/platform.php`:
 ],
 ```
 
+**Routes and migrations** load by convention — drop them in the plugin's own directory
+and they're picked up when the plugin is enabled, with no registration boilerplate:
+
+```
+src/Plugins/MyPlugin/
+├── MyPlugin.php
+├── routes/web.php                 # loaded via loadRoutesFrom()
+└── database/migrations/           # loaded via loadMigrationsFrom()
+```
+
 ### Lifecycle
 
-`PlatformServiceProvider::boot()` instantiates every configured plugin through the container (so plugins can constructor-inject dependencies), then runs **two passes**: every plugin's `register()` first, then every plugin's `boot()`. A plugin's `boot()` can therefore rely on all other plugins having registered.
+`PlatformServiceProvider::boot()`:
 
-For now plugins are listed explicitly in config. `OpenKOS\Core\Contracts\PluginDiscovery` (`discover(): array` of plugin class-strings) is the seam for future Composer-based discovery — interface only, no implementation.
+1. Instantiates every configured plugin through the container (so plugins can
+   constructor-inject dependencies).
+2. **Validates & orders** them with `PluginLoader`: checks each `coreVersion`
+   against `config('platform.version')`, verifies declared `dependencies` exist,
+   and topologically sorts so each plugin loads after its dependencies. Throws on
+   an incompatible version, missing dependency, dependency cycle, or duplicate id.
+3. **Loads resources** — each plugin's `routes/web.php` and `database/migrations/`.
+4. Runs **two passes**: every plugin's `register()`, then every plugin's `boot()`
+   (so `boot()` can rely on all plugins having registered).
+5. **Wires event listeners** from each plugin's `listens()` onto Laravel's dispatcher.
+
+### Manifest, versioning & dependencies
+
+- **Manifest** (`PluginManifest`): `id`, `name`, `version`, `description`,
+  `coreVersion`, `dependencies`. It's a PHP value object, not a JSON file — type-safe
+  and IDE-navigable; a JSON manifest can wrap it later if external discovery needs one.
+- **Version compatibility**: `coreVersion` is checked against `config('platform.version')`
+  (currently `0.1.0`). Supported constraints: `*`, exact `x.y.z`, and caret `^x.y`
+  (for a `0.x` core the minor is the compatibility boundary). Incompatible plugins fail
+  fast at boot rather than half-loading.
+- **Dependencies**: a plugin lists other plugin **ids**; the loader guarantees they're
+  present and loaded first. Missing deps and cycles are hard errors.
+
+### Domain events
+
+Core dispatches domain events (e.g. `App\Events\PaymentRecorded`); plugins subscribe
+declaratively via `listens()` (`event => listener` / `[listeners]`), wired onto Laravel's
+event dispatcher at boot. This is the standard extension seam for reacting to core
+activity (accounting, analytics, notifications) **without modifying core** — the action
+just dispatches; any number of plugins can listen. Add new domain events as core
+operations warrant; keep them in `App\Events` as part of the stable plugin API.
+
+### Discovery
+
+Plugins are listed explicitly in `config/platform.php`. `OpenKOS\Core\Contracts\PluginDiscovery`
+(`discover(): array` of plugin class-strings) is the seam for future Composer-package
+discovery — interface only, no implementation. Note that shipping a plugin's **frontend**
+code (React pages/regions) still requires it to live in-repo under `resources/js/plugins/`;
+a bundling story (build-time registration or module federation) is the open problem
+that gates true external plugins.
+
+### Security & permission boundaries
+
+Plugins run **in-process with full application access** — there is no sandbox. The trust
+boundary is therefore *installation*: only enable plugins you trust, exactly like any
+Composer dependency. What the platform **does** enforce:
+
+- **UI/authorization gating** — every registry item carries an optional `permission`
+  (Spatie), so a plugin's nav item, dashboard page, settings page, or workspace tab is
+  only shown to users who hold it. Plugin routes should apply the same `permission:`
+  middleware.
+- **No schema collisions** — plugins own their tables via their own migrations; they must
+  not alter core tables. Core schema and business logic stay untouched.
+- **Fail-fast loading** — version/dependency validation stops an incompatible or broken
+  plugin from partially booting.
+
+Sandboxing (capability limits, resource isolation) is explicitly out of scope for the
+monolith; it would only matter for untrusted third-party marketplace plugins, which is a
+future concern.
 
 ## Notifications (WhatsApp) — consumed
 
@@ -136,24 +231,25 @@ For now plugins are listed explicitly in config. `OpenKOS\Core\Contracts\PluginD
 
 ### ExamplePlugin (disabled by default)
 
-`ExamplePlugin` (`src/Plugins/Example/`) is a working reference that demonstrates every consumed registry — a sidebar nav item, a Dashboard sub-page, a settings nav entry, and a `workspace-header-badge` region component (client half in `resources/js/plugins/example/`). Its source also shows a commented workspace-tab registration.
+`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `PaymentRecorded`), its own `routes/web.php` (a `/example` endpoint), and a `database/migrations/` migration.
 
-It ships **disabled** so the demo stays out of the real UI. To enable it, uncomment all three spots:
+It ships **disabled** so the demo stays out of the real UI. To enable it:
 
-1. `// ExamplePlugin::class,` and its `use` import in `config/platform.php` (backend registrations)
-2. `// import './example';` in `resources/js/plugins/index.ts` (the client-side header badge)
+1. Uncomment `// ExamplePlugin::class,` and its `use` import in `config/platform.php` — activates the manifest, registry registrations, event listener, and route/migration loading.
+2. Uncomment `// import './example';` in `resources/js/plugins/index.ts` — the client-side header badge.
+3. Run `php artisan migrate` to create the plugin's `example_widgets` table.
 
-The backend and client halves are independent — the nav/dashboard/settings entries come from (1), the header badge from (2).
+The backend and client halves are independent: registry entries + route + listener come from (1), the header badge from (2).
 
 ### Future work
 
 1. Move built-in nav/tabs into a core plugin so built-ins and plugins go through one path (only if the dual path starts to hurt).
-2. Adapter to expose existing WhatsApp drivers through `NotificationRegistry`.
-3. Composer-based `PluginDiscovery` implementation, including a story for shipping plugin frontend code (today it must live in-repo under `resources/js/plugins/`).
+2. Composer-based `PluginDiscovery` implementation, including a story for shipping plugin frontend code (today it must live in-repo under `resources/js/plugins/`).
+3. `PaymentGateway`/`PaymentRegistry` wiring once a real gateway (Midtrans/Xendit) is chosen.
 
 ## Testing
 
-- `tests/Unit/Platform/` — one file per registry; plain unit tests (registries are framework-free classes).
-- `tests/Feature/Platform/` — container/facade singleton resolution, workspace scoping, and the plugin boot lifecycle (register-before-boot ordering, config-driven loading).
+- `tests/Unit/Platform/` — registries (framework-free) and `PluginLoaderTest` (version/dependency/ordering logic).
+- `tests/Feature/Platform/` — container/facade resolution, workspace scoping, and the plugin boot lifecycle: register-before-boot ordering, event-listener wiring (`PluginEventTest`), and convention-based route/migration loading (`PluginResourcesTest`).
 
-Note: registries are singletons and `ExamplePlugin` registers by default — tests assert *contains*, never exact counts.
+Note: platform registries are container singletons; tests that enable a plugin assert *contains*, not exact counts.
