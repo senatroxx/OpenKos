@@ -36,9 +36,25 @@ export type Region = {
     cities: { id: number; name: string }[];
 };
 
+// Mirrors App\Enums\PropertyType.
+export type PropertyType = 'kos' | 'apartment' | 'villa' | 'hostel' | 'hotel';
+
+export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
+    { value: 'kos', label: 'Kos' },
+    { value: 'apartment', label: 'Apartment' },
+    { value: 'villa', label: 'Villa' },
+    { value: 'hostel', label: 'Hostel' },
+    { value: 'hotel', label: 'Hotel' },
+];
+
+export const PROPERTY_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+    PROPERTY_TYPES.map((t) => [t.value, t.label]),
+);
+
 export type Property = {
     id: number;
     name: string;
+    type?: PropertyType;
     slug?: string;
     address?: string | null;
     region_id?: number | null;
