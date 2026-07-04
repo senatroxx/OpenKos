@@ -39,7 +39,8 @@ it('applies the example plugin registrations from config on boot', function () {
     $navTitles = array_map(fn ($item) => $item->title, OpenKOS::navigation()->items('main'));
 
     expect($navTitles)->toContain('Example Plugin')
-        ->and(OpenKOS::settings()->pages())->toHaveKey('example');
+        ->and(OpenKOS::settings()->pages())->toHaveKey('example')
+        ->and(OpenKOS::dashboard()->pages())->toHaveKey('example');
 });
 
 it('runs every register() before any boot()', function () {

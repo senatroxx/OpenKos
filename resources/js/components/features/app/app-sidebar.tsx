@@ -24,7 +24,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { platformNavItems } from '@/lib/platform';
+import { platformNavItems, platformPageNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
 import leases from '@/routes/leases';
@@ -52,6 +52,7 @@ export function AppSidebar() {
                       children: [
                           { title: 'Overview', icon: LayoutGrid, href: dashboard() },
                           { title: 'Rent', icon: Receipt, href: dashboardRent() },
+                          ...platformPageNavItems(platform.dashboard, auth),
                       ],
                   },
               ]
