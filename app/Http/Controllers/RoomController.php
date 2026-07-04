@@ -26,13 +26,26 @@ class RoomController extends Controller
 
         $room->load(['property.city', 'activeRates'])
             ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
-            ->load(['maintenanceTickets' => fn ($q) => $q->latest()->take(10)->with(['property:id,name', 'assignee:id,name'])])
-            ->load(['leases' => fn ($q) => $q->withTrashed()
-                ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone'])
-                ->orderBy('created_at', 'desc'),
+            ->load(['leases' => fn ($q) => $q->where('status', 'active')
+                ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
             ]);
 
         return Inertia::render('properties/rooms/show', [
+            'property' => $property,
+            'room' => $room,
+        ]);
+    }
+
+    public function leaseHistory(Property $property, Room $room): Response
+    {
+        $this->authorize('view', $room);
+
+        $room->load(['leases' => fn ($q) => $q->withTrashed()
+            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone'])
+            ->orderBy('created_at', 'desc'),
+        ]);
+
+        return Inertia::render('properties/rooms/lease-history', [
             'property' => $property,
             'room' => $room,
         ]);

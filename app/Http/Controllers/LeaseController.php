@@ -32,8 +32,24 @@ class LeaseController extends Controller
 {
     public function show(Lease $lease): Response
     {
+        return $this->renderWorkspace($lease, 'leases/show');
+    }
+
+    public function payments(Lease $lease): Response
+    {
+        return $this->renderWorkspace($lease, 'leases/payments');
+    }
+
+    public function documents(Lease $lease): Response
+    {
+        return $this->renderWorkspace($lease, 'leases/documents');
+    }
+
+    private function renderWorkspace(Lease $lease, string $page): Response
+    {
         $this->authorize('view', $lease);
 
+        // ponytail: every tab loads the full lease payload; split per-tab if it grows
         $lease->load([
             'tenants:id,name,phone',
             'primaryTenant:id,name,phone',
@@ -43,7 +59,7 @@ class LeaseController extends Controller
             'roomHistories.transferredBy:id,name',
         ]);
 
-        return Inertia::render('leases/show', [
+        return Inertia::render($page, [
             'lease' => $lease,
         ]);
     }
