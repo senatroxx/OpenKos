@@ -24,6 +24,7 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { platformNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
 import leases from '@/routes/leases';
@@ -34,9 +35,11 @@ import tenants from '@/routes/tenants';
 import userRoutes from '@/routes/users';
 import type { Auth } from '@/types';
 import type { NavItem } from '@/types';
+import type { Platform } from '@/types/platform';
 
 export function AppSidebar() {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    const { auth, platform } = usePage<{ auth: Auth; platform: Platform }>()
+        .props;
     const permissions = auth.permissions;
     const isOwner = auth.role === 'owner';
 
@@ -83,6 +86,7 @@ export function AppSidebar() {
                   },
               ]
             : []),
+        ...platformNavItems(platform.navigation.main, auth),
     ];
 
     const footerNavItems: NavItem[] = [
@@ -96,6 +100,7 @@ export function AppSidebar() {
             href: 'https://laravel.com/docs/starter-kits#react',
             icon: BookOpen,
         },
+        ...platformNavItems(platform.navigation.footer, auth),
     ];
 
     return (
