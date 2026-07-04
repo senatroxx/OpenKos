@@ -39,7 +39,6 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     <CollapsibleTrigger asChild>
                                         <SidebarMenuButton
                                             tooltip={{ children: item.title }}
-                                            isActive={hasActiveChild}
                                         >
                                             {item.icon && <item.icon />}
                                             <span>{item.title}</span>
