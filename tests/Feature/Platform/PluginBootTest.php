@@ -4,6 +4,7 @@ use OpenKOS\Platform\Facades\OpenKOS;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\PlatformServiceProvider;
 use OpenKOS\Platform\Plugin\Plugin;
+use OpenKOS\Plugins\Example\ExamplePlugin;
 
 class OrderProbePluginA extends Plugin
 {
@@ -33,9 +34,12 @@ class OrderProbePluginB extends Plugin
     }
 }
 
-// Registries are singletons and ExamplePlugin registers by default,
-// so assert "contains", not exact counts.
-it('applies the example plugin registrations from config on boot', function () {
+// ExamplePlugin is disabled by default, so enable it explicitly to prove the
+// registration path. Registries are singletons, so assert "contains".
+it('applies a plugins registrations across every registry on boot', function () {
+    config(['platform.plugins' => [ExamplePlugin::class]]);
+    (new PlatformServiceProvider(app()))->boot();
+
     $navTitles = array_map(fn ($item) => $item->title, OpenKOS::navigation()->items('main'));
 
     expect($navTitles)->toContain('Example Plugin')
