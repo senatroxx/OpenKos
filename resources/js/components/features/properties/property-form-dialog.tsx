@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Sheet,
     SheetContent,
     SheetDescription,
@@ -13,7 +20,8 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { store, update } from '@/routes/properties';
-import type { Property, Region } from '@/types';
+import type { Property, PropertyType, Region } from '@/types';
+import { PROPERTY_TYPES } from '@/types/models';
 
 export default function PropertyFormSheet({
     property,
@@ -30,6 +38,8 @@ export default function PropertyFormSheet({
     const formProps = isEdit
         ? { action: update.url(property!), method: 'put' as const }
         : { action: store.url(), method: 'post' as const };
+
+    const [type, setType] = useState<PropertyType>(property?.type ?? 'kos');
 
     const [selectedRegionId, setSelectedRegionId] = useState<number | null>(
         property?.region_id ?? property?.region?.id ?? null,
@@ -86,6 +96,39 @@ export default function PropertyFormSheet({
                                         placeholder="e.g. Kos Melati"
                                     />
                                     <InputError message={errors.name} />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="type">Type</Label>
+                                    <input
+                                        type="hidden"
+                                        name="type"
+                                        value={type}
+                                    />
+                                    <Select
+                                        value={type}
+                                        onValueChange={(val) =>
+                                            setType(val as PropertyType)
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            id="type"
+                                            className="w-full"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PROPERTY_TYPES.map((opt) => (
+                                                <SelectItem
+                                                    key={opt.value}
+                                                    value={opt.value}
+                                                >
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={errors.type} />
                                 </div>
 
                                 <div className="grid gap-2">

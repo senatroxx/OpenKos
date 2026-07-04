@@ -108,7 +108,7 @@ New domains should follow the same pattern: pick the layers you need, place file
 ### Core Entities
 
 ```
-Property (kos / boarding house)
+Property (has a type — see below)
   ├── Regions / Cities (location)
   └── Rooms
        ├── RoomRates (pricing history)
@@ -125,6 +125,10 @@ User (staff / owner)
   ├── Properties (pivot: property_user)
   └── Roles / Permissions
 ```
+
+### Property Type
+
+Every property has a `type` (`properties.type`), backed by the `App\Enums\PropertyType` string enum: `kos` (default), `apartment`, `villa`, `hostel`, `hotel`. The column defaults to `kos`, so existing properties and any created without an explicit type are boarding houses. The enum is cast on the `Property` model, validated on create/update, filterable on the properties index, and shown in the UI. It exists so future business logic can branch on the property type instead of assuming every property is a kos — no behaviour differs by type yet; it's the domain seam for that divergence.
 
 ### Multi-Tenant Occupancy
 

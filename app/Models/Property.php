@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PropertyType;
 use App\Enums\RoomStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,6 +18,7 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'name',
+    'type',
     'slug',
     'address',
     'region_id',
@@ -36,6 +38,7 @@ class Property extends Model
     {
         return [
             'is_active' => 'boolean',
+            'type' => PropertyType::class,
         ];
     }
 
