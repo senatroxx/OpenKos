@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     Copy,
     EllipsisVertical,
+    Eye,
     Pencil,
     Plus,
     Trash2,
@@ -173,6 +174,12 @@ export default function Index({
                         align="end"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        <DropdownMenuItem asChild>
+                            <Link href={`/roles/${role.id}`}>
+                                <Eye className="size-4" />
+                                View
+                            </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                             <Link href={roles.edit(role)}>
                                 <Pencil className="size-4" />

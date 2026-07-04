@@ -1,8 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
-import { Heading } from '@/components/shared';
+import { PluginRegion } from '@/components/shared/plugin-region';
 import { Badge } from '@/components/ui/badge';
-import properties from '@/routes/properties';
 import type { MaintenanceTicket, Property, Room } from '@/types';
+import { RoomLayout } from './layout';
 
 type PageProps = {
     property: Property;
@@ -73,27 +72,9 @@ return '—';
 }
 
 export default function MaintenanceHistory({ property, room, tickets }: PageProps) {
-    const backUrl = properties.rooms.index.url(property);
-
     return (
-        <>
-            <Head title={`Maintenance History - ${room.name}`} />
-
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div>
-                    <div className="mb-1 inline-block text-xs text-muted-foreground">
-                        <Link href={backUrl} className="hover:text-foreground">
-                            &larr; Back to {property.name} rooms
-                        </Link>
-                    </div>
-                    <Heading
-                        title={`${room.name} — Maintenance History`}
-                        description={
-                            room.floor ? `Floor ${room.floor}` : undefined
-                        }
-                    />
-                </div>
-
+        <RoomLayout property={property} room={room} activeTab="maintenance">
+            <PluginRegion name="workspace-tab-maintenance">
                 {tickets.data.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center rounded-lg border py-16">
                         <p className="text-muted-foreground">
@@ -155,19 +136,7 @@ export default function MaintenanceHistory({ property, room, tickets }: PageProp
                         </table>
                     </div>
                 )}
-            </div>
-        </>
+            </PluginRegion>
+        </RoomLayout>
     );
 }
-
-MaintenanceHistory.layout = {
-    breadcrumbs: [
-        {
-            title: 'Properties',
-            href: properties.index(),
-        },
-        {
-            title: 'Rooms',
-        },
-    ],
-};

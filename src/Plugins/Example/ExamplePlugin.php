@@ -6,7 +6,6 @@ use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Settings\SettingsPage;
-use OpenKOS\Platform\Workspace\WorkspaceTab;
 
 /**
  * Reference plugin exercising the platform boot path. The frontend does not
@@ -22,20 +21,15 @@ class ExamplePlugin extends Plugin
             icon: 'puzzle',
         ));
 
-        // Stateful workspace (lease/tenant/room): the tab body renders the
-        // client-side region 'workspace-tab-example' (resources/js/plugins/example).
-        $platform->lease()->registerTab(new WorkspaceTab(
-            key: 'example',
-            label: 'Example',
-        ));
-
-        // URL-routed workspace (property): tabs link out via meta.href,
-        // {id} is replaced with the property id client-side.
-        $platform->property()->registerTab(new WorkspaceTab(
-            key: 'example',
-            label: 'Example',
-            meta: ['href' => '/properties/{id}'],
-        ));
+        // Workspace tabs are URL-routed: meta.href is required, and
+        // {placeholders} ({id}, and {propertyId} on rooms) are resolved
+        // client-side. A real plugin would register its own route + page:
+        //
+        // $platform->lease()->registerTab(new WorkspaceTab(
+        //     key: 'insurance',
+        //     label: 'Insurance',
+        //     meta: ['href' => '/leases/{id}/insurance'],
+        // ));
 
         $platform->settings()->registerPage(new SettingsPage(
             key: 'example',

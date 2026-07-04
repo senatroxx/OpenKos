@@ -21,6 +21,26 @@ use Inertia\Response;
 
 class RoleController extends Controller
 {
+    public function show(Role $role): Response
+    {
+        $role->loadCount('users')->load('permissions:id,name');
+
+        return Inertia::render('roles/show', [
+            'role' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'label' => $role->label ?? ucfirst($role->name),
+                'description' => $role->description,
+                'color' => $role->color,
+                'is_system' => $role->is_system,
+                'is_active' => $role->is_active,
+                'users_count' => $role->users_count,
+                'permissions' => $role->permissions->pluck('name'),
+                'created_at' => $role->created_at?->toISOString(),
+            ],
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $table = Table::make()

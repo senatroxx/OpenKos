@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Ban, Check, EllipsisVertical, Pencil, Play, Trash2, UserPlus } from 'lucide-react';
+import { Ban, Check, EllipsisVertical, Eye, Pencil, Play, Trash2, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -198,6 +198,10 @@ export default function Index({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => router.visit(`/maintenance-tickets/${ticket.id}`)}>
+                            <Eye className="size-4" />
+                            Open
+                        </DropdownMenuItem>
                         {ticket.status === 'reported' && can.update && (
                             <DropdownMenuItem onClick={() => handleStatusChange(ticket, 'in_progress')}>
                                 <Play className="size-4" />

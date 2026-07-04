@@ -59,6 +59,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::get('{room}/maintenance-history', [RoomController::class, 'maintenanceHistory'])
                         ->name('maintenance-history')
                         ->middleware('permission:maintenance-tickets.view');
+                    Route::get('{room}/lease-history', [RoomController::class, 'leaseHistory'])
+                        ->name('lease-history')
+                        ->middleware('permission:leases.view');
                     Route::get('{room}', [RoomController::class, 'show'])->name('show')->middleware('permission:rooms.view')->whereNumber('room');
                 });
             });
@@ -68,6 +71,8 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('tenants')->name('tenants.')->group(function () {
         Route::get('/', [TenantController::class, 'index'])->name('index')->middleware('permission:tenants.view');
         Route::get('{tenant}', [TenantController::class, 'show'])->name('show')->middleware('permission:tenants.view')->whereNumber('tenant');
+        Route::get('{tenant}/leases', [TenantController::class, 'leases'])->name('workspace.leases')->middleware('permission:tenants.view')->whereNumber('tenant');
+        Route::get('{tenant}/documents', [TenantController::class, 'documents'])->name('workspace.documents')->middleware('permission:tenants.view')->whereNumber('tenant');
         Route::post('/', [TenantController::class, 'store'])->name('store')->middleware('permission:tenants.create');
         Route::put('{tenant}', [TenantController::class, 'update'])->name('update')->middleware('permission:tenants.update');
         Route::delete('{tenant}', [TenantController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.delete');
@@ -81,6 +86,8 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('leases')->name('leases.')->group(function () {
         Route::get('/', [LeaseController::class, 'globalIndex'])->name('index')->middleware('permission:leases.view');
         Route::get('{lease}', [LeaseController::class, 'show'])->name('show')->middleware('permission:leases.view')->whereNumber('lease');
+        Route::get('{lease}/payments', [LeaseController::class, 'payments'])->name('workspace.payments')->middleware('permission:leases.view')->whereNumber('lease');
+        Route::get('{lease}/documents', [LeaseController::class, 'documents'])->name('workspace.documents')->middleware('permission:leases.view')->whereNumber('lease');
         Route::get('{lease}/rent-schedule', LeaseRentScheduleController::class)->name('rent-schedule')->middleware('permission:leases.view');
         Route::post('{lease}/move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
         Route::post('{lease}/renew', [LeaseController::class, 'renew'])->name('renew')->middleware('permission:leases.renew');
@@ -94,6 +101,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
 
     Route::prefix('maintenance-tickets')->name('maintenance-tickets.')->group(function () {
         Route::get('/', [MaintenanceTicketController::class, 'index'])->name('index')->middleware('permission:maintenance-tickets.view');
+        Route::get('{ticket}', [MaintenanceTicketController::class, 'show'])->name('show')->middleware('permission:maintenance-tickets.view')->whereNumber('ticket');
         Route::post('/', [MaintenanceTicketController::class, 'store'])->name('store')->middleware('permission:maintenance-tickets.create');
         Route::put('{ticket}', [MaintenanceTicketController::class, 'update'])->name('update')->middleware('permission:maintenance-tickets.update');
         Route::delete('{ticket}', [MaintenanceTicketController::class, 'destroy'])->name('destroy')->middleware('permission:maintenance-tickets.delete');
@@ -102,6 +110,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
 
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index')->middleware('permission:users.view');
+        Route::get('{user}', [UserController::class, 'show'])->name('show')->middleware('permission:users.view')->whereNumber('user');
         Route::post('/', [UserController::class, 'store'])->name('store')->middleware('permission:users.create');
         Route::put('{user}', [UserController::class, 'update'])->name('update')->middleware('permission:users.update');
         Route::delete('{user}', [UserController::class, 'destroy'])->name('destroy')->middleware('permission:users.delete');
@@ -113,6 +122,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::prefix('roles')->name('roles.')->group(function () {
             Route::get('/', [RoleController::class, 'index'])->name('index');
             Route::get('create', [RoleController::class, 'create'])->name('create');
+            Route::get('{role}', [RoleController::class, 'show'])->name('show')->whereNumber('role');
             Route::post('/', [RoleController::class, 'store'])->name('store');
             Route::get('{role}/edit', [RoleController::class, 'edit'])->name('edit');
             Route::put('{role}', [RoleController::class, 'update'])->name('update');

@@ -30,6 +30,17 @@ class MaintenanceTicketController extends Controller
         private ResolveTicket $resolveTicket,
     ) {}
 
+    public function show(MaintenanceTicket $ticket): Response
+    {
+        $this->authorize('view', $ticket);
+
+        $ticket->load(['property:id,name', 'room:id,name,floor', 'assignee:id,name', 'creator:id,name']);
+
+        return Inertia::render('maintenance-tickets/show', [
+            'ticket' => $ticket,
+        ]);
+    }
+
     public function index(Request $request): Response
     {
         $this->authorize('viewAny', MaintenanceTicket::class);

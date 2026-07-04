@@ -23,15 +23,31 @@ class TenantController extends Controller
 {
     public function show(Tenant $tenant): Response
     {
+        return $this->renderWorkspace($tenant, 'tenants/show');
+    }
+
+    public function leases(Tenant $tenant): Response
+    {
+        return $this->renderWorkspace($tenant, 'tenants/leases');
+    }
+
+    public function documents(Tenant $tenant): Response
+    {
+        return $this->renderWorkspace($tenant, 'tenants/documents');
+    }
+
+    private function renderWorkspace(Tenant $tenant, string $page): Response
+    {
         $this->authorize('view', $tenant);
 
+        // ponytail: every tab loads the full tenant payload; split per-tab if it grows
         $tenant->load([
             'documents',
             'leases' => fn ($q) => $q->where('status', 'active')
                 ->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
         ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
 
-        return Inertia::render('tenants/show', [
+        return Inertia::render($page, [
             'tenant' => $tenant,
         ]);
     }
