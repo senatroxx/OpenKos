@@ -46,7 +46,9 @@ const statusLabel: Record<string, string> = {
 };
 
 function formatPrice(cents: string | null): string {
-    if (!cents) return '—';
+    if (!cents) {
+return '—';
+}
 
     const num = Number.parseFloat(cents);
 
@@ -59,7 +61,9 @@ function formatPrice(cents: string | null): string {
 }
 
 function formatDate(date: string | null): string {
-    if (!date) return '—';
+    if (!date) {
+return '—';
+}
 
     return new Date(date).toLocaleDateString('id-ID', {
         year: 'numeric',

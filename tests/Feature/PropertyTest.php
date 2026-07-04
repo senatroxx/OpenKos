@@ -139,3 +139,42 @@ describe('cross-property access', function () {
             ->assertForbidden();
     });
 });
+
+describe('workspace tabs', function () {
+    it('renders the leases tab with workspace stats', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('properties.workspace.leases', $property))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/leases')
+                ->where('property.id', $property->id)
+                ->has('property.rooms_count')
+                ->has('property.occupied_rooms_count')
+                ->has('property.tenants_count'));
+    });
+
+    it('renders the documents tab with workspace stats', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('properties.workspace.documents', $property))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/documents')
+                ->where('property.id', $property->id)
+                ->has('property.tenants_count'));
+    });
+
+    it('denies users without properties.view from workspace tabs', function () {
+        $user = User::factory()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('properties.workspace.leases', $property))
+            ->assertForbidden();
+    });
+});

@@ -18,7 +18,8 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
     const isActive = lease.status === 'active';
     const roomName = lease.room?.name ?? '—';
     const propertyName = lease.room?.property?.name ?? '—';
-    const propertyCity = lease.room?.property?.city?.name ?? '';
+    const city = lease.room?.property?.city;
+    const propertyCity = city && typeof city === 'object' ? city.name : city ?? '';
 
     return (
         <div className="space-y-6">
