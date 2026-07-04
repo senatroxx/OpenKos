@@ -8,6 +8,8 @@ use App\Actions\Leases\RenewLease;
 use App\Actions\Reminders\ForceSendReminder;
 use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
+use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Enums\RoomStatus;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
@@ -16,6 +18,7 @@ use App\Http\Requests\Lease\StoreLeaseRequest;
 use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Lease;
 use App\Models\Payment;
+use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\Room;
 use App\Tables\Column;
@@ -32,24 +35,8 @@ class LeaseController extends Controller
 {
     public function show(Lease $lease): Response
     {
-        return $this->renderWorkspace($lease, 'leases/show');
-    }
-
-    public function payments(Lease $lease): Response
-    {
-        return $this->renderWorkspace($lease, 'leases/payments');
-    }
-
-    public function documents(Lease $lease): Response
-    {
-        return $this->renderWorkspace($lease, 'leases/documents');
-    }
-
-    private function renderWorkspace(Lease $lease, string $page): Response
-    {
         $this->authorize('view', $lease);
 
-        // ponytail: every tab loads the full lease payload; split per-tab if it grows
         $lease->load([
             'tenants:id,name,phone',
             'primaryTenant:id,name,phone',
@@ -59,8 +46,71 @@ class LeaseController extends Controller
             'roomHistories.transferredBy:id,name',
         ]);
 
-        return Inertia::render($page, [
+        return Inertia::render('leases/show', [
             'lease' => $lease,
+        ]);
+    }
+
+    public function payments(Request $request, Lease $lease): Response
+    {
+        $this->authorize('view', $lease);
+
+        $table = Table::make()
+            ->columns([
+                Column::make('period_start', 'Period')->sortable(),
+                Column::make('payment_date', 'Paid on')->sortable(),
+                Column::make('amount', 'Amount')->sortable(),
+                Column::make('payment_method', 'Method')->sortable(),
+                Column::make('reference', 'Reference')->sortable()->searchable(),
+                Column::make('status', 'Status')->sortable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', array_map(fn (PaymentStatus $s) => $s->value, PaymentStatus::cases()))
+                    ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+                Filter::select('payment_method', 'Method', array_map(fn (PaymentMethod $m) => $m->value, PaymentMethod::cases()))
+                    ->query(fn (Builder $q, string $value) => $q->where('payment_method', $value)),
+            ])
+            ->defaultSort('-period_start');
+
+        $result = $table->paginate(
+            $lease->payments()->with(['confirmedBy:id,name', 'proofs']),
+            $request,
+            'payments',
+        );
+
+        return Inertia::render('leases/payments', [
+            ...$result,
+            'lease' => $lease->only('id', 'reference', 'status'),
+        ]);
+    }
+
+    public function documents(Request $request, Lease $lease): Response
+    {
+        $this->authorize('view', $lease);
+
+        $table = Table::make()
+            ->columns([
+                Column::make('original_name', 'Name')->sortable()->searchable(),
+                Column::make('mime_type', 'Type')->sortable(),
+                Column::make('created_at', 'Uploaded')->sortable(),
+            ])
+            ->filters([
+                Filter::select('payment_status', 'Payment status', array_map(fn (PaymentStatus $s) => $s->value, PaymentStatus::cases()))
+                    ->query(fn (Builder $q, string $value) => $q->whereHas('payment', fn (Builder $q) => $q->where('status', $value))),
+            ])
+            ->defaultSort('-created_at');
+
+        $result = $table->paginate(
+            PaymentProof::query()
+                ->whereHas('payment', fn (Builder $q) => $q->where('paymentable_type', $lease->getMorphClass())->where('paymentable_id', $lease->id))
+                ->with('payment:id,period_start,amount,status'),
+            $request,
+            'documents',
+        );
+
+        return Inertia::render('leases/documents', [
+            ...$result,
+            'lease' => $lease->only('id', 'reference', 'status'),
         ]);
     }
 

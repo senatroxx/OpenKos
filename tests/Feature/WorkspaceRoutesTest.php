@@ -58,7 +58,8 @@ describe('room workspace', function () {
             ->assertInertia(fn ($page) => $page
                 ->component('properties/rooms/lease-history')
                 ->where('room.id', $room->id)
-                ->has('room.leases'));
+                ->has('leases.data')
+                ->has('table.filters'));
     });
 });
 
