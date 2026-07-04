@@ -91,5 +91,5 @@ describe('dependency resolution', function () {
 
     it('throws on a duplicate id', function () {
         (new PluginLoader)->prepare([loaderPlugin('a'), loaderPlugin('a')], '0.1.0');
-    })->throws(InvalidArgumentException::class, 'Duplicate plugin id [a]');
+    })->throws(InvalidArgumentException::class, 'Duplicate plugin id [a].');
 });
