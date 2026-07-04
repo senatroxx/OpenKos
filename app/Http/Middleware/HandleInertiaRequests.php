@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use OpenKOS\Platform\Facades\OpenKOS;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -28,6 +29,12 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $request->user()?->getAllPermissions()->pluck('name') ?? [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'platform' => fn () => [
+                'navigation' => OpenKOS::navigation()->toArray(),
+                'workspaces' => OpenKOS::workspaces()->toArray(),
+                'settings' => OpenKOS::settings()->toArray(),
+                'dashboard' => OpenKOS::dashboard()->toArray(),
+            ],
         ];
     }
 }
