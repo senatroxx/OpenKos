@@ -1,6 +1,7 @@
 <?php
 
 use OpenKOS\Plugins\Example\ExamplePlugin;
+use OpenKOS\Plugins\WhatsApp\WhatsAppPlugin;
 
 return [
 
@@ -16,7 +17,9 @@ return [
     */
 
     'plugins' => array_values(array_filter([
-        // Now visible in the UI — set OPENKOS_EXAMPLE_PLUGIN=false to hide (e.g. production).
+        // Core: registers the built-in WhatsApp drivers into NotificationRegistry.
+        WhatsAppPlugin::class,
+        // Demo — set OPENKOS_EXAMPLE_PLUGIN=false to hide (e.g. production).
         env('OPENKOS_EXAMPLE_PLUGIN', true) ? ExamplePlugin::class : null,
     ])),
 

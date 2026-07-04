@@ -1,53 +1,53 @@
 <?php
 
-use OpenKOS\Core\Contracts\NotificationDriver;
+use OpenKOS\Platform\Notification\NotificationDriverRegistration;
 use OpenKOS\Platform\Notification\NotificationRegistry;
 
-function fakeNotificationDriver(): NotificationDriver
+function reg(string $name, string $channel = 'whatsapp'): NotificationDriverRegistration
 {
-    return new class implements NotificationDriver
-    {
-        public function name(): string
-        {
-            return 'fake';
-        }
-
-        public function channel(): string
-        {
-            return 'whatsapp';
-        }
-
-        public function send(string $recipient, string $message, array $options = []): void {}
-
-        public function configurationSchema(): array
-        {
-            return [];
-        }
-    };
+    return new NotificationDriverRegistration(
+        name: $name,
+        channel: $channel,
+        driverClass: 'App\\Notifications\\Drivers\\WhatsappLogDriver',
+        label: ucfirst($name),
+        config: ['token' => 'secret'],
+    );
 }
 
-it('registers drivers as class-strings or instances', function () {
+it('registers and looks up drivers', function () {
     $registry = new NotificationRegistry;
-    $instance = fakeNotificationDriver();
+    $log = reg('log');
 
-    $registry->registerDriver('by-class', $instance::class)
-        ->registerDriver('by-instance', $instance);
+    $registry->registerDriver($log);
 
-    expect($registry->has('by-class'))->toBeTrue()
+    expect($registry->get('log'))->toBe($log)
+        ->and($registry->has('log'))->toBeTrue()
         ->and($registry->has('missing'))->toBeFalse()
-        ->and($registry->drivers())->toBe(['by-class' => $instance::class, 'by-instance' => $instance]);
+        ->and($registry->get('missing'))->toBeNull();
 });
 
-it('serializes to driver names only', function () {
+it('filters drivers by channel', function () {
     $registry = new NotificationRegistry;
-    $registry->registerDriver('fake', fakeNotificationDriver());
+    $registry->registerDriver(reg('log', 'whatsapp'))
+        ->registerDriver(reg('smtp', 'email'));
 
-    expect($registry->toArray())->toBe(['fake']);
+    expect($registry->forChannel('whatsapp'))->toHaveCount(1)
+        ->and($registry->forChannel('whatsapp')[0]->name)->toBe('log')
+        ->and($registry->forChannel('sms'))->toBe([]);
+});
+
+it('serializes without leaking credentials or class', function () {
+    $registry = new NotificationRegistry;
+    $registry->registerDriver(reg('log'));
+
+    expect($registry->toArray())->toBe([
+        ['name' => 'log', 'channel' => 'whatsapp', 'label' => 'Log'],
+    ]);
 });
 
 it('throws on duplicate driver names', function () {
     $registry = new NotificationRegistry;
-    $registry->registerDriver('fake', fakeNotificationDriver());
+    $registry->registerDriver(reg('log'));
 
-    $registry->registerDriver('fake', fakeNotificationDriver());
-})->throws(InvalidArgumentException::class, 'Notification driver [fake] is already registered.');
+    $registry->registerDriver(reg('log'));
+})->throws(InvalidArgumentException::class, 'Notification driver [log] is already registered.');
