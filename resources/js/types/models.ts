@@ -78,17 +78,6 @@ export type Room = {
     tenants?: TenantInfo[];
 };
 
-export type RoomInfo = {
-    id: number;
-    name: string;
-    property_id: number;
-    property: {
-        id: number;
-        name: string;
-        city: { name: string } | null;
-    } | null;
-};
-
 export type RoomWithProperty = Room & {
     property_id: number;
     property: Property | null;
@@ -162,7 +151,7 @@ export type Lease = {
     notes: string | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-    room: RoomInfo | null;
+    room: RoomWithProperty | null;
     payments?: Payment[];
     room_histories?: {
         id: number;
@@ -179,7 +168,7 @@ export type LeaseData = {
     id: number;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-    room: RoomInfo | null;
+    room: { id: number; name: string } | null;
 };
 
 export type PaymentProof = {

@@ -4,7 +4,7 @@ import { LeaseDetailSheet, MoveOutSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import properties from '@/routes/properties';
-import type { AvailableRoom, Lease, Property, Room, TenantInfo } from '@/types';
+import type { AvailableRoom, Lease, Property, Room } from '@/types';
 
 type PageProps = {
     property: Property;

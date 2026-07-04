@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { TenantInfo } from '@/types';
+import type { RoomWithProperty, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -8,17 +8,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: {
-        id: number;
-        name: string;
-        floor: string | null;
-        property_id: number;
-        property: {
-            id: number;
-            name: string;
-            city: { name: string } | null;
-        } | null;
-    } | null;
+    room: RoomWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };

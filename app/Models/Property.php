@@ -79,6 +79,17 @@ class Property extends Model
         return $this->hasManyThrough(Lease::class, Room::class);
     }
 
+    /**
+     * Everything the property workspace header/tabs need.
+     */
+    public function scopeWithWorkspaceStats(Builder $query): void
+    {
+        $query->with(['city', 'region'])
+            ->withCount('rooms')
+            ->withOccupiedRoomsCount()
+            ->withTenantsCount();
+    }
+
     public function scopeWithOccupiedRoomsCount(Builder $query): void
     {
         $query->withCount(['rooms as occupied_rooms_count' => fn (Builder $q) => $q->where(function (Builder $q) {

@@ -12,6 +12,7 @@ use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,7 +25,12 @@ class RoomController extends Controller
         $this->authorize('view', $room);
 
         $room->load(['property.city', 'activeRates'])
-            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')]);
+            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
+            ->load(['maintenanceTickets' => fn ($q) => $q->latest()->take(10)->with(['property:id,name', 'assignee:id,name'])])
+            ->load(['leases' => fn ($q) => $q->withTrashed()
+                ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone'])
+                ->orderBy('created_at', 'desc'),
+            ]);
 
         return Inertia::render('properties/rooms/show', [
             'property' => $property,
@@ -32,9 +38,11 @@ class RoomController extends Controller
         ]);
     }
 
-    public function index(Request $request, Property $property): Response
+    public function index(Request $request, Property $property): Response|JsonResponse
     {
         $this->authorize('viewAny', [Room::class, $property]);
+
+        $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
         $table = Table::make()
             ->columns([
@@ -58,6 +66,10 @@ class RoomController extends Controller
 
         $result = $table->paginate($query, $request, 'rooms');
 
+        if ($request->wantsJson()) {
+            return response()->json($result);
+        }
+
         $tenantsList = Tenant::whereRaw('is_active is true')
             ->whereNull('deleted_at')
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -77,7 +89,7 @@ class RoomController extends Controller
 
         return Inertia::render('properties/rooms/index', [
             ...$result,
-            'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
+            'property' => $property,
             'tenants' => $tenantsList,
             'availableRooms' => $availableRooms,
         ]);

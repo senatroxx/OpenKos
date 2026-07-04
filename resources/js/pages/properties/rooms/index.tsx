@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
@@ -20,7 +20,6 @@ import {
     RoomDetailSheet,
     RoomFormSheet,
 } from '@/components/features';
-import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,6 +30,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
 import type { LeaseInfo, PaginatedData, Property, Room, TableMeta } from '@/types';
 
@@ -406,61 +406,50 @@ export default function Index({
     ];
 
     return (
-        <>
+        <PropertyLayout property={property} activeTab="rooms">
             <Head title={`Rooms - ${property.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <Heading
-                            title={property.name}
-                            description="Manage rooms for this property"
-                        />
-                        <Link
-                            href={properties.index()}
-                            className="mt-1 inline-block text-xs text-muted-foreground hover:text-foreground"
-                        >
-                            &larr; Back to properties
-                        </Link>
-                    </div>
+            <div className="flex items-center justify-between">
+                <div className="flex-1" />
 
-                    <Button onClick={openCreate}>New Room</Button>
-                </div>
-
-                <FilterBar
-                    filters={tableMeta.filters}
-                    activeFilters={table.activeFilters}
-                    activeFilterCount={table.activeFilterCount}
-                    onToggleOption={table.toggleFilterOption}
-                    onClearAll={table.clearAllFilters}
-                    searchInput={
-                        <SearchInput
-                            value={table.searchValue}
-                            onChange={table.onSearchChange}
-                            onClear={table.clearSearch}
-                            placeholder="Search by name or floor..."
-                        />
-                    }
-                />
-
-                <DataTable
-                    columns={columns}
-                    rows={data.data}
-                    currentSort={currentSort}
-                    onSort={table.toggleSort}
-                    onRowClick={openDetail}
-                    paginator={data}
-                    perPage={currentPerPage}
-                    onPageChange={table.goToPage}
-                    onPerPageChange={table.setPerPage}
-                    noun="rooms"
-                    empty={{
-                        message: 'No rooms yet.',
-                        createLabel: 'Create your first room',
-                        onCreate: openCreate,
-                    }}
-                />
+                <Button onClick={openCreate}>
+                    New Room
+                </Button>
             </div>
+
+            <FilterBar
+                filters={tableMeta.filters}
+                activeFilters={table.activeFilters}
+                activeFilterCount={table.activeFilterCount}
+                onToggleOption={table.toggleFilterOption}
+                onClearAll={table.clearAllFilters}
+                searchInput={
+                    <SearchInput
+                        value={table.searchValue}
+                        onChange={table.onSearchChange}
+                        onClear={table.clearSearch}
+                        placeholder="Search by name or floor..."
+                    />
+                }
+            />
+
+            <DataTable
+                columns={columns}
+                rows={data.data}
+                currentSort={currentSort}
+                onSort={table.toggleSort}
+                onRowClick={openDetail}
+                paginator={data}
+                perPage={currentPerPage}
+                onPageChange={table.goToPage}
+                onPerPageChange={table.setPerPage}
+                noun="rooms"
+                empty={{
+                    message: 'No rooms yet.',
+                    createLabel: 'Create your first room',
+                    onCreate: openCreate,
+                }}
+            />
 
             <RoomDetailSheet
                 room={viewingRoom}
@@ -507,18 +496,6 @@ export default function Index({
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
-        </>
+        </PropertyLayout>
     );
 }
-
-Index.layout = {
-    breadcrumbs: [
-        {
-            title: 'Properties',
-            href: properties.index(),
-        },
-        {
-            title: 'Rooms',
-        },
-    ],
-};
