@@ -1,11 +1,8 @@
 import { registerRegion } from '@/components/shared/plugin-region';
+import { Badge } from '@/components/ui/badge';
 
-// Client half of src/Plugins/Example/ExamplePlugin.php: content for the
-// lease workspace tab it registers. Rendered only when the backend plugin
-// is enabled (the tab doesn't exist otherwise).
-registerRegion('workspace-tab-example', () => (
-    <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-        This content is rendered by the example plugin
-        (resources/js/plugins/example).
-    </div>
+// Client half of src/Plugins/Example/ExamplePlugin.php: renders a badge in
+// the workspace header of every entity workspace, demonstrating PluginRegion.
+registerRegion('workspace-header-badge', () => (
+    <Badge variant="outline">Example plugin</Badge>
 ));

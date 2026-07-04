@@ -29,6 +29,40 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
+    public function show(User $user): Response
+    {
+        abort_if($user->tenant()->exists(), 404);
+
+        $user->load(['roles:id,name,label', 'properties:id,name']);
+
+        return Inertia::render('users/show', [
+            'user' => $this->transformUser($user),
+        ]);
+    }
+
+    private function transformUser(User $user): array
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'roles' => $user->roles->map(fn ($role) => [
+                'name' => $role->name,
+                'label' => $role->label ?? ucfirst($role->name),
+            ])->values(),
+            'role' => $user->roles->first()?->name,
+            'properties' => $user->properties->map(fn (Property $property) => [
+                'id' => $property->id,
+                'name' => $property->name,
+            ])->values(),
+            'is_active' => $user->is_active,
+            'status' => $user->invited_at ? 'invited' : ($user->is_active ? 'active' : 'disabled'),
+            'invited_at' => $user->invited_at?->toISOString(),
+            'email_verified_at' => $user->email_verified_at?->toISOString(),
+            'last_login_at' => $user->last_login_at?->toISOString(),
+        ];
+    }
+
     public function index(Request $request): Response
     {
         $assignableRoles = RoleModel::query()
@@ -68,25 +102,7 @@ class UserController extends Controller
 
         $result = $table->paginate($query, $request, 'users');
 
-        $result['users'] = $result['users']->through(fn (User $user) => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'roles' => $user->roles->map(fn ($role) => [
-                'name' => $role->name,
-                'label' => $role->label ?? ucfirst($role->name),
-            ])->values(),
-            'role' => $user->roles->first()?->name,
-            'properties' => $user->properties->map(fn (Property $property) => [
-                'id' => $property->id,
-                'name' => $property->name,
-            ])->values(),
-            'is_active' => $user->is_active,
-            'status' => $user->invited_at ? 'invited' : ($user->is_active ? 'active' : 'disabled'),
-            'invited_at' => $user->invited_at?->toISOString(),
-            'email_verified_at' => $user->email_verified_at?->toISOString(),
-            'last_login_at' => $user->last_login_at?->toISOString(),
-        ]);
+        $result['users'] = $result['users']->through(fn (User $user) => $this->transformUser($user));
 
         return Inertia::render('users/index', [
             ...$result,
