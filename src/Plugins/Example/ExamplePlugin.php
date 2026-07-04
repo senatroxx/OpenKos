@@ -35,10 +35,15 @@ class ExamplePlugin extends Plugin
 
     public function register(OpenKOSManager $platform): void
     {
+        // Declare a permission (persisted via `php artisan platform:permissions:sync`)
+        // and gate the plugin's nav item + route on it.
+        $platform->permissions()->register('example.view', 'View example plugin');
+
         $platform->navigation()->registerItem(new NavigationItem(
             title: 'Example Plugin',
             href: '/example',
             icon: 'puzzle',
+            permission: 'example.view',
         ));
 
         $platform->dashboard()->registerPage(new DashboardPage(
