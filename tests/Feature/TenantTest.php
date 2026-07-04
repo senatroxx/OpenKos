@@ -247,7 +247,7 @@ describe('room assignment pricing', function () {
     it('ships available rooms with their active rates for the picker', function () {
         $user = User::factory()->owner()->create();
         Tenant::factory()->create();
-        Room::factory()->create(); // auto-creates a monthly rate from base_price
+        Room::factory()->create(); // auto-seeds a default monthly rate
 
         $this->actingAs($user)
             ->get(route('tenants.index'))
@@ -259,7 +259,7 @@ describe('room assignment pricing', function () {
     it('derives rent from the selected room rate', function () {
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
-        $room = Room::factory()->create(['base_price' => 1_750_000]);
+        $room = Room::factory()->withRate(1_750_000)->create();
         $rate = $room->rates()->first();
 
         $this->actingAs($user)->post(route('tenants.assign-room', $tenant), [
