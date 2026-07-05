@@ -283,6 +283,26 @@ Every foreign key intentionally chooses one of four strategies:
 
 The full FK inventory with per-constraint rationale is enforced by `tests/Feature/Schema/ForeignKeyDeleteStrategyTest.php`.
 
+### Composite Indexes
+
+Composite indexes are added to support production query patterns (filtering and sorting across multiple columns). The rationale for each:
+
+| Table | Index | Columns | Query pattern |
+|-------|-------|---------|---------------|
+| `payments` | `idx_payments_type_id_status` | `paymentable_type, paymentable_id, status` | Dashboard rent stats (`whereNotIn status`), overview finance (`where status = confirmed`), lease overdue checks. The previous morphs-only index `(paymentable_type, paymentable_id)` was a prefix — this superset covers it and status filtering together. |
+| `leases` | `idx_leases_status_start_date` | `status, start_date` | Dashboard base query `where(status='active', start_date <= now)`, overdue lease calculation. |
+| `maintenance_tickets` | `idx_maintenance_tickets_property_status` | `property_id, status` | Property-scoped ticket filtering. |
+| `maintenance_tickets` | `idx_maintenance_tickets_unit_status` | `unit_id, status` | Unit-scoped maintenance history queries. |
+| `units` | `idx_units_property_status` | `property_id, status` | Unit availability listings (`scopeAvailableForAssignment`). |
+| `lease_unit_histories` | `idx_luh_from_reason_date` | `from_unit_id, reason, effective_date` | Maintenance transfer lookups — equality on first 2 columns + ORDER BY on third. |
+| `unit_rates` | `idx_unit_rates_unit_active_interval` | `unit_id, is_active, billing_interval` | `activeRates()` relation. |
+| `properties` | `idx_properties_active_name` | `is_active, name` | Admin property dropdowns sorted by name. |
+
+**Design decisions:**
+- `period_start` was intentionally excluded from the payments index. The original queries used `whereMonth()`/`whereYear()`, which wrap the column in `EXTRACT()` — a B-tree index cannot accelerate function-wrapped predicates. Those queries were rewritten to range conditions (`whereBetween`) so the index is usable.
+- Existing single-column indexes (`status`, `priority`) are preserved — they serve queries that filter on those columns alone without additional columns (e.g., global status filter on maintenance tickets).
+- The set of composite indexes is enforced by `tests/Feature/Schema/CompositeIndexTest.php`.
+
 ## Testing
 
 - Pest 4 for both Feature and Unit tests.

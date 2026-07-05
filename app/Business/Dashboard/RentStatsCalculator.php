@@ -4,6 +4,7 @@ namespace App\Business\Dashboard;
 
 use App\Models\Lease;
 use App\Models\Payment;
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class RentStatsCalculator
@@ -15,8 +16,10 @@ class RentStatsCalculator
         $paidLeaseIds = Payment::query()
             ->where('paymentable_type', Lease::class)
             ->whereNotIn('status', ['cancelled'])
-            ->whereMonth('period_start', $currentMonth)
-            ->whereYear('period_start', $currentYear)
+            ->whereBetween('period_start', [
+                Carbon::create($currentYear, $currentMonth, 1)->startOfDay(),
+                Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay(),
+            ])
             ->whereIn('paymentable_id', $leaseIds)
             ->distinct()
             ->pluck('paymentable_id')
