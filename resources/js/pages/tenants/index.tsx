@@ -60,7 +60,7 @@ type Tenant = {
 
 type PageProps = {
     tenants: PaginatedData<Tenant>;
-    availableRooms: AvailableUnit[];
+    availableUnits: AvailableUnit[];
     sort?: string;
     search?: string;
     status?: string;
@@ -70,7 +70,7 @@ type PageProps = {
 
 export default function Index({
     tenants: data,
-    availableRooms: _availableRooms,
+    availableUnits: _availableRooms,
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -334,7 +334,7 @@ export default function Index({
             {assignTenant && (
                 <AssignUnitSheet
                     tenant={assignTenant}
-                    availableRooms={_availableRooms}
+                    availableUnits={_availableRooms}
                     open={assignUnitOpen}
                     onOpenChange={setAssignUnitOpen}
                 />
@@ -366,7 +366,7 @@ export default function Index({
                           }
                         : null
                 }
-                availableRooms={_availableRooms}
+                availableUnits={_availableRooms}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />

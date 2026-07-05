@@ -39,8 +39,8 @@ export default function Reminders({ settings }: { settings: { reminder_enabled: 
         overdueDays: 3,
     };
 
-    const renderedUpcoming = renderTemplate(template, { name: preview.name, unit: preview.unit, days: preview.days, amount: preview.amount, date: preview.date });
-    const renderedOverdue = renderTemplate(template, { name: preview.name, unit: preview.unit, days: preview.overdueDays, amount: preview.amount, date: preview.date });
+    const renderedUpcoming = renderTemplate(template, { name: preview.name, unit: preview.unit, room: preview.unit, days: preview.days, amount: preview.amount, date: preview.date });
+    const renderedOverdue = renderTemplate(template, { name: preview.name, unit: preview.unit, room: preview.unit, days: preview.overdueDays, amount: preview.amount, date: preview.date });
 
     return (
         <div className="space-y-6">
