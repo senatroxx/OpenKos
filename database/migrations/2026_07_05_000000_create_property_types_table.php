@@ -27,7 +27,9 @@ return new class extends Migration
             $rows[] = [
                 'slug' => $slug,
                 'label' => $label,
-                'is_active' => true,
+                // DB::raw('true'): a raw insert binds PHP true as int, which a
+                // Postgres boolean column rejects (sqlite accepts it).
+                'is_active' => DB::raw('true'),
                 'sort_order' => $order++,
                 'created_at' => $now,
                 'updated_at' => $now,
