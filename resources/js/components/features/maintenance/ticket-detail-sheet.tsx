@@ -95,6 +95,7 @@ export default function TicketDetailSheet({
 
     const confirmDelete = () => {
         router.delete(maintenanceTickets.destroy.url(ticket.id));
+        setDeleteConfirm(false);
         onOpenChange(false);
     };
 
