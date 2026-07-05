@@ -200,10 +200,29 @@ Named routes follow the Laravel resource convention (`{plural}.{action}`). Setti
 
 - Migrations include a descriptive name (not just `create_*_table`).
 - Timestamps use `nullableTimestamps()` where appropriate (pivot tables).
-- Foreign keys use `constrained()` with explicit `cascadeOnDelete` / `nullOnDelete`.
+- Foreign keys use `constrained()` with explicit `cascadeOnDelete` / `nullOnDelete` / `restrictOnDelete`.
 - Unique constraints cover business-unique combinations (e.g., `lease_id + period_start + reminder_type + overdue_days` on `reminder_logs`).
 - Currency values are stored as integers (cents/sen). The frontend divides by 100 for display.
 - The `settings` table is a singleton — one row with columns for each setting group. No key-value pattern.
+
+### Foreign Key Delete Strategy
+
+Every foreign key intentionally chooses one of four strategies:
+
+| Strategy | When to use |
+|---|---|
+| `restrictOnDelete` | Parent references a historical business record. Prevents hard-deleting the parent while children exist. |
+| `nullOnDelete` | The child can logically exist without the parent (nullable audit trails, optional associations). |
+| `cascadeOnDelete` | The child is meaningless without the parent (auth credentials, dependent files), or is a framework table (Spatie). |
+| `noActionOnDelete` | Reserved for transactional integrity (not currently used). |
+
+**Historical business records** (leases, payments, maintenance tickets, reminders, documents, pricing history, audit trails) must use `restrictOnDelete` on their parent FK. This prevents hard-deleting a parent model while its business records still reference it. Soft-deletable parents (Property, Unit, Lease, Tenant) use `$model->delete()` which sets `deleted_at` — the FK constraint only fires on `forceDelete()` or raw SQL deletes. Child records themselves may be hard-deleted (e.g. MaintenanceTicket, TenantDocument) — the constraint protects the parent, not the child.
+
+**User audit references** (created_by, confirmed_by, recorded_by, etc.) use `nullOnDelete` — the record survives even if the user is hard-deleted.
+
+**Framework pivot tables** (Spatie role/permission assignments, property_user) use `cascadeOnDelete` — they are ephemeral metadata. Domain pivot tables linking business records (e.g. `lease_tenant`) follow the same strategy as the business records they connect.
+
+The full FK inventory with per-constraint rationale is enforced by `tests/Feature/Schema/ForeignKeyDeleteStrategyTest.php`.
 
 ## Testing
 
