@@ -79,11 +79,11 @@ describe('maintenance history page', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
         $unit = Unit::factory()->for($property)->create();
-        $otherRoom = Unit::factory()->for($property)->create();
+        $otherUnit = Unit::factory()->for($property)->create();
 
         MaintenanceTicket::factory()->create([
             'property_id' => $property->id,
-            'unit_id' => $otherRoom->id,
+            'unit_id' => $otherUnit->id,
             'title' => 'Other unit ticket',
         ]);
 
