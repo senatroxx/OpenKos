@@ -55,7 +55,7 @@ class LeaseSeeder extends Seeder
                 continue;
             }
 
-            $unit = $property->units->firstWhere('name', );
+            $unit = $property->units->firstWhere('name');
 
             if (! $unit) {
                 continue;
@@ -94,7 +94,7 @@ class LeaseSeeder extends Seeder
                 continue;
             }
 
-            $unit = $property->units->firstWhere('name', );
+            $unit = $property->units->firstWhere('name');
 
             if (! $unit) {
                 continue;
@@ -136,7 +136,7 @@ class LeaseSeeder extends Seeder
                 continue;
             }
 
-            $unit = $property->units->firstWhere('name', );
+            $unit = $property->units->firstWhere('name');
 
             if (! $unit) {
                 continue;
