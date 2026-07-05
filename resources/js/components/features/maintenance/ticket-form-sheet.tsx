@@ -66,7 +66,7 @@ export default function TicketFormSheet({
     const [locationType, setLocationType] = useState(ticket?.unit_id ? 'unit' : ticket?.location ? 'area' : 'unit');
     const [selectedProperty, setSelectedProperty] = useState(ticket?.property_id ? String(ticket.property_id) : '');
     const [priority, setPriority] = useState(ticket?.priority ?? 'medium');
-    const [selectedRoomId, setSelectedRoomId] = useState(ticket?.unit_id ? String(ticket.unit_id) : '');
+    const [selectedUnitId, setSelectedUnitId] = useState(ticket?.unit_id ? String(ticket.unit_id) : '');
     const [blockUnit, setBlockUnit] = useState(false);
     const [showOccupiedDialog, setShowOccupiedDialog] = useState(false);
     const [moveToRoomId, setMoveToRoomId] = useState('');
@@ -77,16 +77,16 @@ export default function TicketFormSheet({
         ? units.filter((r) => r.property_id === Number(selectedProperty))
         : [];
 
-    const selectedRoomData = selectedRoomId
-        ? units.find((r) => r.id === Number(selectedRoomId))
+    const selectedUnitData = selectedUnitId
+        ? units.find((r) => r.id === Number(selectedUnitId))
         : undefined;
 
-    const selectedRoomOccupied = (selectedRoomData?.active_lease_count ?? 0) > 0;
+    const selectedUnitOccupied = (selectedUnitData?.active_lease_count ?? 0) > 0;
 
     const availableMoveRooms = selectedProperty
         ? units.filter(
             (r) => r.property_id === Number(selectedProperty)
-                && r.id !== Number(selectedRoomId)
+                && r.id !== Number(selectedUnitId)
                 && r.status !== 'maintenance'
                 && r.active_lease_count === 0,
         )
@@ -104,7 +104,7 @@ export default function TicketFormSheet({
             return;
         }
 
-        if (!isEdit && blockUnit && selectedRoomOccupied) {
+        if (!isEdit && blockUnit && selectedUnitOccupied) {
             e.preventDefault();
             setShowOccupiedDialog(true);
         }
@@ -138,7 +138,7 @@ export default function TicketFormSheet({
                                                 value={selectedProperty}
                                                 onValueChange={(v) => {
                                                     setSelectedProperty(v);
-                                                    setSelectedRoomId('');
+                                                    setSelectedUnitId('');
                                                     setBlockUnit(false);
                                                 }}
                                             >
@@ -173,9 +173,9 @@ export default function TicketFormSheet({
                                                 {locationType === 'unit' ? (
                                                     <Select
                                                         name="unit_id"
-                                                        value={selectedRoomId}
+                                                        value={selectedUnitId}
                                                         onValueChange={(v) => {
-                                                            setSelectedRoomId(v);
+                                                            setSelectedUnitId(v);
                                                             setBlockUnit(false);
                                                         }}
                                                     >
@@ -202,7 +202,7 @@ export default function TicketFormSheet({
                                         </div>
                                     )}
 
-                                    {! isEdit && selectedRoomId && (
+                                    {! isEdit && selectedUnitId && (
                                         <div className="flex items-center gap-2">
                                             <Checkbox
                                                 id="block_unit"
@@ -325,7 +325,7 @@ return null;
                     <DialogHeader>
                         <DialogTitle>Unit Occupied</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground">
-                            {selectedRoomData?.name} has an active lease. What would you like to do?
+                            {selectedUnitData?.name} has an active lease. What would you like to do?
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">

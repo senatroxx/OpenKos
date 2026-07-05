@@ -1,11 +1,11 @@
 export type PropertyStats = {
     id: number;
     name: string;
-    total_rooms: number;
-    occupied_rooms: number;
-    available_rooms: number;
-    maintenance_rooms: number;
-    unavailable_rooms: number;
+    total_units: number;
+    occupied_units: number;
+    available_units: number;
+    maintenance_units: number;
+    unavailable_units: number;
     occupancy_percentage: number;
 };
 
@@ -17,11 +17,11 @@ export type Finance = {
 };
 
 export type Stats = {
-    total_rooms: number;
-    occupied_rooms: number;
-    available_rooms: number;
-    maintenance_rooms: number;
-    unavailable_rooms: number;
+    total_units: number;
+    occupied_units: number;
+    available_units: number;
+    maintenance_units: number;
+    unavailable_units: number;
     occupancy_percentage: number;
     properties: PropertyStats[];
 };

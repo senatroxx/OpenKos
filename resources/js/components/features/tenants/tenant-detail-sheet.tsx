@@ -43,7 +43,7 @@ export default function TenantDetailSheet({
     open,
     onOpenChange,
     onEdit,
-    onAssignToRoom,
+    onAssignToUnit,
     onMoveOut,
     onDocuments,
 }: {
@@ -51,7 +51,7 @@ export default function TenantDetailSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
-    onAssignToRoom?: () => void;
+    onAssignToUnit?: () => void;
     onMoveOut?: () => void;
     onDocuments?: () => void;
 }) {
@@ -281,8 +281,8 @@ export default function TenantDetailSheet({
                             </Button>
                             {!isArchived && (
                                 <>
-                                    {!activeLease && onAssignToRoom && (
-                                        <Button onClick={onAssignToRoom}>
+                                    {!activeLease && onAssignToUnit && (
+                                        <Button onClick={onAssignToUnit}>
                                             Assign to Unit
                                         </Button>
                                     )}
