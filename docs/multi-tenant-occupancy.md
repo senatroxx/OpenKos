@@ -38,11 +38,11 @@ tenants
 
 ### Application-Level Constraints
 
-- `StoreLeaseRequest::ensureUnitAvailable()` — aborts 422 if unit has any active lease
-- `LeaseController@move` — same check on target unit
-- `TenantController@assignUnit` — same check
-- Unit listing queries filter out units with active leases via `whereDoesntHave('leases', fn($q) => $q->where('status', 'active'))`
-- Unit status set to `occupied` when an active lease exists (in `UnitController`)
+- `CreateLease::execute()` — checks unit capacity via `OccupancyCalculator::canAccommodate()`; aborts 422 if adding tenants would exceed capacity
+- `LeaseController@move` — same check on target unit via `OccupancyCalculator`
+- `TenantController@assignUnit` — same check via `CreateLease`
+- Unit listing queries filter out fully-occupied units via `scopeAvailableForAssignment()`
+- Unit status set to `occupied` when `count(active_tenants) >= capacity` (in `CreateLease`)
 
 ### DB-Level Constraints
 
