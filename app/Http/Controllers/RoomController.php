@@ -105,7 +105,7 @@ class RoomController extends Controller
             return response()->json($result);
         }
 
-        $tenantsList = Tenant::whereRaw('is_active is true')
+        $tenantsList = Tenant::where('is_active', true)
             ->whereNull('deleted_at')
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'leases.room.property.users',

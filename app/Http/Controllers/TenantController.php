@@ -114,8 +114,8 @@ class TenantController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['active', 'inactive', 'archived'])
                     ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->whereRaw('is_active is true'),
-                        'inactive' => $q->whereRaw('is_active is false'),
+                        'active' => $q->where('is_active', true),
+                        'inactive' => $q->where('is_active', false),
                         'archived' => $q->onlyTrashed(),
                         default => $q,
                     }),

@@ -174,7 +174,7 @@ it('blocks occupied room and warns about active lease', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $room->leases()->first()->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $room->leases()->first()->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
@@ -201,7 +201,7 @@ it('moves tenant and blocks room when move_tenant_to_room_id provided', function
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
@@ -247,7 +247,7 @@ it('prevents moving into a maintenance room', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->post(route('properties.rooms.leases.move', [$sourceRoom->property, $sourceRoom, $lease]), [
@@ -336,7 +336,7 @@ it('preserves maintenance status on lease termination', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->delete(route('properties.rooms.leases.destroy', [$room->property, $room, $lease]), [
@@ -361,7 +361,7 @@ it('moves tenant back when resolving ticket with move_back flag', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     LeaseRoomHistory::create([
         'lease_id' => $lease->id,
