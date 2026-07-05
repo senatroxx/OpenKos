@@ -34,7 +34,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::post('/', [PropertyController::class, 'store'])->name('store')->middleware('permission:properties.create');
 
         Route::scopeBindings()->group(function () {
-            Route::prefix('{property}')->whereNumber('property')->group(function () {
+            Route::prefix('{property}')->group(function () {
                 Route::get('/', [PropertyController::class, 'show'])->name('show')->middleware('permission:properties.view');
                 Route::put('/', [PropertyController::class, 'update'])->name('update')->middleware('permission:properties.update');
                 Route::delete('/', [PropertyController::class, 'destroy'])->name('destroy')->middleware('permission:properties.delete');
@@ -45,7 +45,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::get('/', [RoomController::class, 'index'])->name('index')->middleware('permission:rooms.view');
                     Route::post('/', [RoomController::class, 'store'])->name('store')->middleware('permission:rooms.create');
 
-                    Route::prefix('{room}')->whereNumber('room')->group(function () {
+                    Route::prefix('{room}')->group(function () {
                         Route::get('/', [RoomController::class, 'show'])->name('show')->middleware('permission:rooms.view');
                         Route::put('/', [RoomController::class, 'update'])->name('update')->middleware('permission:rooms.update');
                         Route::delete('/', [RoomController::class, 'destroy'])->name('destroy')->middleware('permission:rooms.delete');

@@ -10,6 +10,6 @@ class UserGuard
     public function isLastActiveOwner(User $user): bool
     {
         return $user->isOwner()
-            && User::role(Role::Owner->value)->whereRaw('is_active is true')->whereKeyNot($user->id)->doesntExist();
+            && User::role(Role::Owner->value)->where('is_active', true)->whereKeyNot($user->id)->doesntExist();
     }
 }

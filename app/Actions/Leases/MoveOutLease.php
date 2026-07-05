@@ -104,7 +104,7 @@ class MoveOutLease
             foreach ($lease->tenants as $tenant) {
                 if (! $existingTenantIds->contains($tenant->id)) {
                     $existingLease->tenants()->attach($tenant->id, [
-                        'is_primary' => DB::raw('false'),
+                        'is_primary' => false,
                     ]);
                 }
             }
@@ -120,7 +120,7 @@ class MoveOutLease
                 'rent_amount' => $lease->rent_amount,
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
-                'is_custom_price' => $lease->is_custom_price ? DB::raw('true') : DB::raw('false'),
+                'is_custom_price' => $lease->is_custom_price,
                 'room_rate_id' => $matchingRate?->id,
                 'deposit_amount' => $lease->deposit_amount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
@@ -133,7 +133,7 @@ class MoveOutLease
 
             foreach ($lease->tenants as $tenant) {
                 $newLease->tenants()->attach($tenant->id, [
-                    'is_primary' => $tenant->id === $lease->primary_tenant_id ? DB::raw('true') : DB::raw('false'),
+                    'is_primary' => $tenant->id === $lease->primary_tenant_id,
                 ]);
             }
         }

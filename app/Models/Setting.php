@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 #[Fillable([
     'site_name',
@@ -56,7 +55,7 @@ class Setting extends Model
             'currency' => 'IDR',
             'timezone' => 'Asia/Jakarta',
             'lease_id_prefix' => 'LSX',
-            'reminder_enabled' => DB::raw('true'),
+            'reminder_enabled' => true,
             'reminder_days_before' => 3,
             'reminder_overdue_intervals' => [1, 3, 7],
             'reminder_channels' => ['log'],

@@ -232,8 +232,8 @@ export default function Index({
         if (confirm('Are you sure you want to delete this room?')) {
             router.delete(
                 properties.rooms.destroy.url({
-                    property: property.id,
-                    room: room.id,
+                    property: property.slug,
+                    room: room.slug,
                 }),
             );
         }
@@ -356,8 +356,8 @@ export default function Index({
                                 onClick={() =>
                                     router.get(
                                         properties.rooms.show.url({
-                                            property: property.id,
-                                            room: r.id,
+                                            property: property.slug,
+                                            room: r.slug,
                                         }),
                                     )
                                 }

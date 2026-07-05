@@ -174,7 +174,7 @@ it('blocks occupied room and warns about active lease', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $room->leases()->first()->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $room->leases()->first()->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
@@ -201,7 +201,7 @@ it('moves tenant and blocks room when move_tenant_to_room_id provided', function
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
@@ -228,7 +228,7 @@ it('prevents leasing a maintenance room', function () {
     $tenant = Tenant::factory()->create();
 
     $this->actingAs($owner)
-        ->post(route('properties.rooms.leases.store', [$room->property_id, $room]), [
+        ->post(route('properties.rooms.leases.store', [$room->property, $room]), [
             'tenant_ids' => [$tenant->id],
             'start_date' => now()->format('Y-m-d'),
             'rent_amount' => 1_000_000,
@@ -247,10 +247,10 @@ it('prevents moving into a maintenance room', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
-        ->post(route('properties.rooms.leases.move', [$sourceRoom->property_id, $sourceRoom, $lease]), [
+        ->post(route('properties.rooms.leases.move', [$sourceRoom->property, $sourceRoom, $lease]), [
             'target_room_id' => $targetRoom->id,
         ])
         ->assertStatus(422);
@@ -336,10 +336,10 @@ it('preserves maintenance status on lease termination', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
-        ->delete(route('properties.rooms.leases.destroy', [$room->property_id, $room, $lease]), [
+        ->delete(route('properties.rooms.leases.destroy', [$room->property, $room, $lease]), [
             'reason' => 'Testing',
         ])
         ->assertRedirect();
@@ -361,7 +361,7 @@ it('moves tenant back when resolving ticket with move_back flag', function () {
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $lease->tenants()->attach($tenant->id, ['is_primary' => DB::raw('true')]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     LeaseRoomHistory::create([
         'lease_id' => $lease->id,

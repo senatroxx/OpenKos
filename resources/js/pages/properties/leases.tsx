@@ -115,7 +115,7 @@ export default function PropertyLeases({
         <PropertyLayout property={property} activeTab="leases">
             <PluginRegion name="workspace-tab-leases">
                 <WorkspaceTable
-                    url={`/properties/${property.id}/leases`}
+                    url={`/properties/${property.slug}/leases`}
                     noun="leases"
                     rows={leases}
                     columns={columns}

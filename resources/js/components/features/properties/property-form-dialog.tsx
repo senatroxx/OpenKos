@@ -20,8 +20,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { store, update } from '@/routes/properties';
-import type { Property, PropertyType, Region } from '@/types';
-import { PROPERTY_TYPES } from '@/types/models';
+import type { Property, PropertyTypeOption, Region } from '@/types';
 
 export default function PropertyFormSheet({
     property,
@@ -32,14 +31,19 @@ export default function PropertyFormSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { regions } = usePage<{ regions: Region[] }>().props;
+    const { regions, propertyTypes } = usePage<{
+        regions: Region[];
+        propertyTypes: PropertyTypeOption[];
+    }>().props;
 
     const isEdit = Boolean(property);
     const formProps = isEdit
         ? { action: update.url(property!), method: 'put' as const }
         : { action: store.url(), method: 'post' as const };
 
-    const [type, setType] = useState<PropertyType>(property?.type ?? 'kos');
+    const [type, setType] = useState<string>(
+        property?.type ?? propertyTypes[0]?.slug ?? '',
+    );
 
     const [selectedRegionId, setSelectedRegionId] = useState<number | null>(
         property?.region_id ?? property?.region?.id ?? null,
@@ -107,9 +111,7 @@ export default function PropertyFormSheet({
                                     />
                                     <Select
                                         value={type}
-                                        onValueChange={(val) =>
-                                            setType(val as PropertyType)
-                                        }
+                                        onValueChange={setType}
                                     >
                                         <SelectTrigger
                                             id="type"
@@ -118,10 +120,10 @@ export default function PropertyFormSheet({
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {PROPERTY_TYPES.map((opt) => (
+                                            {propertyTypes.map((opt) => (
                                                 <SelectItem
-                                                    key={opt.value}
-                                                    value={opt.value}
+                                                    key={opt.slug}
+                                                    value={opt.slug}
                                                 >
                                                     {opt.label}
                                                 </SelectItem>

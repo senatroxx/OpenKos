@@ -167,7 +167,7 @@ class PropertyAndRoomSeeder extends Seeder
                             'billing_interval' => $rate['billing_interval'],
                             'billing_unit' => $rate['billing_unit'],
                             'amount' => $rate['amount'],
-                            'is_active' => DB::raw('true'),
+                            'is_active' => true,
                         ]);
                     }
                 }

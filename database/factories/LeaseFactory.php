@@ -6,7 +6,6 @@ use App\Models\Lease;
 use App\Models\Room;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<Lease>
@@ -25,7 +24,7 @@ class LeaseFactory extends Factory
             'rent_amount' => null,
             'billing_interval' => 1,
             'billing_unit' => 'month',
-            'is_custom_price' => DB::raw('false'),
+            'is_custom_price' => false,
             'deposit_amount' => fake()->numberBetween(500_000, 1_000_000),
             'deposit_paid_at' => now(),
             'rent_due_day' => 1,
@@ -39,7 +38,7 @@ class LeaseFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (Lease $lease) {
-            $lease->tenants()->attach($lease->primary_tenant_id, ['is_primary' => DB::raw('true')]);
+            $lease->tenants()->attach($lease->primary_tenant_id, ['is_primary' => true]);
         });
     }
 

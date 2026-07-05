@@ -66,7 +66,7 @@ class UserController extends Controller
     public function index(Request $request): Response
     {
         $assignableRoles = RoleModel::query()
-            ->whereRaw('is_active is true')
+            ->where('is_active', true)
             ->where('name', '!=', Role::Owner->value)
             ->orderBy('name')
             ->get(['name', 'label']);
@@ -88,9 +88,9 @@ class UserController extends Controller
                     )),
                 Filter::select('status', 'Status', ['active', 'invited', 'disabled'])
                     ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->whereRaw('is_active is true'),
+                        'active' => $q->where('is_active', true),
                         'invited' => $q->whereNotNull('invited_at'),
-                        'disabled' => $q->whereRaw('is_active is false')->whereNull('invited_at'),
+                        'disabled' => $q->where('is_active', false)->whereNull('invited_at'),
                         default => $q,
                     }),
             ])
@@ -106,7 +106,7 @@ class UserController extends Controller
 
         return Inertia::render('users/index', [
             ...$result,
-            'properties' => Property::query()->whereRaw('is_active is true')->orderBy('name')->get(['id', 'name']),
+            'properties' => Property::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'roles' => $assignableRoles->map(fn (RoleModel $role) => [
                 'value' => $role->name,
                 'label' => $role->label ?? ucfirst($role->name),
@@ -126,7 +126,7 @@ class UserController extends Controller
                 'invited_at' => now(),
             ]);
 
-            User::query()->whereKey($user->id)->update(['is_active' => DB::raw('false')]);
+            User::query()->whereKey($user->id)->update(['is_active' => false]);
 
             $roleNames = $validated['roles'];
             $user->syncRoles($roleNames);
@@ -161,7 +161,7 @@ class UserController extends Controller
             ]);
 
             User::query()->whereKey($user->id)->update([
-                'is_active' => DB::raw($validated['is_active'] ? 'true' : 'false'),
+                'is_active' => $validated['is_active'],
             ]);
 
             if (! $user->isOwner()) {
@@ -186,7 +186,7 @@ class UserController extends Controller
         }
 
         User::query()->whereKey($user->id)->update([
-            'is_active' => DB::raw('false'),
+            'is_active' => false,
             'invited_at' => null,
         ]);
 
@@ -258,7 +258,7 @@ class UserController extends Controller
                 'remember_token' => Str::random(60),
             ])->save();
 
-            User::query()->whereKey($user->id)->update(['is_active' => DB::raw('true')]);
+            User::query()->whereKey($user->id)->update(['is_active' => true]);
 
             event(new PasswordReset($user));
         });
