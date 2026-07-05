@@ -34,5 +34,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Database\QueryException $e) {
+            if ($e->getCode() === '23503') {
+                Inertia::flash('toast', ['type' => 'error', 'message' => __('This record cannot be deleted because other records depend on it.')]);
+
+                return redirect()->back();
+            }
+        });
     })->create();
