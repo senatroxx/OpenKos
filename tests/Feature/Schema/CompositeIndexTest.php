@@ -85,18 +85,17 @@ function loadIndexesPgsql(array $tables): array
         SELECT
             i.relname AS index_name,
             t.relname AS table_name,
-            a.attname AS column_name,
-            i.indisunique,
-            i.indisprimary
+            a.attname AS column_name
         FROM pg_index idx
         JOIN pg_class i ON i.oid = idx.indexrelid
         JOIN pg_class t ON t.oid = idx.indrelid
         JOIN pg_attribute a ON a.attrelid = idx.indrelid
-            AND a.attnum = ANY(idx.indkey)
+        CROSS JOIN LATERAL unnest(idx.indkey) WITH ORDINALITY AS ik(key, ord)
+            ON a.attnum = ik.key
         WHERE t.relname IN ({$placeholders})
-            AND NOT i.indisunique
-            AND NOT i.indisprimary
-        ORDER BY i.relname, a.attnum
+            AND NOT idx.indisunique
+            AND NOT idx.indisprimary
+        ORDER BY i.relname, ik.ord
     ", $tables);
 
     $indexes = [];
