@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 
 /*
  * Slug for future public property/unit listing URLs
- * (/properties/{property-slug}/rooms/{unit-slug}). Unique per property, since
+ * (/properties/{property-slug}/units/{unit-slug}). Unique per property, since
  * unit names (e.g. "A1") repeat across properties. Current routing still uses
  * the numeric id — this is future-proofing only.
  */

@@ -31,7 +31,7 @@ import { Textarea } from '@/components/ui/textarea';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
-type RoomOption = {
+type UnitOption = {
     id: number;
     name: string;
     property_id: number;
@@ -41,7 +41,7 @@ type RoomOption = {
     leases?: { tenants: { id: number; name: string }[] }[];
 };
 
-function formatRoomOption(r: RoomOption): string {
+function formatUnitOption(r: UnitOption): string {
     const tenants = r.leases?.[0]?.tenants ?? [];
     const unitLabel = r.name.length > 20 ? r.name.slice(0, 19) + '...' : r.name;
 
@@ -69,7 +69,7 @@ export default function TicketFormSheet({
     onOpenChange: (open: boolean) => void;
     ticket?: MaintenanceTicket | null;
     properties: { id: number; name: string }[];
-    units: RoomOption[];
+    units: UnitOption[];
 }) {
     const isEdit = Boolean(ticket);
     const formAction = isEdit
@@ -89,7 +89,7 @@ export default function TicketFormSheet({
     );
     const [blockUnit, setBlockUnit] = useState(false);
     const [showOccupiedDialog, setShowOccupiedDialog] = useState(false);
-    const [moveToRoomId, setMoveToRoomId] = useState('');
+    const [moveToUnitId, setMoveToUnitId] = useState('');
     const [restoreUnit, setRestoreUnit] = useState(false);
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
@@ -235,7 +235,7 @@ export default function TicketFormSheet({
                                                                             r.id,
                                                                         )}
                                                                     >
-                                                                        {formatRoomOption(
+                                                                        {formatUnitOption(
                                                                             r,
                                                                         )}
                                                                     </SelectItem>
@@ -473,8 +473,8 @@ export default function TicketFormSheet({
                                                 Move tenant to another unit
                                             </div>
                                             <Select
-                                                value={moveToRoomId}
-                                                onValueChange={setMoveToRoomId}
+                                                value={moveToUnitId}
+                                                onValueChange={setMoveToUnitId}
                                             >
                                                 <SelectTrigger className="mt-2 w-full">
                                                     <SelectValue placeholder="Select unit" />
@@ -488,7 +488,7 @@ export default function TicketFormSheet({
                                                                     r.id,
                                                                 )}
                                                             >
-                                                                {formatRoomOption(
+                                                                {formatUnitOption(
                                                                     r,
                                                                 )}
                                                             </SelectItem>
@@ -536,8 +536,8 @@ export default function TicketFormSheet({
                                     },
                                 );
 
-                                if (moveToRoomId) {
-                                    data.move_tenant_to_unit_id = moveToRoomId;
+                                if (moveToUnitId) {
+                                    data.move_tenant_to_unit_id = moveToUnitId;
                                 }
 
                                 router.visit(formAction, {

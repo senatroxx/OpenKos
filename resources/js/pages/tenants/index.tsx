@@ -76,7 +76,7 @@ type PageProps = {
 
 export default function Index({
     tenants: data,
-    availableUnits: _availableRooms,
+    availableUnits: _availableUnits,
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -342,7 +342,7 @@ export default function Index({
             {assignTenant && (
                 <AssignUnitSheet
                     tenant={assignTenant}
-                    availableUnits={_availableRooms}
+                    availableUnits={_availableUnits}
                     open={assignUnitOpen}
                     onOpenChange={setAssignUnitOpen}
                 />
@@ -376,7 +376,7 @@ export default function Index({
                           }
                         : null
                 }
-                availableUnits={_availableRooms}
+                availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />

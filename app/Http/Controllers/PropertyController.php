@@ -51,7 +51,7 @@ class PropertyController extends Controller
                         DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%',
                     ));
                 }),
-                Column::make('units_count', 'Total Rooms')->sortable(),
+                Column::make('units_count', 'Total Units')->sortable(),
                 Column::make('occupied_units_count', 'Occupied')->sortable(),
                 Column::make('tenants_count', 'Tenants')->sortable(),
             ])

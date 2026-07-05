@@ -170,7 +170,7 @@ export default function AssignUnitSheet({
             }));
     }, [availableUnits]);
 
-    const filteredRooms = useMemo(
+    const filteredUnits = useMemo(
         () =>
             selectedPropertyId
                 ? availableUnits.filter(
@@ -180,7 +180,7 @@ export default function AssignUnitSheet({
         [availableUnits, selectedPropertyId],
     );
 
-    const roomOptions = filteredRooms.map((r) => {
+    const unitOptions = filteredUnits.map((r) => {
         const spotsLeft = r.capacity - r.occupied_count;
         const suffix =
             r.occupied_count > 0
@@ -283,7 +283,7 @@ export default function AssignUnitSheet({
                                         />
                                         <SearchableSelect
                                             key={selectedPropertyId ?? 'none'}
-                                            options={roomOptions}
+                                            options={unitOptions}
                                             value={selectedUnitId}
                                             onChange={(val) =>
                                                 setSelectedUnitId(

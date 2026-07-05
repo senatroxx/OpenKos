@@ -86,7 +86,7 @@ class ResolveTicket
         ]);
 
         $targetUnit = Unit::lockForUpdate()->findOrFail($transfer->to_unit_id);
-        $targetRoomStillOccupied = $targetUnit->leases()->where('status', 'active')->exists();
-        $targetUnit->update(['status' => $targetRoomStillOccupied ? UnitStatus::Occupied : UnitStatus::Available]);
+        $targetUnitStillOccupied = $targetUnit->leases()->where('status', 'active')->exists();
+        $targetUnit->update(['status' => $targetUnitStillOccupied ? UnitStatus::Occupied : UnitStatus::Available]);
     }
 }

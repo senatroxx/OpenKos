@@ -105,7 +105,7 @@ class PropertyAndUnitSeeder extends Seeder
         ],
     ];
 
-    private array $roomTemplates = [
+    private array $unitTemplates = [
         ['prefix' => 'A', 'count' => 4, 'floor' => 1, 'rates' => [
             ['billing_interval' => 1, 'billing_unit' => 'month', 'amount' => 1_500_000],
             ['billing_interval' => 1, 'billing_unit' => 'year', 'amount' => 15_000_000],
@@ -150,7 +150,7 @@ class PropertyAndUnitSeeder extends Seeder
 
             DB::statement('UPDATE properties SET is_active = true WHERE id = ?', [$property->id]);
 
-            foreach ($this->roomTemplates as $template) {
+            foreach ($this->unitTemplates as $template) {
                 for ($i = 1; $i <= $template['count']; $i++) {
                     $unit = Unit::create([
                         'property_id' => $property->id,
