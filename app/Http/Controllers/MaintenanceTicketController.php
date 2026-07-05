@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Maintenance\BlockUnit;
 use App\Actions\Maintenance\ResolveTicket;
 use App\Business\Maintenance\TransitionValidator;
+use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Maintenance\StoreMaintenanceTicketRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceTicketRequest;
@@ -97,8 +98,8 @@ class MaintenanceTicketController extends Controller
 
         $units = Unit::query()
             ->select(['id', 'slug', 'name', 'property_id', 'status'])
-            ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', 'active')])
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenants:id,name')])
+            ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)])
+            ->with(['leases' => fn ($q) => $q->where('status', LeaseStatus::Active->value)->with('tenants:id,name')])
             ->addSelect([
                 'has_maintenance_transfer' => LeaseUnitHistory::query()
                     ->selectRaw('1')

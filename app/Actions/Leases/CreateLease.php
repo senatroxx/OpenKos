@@ -2,8 +2,10 @@
 
 namespace App\Actions\Leases;
 
+use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\OccupancyCalculator;
 use App\Data\Lease\CreateLeaseData;
+use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Unit;
 use App\Models\UnitRate;
@@ -13,6 +15,7 @@ class CreateLease
 {
     public function __construct(
         private OccupancyCalculator $occupancy,
+        private LeaseStatusValidator $leaseStatusValidator,
     ) {}
 
     public function execute(Unit $unit, CreateLeaseData $data): mixed
@@ -24,7 +27,7 @@ class CreateLease
 
             abort_if($unit->status === UnitStatus::Maintenance, 422, __('This unit is under maintenance and cannot be leased.'));
 
-            $existingLease = $unit->leases()->where('status', 'active')->first();
+            $existingLease = $unit->leases()->where('status', LeaseStatus::Active->value)->first();
             $activeTenantsCount = $this->occupancy->activeOccupantCount($unit);
 
             if ($existingLease) {
@@ -64,7 +67,7 @@ class CreateLease
                 'deposit_refund_amount' => $data->depositRefundAmount,
                 'deposit_refunded_at' => $data->depositRefundedAt,
                 'rent_due_day' => $data->rentDueDay ?? 1,
-                'status' => 'active',
+                'status' => LeaseStatus::Active,
                 'notes' => $data->notes,
             ]);
 

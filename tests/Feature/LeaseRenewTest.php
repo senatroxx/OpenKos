@@ -2,6 +2,7 @@
 
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\DepositHandling;
+use App\Enums\LeaseStatus;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -134,7 +135,7 @@ describe('eligibility', function () {
             ]);
         $lease->refresh();
 
-        expect($lease->status)->toBe('active');
+        expect($lease->status)->toBe(LeaseStatus::Active);
     });
 
     it('rejects terminated leases', function () {
@@ -152,7 +153,7 @@ describe('eligibility', function () {
             ->assertSessionHasNoErrors();
         $lease->refresh();
 
-        expect($lease->status)->toBe('terminated');
+        expect($lease->status)->toBe(LeaseStatus::Terminated);
     });
 
     it('rejects expired leases', function () {
@@ -169,7 +170,7 @@ describe('eligibility', function () {
             ]);
         $lease->refresh();
 
-        expect($lease->status)->toBe('expired');
+        expect($lease->status)->toBe(LeaseStatus::Expired);
     });
 });
 
@@ -190,13 +191,13 @@ describe('renewal', function () {
 
         $lease->refresh();
 
-        expect($lease->status)->toBe('renewed');
+        expect($lease->status)->toBe(LeaseStatus::Renewed);
 
         $newLease = $lease->fresh()->renewedLease;
 
         expect($newLease)->not->toBeNull();
         expect($newLease->previous_lease_id)->toBe($lease->id);
-        expect($newLease->status)->toBe('active');
+        expect($newLease->status)->toBe(LeaseStatus::Active);
         expect($newLease->rent_amount)->toBe('1500000.00');
         expect($newLease->start_date->format('Y-m-d'))->toBe('2026-07-01');
         expect($newLease->end_date->format('Y-m-d'))->toBe('2027-06-30');
@@ -348,7 +349,7 @@ describe('outstanding balance', function () {
 
         $lease->refresh();
 
-        expect($lease->status)->toBe('renewed');
+        expect($lease->status)->toBe(LeaseStatus::Renewed);
     });
 
     it('blocks renewal with outstanding balance without confirmation', function () {
@@ -375,7 +376,7 @@ describe('outstanding balance', function () {
             ->assertSessionHasNoErrors();
         $lease->refresh();
 
-        expect($lease->status)->toBe('active');
+        expect($lease->status)->toBe(LeaseStatus::Active);
     });
 
     it('allows renewal with paid lease without confirmation', function () {
@@ -441,7 +442,7 @@ describe('outstanding balance', function () {
 
         $lease->refresh();
 
-        expect($lease->status)->toBe('renewed');
+        expect($lease->status)->toBe(LeaseStatus::Renewed);
     });
 
     it('allows renewal with outstanding balance when confirmed', function () {
@@ -470,7 +471,7 @@ describe('outstanding balance', function () {
 
         $lease->refresh();
 
-        expect($lease->status)->toBe('renewed');
+        expect($lease->status)->toBe(LeaseStatus::Renewed);
     });
 });
 

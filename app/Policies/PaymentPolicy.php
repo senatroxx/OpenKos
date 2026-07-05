@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\PaymentStatus;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\User;
@@ -38,7 +39,7 @@ class PaymentPolicy
             return false;
         }
 
-        if ($payment->status !== 'pending') {
+        if ($payment->status !== PaymentStatus::Pending) {
             return false;
         }
 
