@@ -54,7 +54,7 @@ export default function UnitDetailSheet({
     onEdit,
     onAssignTenant,
     onMoveOut,
-    onMoveRoom,
+    onMoveUnit,
 }: {
     unit?: Unit | null;
     property: Property | null;
@@ -63,7 +63,7 @@ export default function UnitDetailSheet({
     onEdit: () => void;
     onAssignTenant?: () => void;
     onMoveOut?: () => void;
-    onMoveRoom?: () => void;
+    onMoveUnit?: () => void;
 }) {
     const isOccupied = (unit?.active_leases ?? 0) > 0;
     const allTenants =
@@ -315,8 +315,8 @@ export default function UnitDetailSheet({
                                     Move Out Tenant
                                 </Button>
                             )}
-                            {isOccupied && onMoveRoom && (
-                                <Button variant="outline" onClick={onMoveRoom}>
+                            {isOccupied && onMoveUnit && (
+                                <Button variant="outline" onClick={onMoveUnit}>
                                     Move Unit
                                 </Button>
                             )}

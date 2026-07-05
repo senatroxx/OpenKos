@@ -24,6 +24,3 @@ enum UnitStatus: string
         return array_column(self::cases(), 'value');
     }
 }
-
-// ponytail: alias file removed; all callers migrated to UnitStatus
-class_alias(UnitStatus::class, 'App\Enums\RoomStatus');

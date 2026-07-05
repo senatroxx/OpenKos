@@ -110,7 +110,7 @@ function formatDate(date: string | null): string {
 
 export default function Index({
     leases: data,
-    availableUnits: _availableRooms,
+    availableUnits: _availableUnits,
     sort: currentSort = 'status,-start_date',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -451,7 +451,7 @@ export default function Index({
                           }
                         : null
                 }
-                availableUnits={_availableRooms}
+                availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
