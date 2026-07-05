@@ -11,7 +11,6 @@ import {
 import properties from '@/routes/properties';
 
 import type { Property } from '@/types';
-import { PROPERTY_TYPE_LABELS } from '@/types/models';
 
 export default function PropertyDetailSheet({
     property,
@@ -40,13 +39,20 @@ export default function PropertyDetailSheet({
         property?.city && typeof property.city !== 'string'
             ? property.city
             : null;
-    const locationLabel = [city?.name, property?.region?.name, property?.postal_code]
+    const locationLabel = [
+        city?.name,
+        property?.region?.name,
+        property?.postal_code,
+    ]
         .filter(Boolean)
         .join(', ');
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg" expandTo={property ? properties.show.url(property) : undefined}>
+            <SheetContent
+                className="sm:max-w-lg"
+                expandTo={property ? properties.show.url(property) : undefined}
+            >
                 <SheetHeader>
                     <SheetTitle>{property?.name}</SheetTitle>
                     <SheetDescription>
@@ -71,8 +77,7 @@ export default function PropertyDetailSheet({
                                 )}
                                 {property.type && (
                                     <Badge variant="outline">
-                                        {PROPERTY_TYPE_LABELS[property.type] ??
-                                            property.type}
+                                        {property.type_label ?? property.type}
                                     </Badge>
                                 )}
                             </div>
@@ -98,9 +103,7 @@ export default function PropertyDetailSheet({
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
                                         City
                                     </p>
-                                    <p className="mt-1 text-sm">
-                                        {city.name}
-                                    </p>
+                                    <p className="mt-1 text-sm">{city.name}</p>
                                 </div>
                             )}
 

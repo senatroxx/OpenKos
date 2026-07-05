@@ -54,8 +54,8 @@ class RoleController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['active', 'disabled'])
                     ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->whereRaw('is_active is true'),
-                        'disabled' => $q->whereRaw('is_active is false'),
+                        'active' => $q->where('is_active', true),
+                        'disabled' => $q->where('is_active', false),
                         default => $q,
                     }),
             ])

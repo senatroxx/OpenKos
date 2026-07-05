@@ -71,8 +71,8 @@ export default function LeaseEditSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={leases.update.url({
-                            property: lease.room.property_id,
-                            room: lease.room.id,
+                            property: lease.room.property!.slug,
+                            room: lease.room.slug,
                             lease: lease.id,
                         })}
                         method="put"

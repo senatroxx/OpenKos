@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\PropertyType;
 use App\Models\City;
 use App\Models\Property;
 use App\Models\Region;
@@ -118,17 +117,17 @@ describe('CRUD', function () {
 });
 
 describe('type', function () {
-    it('defaults to kos when no type is given', function () {
+    it('defaults to boarding_house when no type is given', function () {
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)->post(route('properties.store'), [
-            'name' => 'Kos Melati',
+            'name' => 'Sunrise Residence',
         ]);
 
-        expect(Property::first()->type)->toBe(PropertyType::Kos);
+        expect(Property::first()->type)->toBe('boarding_house');
     });
 
-    it('stores an explicit type', function () {
+    it('stores an explicit seeded type and exposes its label', function () {
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)->post(route('properties.store'), [
@@ -136,27 +135,30 @@ describe('type', function () {
             'type' => 'villa',
         ]);
 
-        expect(Property::first()->type)->toBe(PropertyType::Villa);
+        $property = Property::first();
+
+        expect($property->type)->toBe('villa')
+            ->and($property->type_label)->toBe('Villa');
     });
 
     it('updates the type', function () {
         $user = User::factory()->owner()->create();
-        $property = Property::factory()->create(['type' => PropertyType::Kos]);
+        $property = Property::factory()->create(['type' => 'boarding_house']);
 
         $this->actingAs($user)->put(route('properties.update', $property), [
             'name' => $property->name,
             'type' => 'hotel',
         ]);
 
-        expect($property->refresh()->type)->toBe(PropertyType::Hotel);
+        expect($property->refresh()->type)->toBe('hotel');
     });
 
-    it('rejects an invalid type', function () {
+    it('rejects a type that is not a known property type', function () {
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)
             ->post(route('properties.store'), [
-                'name' => 'Kos Melati',
+                'name' => 'Mystery Manor',
                 'type' => 'mansion',
             ])
             ->assertSessionHasErrors('type');

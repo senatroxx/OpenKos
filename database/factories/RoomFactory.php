@@ -6,7 +6,6 @@ use App\Enums\RoomStatus;
 use App\Models\Property;
 use App\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\DB;
 
 /**
  * @extends Factory<Room>
@@ -37,7 +36,7 @@ class RoomFactory extends Factory
                     'billing_interval' => 1,
                     'billing_unit' => 'month',
                     'amount' => fake()->numberBetween(500_000, 3_000_000),
-                    'is_active' => DB::raw('true'),
+                    'is_active' => true,
                 ]);
             }
         });
@@ -51,7 +50,7 @@ class RoomFactory extends Factory
         return $this->afterCreating(function (Room $room) use ($amount) {
             $room->rates()->updateOrCreate(
                 ['billing_interval' => 1, 'billing_unit' => 'month'],
-                ['amount' => $amount, 'is_active' => DB::raw('true')],
+                ['amount' => $amount, 'is_active' => true],
             );
         });
     }

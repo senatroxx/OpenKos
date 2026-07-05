@@ -96,7 +96,7 @@ class MaintenanceTicketController extends Controller
             ->get(['id', 'name']);
 
         $rooms = Room::query()
-            ->select(['id', 'name', 'property_id', 'status'])
+            ->select(['id', 'slug', 'name', 'property_id', 'status'])
             ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', 'active')])
             ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenants:id,name')])
             ->addSelect([

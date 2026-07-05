@@ -11,10 +11,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 #[Fillable([
     'property_id',
     'name',
+    'slug',
     'floor',
     'description',
     'size_sqm',
@@ -35,6 +37,30 @@ class Room extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Room $room) {
+            if (empty($room->slug)) {
+                $base = Str::slug($room->name) ?: 'room';
+                $slug = $base;
+                $counter = 1;
+                while (static::withTrashed()
+                    ->where('property_id', $room->property_id)
+                    ->where('slug', $slug)
+                    ->exists()
+                ) {
+                    $slug = $base.'-'.++$counter;
+                }
+                $room->slug = $slug;
+            }
+        });
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
@@ -53,7 +79,7 @@ class Room extends Model
     public function activeRates(): HasMany
     {
         return $this->hasMany(RoomRate::class)
-            ->whereRaw('is_active is true')
+            ->where('is_active', true)
             ->orderBy('billing_interval');
     }
 

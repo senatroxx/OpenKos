@@ -36,26 +36,23 @@ export type Region = {
     cities: { id: number; name: string }[];
 };
 
-// Mirrors App\Enums\PropertyType.
-export type PropertyType = 'kos' | 'apartment' | 'villa' | 'hostel' | 'hotel';
-
-export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
-    { value: 'kos', label: 'Kos' },
-    { value: 'apartment', label: 'Apartment' },
-    { value: 'villa', label: 'Villa' },
-    { value: 'hostel', label: 'Hostel' },
-    { value: 'hotel', label: 'Hotel' },
-];
-
-export const PROPERTY_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-    PROPERTY_TYPES.map((t) => [t.value, t.label]),
-);
+// A user-managed property classification (App\Models\PropertyType). The slug
+// is stored on properties.type; the label is the editable display name.
+export type PropertyTypeOption = {
+    id?: number;
+    slug: string;
+    label: string;
+    is_active?: boolean;
+    sort_order?: number;
+    properties_count?: number;
+};
 
 export type Property = {
     id: number;
     name: string;
-    type?: PropertyType;
-    slug?: string;
+    type?: string; // property_types.slug
+    type_label?: string; // resolved label (appended by the model)
+    slug: string; // route key
     address?: string | null;
     region_id?: number | null;
     city_id?: number | null;
@@ -79,6 +76,7 @@ export type RoomRate = {
 export type Room = {
     id: number;
     name: string;
+    slug: string; // route key (unique per property)
     floor: string | null;
     description: string | null;
     size_sqm: string | null;
@@ -174,7 +172,11 @@ export type Lease = {
         id: number;
         from_room: { id: number; name: string } | null;
         to_room: { id: number; name: string } | null;
-        transferred_by: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
+        transferred_by: {
+            id: number;
+            name: string;
+            roles?: { name: string; label?: string }[];
+        } | null;
         reason: string | null;
         notes: string | null;
         effective_date: string;
@@ -245,7 +247,15 @@ export type MaintenanceTicket = {
     updated_at: string;
     property?: { id: number; name: string } | null;
     room?: { id: number; name: string } | null;
-    assignee?: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
-    creator?: { id: number; name: string; roles?: { name: string; label?: string }[] } | null;
+    assignee?: {
+        id: number;
+        name: string;
+        roles?: { name: string; label?: string }[];
+    } | null;
+    creator?: {
+        id: number;
+        name: string;
+        roles?: { name: string; label?: string }[];
+    } | null;
     maintenance_transfer_to?: string | null;
 };

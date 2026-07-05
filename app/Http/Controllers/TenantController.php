@@ -114,8 +114,8 @@ class TenantController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['active', 'inactive', 'archived'])
                     ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->whereRaw('is_active is true'),
-                        'inactive' => $q->whereRaw('is_active is false'),
+                        'active' => $q->where('is_active', true),
+                        'inactive' => $q->where('is_active', false),
                         'archived' => $q->onlyTrashed(),
                         default => $q,
                     }),
@@ -138,7 +138,7 @@ class TenantController extends Controller
 
         $availableRooms = Room::query()
             ->with(['property.city', 'activeRates'])
-            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))

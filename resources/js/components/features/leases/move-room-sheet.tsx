@@ -19,9 +19,14 @@ export default function MoveRoomSheet({
     open,
     onOpenChange,
 }: {
-    property: { id: number; name: string };
-    currentRoom: { id: number; name: string; capacity: number };
-    availableRooms: { id: number; name: string; capacity: number; occupied_count?: number }[];
+    property: { id: number; slug: string; name: string };
+    currentRoom: { id: number; slug: string; name: string; capacity: number };
+    availableRooms: {
+        id: number;
+        name: string;
+        capacity: number;
+        occupied_count?: number;
+    }[];
     lease: { id: number };
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -31,11 +36,12 @@ export default function MoveRoomSheet({
     const roomOptions = availableRooms.map((r) => {
         const occupiedCount = r.occupied_count ?? 0;
         const spotsLeft = r.capacity - occupiedCount;
-        const suffix = occupiedCount > 0
-            ? ` (${occupiedCount}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
-            : r.capacity > 1
-                ? ` (capacity ${r.capacity})`
-                : '';
+        const suffix =
+            occupiedCount > 0
+                ? ` (${occupiedCount}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+                : r.capacity > 1
+                  ? ` (capacity ${r.capacity})`
+                  : '';
 
         return {
             value: r.id,
@@ -56,8 +62,8 @@ export default function MoveRoomSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={properties.rooms.leases.move.url({
-                            property: property.id,
-                            room: currentRoom.id,
+                            property: property.slug,
+                            room: currentRoom.slug,
                             lease: lease.id,
                         })}
                         method="post"

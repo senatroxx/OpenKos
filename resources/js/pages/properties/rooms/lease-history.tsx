@@ -91,8 +91,13 @@ export default function RoomLeaseHistory({
     per_page = 15,
     table,
 }: {
-    property: { id: number; name: string };
-    room: { id: number; name: string; floor?: string | number | null };
+    property: { id: number; slug: string; name: string };
+    room: {
+        id: number;
+        slug: string;
+        name: string;
+        floor?: string | number | null;
+    };
     leases: PaginatedData<LeaseRow>;
     sort?: string;
     search?: string;
@@ -104,7 +109,7 @@ export default function RoomLeaseHistory({
         <RoomLayout property={property} room={room} activeTab="lease-history">
             <PluginRegion name="workspace-tab-lease-history">
                 <WorkspaceTable
-                    url={`/properties/${property.id}/rooms/${room.id}/lease-history`}
+                    url={`/properties/${property.slug}/rooms/${room.slug}/lease-history`}
                     noun="leases"
                     rows={leases}
                     columns={columns}
