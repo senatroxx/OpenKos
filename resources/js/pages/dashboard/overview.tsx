@@ -24,12 +24,12 @@ export default function Overview({
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="grid gap-4 md:grid-cols-4">
                     <StatCard
-                        label="Occupied Rooms"
+                        label="Occupied Units"
                         value={stats.occupied_units}
                         bgColor="bg-blue-50 dark:bg-blue-950/20"
                     />
                     <StatCard
-                        label="Available Rooms"
+                        label="Available Units"
                         value={stats.available_units}
                         bgColor="bg-green-50 dark:bg-green-950/20"
                     />

@@ -128,7 +128,7 @@ export default function PropertyDetailSheet({
                                             {property.units_count}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Total Rooms
+                                            Total Units
                                         </p>
                                     </div>
                                     <div>
@@ -157,7 +157,7 @@ export default function PropertyDetailSheet({
                                 className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Manage Rooms ({property.units_count})
+                                Manage Units ({property.units_count})
                             </Link>
                         </div>
 

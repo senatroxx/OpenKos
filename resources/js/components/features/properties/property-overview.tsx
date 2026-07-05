@@ -74,7 +74,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
                             {property.units_count ?? 0}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Total Rooms
+                            Total Units
                         </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">

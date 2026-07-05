@@ -70,7 +70,7 @@ class MoveOutLease
             : count($incomingTenantIds);
 
         if (! $this->occupancy->canAccommodate($targetUnit, $incomingCount)) {
-            abort(422, __('Room capacity exceeded. Target unit can only hold :capacity occupants.', ['capacity' => $targetUnit->capacity]));
+            abort(422, __('Unit capacity exceeded. Target unit can only hold :capacity occupants.', ['capacity' => $targetUnit->capacity]));
         }
 
         $depositRefundAmount = $data->depositReturned

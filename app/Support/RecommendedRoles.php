@@ -15,7 +15,7 @@ class RecommendedRoles
             [
                 'name' => 'admin',
                 'label' => 'Admin',
-                'description' => 'Full operational access to properties, rooms, tenants, leases, and users.',
+                'description' => 'Full operational access to properties, units, tenants, leases, and users.',
                 'color' => '#2563eb',
                 'permissions' => [
                     Permission::DashboardView->value,
@@ -70,7 +70,7 @@ class RecommendedRoles
             [
                 'name' => 'front-desk',
                 'label' => 'Front Desk',
-                'description' => 'Manage tenant check-ins, room viewings, and lease inquiries.',
+                'description' => 'Manage tenant check-ins, unit viewings, and lease inquiries.',
                 'color' => '#7c3aed',
                 'permissions' => [
                     Permission::DashboardView->value,
@@ -84,7 +84,7 @@ class RecommendedRoles
             [
                 'name' => 'maintenance-staff',
                 'label' => 'Maintenance Staff',
-                'description' => 'Handle maintenance requests and view room assignments.',
+                'description' => 'Handle maintenance requests and view unit assignments.',
                 'color' => '#e11d48',
                 'permissions' => [
                     Permission::DashboardView->value,

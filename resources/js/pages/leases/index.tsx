@@ -51,7 +51,7 @@ type AvailableUnit = {
 
 type PageProps = {
     leases: PaginatedData<Lease>;
-    availableRooms: AvailableUnit[];
+    availableUnits: AvailableUnit[];
     sort?: string;
     search?: string;
     status?: string;
@@ -110,7 +110,7 @@ function formatDate(date: string | null): string {
 
 export default function Index({
     leases: data,
-    availableRooms: _availableRooms,
+    availableUnits: _availableRooms,
     sort: currentSort = 'status,-start_date',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -451,7 +451,7 @@ export default function Index({
                           }
                         : null
                 }
-                availableRooms={_availableRooms}
+                availableUnits={_availableRooms}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />

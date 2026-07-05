@@ -34,7 +34,7 @@ export function PropertyLayout({
                     },
                     {
                         key: 'units',
-                        label: 'Rooms',
+                        label: 'Units',
                         href: `/properties/${property.slug}/units`,
                     },
                     {

@@ -70,7 +70,7 @@ enum Permission: string
             'reset_password' => 'Reset Password',
             'resend_invitation' => 'Resend Invitation',
             'export' => 'Export',
-            'move' => 'Move Room',
+            'move' => 'Move Unit',
             'move_out' => 'Move Out',
             'renew' => 'Renew Lease',
             'send' => 'Send',

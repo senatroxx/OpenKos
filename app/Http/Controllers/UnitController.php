@@ -147,7 +147,7 @@ class UnitController extends Controller
             }
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Room created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit created.')]);
 
         return to_route('properties.units.index', $property);
     }
@@ -182,7 +182,7 @@ class UnitController extends Controller
             $unit->rates()->whereNotIn('id', $keepIds)->delete();
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Room updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit updated.')]);
 
         return to_route('properties.units.index', $property);
     }
@@ -193,7 +193,7 @@ class UnitController extends Controller
 
         $unit->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Room deleted.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit deleted.')]);
 
         return to_route('properties.units.index', $property);
     }
