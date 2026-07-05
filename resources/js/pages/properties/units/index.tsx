@@ -421,7 +421,7 @@ export default function Index({
 
     return (
         <PropertyLayout property={property} activeTab="units">
-            <Head title={`Units - `} />
+            <Head title={`Units - ${property.name}`} />
 
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-end">
