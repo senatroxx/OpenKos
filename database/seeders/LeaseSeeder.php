@@ -14,29 +14,29 @@ use Illuminate\Database\Seeder;
 class LeaseSeeder extends Seeder
 {
     private array $activeAssignments = [
-        ['property' => 'Kos Melati Indah', 'room' => 'A1', 'tenant' => 'Budi Santoso'],
-        ['property' => 'Kos Melati Indah', 'room' => 'A2', 'tenant' => 'Siti Nurhaliza'],
-        ['property' => 'Kos Melati Indah', 'room' => 'A3', 'tenant' => 'Ahmad Rizki'],
-        ['property' => 'Kos Mawar Putih',  'room' => 'A1', 'tenant' => 'Dewi Lestari'],
-        ['property' => 'Kos Mawar Putih',  'room' => 'B1', 'tenant' => 'Rudi Hartono'],
-        ['property' => 'Kos Kenanga Asri', 'room' => 'A1', 'tenant' => 'Rina Wijaya'],
-        ['property' => 'Kos Kenanga Asri', 'room' => 'B2', 'tenant' => 'Agus Prasetyo'],
-        ['property' => 'Kos Dahlia Permai', 'room' => 'A4', 'tenant' => 'Maya Anggraini'],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'A1', 'tenant' => 'Budi Santoso'],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'A2', 'tenant' => 'Siti Nurhaliza'],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'A3', 'tenant' => 'Ahmad Rizki'],
+        ['property' => 'Kos Mawar Putih',  'unit_name' => 'A1', 'tenant' => 'Dewi Lestari'],
+        ['property' => 'Kos Mawar Putih',  'unit_name' => 'B1', 'tenant' => 'Rudi Hartono'],
+        ['property' => 'Kos Kenanga Asri', 'unit_name' => 'A1', 'tenant' => 'Rina Wijaya'],
+        ['property' => 'Kos Kenanga Asri', 'unit_name' => 'B2', 'tenant' => 'Agus Prasetyo'],
+        ['property' => 'Kos Dahlia Permai', 'unit_name' => 'A4', 'tenant' => 'Maya Anggraini'],
     ];
 
     private array $sharedAssignments = [
-        ['property' => 'Kos Melati Indah', 'room' => 'B1', 'primary_tenant' => 'Eko Wahyudi', 'extra_tenants' => ['Dian Permata']],
-        ['property' => 'Kos Melati Indah', 'room' => 'B2', 'primary_tenant' => 'Fajar Nugroho', 'extra_tenants' => ['Ratna Sari', 'Bayu Aji']],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'B1', 'primary_tenant' => 'Eko Wahyudi', 'extra_tenants' => ['Dian Permata']],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'B2', 'primary_tenant' => 'Fajar Nugroho', 'extra_tenants' => ['Ratna Sari', 'Bayu Aji']],
     ];
 
     private array $historicalAssignments = [
-        ['property' => 'Kos Melati Indah', 'room' => 'A3', 'tenant' => 'Fitri Handayani', 'months_ago' => 7],
-        ['property' => 'Kos Mawar Putih',  'room' => 'B3', 'tenant' => 'Hendra Gunawan', 'months_ago' => 5],
-        ['property' => 'Kos Kenanga Asri', 'room' => 'C3', 'tenant' => 'Joko Susilo',    'months_ago' => 4],
-        ['property' => 'Kos Dahlia Permai', 'room' => 'C4', 'tenant' => 'Kartika Sari',   'months_ago' => 3],
-        ['property' => 'Kos Melati Indah', 'room' => 'A2', 'tenant' => 'Doni Firmansyah', 'months_ago' => 9],
-        ['property' => 'Kos Mawar Putih',  'room' => 'B4', 'tenant' => 'Indah Permata',   'months_ago' => 6],
-        ['property' => 'Kos Kenanga Asri', 'room' => 'A2', 'tenant' => 'Lukman Hakim',    'months_ago' => 8],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'A3', 'tenant' => 'Fitri Handayani', 'months_ago' => 7],
+        ['property' => 'Kos Mawar Putih',  'unit_name' => 'B3', 'tenant' => 'Hendra Gunawan', 'months_ago' => 5],
+        ['property' => 'Kos Kenanga Asri', 'unit_name' => 'C3', 'tenant' => 'Joko Susilo',    'months_ago' => 4],
+        ['property' => 'Kos Dahlia Permai', 'unit_name' => 'C4', 'tenant' => 'Kartika Sari',   'months_ago' => 3],
+        ['property' => 'Kos Melati Indah', 'unit_name' => 'A2', 'tenant' => 'Doni Firmansyah', 'months_ago' => 9],
+        ['property' => 'Kos Mawar Putih',  'unit_name' => 'B4', 'tenant' => 'Indah Permata',   'months_ago' => 6],
+        ['property' => 'Kos Kenanga Asri', 'unit_name' => 'A2', 'tenant' => 'Lukman Hakim',    'months_ago' => 8],
     ];
 
     public function run(): void
@@ -55,7 +55,7 @@ class LeaseSeeder extends Seeder
                 continue;
             }
 
-            $unit = $property->units->firstWhere('name', $assignment['room']);
+            $unit = $property->units->firstWhere('name', );
 
             if (! $unit) {
                 continue;
@@ -94,7 +94,7 @@ class LeaseSeeder extends Seeder
                 continue;
             }
 
-            $unit = $property->units->firstWhere('name', $assignment['room']);
+            $unit = $property->units->firstWhere('name', );
 
             if (! $unit) {
                 continue;
@@ -136,7 +136,7 @@ class LeaseSeeder extends Seeder
                 continue;
             }
 
-            $unit = $property->units->firstWhere('name', $assignment['room']);
+            $unit = $property->units->firstWhere('name', );
 
             if (! $unit) {
                 continue;
