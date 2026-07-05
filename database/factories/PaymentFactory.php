@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\PaymentStatus;
 use App\Models\Lease;
 use App\Models\Payment;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -27,7 +28,7 @@ class PaymentFactory extends Factory
             'payment_method' => 'cash',
             'reference_number' => null,
             'notes' => null,
-            'status' => 'confirmed',
+            'status' => PaymentStatus::Confirmed,
             'confirmed_by' => null,
             'recorded_by' => null,
         ];
@@ -36,7 +37,7 @@ class PaymentFactory extends Factory
     public function pending(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'pending',
+            'status' => PaymentStatus::Pending,
         ]);
     }
 }

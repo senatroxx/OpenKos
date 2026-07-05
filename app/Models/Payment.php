@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -35,6 +36,7 @@ class Payment extends Model
             'payment_date' => 'date',
             'period_start' => 'date',
             'period_end' => 'date',
+            'status' => PaymentStatus::class,
             'verified_at' => 'datetime',
         ];
     }

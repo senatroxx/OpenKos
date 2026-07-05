@@ -16,6 +16,14 @@ import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -71,6 +79,8 @@ export default function Index({
     const [detailOpen, setDetailOpen] = useState(false);
     const [viewingProperty, setViewingProperty] =
         useState<ManagedProperty | null>(null);
+    const [archiveConfirm, setArchiveConfirm] =
+        useState<ManagedProperty | null>(null);
 
     const table = useTable({
         routeFn: () => properties.index(),
@@ -111,9 +121,16 @@ export default function Index({
     }
 
     function archive(property: ManagedProperty) {
-        if (confirm('Are you sure you want to archive this property?')) {
-            router.delete(properties.destroy.url(property));
+        setArchiveConfirm(property);
+    }
+
+    function confirmArchive() {
+        if (!archiveConfirm) {
+            return;
         }
+
+        router.delete(properties.destroy.url(archiveConfirm));
+        setArchiveConfirm(null);
     }
 
     const columns: TableColumn<ManagedProperty>[] = [
@@ -273,6 +290,38 @@ export default function Index({
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
             />
+
+            <Dialog
+                open={archiveConfirm !== null}
+                onOpenChange={() => setArchiveConfirm(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Archive property</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to archive{' '}
+                            <span className="font-medium">
+                                {archiveConfirm?.name}
+                            </span>
+                            ?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setArchiveConfirm(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmArchive}
+                        >
+                            Archive
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

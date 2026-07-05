@@ -2,6 +2,7 @@
 
 namespace App\Actions\Maintenance;
 
+use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\LeaseUnitHistory;
 use App\Models\Unit;
@@ -12,7 +13,7 @@ class BlockUnit
     public function execute(int $unitId, ?int $moveToUnitId): void
     {
         $unit = Unit::lockForUpdate()->findOrFail($unitId);
-        $activeLease = $unit->leases()->where('status', 'active')->first();
+        $activeLease = $unit->leases()->where('status', LeaseStatus::Active->value)->first();
 
         if ($activeLease && $moveToUnitId) {
             $this->transferOccupants($unit, $activeLease, $moveToUnitId);
@@ -27,10 +28,10 @@ class BlockUnit
     {
         $targetUnit = Unit::lockForUpdate()->findOrFail($targetUnitId);
 
-        abort_if($targetUnit->status === UnitStatus::Maintenance, 422, __('Target unit is under maintenance.'));
+        abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
         abort_if($targetUnit->id === $unit->id, 422, __('Cannot move to the same unit.'));
 
-        $targetHasLease = $targetUnit->leases()->where('status', 'active')->exists();
+        $targetHasLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->exists();
         abort_if($targetHasLease, 422, __('Target unit already has an active lease.'));
 
         $activeLease->load('tenants');
@@ -38,7 +39,7 @@ class BlockUnit
         $activeTenantsCount = DB::table('lease_tenant')
             ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
             ->where('leases.unit_id', $targetUnit->id)
-            ->where('leases.status', 'active')
+            ->where('leases.status', LeaseStatus::Active->value)
             ->count();
 
         $incomingCount = $activeLease->tenants->count();

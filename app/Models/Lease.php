@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\BillingUnit;
+use App\Enums\LeaseStatus;
+use App\Enums\PaymentStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,6 +75,7 @@ class Lease extends Model
             'rent_amount' => 'decimal:2',
             'billing_interval' => 'integer',
             'billing_unit' => BillingUnit::class,
+            'status' => LeaseStatus::class,
             'is_custom_price' => 'boolean',
             'deposit_amount' => 'decimal:2',
             'deposit_refund_amount' => 'decimal:2',
@@ -158,7 +161,7 @@ class Lease extends Model
 
     public function scopeActive(Builder $query): void
     {
-        $query->where('status', 'active');
+        $query->where('status', LeaseStatus::Active->value);
     }
 
     public function scheduleForReminder(): Collection
@@ -218,10 +221,10 @@ class Lease extends Model
                 ? $payments->first(fn ($p) => $p->period_start
                     && $p->period_start >= $periodStart
                     && $p->period_start <= $periodEnd
-                    && $p->status !== 'cancelled')
+                    && $p->status !== PaymentStatus::Cancelled)
                 : $payments->first(fn ($p) => $p->period_start
                     && $p->period_start->isSameDay($periodStart)
-                    && $p->status !== 'cancelled');
+                    && $p->status !== PaymentStatus::Cancelled);
 
             $status = $paid
                 ? 'paid'

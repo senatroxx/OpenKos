@@ -2,9 +2,12 @@
 
 namespace App\Actions\Leases;
 
+use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\OccupancyCalculator;
 use App\Data\Lease\MoveOutLeaseData;
+use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
+use App\Events\Lease\LeaseStatusChanged;
 use App\Models\Lease;
 use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
@@ -14,6 +17,7 @@ class MoveOutLease
 {
     public function __construct(
         private OccupancyCalculator $occupancy,
+        private LeaseStatusValidator $leaseStatusValidator,
     ) {}
 
     public function execute(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
@@ -29,6 +33,10 @@ class MoveOutLease
 
     private function terminate(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
+        $oldStatus = $lease->status;
+
+        $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Terminated);
+
         $depositRefundAmount = $data->depositReturned
             ? ($data->depositRefundAmount ?? $lease->deposit_amount)
             : null;
@@ -37,7 +45,7 @@ class MoveOutLease
 
         $lease->update([
             'end_date' => $data->endDate,
-            'status' => 'terminated',
+            'status' => LeaseStatus::Terminated,
             'termination_date' => $data->terminationDate,
             'termination_reason' => $data->reason,
             'deposit_refund_amount' => $depositRefundAmount,
@@ -45,9 +53,9 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
-        $oldUnit->unsetRelation('leases');
+        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
 
-        if ($oldUnit->leases()->where('status', 'active')->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
+        if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
         }
 
@@ -56,14 +64,18 @@ class MoveOutLease
 
     private function transfer(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
+        $oldStatus = $lease->status; // ponytail: captured before validator call
+
+        $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Terminated);
+
         $targetUnit = Unit::lockForUpdate()->findOrFail($data->targetUnitId);
 
-        abort_if($targetUnit->status === UnitStatus::Maintenance, 422, __('Target unit is under maintenance.'));
+        abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
 
         $lease->load('tenants');
 
         $incomingTenantIds = $lease->tenants->pluck('id')->toArray();
-        $existingLease = $targetUnit->leases()->where('status', 'active')->first();
+        $existingLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->first();
 
         $incomingCount = $existingLease
             ? count(array_diff($incomingTenantIds, $existingLease->tenants()->pluck('tenants.id')->all()))
@@ -81,7 +93,7 @@ class MoveOutLease
 
         $lease->update([
             'end_date' => $data->endDate,
-            'status' => 'terminated',
+            'status' => LeaseStatus::Terminated,
             'termination_date' => $data->terminationDate,
             'termination_reason' => $data->reason,
             'deposit_refund_amount' => $depositRefundAmount,
@@ -89,14 +101,16 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
+        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
+
         $oldUnit->unsetRelation('leases');
 
-        if ($oldUnit->leases()->where('status', 'active')->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
+        if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
         }
 
         $lease->load('tenants');
-        $existingLease = $targetUnit->leases()->where('status', 'active')->first();
+        $existingLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->first();
 
         if ($existingLease) {
             $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
@@ -127,7 +141,7 @@ class MoveOutLease
                 'deposit_refund_amount' => $data->carryDepositRefund ? $lease->deposit_refund_amount : null,
                 'deposit_refunded_at' => $data->carryDepositRefund ? $lease->deposit_refunded_at : null,
                 'rent_due_day' => $lease->rent_due_day,
-                'status' => 'active',
+                'status' => LeaseStatus::Active,
                 'notes' => 'Moved from unit '.$oldUnit->name.' on '.now()->format('Y-m-d'),
             ]);
 

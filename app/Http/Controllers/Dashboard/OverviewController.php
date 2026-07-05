@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Business\Dashboard\OverviewStatsCalculator;
+use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Lease;
@@ -26,14 +27,14 @@ class OverviewController extends Controller
                 'units as occupied_units_count' => fn (Builder $q) => $q
                     ->where(function (Builder $q) {
                         $q->where('status', UnitStatus::Occupied)
-                            ->orWhereHas('leases', fn (Builder $q) => $q->where('status', 'active'));
+                            ->orWhereHas('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value));
                     }),
                 'units as maintenance_units_count' => fn (Builder $q) => $q
                     ->where('status', UnitStatus::Maintenance)
-                    ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active')),
+                    ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)),
                 'units as unavailable_units_count' => fn (Builder $q) => $q
                     ->where('status', UnitStatus::Unavailable)
-                    ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active')),
+                    ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)),
             ])
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -50,7 +51,7 @@ class OverviewController extends Controller
             ))
             ->pluck('id');
 
-        $activeLeases = Lease::where('status', 'active')
+        $activeLeases = Lease::where('status', LeaseStatus::Active->value)
             ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
 
         $financeResult = $finance->computeFinance($activeLeases);
