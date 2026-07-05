@@ -122,6 +122,8 @@ export default function Index({
     );
     const [resolveTicket, setResolveTicket] =
         useState<MaintenanceTicket | null>(null);
+    const [deleteConfirm, setDeleteConfirm] =
+        useState<MaintenanceTicket | null>(null);
     const [assignTicket, setAssignTicket] = useState<MaintenanceTicket | null>(
         null,
     );
@@ -310,15 +312,7 @@ export default function Index({
                         {can.delete && (
                             <DropdownMenuItem
                                 className="text-red-600"
-                                onClick={() => {
-                                    if (confirm('Delete this ticket?')) {
-                                        router.delete(
-                                            maintenanceTickets.destroy.url(
-                                                ticket.id,
-                                            ),
-                                        );
-                                    }
-                                }}
+                                onClick={() => setDeleteConfirm(ticket)}
                             >
                                 <Trash2 className="size-4 text-red-600" />
                                 Delete
@@ -488,6 +482,50 @@ export default function Index({
                                 }}
                             >
                                 Move back
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog
+                    open={deleteConfirm !== null}
+                    onOpenChange={() => setDeleteConfirm(null)}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete ticket</DialogTitle>
+                            <DialogDescription>
+                                Delete{' '}
+                                <span className="font-medium">
+                                    {deleteConfirm?.reference ??
+                                        `#${deleteConfirm?.id}`}
+                                </span>
+                                ? This cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setDeleteConfirm(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => {
+                                    const ticket = deleteConfirm;
+                                    setDeleteConfirm(null);
+
+                                    if (ticket) {
+                                        router.delete(
+                                            maintenanceTickets.destroy.url(
+                                                ticket.id,
+                                            ),
+                                        );
+                                    }
+                                }}
+                            >
+                                Delete
                             </Button>
                         </DialogFooter>
                     </DialogContent>

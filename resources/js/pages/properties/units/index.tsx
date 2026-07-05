@@ -23,6 +23,14 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -132,6 +140,9 @@ export default function Index({
     } | null>(null);
     const [moveOutOpen, setMoveOutOpen] = useState(false);
 
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+
     const table = useTable({
         routeFn: () => ({ url: properties.units.index.url(property) }),
         params: {
@@ -228,15 +239,23 @@ export default function Index({
         setMoveOutOpen(true);
     }
 
-    function destroy(unit: Unit) {
-        if (confirm('Are you sure you want to delete this unit?')) {
-            router.delete(
-                properties.units.destroy.url({
-                    property: property.slug,
-                    unit: unit.slug,
-                }),
-            );
+    function confirmDelete(unit: Unit) {
+        setUnitToDelete(unit);
+        setDeleteDialogOpen(true);
+    }
+
+    function destroy() {
+        if (!unitToDelete) {
+            return;
         }
+
+        router.delete(
+            properties.units.destroy.url({
+                property: property.slug,
+                unit: unitToDelete.slug,
+            }),
+        );
+        setDeleteDialogOpen(false);
     }
 
     function getFilteredUnitsForMove(
@@ -407,7 +426,7 @@ export default function Index({
                             </DropdownMenuItem>
                             <DropdownMenuItem
                                 variant="destructive"
-                                onClick={() => destroy(r)}
+                                onClick={() => confirmDelete(r)}
                             >
                                 <Trash2 className="size-4" />
                                 Delete
@@ -508,6 +527,35 @@ export default function Index({
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete unit</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete{' '}
+                            <span className="font-medium">
+                                {unitToDelete?.name}
+                            </span>
+                            ? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={destroy}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </PropertyLayout>
     );
 }

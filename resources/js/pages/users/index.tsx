@@ -17,6 +17,14 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -109,6 +117,10 @@ export default function Index({
     const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
     const [viewingUser, setViewingUser] = useState<ManagedUser | null>(null);
     const [formKey, setFormKey] = useState(0);
+    const [confirmState, setConfirmState] = useState<{
+        user: ManagedUser;
+        action: 'disable' | 'reset' | 'resend';
+    } | null>(null);
 
     const table = useTable({
         routeFn: () => users.index(),
@@ -143,21 +155,33 @@ export default function Index({
     }
 
     function disableAccess(user: ManagedUser) {
-        if (confirm(`Disable access for ${user.name}?`)) {
-            router.delete(destroy.url(user));
-        }
+        setConfirmState({ user, action: 'disable' });
     }
 
     function sendReset(user: ManagedUser) {
-        if (confirm(`Send password reset to ${user.email}?`)) {
-            router.post(resetPassword.url(user));
-        }
+        setConfirmState({ user, action: 'reset' });
     }
 
     function resendInvite(user: ManagedUser) {
-        if (confirm(`Resend invitation to ${user.email}?`)) {
+        setConfirmState({ user, action: 'resend' });
+    }
+
+    function executeConfirmed() {
+        if (!confirmState) {
+            return;
+        }
+
+        const { user, action } = confirmState;
+
+        if (action === 'disable') {
+            router.delete(destroy.url(user));
+        } else if (action === 'reset') {
+            router.post(resetPassword.url(user));
+        } else {
             router.post(resendInvitation.url(user));
         }
+
+        setConfirmState(null);
     }
 
     const columns: TableColumn<ManagedUser>[] = [
@@ -340,6 +364,48 @@ export default function Index({
                 onResetPassword={sendReset}
                 onResendInvitation={resendInvite}
             />
+            <Dialog
+                open={confirmState !== null}
+                onOpenChange={() => setConfirmState(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {confirmState?.action === 'disable'
+                                ? 'Disable access'
+                                : confirmState?.action === 'reset'
+                                  ? 'Reset password'
+                                  : 'Resend invitation'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {confirmState?.action === 'disable' && (
+                                <>Disable access for <span className="font-medium">{confirmState.user.name}</span>?</>
+                            )}
+                            {confirmState?.action === 'reset' && (
+                                <>Send password reset to <span className="font-medium">{confirmState.user.email}</span>?</>
+                            )}
+                            {confirmState?.action === 'resend' && (
+                                <>Resend invitation to <span className="font-medium">{confirmState.user.email}</span>?</>
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmState(null)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            variant={confirmState?.action === 'disable' ? 'destructive' : 'default'}
+                            onClick={executeConfirmed}
+                        >
+                            {confirmState?.action === 'disable'
+                                ? 'Disable'
+                                : confirmState?.action === 'reset'
+                                  ? 'Send Reset'
+                                  : 'Resend'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
