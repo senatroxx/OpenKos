@@ -46,7 +46,7 @@ All four "available units" queries now exclude maintenance units:
 - `LeaseController::index()` — unit-specific lease page
 - `LeaseController::globalIndex()` — global leases page
 - `TenantController::index()` — tenant list
-- `RoomController::index()` — unit list
+- `UnitController::index()` — unit list
 
 Filter: `->whereNotIn('status', ['maintenance'])`
 
@@ -74,15 +74,15 @@ When editing a ticket (status change via the Resolve or Cancel action), if the t
 
 ### Controller Logic
 
-`MaintenanceTicketController::blockRoom()` handles the blocking logic:
+`MaintenanceTicketController::blockUnit()` handles the blocking logic:
 1. Locks the unit with `lockForUpdate()`
 2. Finds active lease if any
 3. If active lease + move target:
    - Locks target unit with `lockForUpdate()`
    - Validates target is not under maintenance, not same unit, no active lease
    - Validates capacity
-   - **Transfers the lease**: updates `lease.room_id` to target unit, appends transfer note
-   - Records `LeaseRoomHistory` entry (from_room, to_room, reason=maintenance, transferred_by)
+   - **Transfers the lease**: updates `lease.unit_id` to target unit, appends transfer note
+   - Records `LeaseUnitHistory` entry (from_unit, to_unit, reason=maintenance, transferred_by)
    - Sets original unit to `maintenance`, target to `occupied`
    - Lease agreement remains intact — only the physical unit changes
 4. If active lease + no move: sets unit to `maintenance` with warning
@@ -90,7 +90,7 @@ When editing a ticket (status change via the Resolve or Cancel action), if the t
 
 ### Unit Transfer History
 
-A `lease_room_histories` table tracks every unit change within a lease:
+A `lease_unit_histories` table tracks every unit change within a lease:
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -101,7 +101,7 @@ A `lease_room_histories` table tracks every unit change within a lease:
 | `reason` | string | e.g. `maintenance`, `upgrade`, `downgrade` |
 | `effective_date` | timestamp | When the transfer took effect |
 
-The `Lease` model has a `roomHistories()` HasMany relationship.
+The `Lease` model has a `unitHistories()` HasMany relationship.
 
 **Design rationale:** A lease is a legal agreement between tenant and property, not tenant and unit. Moving to another unit for maintenance does not terminate the agreement — rent, deposit, billing, and terms remain unchanged. The unit transfer is tracked as a history entry rather than creating a new lease, preserving lease continuity and providing a complete audit trail.
 

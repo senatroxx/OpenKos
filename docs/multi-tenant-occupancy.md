@@ -1,4 +1,4 @@
-# Multi-Tenant Room Occupancy
+# Multi-Tenant Unit Occupancy
 
 > **Status:** Design Document (not yet implemented)
 > **Issue:** [OPE-18](https://linear.app/openkos/issue/OPE-18)
@@ -6,13 +6,13 @@
 
 ## Context
 
-The kos (boarding house) market commonly requires shared rooms — multiple tenants occupying a single room, splitting the rent. The current MVP architecture assumes:
+The kos (boarding house) market commonly requires shared units — multiple tenants occupying a single unit, splitting the rent. The current MVP architecture assumes:
 
-- One active lease per room
+- One active lease per unit
 - One tenant per lease
-- One tenant per room
+- One tenant per unit
 
-The `rooms.capacity` column already exists (defaults to `1`) but is unused. This document describes the target architecture for multi-tenant support while preserving the path for future implementation.
+The `units.capacity` column already exists (defaults to `1`) but is unused. This document describes the target architecture for multi-tenant support while preserving the path for future implementation.
 
 ## Current State (MVP)
 
@@ -21,12 +21,12 @@ The `rooms.capacity` column already exists (defaults to `1`) but is unused. This
 ```
 leases
 ├── tenant_id (FK → tenants.id, NOT NULL)    ← one tenant only
-├── room_id (FK → rooms.id, NOT NULL)
+├── unit_id (FK → units.id, NOT NULL)
 ├── rent_amount, billing_interval, billing_unit
 ├── deposit_amount, deposit_paid_at, ...
 └── status
 
-rooms
+units
 ├── capacity (default 1)                      ← unused
 └── status
 
@@ -38,28 +38,28 @@ tenants
 
 ### Application-Level Constraints
 
-- `StoreLeaseRequest::ensureRoomAvailable()` — aborts 422 if room has any active lease
-- `LeaseController@move` — same check on target room
-- `TenantController@assignRoom` — same check
-- Room listing queries filter out rooms with active leases via `whereDoesntHave('leases', fn($q) => $q->where('status', 'active'))`
-- Room status set to `occupied` when an active lease exists (in `RoomController`)
+- `StoreLeaseRequest::ensureUnitAvailable()` — aborts 422 if unit has any active lease
+- `LeaseController@move` — same check on target unit
+- `TenantController@assignUnit` — same check
+- Unit listing queries filter out units with active leases via `whereDoesntHave('leases', fn($q) => $q->where('status', 'active'))`
+- Unit status set to `occupied` when an active lease exists (in `UnitController`)
 
 ### DB-Level Constraints
 
-There are **no unique constraints** on `leases.room_id` or `(room_id, tenant_id)` that would block multi-tenant. The enforcement is purely application-level. This means the DB schema is already forward-compatible.
+There are **no unique constraints** on `leases.unit_id` or `(unit_id, tenant_id)` that would block multi-tenant. The enforcement is purely application-level. This means the DB schema is already forward-compatible.
 
 ### Race Condition Risk
 
-The application-level checks are separate queries from the insert (not wrapped in a transaction with `FOR UPDATE` lock). Two concurrent requests could both pass the check and create two active leases on the same room. Address this when implementing multi-tenant (or earlier if race conditions become a problem).
+The application-level checks are separate queries from the insert (not wrapped in a transaction with `FOR UPDATE` lock). Two concurrent requests could both pass the check and create two active leases on the same unit. Address this when implementing multi-tenant (or earlier if race conditions become a problem).
 
 ## Target Architecture
 
 ### Recommended Model: Shared Lease (Indonesia-First)
 
-One lease per room, multiple tenants on that lease. This matches how kos owners think about room pricing — a room costs X, not a bed costs X.
+One lease per unit, multiple tenants on that lease. This matches how kos owners think about unit pricing — a unit costs X, not a bed costs X.
 
 ```
-One Lease = Room A1 (2jt/month)
+One Lease = Unit A1 (2jt/month)
   ├── Athhar (primary tenant)
   └── Budi  (co-tenant)
 ```
@@ -152,20 +152,20 @@ This is the exhaustive checklist of every location that needs modification when 
 |---|---|
 | `app/Models/Lease.php` | Replace `tenant(): BelongsTo` with `tenants(): BelongsToMany`, add `primaryTenant(): BelongsTo`. Remove `tenant_id` from `$fillable`, add `primary_tenant_id`. |
 | `app/Models/Tenant.php` | Change `leases(): HasMany` to `leases(): BelongsToMany`. |
-| `app/Http/Requests/StoreLeaseRequest.php` | Replace `tenant_id` validation with `tenant_ids` (array). Remove `ensureRoomAvailable()`. Add capacity validation (`count(tenant_ids) <= room.capacity`). |
+| `app/Http/Requests/StoreLeaseRequest.php` | Replace `tenant_id` validation with `tenant_ids` (array). Remove `ensureUnitAvailable()`. Add capacity validation (`count(tenant_ids) <= unit.capacity`). |
 | `app/Http/Requests/UpdateLeaseRequest.php` | Same tenant_id → tenant_ids changes. |
-| `app/Http/Controllers/LeaseController.php` | Store: accept `tenant_ids` array, create pivot records. Remove `ensureRoomAvailable()` call. Update `availableRooms` query to check capacity remaining. Move/moveOut: check capacity instead of "no active lease." |
-| `app/Http/Controllers/TenantController.php` | `assignRoom`: accept multiple tenant IDs, check capacity. Update flash messages to plural. |
-| `app/Http/Controllers/RoomController.php` | Update `occupied` status logic: check capacity vs active tenant count. |
+| `app/Http/Controllers/LeaseController.php` | Store: accept `tenant_ids` array, create pivot records. Remove `ensureUnitAvailable()` call. Update `availableUnits` query to check capacity remaining. Move/moveOut: check capacity instead of "no active lease." |
+| `app/Http/Controllers/TenantController.php` | `assignUnit`: accept multiple tenant IDs, check capacity. Update flash messages to plural. |
+| `app/Http/Controllers/UnitController.php` | Update `occupied` status logic: check capacity vs active tenant count. |
 | All `$lease->tenant` references in controllers | Change to `$lease->tenants` or `$lease->primaryTenant`. |
 
 ### Queries (Affected)
 
 | Query | Current | Future |
 |---|---|---|
-| Available rooms | `whereDoesntHave('leases', fn => status=active)` | `withCount(['tenants' => fn => active])` + having `tenants_count < capacity` |
-| Room has active lease | `where('room_id', $id)->where('status', 'active')->exists()` | `where('room_id', $id)->where('status', 'active')->withCount('tenants')->having('tenants_count', '<', 'capacity')` |
-| Room display status | `occupied` if any active lease | `occupied` if `tenants_count >= capacity`, `partial` if `0 < tenants_count < capacity` |
+| Available units | `whereDoesntHave('leases', fn => status=active)` | `withCount(['tenants' => fn => active])` + having `tenants_count < capacity` |
+| Unit has active lease | `where('unit_id', $id)->where('status', 'active')->exists()` | `where('unit_id', $id)->where('status', 'active')->withCount('tenants')->having('tenants_count', '<', 'capacity')` |
+| Unit display status | `occupied` if any active lease | `occupied` if `tenants_count >= capacity`, `partial` if `0 < tenants_count < capacity` |
 
 ### Frontend
 
@@ -173,17 +173,17 @@ All changes assume the backend now returns `tenants: TenantInfo[]` instead of `t
 
 | File | Change |
 |---|---|
-| `lease-form-sheet.tsx` | Replace single `SearchableSelect` for tenant with multi-select. Allow selecting up to `room.capacity` tenants. Change button label to "Assign Tenants." Submit `tenant_ids[]` array. |
+| `lease-form-sheet.tsx` | Replace single `SearchableSelect` for tenant with multi-select. Allow selecting up to `unit.capacity` tenants. Change button label to "Assign Tenants." Submit `tenant_ids[]` array. |
 | `lease-edit-sheet.tsx` | Show list of tenants instead of single tenant name. Allow adding/removing tenants. |
 | `lease-detail-sheet.tsx` | Display tenant list (primary tenant highlighted). Show "Primary" badge on primary tenant. |
-| `room-detail-sheet.tsx` | Show all tenants currently on active lease, not just `leases[0].tenant`. Show capacity usage (e.g., "2/3 occupied"). |
-| `assign-room-sheet.tsx` | Accept single or multiple tenants. |
-| `move-room-sheet.tsx` | Handle partial move-out (moving one tenant out while others stay). |
+| `unit-detail-sheet.tsx` | Show all tenants currently on active lease, not just `leases[0].tenant`. Show capacity usage (e.g., "2/3 occupied"). |
+| `assign-unit-sheet.tsx` | Accept single or multiple tenants. |
+| `move-unit-sheet.tsx` | Handle partial move-out (moving one tenant out while others stay). |
 | `move-out-sheet.tsx` | Handle partial move-out. |
-| `properties/rooms/index.tsx` | Tenant column: show list of tenant names instead of single. Status column: show "Partial" for partially occupied rooms. |
-| `properties/rooms/leases/index.tsx` | Show multi-tenant occupancy on each lease row. |
+| `properties/units/index.tsx` | Tenant column: show list of tenant names instead of single. Status column: show "Partial" for partially occupied units. |
+| `properties/units/leases/index.tsx` | Show multi-tenant occupancy on each lease row. |
 | `leases/index.tsx` | Update tenant display to show multiple names. Update filters. |
-| `tenants/index.tsx` | Update "Active Lease" column to show room + co-tenants. |
+| `tenants/index.tsx` | Update "Active Lease" column to show unit + co-tenants. |
 | `tenant-detail-sheet.tsx` | Show co-tenants on shared lease. |
 
 ### TypeScript Types
@@ -207,10 +207,10 @@ type Lease = {
 
 ### Capacity Enforcement
 
-- `count(lease.tenants) <= room.capacity` at all times
-- A room is "available" when `count(active_tenants) < capacity`
-- A room is "occupied" when `count(active_tenants) >= capacity`
-- A room with `count(active_tenants) > 0 && count(active_tenants) < capacity` is "partially occupied" (new status or display state)
+- `count(lease.tenants) <= unit.capacity` at all times
+- A unit is "available" when `count(active_tenants) < capacity`
+- A unit is "occupied" when `count(active_tenants) >= capacity`
+- A unit with `count(active_tenants) > 0 && count(active_tenants) < capacity` is "partially occupied" (new status or display state)
 
 ### Primary Tenant
 
@@ -221,7 +221,7 @@ type Lease = {
 
 ### Deposit Ownership
 
-- Deposit is stored on the Lease (room-level), not per tenant
+- Deposit is stored on the Lease (unit-level), not per tenant
 - On full move-out, deposit is refunded to the primary tenant
 - On partial move-out, deposit stays with the lease (remaining tenants maintain occupancy)
 
@@ -230,51 +230,51 @@ type Lease = {
 - When a tenant leaves but others stay, the lease remains active
 - Remove the departing tenant from `lease_tenant` pivot
 - No new lease creation — just pivot removal
-- Rent amount stays the same (room-level pricing)
+- Rent amount stays the same (unit-level pricing)
 
 ### Full Move-Out / Termination
 
 - When last tenant leaves, terminate the lease (set `status = terminated`, `termination_date`)
 - Process deposit refund per standard flow
-- Mark room as `available`
+- Mark unit as `available`
 
 ### Partial Move-In
 
 - Adding a tenant to an existing active lease
 - Check `count(current_tenants) < capacity`
 - Insert new pivot record
-- No rent recalculation needed (room-level pricing)
+- No rent recalculation needed (unit-level pricing)
 
 ## Future Considerations
 
 ### Payment Splitting
 
-- Currently payments are per-lease (room-level). Future: optionally split a payment across tenants
+- Currently payments are per-lease (unit-level). Future: optionally split a payment across tenants
 - Could be tracked on the pivot table: `lease_tenant.rent_share` (percentage or amount)
-- Or remain room-level: one payment covers the room, tenants handle their own splits offline
+- Or remain unit-level: one payment covers the unit, tenants handle their own splits offline
 
 ### Overdue Tracking Per Tenant
 
-- Currently overdue tracking is per-lease (one overdue amount per room)
+- Currently overdue tracking is per-lease (one overdue amount per unit)
 - Future: could track per-tenant overdue if payment splitting is implemented
 - Likely unnecessary: kos owners typically chase the primary tenant for full payment
 
-### Waitlist / Room Queue
+### Waitlist / Unit Queue
 
-- When a room is fully occupied, could support a waitlist for tenants wanting to join
+- When a unit is fully occupied, could support a waitlist for tenants wanting to join
 
 ### Capacity Changes
 
-- Changing `room.capacity` when tenants are currently assigned needs careful handling:
+- Changing `unit.capacity` when tenants are currently assigned needs careful handling:
   - Increasing capacity: always safe (just allows more tenants)
   - Decreasing capacity below current tenant count: should be blocked or require move-out
 
 ### Dashboard / Reporting
 
-- Update occupancy reports to show `occupied_beds / total_beds` instead of `occupied_rooms / total_rooms`
-- Show partially occupied rooms as distinct from fully occupied
+- Update occupancy reports to show `occupied_beds / total_beds` instead of `occupied_units / total_units`
+- Show partially occupied units as distinct from fully occupied
 
 ### Lease Creation from Tenant Side
 
-- Current "Assign to Room" flow on tenant detail page creates a new lease
-- With multi-tenant, this could also be "Add to existing lease" flow for partially occupied rooms
+- Current "Assign to Unit" flow on tenant detail page creates a new lease
+- With multi-tenant, this could also be "Add to existing lease" flow for partially occupied units

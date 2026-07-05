@@ -110,8 +110,8 @@ New domains should follow the same pattern: pick the layers you need, place file
 ```
 Property (has a type — see below)
   ├── Regions / Cities (location)
-  └── Rooms
-       ├── RoomRates (pricing history)
+  └── Units
+       ├── UnitRates (pricing history)
        └── Leases
             ├── Tenants (pivot: lease_tenant)
             ├── Payments

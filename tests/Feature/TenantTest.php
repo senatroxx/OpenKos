@@ -234,11 +234,11 @@ describe('cross-property access', function () {
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
-        $roomInB = Unit::factory()->for($propertyB)->create();
+        $unitInB = Unit::factory()->for($propertyB)->create();
 
         $this->actingAs($admin)
             ->post(route('tenants.assign-unit', $tenant), [
-                'unit_id' => $roomInB->id,
+                'unit_id' => $unitInB->id,
                 'start_date' => '2026-06-01',
             ])
             ->assertForbidden();
