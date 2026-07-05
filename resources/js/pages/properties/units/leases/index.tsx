@@ -10,7 +10,7 @@ type PageProps = {
     property: Property;
     unit: Unit;
     leases: Lease[];
-    availableRooms: AvailableUnit[];
+    availableUnits: AvailableUnit[];
 };
 
 function formatPrice(cents: string | null): string {
@@ -54,7 +54,7 @@ export default function Index({
     property,
     unit,
     leases,
-    availableRooms: _availableRooms,
+    availableUnits: _availableUnits,
 }: PageProps) {
     const backUrl = properties.units.index.url(property);
 
@@ -282,7 +282,7 @@ export default function Index({
                           }
                         : null
                 }
-                availableUnits={_availableRooms}
+                availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
@@ -297,7 +297,7 @@ Index.layout = {
             href: properties.index(),
         },
         {
-            title: 'Rooms',
+            title: 'Units',
         },
     ],
 };

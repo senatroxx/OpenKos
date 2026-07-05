@@ -4,21 +4,21 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 
 type WorkspaceProperty = { id: number; slug: string; name: string };
-type WorkspaceRoom = {
+type WorkspaceUnit = {
     id: number;
     slug: string;
     name: string;
     floor?: string | number | null;
 };
 
-export function RoomLayout({
+export function UnitLayout({
     property,
     unit,
     activeTab,
     children,
 }: {
     property: WorkspaceProperty;
-    unit: WorkspaceRoom;
+    unit: WorkspaceUnit;
     activeTab: string;
     children: ReactNode;
 }) {

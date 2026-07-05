@@ -5,7 +5,7 @@ import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { PaginatedData, TableMeta, TenantInfo } from '@/types';
-import { RoomLayout } from './layout';
+import { UnitLayout } from './layout';
 
 type LeaseRow = {
     id: number;
@@ -81,7 +81,7 @@ const columns: TableColumn<LeaseRow>[] = [
     },
 ];
 
-export default function RoomLeaseHistory({
+export default function UnitLeaseHistory({
     property,
     unit,
     leases,
@@ -106,7 +106,7 @@ export default function RoomLeaseHistory({
     table: TableMeta;
 }) {
     return (
-        <RoomLayout property={property} unit={unit} activeTab="lease-history">
+        <UnitLayout property={property} unit={unit} activeTab="lease-history">
             <PluginRegion name="workspace-tab-lease-history">
                 <WorkspaceTable
                     url={`/properties/${property.slug}/units/${unit.slug}/lease-history`}
@@ -124,6 +124,6 @@ export default function RoomLeaseHistory({
                     onRowClick={(l) => router.get(`/leases/${l.id}`)}
                 />
             </PluginRegion>
-        </RoomLayout>
+        </UnitLayout>
     );
 }

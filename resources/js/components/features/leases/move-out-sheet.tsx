@@ -23,7 +23,7 @@ import type { AvailableUnit, LeaseData } from '@/types';
 
 const REASONS = [
     { value: 'contract_ended', label: 'Contract ended' },
-    { value: 'moved_room', label: 'Moved unit' },
+    { value: 'moved_unit', label: 'Moved unit' },
     { value: 'left_early', label: 'Left early' },
     { value: 'evicted', label: 'Evicted' },
     { value: 'other', label: 'Other' },
