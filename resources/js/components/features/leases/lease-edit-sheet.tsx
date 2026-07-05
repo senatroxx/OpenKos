@@ -45,11 +45,9 @@ export default function LeaseEditSheet({
 
     const noDeposit = Number.parseFloat(lease?.deposit_amount ?? '0') === 0;
 
-    if (!lease?.unit?.property) {
+    if (!lease || !lease.unit || !lease.unit.property) {
         return null;
     }
-
-    const { unit } = lease;
 
     function formatDate(date: string | null): string {
         if (!date) {
@@ -73,8 +71,8 @@ export default function LeaseEditSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={leases.update.url({
-                            property: unit.property.slug,
-                            unit: unit.slug,
+                            property: lease.unit.property!.slug,
+                            unit: lease.unit.slug,
                             lease: lease.id,
                         })}
                         method="put"

@@ -27,7 +27,7 @@ import {
 import tenants from '@/routes/tenants';
 import type { AvailableUnit, UnitRate, Tenant } from '@/types';
 
-type AvailableRooms = AvailableUnit[];
+type AvailableUnits = AvailableUnit[];
 
 const DUE_DAY_OPTIONS = [
     { value: '1', label: '1st' },
@@ -90,39 +90,39 @@ function computeMonthlyEquivalent(
 
 export default function AssignUnitSheet({
     tenant,
-    availableRooms,
+    availableUnits,
     open,
     onOpenChange,
 }: {
     tenant?: Tenant | null;
-    availableRooms: AvailableRooms;
+    availableUnits: AvailableUnits;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
     const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
         null,
     );
-    const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
+    const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
     const [dueDay, setDueDay] = useState('1');
     const [hasDeposit, setHasDeposit] = useState(false);
     const dueDayInitialized = useRef(false);
 
-    const selectedRoom =
-        availableRooms.find((r) => r.id === selectedRoomId) ?? null;
-    const rates = selectedRoom?.active_rates ?? [];
+    const selectedUnit =
+        availableUnits.find((r) => r.id === selectedUnitId) ?? null;
+    const rates = selectedUnit?.active_rates ?? [];
 
     const [selectedRateId, setSelectedRateId] = useState<number | null>(null);
     const [rentAmount, setRentAmount] = useState('');
     const [billingInterval, setBillingInterval] = useState('1');
     const [billingUnit, setBillingUnit] = useState('month');
     const [isCustom, setIsCustom] = useState(false);
-    const [prevRoomId, setPrevRoomId] = useState(selectedRoomId);
+    const [prevUnitId, setPrevUnitId] = useState(selectedUnitId);
 
     // Reset the rate/rent fields to the newly selected unit's default rate.
-    if (selectedRoomId !== prevRoomId) {
-        setPrevRoomId(selectedRoomId);
+    if (selectedUnitId !== prevUnitId) {
+        setPrevUnitId(selectedUnitId);
 
-        const defaultRate = selectedRoom?.active_rates?.[0] ?? null;
+        const defaultRate = selectedUnit?.active_rates?.[0] ?? null;
 
         setSelectedRateId(defaultRate?.id ?? null);
         setRentAmount(defaultRate?.amount ?? '');
@@ -154,7 +154,7 @@ export default function AssignUnitSheet({
     const propertyOptions = useMemo(() => {
         const seen = new Set<number>();
 
-        return availableRooms
+        return availableUnits
             .filter((r) => {
                 if (seen.has(r.property_id)) {
                     return false;
@@ -168,16 +168,16 @@ export default function AssignUnitSheet({
                 propertyId: r.property_id,
                 label: `${r.property?.name ?? 'Unknown'} — ${r.property?.city?.name ?? ''}`,
             }));
-    }, [availableRooms]);
+    }, [availableUnits]);
 
     const filteredRooms = useMemo(
         () =>
             selectedPropertyId
-                ? availableRooms.filter(
+                ? availableUnits.filter(
                       (r) => r.property_id === selectedPropertyId,
                   )
                 : [],
-        [availableRooms, selectedPropertyId],
+        [availableUnits, selectedPropertyId],
     );
 
     const roomOptions = filteredRooms.map((r) => {
@@ -197,7 +197,7 @@ export default function AssignUnitSheet({
 
     function handlePropertyChange(val: number | string | null) {
         setSelectedPropertyId(val as number | null);
-        setSelectedRoomId(null);
+        setSelectedUnitId(null);
     }
 
     function handleStartDateChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -235,7 +235,7 @@ export default function AssignUnitSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={
-                            tenants.assignRoom.post({ tenant: tenant!.id }).url
+                            tenants.assignUnit.post({ tenant: tenant!.id }).url
                         }
                         method="post"
                         onSuccess={() => onOpenChange(false)}
@@ -279,14 +279,14 @@ export default function AssignUnitSheet({
                                         <input
                                             type="hidden"
                                             name="unit_id"
-                                            value={selectedRoomId ?? ''}
+                                            value={selectedUnitId ?? ''}
                                         />
                                         <SearchableSelect
                                             key={selectedPropertyId ?? 'none'}
                                             options={roomOptions}
-                                            value={selectedRoomId}
+                                            value={selectedUnitId}
                                             onChange={(val) =>
-                                                setSelectedRoomId(
+                                                setSelectedUnitId(
                                                     val as number | null,
                                                 )
                                             }
@@ -329,7 +329,7 @@ export default function AssignUnitSheet({
                                         />
                                     </div>
 
-                                    {selectedRoomId &&
+                                    {selectedUnitId &&
                                         (rates.length > 0 ? (
                                             <div className="mt-4 grid gap-2">
                                                 <Label>Unit Rate Options</Label>

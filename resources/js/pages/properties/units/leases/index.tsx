@@ -282,7 +282,7 @@ export default function Index({
                           }
                         : null
                 }
-                availableRooms={_availableRooms}
+                availableUnits={_availableRooms}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
