@@ -90,7 +90,7 @@ function loadIndexesPgsql(array $tables): array
         JOIN pg_class i ON i.oid = idx.indexrelid
         JOIN pg_class t ON t.oid = idx.indrelid
         JOIN pg_attribute a ON a.attrelid = idx.indrelid
-        CROSS JOIN LATERAL unnest(idx.indkey) WITH ORDINALITY AS ik(key, ord)
+        JOIN LATERAL unnest(idx.indkey) WITH ORDINALITY AS ik(key, ord)
             ON a.attnum = ik.key
         WHERE t.relname IN ({$placeholders})
             AND NOT idx.indisunique
