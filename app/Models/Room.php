@@ -79,7 +79,7 @@ class Room extends Model
     public function activeRates(): HasMany
     {
         return $this->hasMany(RoomRate::class)
-            ->whereRaw('is_active is true')
+            ->where('is_active', true)
             ->orderBy('billing_interval');
     }
 

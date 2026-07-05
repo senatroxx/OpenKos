@@ -34,7 +34,7 @@ class CreateLease
                 abort_if(! $this->occupancy->canAccommodate($room, count($newTenantIds)), 422, __('Room capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $room->capacity]));
 
                 foreach ($newTenantIds as $tenantId) {
-                    $existingLease->tenants()->attach($tenantId, ['is_primary' => DB::raw('false')]);
+                    $existingLease->tenants()->attach($tenantId, ['is_primary' => false]);
                 }
 
                 $room->update(['status' => RoomStatus::Occupied]);
@@ -57,7 +57,7 @@ class CreateLease
                 'rent_amount' => $rentAmount,
                 'billing_interval' => $data->billingInterval ?? $roomRate?->billing_interval ?? 1,
                 'billing_unit' => $data->billingUnit ?? $roomRate?->billing_unit ?? 'month',
-                'is_custom_price' => $isCustomPrice ? DB::raw('true') : DB::raw('false'),
+                'is_custom_price' => $isCustomPrice,
                 'room_rate_id' => $data->roomRateId,
                 'deposit_amount' => $data->depositAmount ?? 0,
                 'deposit_paid_at' => $data->depositPaidAt,
@@ -69,7 +69,7 @@ class CreateLease
             ]);
 
             foreach ($tenantIds as $index => $tenantId) {
-                $lease->tenants()->attach($tenantId, ['is_primary' => $index === 0 ? DB::raw('true') : DB::raw('false')]);
+                $lease->tenants()->attach($tenantId, ['is_primary' => $index === 0]);
             }
 
             $room->update(['status' => RoomStatus::Occupied]);

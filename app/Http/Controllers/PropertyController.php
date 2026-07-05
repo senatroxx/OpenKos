@@ -58,8 +58,8 @@ class PropertyController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['active', 'archived'])
                     ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->whereRaw('is_active is true'),
-                        'archived' => $q->whereRaw('is_active is false'),
+                        'active' => $q->where('is_active', true),
+                        'archived' => $q->where('is_active', false),
                         default => $q,
                     }),
                 Filter::select('type', 'Type', PropertyType::ordered()->pluck('slug')->all())
@@ -115,7 +115,7 @@ class PropertyController extends Controller
     {
         $this->authorize('delete', $property);
 
-        Property::query()->whereKey($property->id)->update(['is_active' => DB::raw('false')]);
+        Property::query()->whereKey($property->id)->update(['is_active' => false]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
 
