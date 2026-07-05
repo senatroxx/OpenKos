@@ -86,7 +86,7 @@ class Unit extends Model
     public function scopeAvailableForAssignment(Builder $query): void
     {
         $query->whereNull('deleted_at')
-            ->whereNotIn('status', ['maintenance'])
+            ->whereNotIn('status', [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value])
             ->where(function (Builder $q) {
                 $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
                     ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE unit_id = units.id AND status = \'active\'))');

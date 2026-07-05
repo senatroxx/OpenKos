@@ -239,7 +239,7 @@ Reported ──→ InProgress ──→ Resolved
 
 ### Unit Lifecycle (Programmatic Only)
 
-Programmatic transitions are partially enforced by inline guard checks in the Actions. Guards currently only block transitions involving `Maintenance` (e.g., `abort_if` before leasing a maintenance unit). The `Unavailable` state has no guard — a lease can be created on an `Unavailable` unit, bypassing the documented state machine. The `UnitStatusValidator` class documents the canonical set of allowed transitions but is not wired into every Action. Manual edits via the unit form bypass all validation (admin can set any status).
+Programmatic transitions are enforced by inline guard checks in the Actions (e.g., `abort_if` before leasing a maintenance or unavailable unit, `scopeAvailableForAssignment` excluding both states). The `UnitStatusValidator` class documents the canonical set of allowed transitions but is not wired into every Action. Manual edits via the unit form bypass all validation (admin can set any status).
 
 ```
 Available  ──→ Occupied       (lease created)
