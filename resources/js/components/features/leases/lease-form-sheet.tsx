@@ -25,7 +25,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import properties from '@/routes/properties';
-import type { Property, Room, RoomRate } from '@/types';
+import type { Property, Unit, UnitRate } from '@/types';
 
 const DUE_DAY_OPTIONS = [
     { value: '1', label: '1st' },
@@ -87,12 +87,12 @@ function computeMonthlyEquivalent(
 }
 
 export default function LeaseFormSheet({
-    room,
+    unit,
     property,
     open,
     onOpenChange,
 }: {
-    room?: Room | null;
+    unit?: Unit | null;
     property: Property;
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -105,7 +105,7 @@ export default function LeaseFormSheet({
     const [hasDeposit, setHasDeposit] = useState(false);
     const dueDayInitialized = useRef(false);
 
-    const defaultRate = room?.active_rates?.[0] ?? null;
+    const defaultRate = unit?.active_rates?.[0] ?? null;
 
     const [selectedRateId, setSelectedRateId] = useState<number | null>(
         () => defaultRate?.id ?? null,
@@ -121,9 +121,9 @@ export default function LeaseFormSheet({
     );
     const [isCustom, setIsCustom] = useState(false);
 
-    const capacity = room?.capacity ?? 1;
+    const capacity = unit?.capacity ?? 1;
     const selectedRate =
-        room?.active_rates?.find((r) => r.id === selectedRateId) ?? null;
+        unit?.active_rates?.find((r) => r.id === selectedRateId) ?? null;
 
     const monthlyEquivalent = useMemo(() => {
         return computeMonthlyEquivalent(
@@ -133,7 +133,7 @@ export default function LeaseFormSheet({
         );
     }, [rentAmount, billingInterval, billingUnit]);
 
-    const handleRateSelect = useCallback((rate: RoomRate) => {
+    const handleRateSelect = useCallback((rate: UnitRate) => {
         setSelectedRateId(rate.id ?? null);
         setRentAmount(rate.amount);
         setBillingInterval(String(rate.billing_interval));
@@ -183,16 +183,16 @@ export default function LeaseFormSheet({
                     </SheetTitle>
                     <SheetDescription>
                         Assign {capacity > 1 ? 'tenants' : 'a tenant'} to{' '}
-                        {room?.name ?? 'this room'}
+                        {unit?.name ?? 'this unit'}
                         {capacity > 1 && ` (capacity: ${capacity})`}
                     </SheetDescription>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
-                        action={properties.rooms.leases.store.url({
+                        action={properties.units.leases.store.url({
                             property: property.slug,
-                            room: room!.slug,
+                            unit: unit!.slug,
                         })}
                         method="post"
                         onSuccess={() => onOpenChange(false)}
@@ -308,12 +308,12 @@ export default function LeaseFormSheet({
                                         />
                                     </div>
 
-                                    {room?.active_rates &&
-                                    room.active_rates.length > 0 ? (
+                                    {unit?.active_rates &&
+                                    unit.active_rates.length > 0 ? (
                                         <div className="mt-4 grid gap-2">
-                                            <Label>Room Rate Options</Label>
+                                            <Label>Unit Rate Options</Label>
                                             <div className="space-y-1">
-                                                {room.active_rates.map(
+                                                {unit.active_rates.map(
                                                     (rate) => (
                                                         <label
                                                             key={`${rate.billing_interval}-${rate.billing_unit}`}
@@ -365,8 +365,8 @@ export default function LeaseFormSheet({
                                         </div>
                                     ) : (
                                         <p className="mt-4 text-xs text-amber-600">
-                                            No pricing configured for this room.
-                                            Please set up room rates first.
+                                            No pricing configured for this unit.
+                                            Please set up unit rates first.
                                         </p>
                                     )}
 
@@ -375,7 +375,7 @@ export default function LeaseFormSheet({
                                             <Label>Rent Amount (IDR)</Label>
                                             <input
                                                 type="hidden"
-                                                name="room_rate_id"
+                                                name="unit_rate_id"
                                                 value={selectedRateId ?? ''}
                                             />
                                             <input
@@ -417,7 +417,7 @@ export default function LeaseFormSheet({
                                             {isCustom && (
                                                 <p className="text-xs font-medium text-amber-600">
                                                     Custom Price ⚠️ This lease
-                                                    differs from room default
+                                                    differs from unit default
                                                     pricing.
                                                 </p>
                                             )}

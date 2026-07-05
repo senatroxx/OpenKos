@@ -110,7 +110,7 @@ describe('CRUD', function () {
             ->post(route('roles.store'), [
                 'name' => 'maintenance-staff',
                 'label' => 'Maintenance Staff',
-                'permissions' => [Permission::RoomsView->value],
+                'permissions' => [Permission::UnitsView->value],
             ]);
 
         $role = Role::where('name', 'maintenance-staff')->first();
@@ -125,7 +125,7 @@ describe('CRUD', function () {
 
         expect($clone)->not->toBeNull();
         expect($clone->is_system)->toBeFalse();
-        expect($clone->hasPermissionTo(Permission::RoomsView->value))->toBeTrue();
+        expect($clone->hasPermissionTo(Permission::UnitsView->value))->toBeTrue();
     });
 
     it('owner can delete custom role without affecting users', function () {

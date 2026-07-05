@@ -43,7 +43,8 @@ export default function RenewLeaseSheet({
         return null;
     }
 
-    const isOverdue = lease.status === 'active' && lease.payment_status === 'overdue';
+    const isOverdue =
+        lease.status === 'active' && lease.payment_status === 'overdue';
 
     function handleClose() {
         onOpenChange(false);
@@ -55,7 +56,8 @@ export default function RenewLeaseSheet({
                 <SheetHeader>
                     <SheetTitle>Renew Lease</SheetTitle>
                     <SheetDescription>
-                        {lease.primary_tenant?.name ?? 'Tenant'} · {lease.room?.name}
+                        {lease.primary_tenant?.name ?? 'Tenant'} ·{' '}
+                        {lease.unit?.name}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -76,11 +78,21 @@ export default function RenewLeaseSheet({
                                         name="rent_amount"
                                         type="number"
                                         min={1}
-                                        defaultValue={lease.rent_amount ? String(Number.parseInt(lease.rent_amount)) : ''}
+                                        defaultValue={
+                                            lease.rent_amount
+                                                ? String(
+                                                      Number.parseInt(
+                                                          lease.rent_amount,
+                                                      ),
+                                                  )
+                                                : ''
+                                        }
                                         required
                                     />
                                     {errors.rent_amount && (
-                                        <p className="text-sm text-red-500">{errors.rent_amount}</p>
+                                        <p className="text-sm text-red-500">
+                                            {errors.rent_amount}
+                                        </p>
                                     )}
                                 </div>
 
@@ -99,22 +111,35 @@ export default function RenewLeaseSheet({
                                             required
                                         />
                                         {errors.extension_value && (
-                                            <p className="text-sm text-red-500">{errors.extension_value}</p>
+                                            <p className="text-sm text-red-500">
+                                                {errors.extension_value}
+                                            </p>
                                         )}
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="extension_unit">Period</Label>
-                                        <Select name="extension_unit" defaultValue="months">
+                                        <Label htmlFor="extension_unit">
+                                            Period
+                                        </Label>
+                                        <Select
+                                            name="extension_unit"
+                                            defaultValue="months"
+                                        >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="months">Months</SelectItem>
-                                                <SelectItem value="years">Years</SelectItem>
+                                                <SelectItem value="months">
+                                                    Months
+                                                </SelectItem>
+                                                <SelectItem value="years">
+                                                    Years
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {errors.extension_unit && (
-                                            <p className="text-sm text-red-500">{errors.extension_unit}</p>
+                                            <p className="text-sm text-red-500">
+                                                {errors.extension_unit}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -137,41 +162,59 @@ export default function RenewLeaseSheet({
                                         </SelectTrigger>
                                         <SelectContent>
                                             {DEPOSIT_HANDLING.map((d) => (
-                                                <SelectItem key={d.value} value={d.value}>
+                                                <SelectItem
+                                                    key={d.value}
+                                                    value={d.value}
+                                                >
                                                     {d.label}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                     {errors.deposit_handling && (
-                                        <p className="text-sm text-red-500">{errors.deposit_handling}</p>
+                                        <p className="text-sm text-red-500">
+                                            {errors.deposit_handling}
+                                        </p>
                                     )}
                                 </div>
 
                                 {isOverdue && (
                                     <Alert variant="destructive">
-                                        <AlertTitle>Outstanding Balance</AlertTitle>
+                                        <AlertTitle>
+                                            Outstanding Balance
+                                        </AlertTitle>
                                         <AlertDescription>
                                             <p className="mb-3">
-                                                This lease has overdue payments. Renewal will proceed
-                                                with the existing balance.
+                                                This lease has overdue payments.
+                                                Renewal will proceed with the
+                                                existing balance.
                                             </p>
                                             <label className="flex items-start gap-3">
                                                 <input
                                                     type="checkbox"
-                                                    checked={confirmedOutstanding}
+                                                    checked={
+                                                        confirmedOutstanding
+                                                    }
                                                     onChange={(e) => {
-                                                        setConfirmedOutstanding(e.target.checked);
+                                                        setConfirmedOutstanding(
+                                                            e.target.checked,
+                                                        );
                                                     }}
                                                     className="mt-0.5 size-4"
                                                 />
                                                 <input
                                                     type="hidden"
                                                     name="confirmed_outstanding"
-                                                    value={confirmedOutstanding ? '1' : '0'}
+                                                    value={
+                                                        confirmedOutstanding
+                                                            ? '1'
+                                                            : '0'
+                                                    }
                                                 />
                                                 <span>
-                                                    I confirm I want to renew despite the outstanding balance
+                                                    I confirm I want to renew
+                                                    despite the outstanding
+                                                    balance
                                                 </span>
                                             </label>
                                         </AlertDescription>

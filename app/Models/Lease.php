@@ -18,14 +18,14 @@ use Illuminate\Support\Collection;
 
 #[Fillable([
     'primary_tenant_id',
-    'room_id',
+    'unit_id',
     'start_date',
     'end_date',
     'rent_amount',
     'billing_interval',
     'billing_unit',
     'is_custom_price',
-    'room_rate_id',
+    'unit_rate_id',
     'deposit_amount',
     'deposit_paid_at',
     'deposit_refund_amount',
@@ -95,14 +95,14 @@ class Lease extends Model
         return $this->belongsTo(Tenant::class, 'primary_tenant_id');
     }
 
-    public function room(): BelongsTo
+    public function unit(): BelongsTo
     {
-        return $this->belongsTo(Room::class);
+        return $this->belongsTo(Unit::class);
     }
 
-    public function roomRate(): BelongsTo
+    public function unitRate(): BelongsTo
     {
-        return $this->belongsTo(RoomRate::class);
+        return $this->belongsTo(UnitRate::class);
     }
 
     public function payments(): MorphMany
@@ -120,9 +120,9 @@ class Lease extends Model
         return $this->hasOne(Lease::class, 'previous_lease_id');
     }
 
-    public function roomHistories(): HasMany
+    public function unitHistories(): HasMany
     {
-        return $this->hasMany(LeaseRoomHistory::class)->orderBy('effective_date');
+        return $this->hasMany(LeaseUnitHistory::class)->orderBy('effective_date');
     }
 
     public function getMonthlyEquivalentAttribute(): string

@@ -43,7 +43,7 @@ export default function DocumentPreview({
             onPointerDown={handlePointerDown}
             onClick={onClose}
         >
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-linear-to-b from-black/50 to-transparent px-4 py-3">
+            <div className="absolute top-0 right-0 left-0 z-10 flex items-center justify-between bg-linear-to-b from-black/50 to-transparent px-4 py-3">
                 <div>
                     {title && (
                         <p className="text-sm font-medium text-white">

@@ -51,8 +51,8 @@ class PropertyController extends Controller
                         DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%',
                     ));
                 }),
-                Column::make('rooms_count', 'Total Rooms')->sortable(),
-                Column::make('occupied_rooms_count', 'Occupied')->sortable(),
+                Column::make('units_count', 'Total Units')->sortable(),
+                Column::make('occupied_units_count', 'Occupied')->sortable(),
                 Column::make('tenants_count', 'Tenants')->sortable(),
             ])
             ->filters([
@@ -72,8 +72,8 @@ class PropertyController extends Controller
                 'users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
-            ->withCount('rooms')
-            ->withOccupiedRoomsCount()
+            ->withCount('units')
+            ->withOccupiedUnitsCount()
             ->withTenantsCount();
 
         $result = $table->paginate($query, $request, 'properties');

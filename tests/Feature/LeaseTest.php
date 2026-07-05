@@ -2,8 +2,8 @@
 
 use App\Models\Lease;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -13,94 +13,94 @@ uses()->beforeEach(function () {
     $this->seed(RegionAndCitySeeder::class);
 });
 
-function createPropertyWithRoom(): array
+function createPropertyWithUnit(): array
 {
     $property = Property::factory()->create();
-    $room = Room::factory()->withRate(1_000_000)->create([
+    $unit = Unit::factory()->withRate(1_000_000)->create([
         'property_id' => $property->id,
     ]);
 
-    return [$property, $room];
+    return [$property, $unit];
 }
 
 describe('authorization', function () {
     it('redirects unauthenticated users to login', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
 
-        $this->get(route('properties.rooms.leases.index', [$property, $room]))
+        $this->get(route('properties.units.leases.index', [$property, $unit]))
             ->assertRedirect('login');
     });
 
     it('returns 403 for users without leases.view permission', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('properties.rooms.leases.index', [$property, $room]))
+            ->get(route('properties.units.leases.index', [$property, $unit]))
             ->assertForbidden();
     });
 
     it('allows admin to access leases', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->admin()->create();
         $user->properties()->sync([$property->id]);
 
         $this->actingAs($user)
-            ->get(route('properties.rooms.leases.index', [$property, $room]))
+            ->get(route('properties.units.leases.index', [$property, $unit]))
             ->assertOk();
     });
 
     it('allows owner to access leases', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)
-            ->get(route('properties.rooms.leases.index', [$property, $room]))
+            ->get(route('properties.units.leases.index', [$property, $unit]))
             ->assertOk();
     });
 
     it('denies staff access to leases', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->staff()->create();
 
         $this->actingAs($user)
-            ->get(route('properties.rooms.leases.index', [$property, $room]))
+            ->get(route('properties.units.leases.index', [$property, $unit]))
             ->assertForbidden();
     });
 });
 
 describe('CRUD', function () {
-    it('lists lease history for a room', function () {
-        [$property, $room] = createPropertyWithRoom();
+    it('lists lease history for a unit', function () {
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
 
         Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'status' => 'active',
         ]);
 
         Lease::factory()->terminated()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
         ]);
 
         $this->actingAs($user)
-            ->get(route('properties.rooms.leases.index', [$property, $room]))
+            ->get(route('properties.units.leases.index', [$property, $unit]))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->component('properties/rooms/leases/index')
+                ->component('properties/units/leases/index')
                 ->has('leases', 2)
             );
     });
 
-    it('creates a lease and assigns tenant to room', function () {
-        [$property, $room] = createPropertyWithRoom();
+    it('creates a lease and assigns tenant to unit', function () {
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
 
-        $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
+        $this->actingAs($user)->post(route('properties.units.leases.store', [$property, $unit]), [
             'tenant_ids' => [$tenant->id],
             'start_date' => '2026-06-01',
             'rent_amount' => 1_500_000,
@@ -114,51 +114,51 @@ describe('CRUD', function () {
 
         expect($lease)->not->toBeNull();
         expect($lease->primary_tenant_id)->toBe($tenant->id);
-        expect($lease->room_id)->toBe($room->id);
+        expect($lease->unit_id)->toBe($unit->id);
         expect($lease->rent_amount)->toBe('1500000.00');
         expect($lease->deposit_amount)->toBe('1000000.00');
         expect($lease->rent_due_day)->toBe(5);
         expect($lease->status)->toBe('active');
     });
 
-    it('uses room base price when rent amount is not specified', function () {
-        [$property, $room] = createPropertyWithRoom();
+    it('uses unit base price when rent amount is not specified', function () {
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
 
-        $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
+        $this->actingAs($user)->post(route('properties.units.leases.store', [$property, $unit]), [
             'tenant_ids' => [$tenant->id],
             'start_date' => '2026-06-01',
         ]);
 
         $lease = Lease::first();
 
-        expect($lease->rent_amount)->toBe($room->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount'));
+        expect($lease->rent_amount)->toBe($unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount'));
     });
 
     it('validates required fields on create', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)
-            ->post(route('properties.rooms.leases.store', [$property, $room]), [])
+            ->post(route('properties.units.leases.store', [$property, $unit]), [])
             ->assertSessionHasErrors(['tenant_ids', 'start_date']);
     });
 
-    it('prevents assigning tenant to an already occupied room', function () {
-        [$property, $room] = createPropertyWithRoom();
+    it('prevents assigning tenant to an already occupied unit', function () {
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenantA = Tenant::factory()->create();
         $tenantB = Tenant::factory()->create();
 
         Lease::factory()->create([
             'primary_tenant_id' => $tenantA->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'status' => 'active',
         ]);
 
         $this->actingAs($user)
-            ->post(route('properties.rooms.leases.store', [$property, $room]), [
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
                 'tenant_ids' => [$tenantB->id],
                 'start_date' => '2026-06-01',
             ])
@@ -166,18 +166,18 @@ describe('CRUD', function () {
     });
 
     it('updates a lease', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
 
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'rent_amount' => 1_000_000,
         ]);
 
         $this->actingAs($user)
-            ->put(route('properties.rooms.leases.update', [$property, $room, $lease]), [
+            ->put(route('properties.units.leases.update', [$property, $unit, $lease]), [
                 'rent_amount' => 2_000_000,
             ]);
 
@@ -189,19 +189,19 @@ describe('CRUD', function () {
 
 describe('termination', function () {
     it('terminates an active lease', function () {
-        [$property, $room] = createPropertyWithRoom();
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
 
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'status' => 'active',
             'end_date' => null,
         ]);
 
         $this->actingAs($user)
-            ->delete(route('properties.rooms.leases.destroy', [$property, $room, $lease]));
+            ->delete(route('properties.units.leases.destroy', [$property, $unit, $lease]));
 
         $lease->refresh();
 
@@ -211,10 +211,10 @@ describe('termination', function () {
     });
 });
 
-describe('move room', function () {
-    it('moves a tenant to a new room', function () {
-        [$property, $roomA] = createPropertyWithRoom();
-        $roomB = Room::factory()->withRate(1_200_000)->create([
+describe('move unit', function () {
+    it('moves a tenant to a new unit', function () {
+        [$property, $unitA] = createPropertyWithUnit();
+        $unitB = Unit::factory()->withRate(1_200_000)->create([
             'property_id' => $property->id,
         ]);
 
@@ -223,7 +223,7 @@ describe('move room', function () {
 
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $roomA->id,
+            'unit_id' => $unitA->id,
             'status' => 'active',
             'rent_amount' => 1_000_000,
             'deposit_amount' => 500_000,
@@ -232,8 +232,8 @@ describe('move room', function () {
         ]);
 
         $this->actingAs($user)
-            ->post(route('properties.rooms.leases.move', [$property, $roomA, $lease]), [
-                'target_room_id' => $roomB->id,
+            ->post(route('properties.units.leases.move', [$property, $unitA, $lease]), [
+                'target_unit_id' => $unitB->id,
             ]);
 
         $lease->refresh();
@@ -241,7 +241,7 @@ describe('move room', function () {
         expect($lease->status)->toBe('terminated');
         expect($lease->end_date->format('Y-m-d'))->toBe(now()->format('Y-m-d'));
 
-        $newLease = Lease::where('room_id', $roomB->id)->first();
+        $newLease = Lease::where('unit_id', $unitB->id)->first();
 
         expect($newLease)->not->toBeNull();
         expect($newLease->primary_tenant_id)->toBe($tenant->id);
@@ -252,24 +252,24 @@ describe('move room', function () {
 
     it('denies admin from accessing leases of a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
-        [$propertyA] = createPropertyWithRoom();
-        [$propertyB, $roomB] = createPropertyWithRoom();
+        [$propertyA] = createPropertyWithUnit();
+        [$propertyB, $unitB] = createPropertyWithUnit();
         $admin->properties()->sync([$propertyA->id]);
 
         $this->actingAs($admin)
-            ->get(route('properties.rooms.leases.index', [$propertyB, $roomB]))
+            ->get(route('properties.units.leases.index', [$propertyB, $unitB]))
             ->assertForbidden();
     });
 
     it('denies admin from creating a lease in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
-        [$propertyA] = createPropertyWithRoom();
-        [$propertyB, $roomB] = createPropertyWithRoom();
+        [$propertyA] = createPropertyWithUnit();
+        [$propertyB, $unitB] = createPropertyWithUnit();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
 
         $this->actingAs($admin)
-            ->post(route('properties.rooms.leases.store', [$propertyB, $roomB]), [
+            ->post(route('properties.units.leases.store', [$propertyB, $unitB]), [
                 'tenant_ids' => [$tenant->id],
                 'start_date' => '2026-06-01',
             ])
@@ -278,17 +278,17 @@ describe('move room', function () {
 
     it('denies admin from updating a lease in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
-        [$propertyA] = createPropertyWithRoom();
-        [$propertyB, $roomB] = createPropertyWithRoom();
+        [$propertyA] = createPropertyWithUnit();
+        [$propertyB, $unitB] = createPropertyWithUnit();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $roomB->id,
+            'unit_id' => $unitB->id,
         ]);
 
         $this->actingAs($admin)
-            ->put(route('properties.rooms.leases.update', [$propertyB, $roomB, $lease]), [
+            ->put(route('properties.units.leases.update', [$propertyB, $unitB, $lease]), [
                 'rent_amount' => 9_999_999,
             ])
             ->assertForbidden();
@@ -296,63 +296,63 @@ describe('move room', function () {
 
     it('denies admin from terminating a lease in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
-        [$propertyA] = createPropertyWithRoom();
-        [$propertyB, $roomB] = createPropertyWithRoom();
+        [$propertyA] = createPropertyWithUnit();
+        [$propertyB, $unitB] = createPropertyWithUnit();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $roomB->id,
+            'unit_id' => $unitB->id,
             'status' => 'active',
         ]);
 
         $this->actingAs($admin)
-            ->delete(route('properties.rooms.leases.destroy', [$propertyB, $roomB, $lease]))
+            ->delete(route('properties.units.leases.destroy', [$propertyB, $unitB, $lease]))
             ->assertForbidden();
     });
 
-    it('denies admin from moving a lease to a room in a property they are not assigned to', function () {
+    it('denies admin from moving a lease to a unit in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
-        [$propertyA] = createPropertyWithRoom();
-        [$propertyB, $roomB] = createPropertyWithRoom();
+        [$propertyA] = createPropertyWithUnit();
+        [$propertyB, $unitB] = createPropertyWithUnit();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $roomB->id,
+            'unit_id' => $unitB->id,
             'status' => 'active',
         ]);
 
         $this->actingAs($admin)
-            ->post(route('properties.rooms.leases.move', [$propertyB, $roomB, $lease]), [
-                'target_room_id' => Room::factory()->for($propertyB)->create()->id,
+            ->post(route('properties.units.leases.move', [$propertyB, $unitB, $lease]), [
+                'target_unit_id' => Unit::factory()->for($propertyB)->create()->id,
             ])
             ->assertForbidden();
     });
 
-    it('denies admin from moving a lease to a target room in a different property', function () {
+    it('denies admin from moving a lease to a target unit in a different property', function () {
         $admin = User::factory()->admin()->create();
-        [$propertyA, $roomA] = createPropertyWithRoom();
-        [$propertyB] = createPropertyWithRoom();
+        [$propertyA, $unitA] = createPropertyWithUnit();
+        [$propertyB] = createPropertyWithUnit();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $roomA->id,
+            'unit_id' => $unitA->id,
             'status' => 'active',
         ]);
-        $targetRoomInB = Room::factory()->for($propertyB)->create();
+        $targetUnitInB = Unit::factory()->for($propertyB)->create();
 
         $this->actingAs($admin)
-            ->post(route('properties.rooms.leases.move', [$propertyA, $roomA, $lease]), [
-                'target_room_id' => $targetRoomInB->id,
+            ->post(route('properties.units.leases.move', [$propertyA, $unitA, $lease]), [
+                'target_unit_id' => $targetUnitInB->id,
             ])
             ->assertForbidden();
     });
 
-    it('prevents moving to an already occupied room', function () {
-        [$property, $roomA] = createPropertyWithRoom();
-        $roomB = Room::factory()->create([
+    it('prevents moving to an already occupied unit', function () {
+        [$property, $unitA] = createPropertyWithUnit();
+        $unitB = Unit::factory()->create([
             'property_id' => $property->id,
         ]);
 
@@ -362,44 +362,44 @@ describe('move room', function () {
 
         $leaseA = Lease::factory()->create([
             'primary_tenant_id' => $tenantA->id,
-            'room_id' => $roomA->id,
+            'unit_id' => $unitA->id,
             'status' => 'active',
         ]);
 
         Lease::factory()->create([
             'primary_tenant_id' => $tenantB->id,
-            'room_id' => $roomB->id,
+            'unit_id' => $unitB->id,
             'status' => 'active',
         ]);
 
         $this->actingAs($user)
-            ->post(route('properties.rooms.leases.move', [$property, $roomA, $leaseA]), [
-                'target_room_id' => $roomB->id,
+            ->post(route('properties.units.leases.move', [$property, $unitA, $leaseA]), [
+                'target_unit_id' => $unitB->id,
             ])
             ->assertStatus(422);
     });
 });
 
-describe('room occupancy derived from lease', function () {
-    it('shows room as occupied after lease creation', function () {
-        [$property, $room] = createPropertyWithRoom();
+describe('unit occupancy derived from lease', function () {
+    it('shows unit as occupied after lease creation', function () {
+        [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
 
-        $this->actingAs($user)->post(route('properties.rooms.leases.store', [$property, $room]), [
+        $this->actingAs($user)->post(route('properties.units.leases.store', [$property, $unit]), [
             'tenant_ids' => [$tenant->id],
             'start_date' => '2026-06-01',
         ]);
 
-        $room->refresh();
+        $unit->refresh();
 
         $this->actingAs($user)
-            ->get(route('properties.rooms.index', $property))
+            ->get(route('properties.units.index', $property))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->component('properties/rooms/index')
-                ->has('rooms.data', 1)
-                ->where('rooms.data.0.active_leases', 1)
+                ->component('properties/units/index')
+                ->has('units.data', 1)
+                ->where('units.data.0.active_leases', 1)
             );
     });
 });

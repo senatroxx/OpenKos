@@ -2,8 +2,8 @@
 
 namespace App\Policies;
 
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 
 class TenantPolicy
@@ -11,7 +11,7 @@ class TenantPolicy
     public function view(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('room.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 
@@ -23,19 +23,19 @@ class TenantPolicy
     public function update(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('room.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 
     public function delete(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('room.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 
-    public function assignRoom(User $user, Room $room): bool
+    public function assignUnit(User $user, Unit $unit): bool
     {
-        return $user->properties->contains($room->property_id);
+        return $user->properties->contains($unit->property_id);
     }
 }

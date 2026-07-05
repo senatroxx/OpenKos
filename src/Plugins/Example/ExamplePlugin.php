@@ -53,7 +53,7 @@ class ExamplePlugin extends Plugin
         ));
 
         // Workspace tabs are URL-routed: meta.href is required, and
-        // {placeholders} ({id}, and {propertyId} on rooms) are resolved
+        // {placeholders} ({id}, and {propertyId} on units) are resolved
         // client-side. A real plugin would register its own route + page:
         //
         // $platform->lease()->registerTab(new WorkspaceTab(

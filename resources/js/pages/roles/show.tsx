@@ -36,15 +36,26 @@ export default function RoleWorkspace({ role }: { role: WorkspaceRole }) {
                 workspace="role"
                 activeTab="overview"
                 hrefParams={{ id: role.id }}
-                tabs={[{ key: 'overview', label: 'Overview', href: `/roles/${role.id}` }]}
+                tabs={[
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/roles/${role.id}`,
+                    },
+                ]}
             />
 
             <div className="space-y-6">
                 <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{role.is_active ? 'Active' : 'Disabled'}</Badge>
-                    {role.is_system && <Badge variant="secondary">System role</Badge>}
                     <Badge variant="outline">
-                        {role.users_count} {role.users_count === 1 ? 'user' : 'users'}
+                        {role.is_active ? 'Active' : 'Disabled'}
+                    </Badge>
+                    {role.is_system && (
+                        <Badge variant="secondary">System role</Badge>
+                    )}
+                    <Badge variant="outline">
+                        {role.users_count}{' '}
+                        {role.users_count === 1 ? 'user' : 'users'}
                     </Badge>
                 </div>
 
@@ -53,11 +64,17 @@ export default function RoleWorkspace({ role }: { role: WorkspaceRole }) {
                         Permissions ({role.permissions.length})
                     </p>
                     {role.permissions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No permissions granted.</p>
+                        <p className="text-sm text-muted-foreground">
+                            No permissions granted.
+                        </p>
                     ) : (
                         <div className="flex flex-wrap gap-1.5">
                             {role.permissions.map((permission) => (
-                                <Badge key={permission} variant="outline" className="font-mono text-xs">
+                                <Badge
+                                    key={permission}
+                                    variant="outline"
+                                    className="font-mono text-xs"
+                                >
                                     {permission}
                                 </Badge>
                             ))}

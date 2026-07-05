@@ -110,7 +110,10 @@ export default function TenantDocumentsSheet({
     }
 
     function handlePreview(doc: TenantDocument) {
-        if (doc.mime_type.startsWith('image/') || doc.mime_type === 'application/pdf') {
+        if (
+            doc.mime_type.startsWith('image/') ||
+            doc.mime_type === 'application/pdf'
+        ) {
             setPreviewDoc(doc);
         }
     }
@@ -140,16 +143,16 @@ export default function TenantDocumentsSheet({
                                                 onClick={() =>
                                                     handlePreview(doc)
                                                 }
-                                                    className={
-                                                        'min-w-0 flex-1 truncate text-left text-xs text-muted-foreground' +
-                                                        (doc.mime_type.startsWith(
-                                                            'image/',
-                                                        ) ||
-                                                        doc.mime_type ===
-                                                            'application/pdf'
-                                                            ? ' cursor-pointer hover:text-foreground'
-                                                            : '')
-                                                    }
+                                                className={
+                                                    'min-w-0 flex-1 truncate text-left text-xs text-muted-foreground' +
+                                                    (doc.mime_type.startsWith(
+                                                        'image/',
+                                                    ) ||
+                                                    doc.mime_type ===
+                                                        'application/pdf'
+                                                        ? ' cursor-pointer hover:text-foreground'
+                                                        : '')
+                                                }
                                             >
                                                 {TYPE_LABELS[doc.type] ??
                                                     doc.type}
@@ -190,17 +193,34 @@ export default function TenantDocumentsSheet({
                                     onSubmit={handleUpload}
                                     className="flex flex-row items-end gap-2"
                                 >
-                                    <input type="hidden" name="type" value={docType} />
-                                    <Select value={docType} onValueChange={setDocType}>
-                                        <SelectTrigger className="shrink-0 w-[160px]">
+                                    <input
+                                        type="hidden"
+                                        name="type"
+                                        value={docType}
+                                    />
+                                    <Select
+                                        value={docType}
+                                        onValueChange={setDocType}
+                                    >
+                                        <SelectTrigger className="w-[160px] shrink-0">
                                             <SelectValue placeholder="Select type..." />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ktp">KTP</SelectItem>
-                                            <SelectItem value="passport">Passport</SelectItem>
-                                            <SelectItem value="lease">Lease/Agreement</SelectItem>
-                                            <SelectItem value="supporting">Supporting</SelectItem>
-                                            <SelectItem value="other">Other</SelectItem>
+                                            <SelectItem value="ktp">
+                                                KTP
+                                            </SelectItem>
+                                            <SelectItem value="passport">
+                                                Passport
+                                            </SelectItem>
+                                            <SelectItem value="lease">
+                                                Lease/Agreement
+                                            </SelectItem>
+                                            <SelectItem value="supporting">
+                                                Supporting
+                                            </SelectItem>
+                                            <SelectItem value="other">
+                                                Other
+                                            </SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <input
@@ -228,9 +248,7 @@ export default function TenantDocumentsSheet({
                 <DocumentPreview
                     src={docUrl(previewDoc)!}
                     mimeType={previewDoc.mime_type}
-                    title={
-                        TYPE_LABELS[previewDoc.type] ?? previewDoc.type
-                    }
+                    title={TYPE_LABELS[previewDoc.type] ?? previewDoc.type}
                     subtitle={`${formatSize(previewDoc.size)} · ${formatDate(previewDoc.created_at)}`}
                     onClose={() => setPreviewDoc(null)}
                 />

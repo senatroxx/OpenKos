@@ -4,17 +4,17 @@ use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Payment;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 
 describe('Property', function () {
-    it('has many rooms', function () {
+    it('has many units', function () {
         $property = Property::factory()
-            ->has(Room::factory()->count(3))
+            ->has(Unit::factory()->count(3))
             ->create();
 
-        expect($property->rooms)->toHaveCount(3);
+        expect($property->units)->toHaveCount(3);
     });
 
     it('auto-generates slug from name', function () {
@@ -52,37 +52,37 @@ describe('Property', function () {
     });
 });
 
-describe('Room', function () {
+describe('Unit', function () {
     it('belongs to a property', function () {
         $property = Property::factory()->create();
-        $room = Room::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
 
-        expect($room->property)->toBeInstanceOf(Property::class);
-        expect($room->property->id)->toBe($property->id);
+        expect($unit->property)->toBeInstanceOf(Property::class);
+        expect($unit->property->id)->toBe($property->id);
     });
 
     it('has many leases', function () {
-        $room = Room::factory()
+        $unit = Unit::factory()
             ->has(Lease::factory()->count(2))
             ->create();
 
-        expect($room->leases)->toHaveCount(2);
+        expect($unit->leases)->toHaveCount(2);
     });
 
     it('has many maintenance tickets', function () {
-        $room = Room::factory()
+        $unit = Unit::factory()
             ->has(MaintenanceTicket::factory()->count(2))
             ->create();
 
-        expect($room->maintenanceTickets)->toHaveCount(2);
+        expect($unit->maintenanceTickets)->toHaveCount(2);
     });
 
     it('can be soft deleted', function () {
-        $room = Room::factory()->create();
-        $room->delete();
+        $unit = Unit::factory()->create();
+        $unit->delete();
 
-        expect(Room::count())->toBe(0);
-        expect(Room::withTrashed()->count())->toBe(1);
+        expect(Unit::count())->toBe(0);
+        expect(Unit::withTrashed()->count())->toBe(1);
     });
 });
 
@@ -134,12 +134,12 @@ describe('Lease', function () {
         expect($lease->primaryTenant->id)->toBe($lease->primary_tenant_id);
     });
 
-    it('belongs to a room', function () {
-        $room = Room::factory()->create();
-        $lease = Lease::factory()->for($room)->create();
+    it('belongs to a unit', function () {
+        $unit = Unit::factory()->create();
+        $lease = Lease::factory()->for($unit)->create();
 
-        expect($lease->room)->toBeInstanceOf(Room::class);
-        expect($lease->room->id)->toBe($room->id);
+        expect($lease->unit)->toBeInstanceOf(Unit::class);
+        expect($lease->unit->id)->toBe($unit->id);
     });
 
     it('has many payments', function () {
@@ -209,12 +209,12 @@ describe('Payment', function () {
 });
 
 describe('MaintenanceTicket', function () {
-    it('belongs to a room', function () {
-        $room = Room::factory()->create();
-        $ticket = MaintenanceTicket::factory()->for($room)->create();
+    it('belongs to a unit', function () {
+        $unit = Unit::factory()->create();
+        $ticket = MaintenanceTicket::factory()->for($unit)->create();
 
-        expect($ticket->room)->toBeInstanceOf(Room::class);
-        expect($ticket->room->id)->toBe($room->id);
+        expect($ticket->unit)->toBeInstanceOf(Unit::class);
+        expect($ticket->unit->id)->toBe($unit->id);
     });
 
     it('can be assigned to a user', function () {

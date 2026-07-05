@@ -7,7 +7,7 @@ use App\Business\Leases\RenewalEligibilityChecker;
 use App\Data\Lease\RenewLeaseData;
 use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
-use App\Models\Room;
+use App\Models\Unit;
 use App\Results\Lease\RenewLeaseResult;
 use Illuminate\Support\Facades\DB;
 
@@ -35,15 +35,15 @@ class RenewLease
         }
 
         return DB::transaction(function () use ($lease, $data) {
-            $room = Room::lockForUpdate()->findOrFail($lease->room_id);
+            $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
 
-            $existingActive = $room->leases()
+            $existingActive = $unit->leases()
                 ->where('status', 'active')
                 ->where('id', '!=', $lease->id)
                 ->exists();
 
             if ($existingActive) {
-                return RenewLeaseResult::error('Room already has an active lease.');
+                return RenewLeaseResult::error('Unit already has an active lease.');
             }
 
             $lease->update([
@@ -52,7 +52,7 @@ class RenewLease
 
             $newEndDate = $data->endDate;
 
-            $newLease = $room->leases()->create([
+            $newLease = $unit->leases()->create([
                 'previous_lease_id' => $lease->id,
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $lease->end_date->addDay(),
@@ -64,7 +64,7 @@ class RenewLease
                 'billing_unit' => $lease->billing_unit,
                 'rent_due_day' => $lease->rent_due_day,
                 'is_custom_price' => $lease->is_custom_price,
-                'room_rate_id' => $lease->room_rate_id,
+                'unit_rate_id' => $lease->unit_rate_id,
                 'status' => 'active',
             ]);
 

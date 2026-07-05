@@ -1,11 +1,11 @@
 export type PropertyStats = {
     id: number;
     name: string;
-    total_rooms: number;
-    occupied_rooms: number;
-    available_rooms: number;
-    maintenance_rooms: number;
-    unavailable_rooms: number;
+    total_units: number;
+    occupied_units: number;
+    available_units: number;
+    maintenance_units: number;
+    unavailable_units: number;
     occupancy_percentage: number;
 };
 
@@ -17,11 +17,11 @@ export type Finance = {
 };
 
 export type Stats = {
-    total_rooms: number;
-    occupied_rooms: number;
-    available_rooms: number;
-    maintenance_rooms: number;
-    unavailable_rooms: number;
+    total_units: number;
+    occupied_units: number;
+    available_units: number;
+    maintenance_units: number;
+    unavailable_units: number;
     occupancy_percentage: number;
     properties: PropertyStats[];
 };
@@ -29,7 +29,7 @@ export type Stats = {
 export type RentDashboardEntry = {
     id: number;
     tenant_name: string;
-    room_name: string;
+    unit_name: string;
     property_name: string;
     rent_due_day: number;
     days_overdue: number | null;

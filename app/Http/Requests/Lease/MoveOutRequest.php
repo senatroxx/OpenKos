@@ -18,8 +18,8 @@ class MoveOutRequest extends FormRequest
             'deposit_returned' => ['nullable', 'boolean'],
             'deposit_refund_amount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string', 'max:65535'],
-            'move_to_another_room' => ['nullable', 'boolean'],
-            'target_room_id' => ['nullable', 'integer', 'exists:rooms,id'],
+            'move_to_another_unit' => ['nullable', 'boolean'],
+            'target_unit_id' => ['nullable', 'integer', 'exists:units,id'],
         ];
     }
 }
