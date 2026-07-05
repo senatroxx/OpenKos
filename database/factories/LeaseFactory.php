@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\LeaseStatus;
 use App\Models\Lease;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -28,7 +29,7 @@ class LeaseFactory extends Factory
             'deposit_amount' => fake()->numberBetween(500_000, 1_000_000),
             'deposit_paid_at' => now(),
             'rent_due_day' => 1,
-            'status' => 'active',
+            'status' => LeaseStatus::Active,
             'termination_date' => null,
             'termination_reason' => null,
             'notes' => null,
@@ -46,7 +47,7 @@ class LeaseFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'end_date' => fake()->dateTimeBetween('-1 month', 'now'),
-            'status' => 'terminated',
+            'status' => LeaseStatus::Terminated,
             'termination_date' => fake()->dateTimeBetween('-1 month', 'now'),
             'termination_reason' => fake()->sentence(),
         ]);

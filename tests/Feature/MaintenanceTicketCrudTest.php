@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\LeaseStatus;
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Enums\UnitStatus;
@@ -215,10 +216,10 @@ it('moves tenant and blocks unit when move_tenant_to_unit_id provided', function
         ->assertRedirect();
 
     expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
-    expect($lease->fresh()->status)->toBe('active');
+    expect($lease->fresh()->status)->toBe(LeaseStatus::Active);
     expect($lease->fresh()->unit_id)->toBe($targetUnit->id);
     expect($targetUnit->fresh()->status)->toBe(UnitStatus::Occupied);
-    expect($targetUnit->leases()->where('status', 'active')->count())->toBe(1);
+    expect($targetUnit->leases()->where('status', LeaseStatus::Active->value)->count())->toBe(1);
     expect($lease->fresh()->unitHistories()->count())->toBe(1);
 });
 

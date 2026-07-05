@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Payment;
 
+use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
+use App\Enums\PaymentStatus;
 use App\Models\Lease;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,7 +33,7 @@ class StorePaymentRequest extends FormRequest
     {
         $lease = $this->route('lease');
 
-        if (! $lease instanceof Lease || $lease->status !== 'active') {
+        if (! $lease instanceof Lease || $lease->status !== LeaseStatus::Active) {
             throw ValidationException::withMessages([
                 'lease' => __('Lease must be active to record payments.'),
             ]);
@@ -43,7 +45,7 @@ class StorePaymentRequest extends FormRequest
         $exists = $lease->payments()
             ->whereYear('period_start', $this->period_year)
             ->whereMonth('period_start', $this->period_month)
-            ->where('status', '!=', 'cancelled')
+            ->where('status', '!=', PaymentStatus::Cancelled->value)
             ->exists();
 
         if ($exists) {

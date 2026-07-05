@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PaymentStatus;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
@@ -82,7 +83,7 @@ describe('payment recording', function () {
             ]);
 
         expect($lease->fresh()->payments)->toHaveCount(1)
-            ->and($lease->fresh()->payments->first()->status)->toBe('confirmed');
+            ->and($lease->fresh()->payments->first()->status)->toBe(PaymentStatus::Confirmed);
     });
 
     it('allows admin assigned to property to record payment', function () {
@@ -202,6 +203,6 @@ describe('payment recording', function () {
 
         expect((int) $payment->recorded_by)->toBe((int) $user->id);
         expect((int) $payment->confirmed_by)->toBe((int) $user->id);
-        expect($payment->status)->toBe('confirmed');
+        expect($payment->status)->toBe(PaymentStatus::Confirmed);
     });
 });

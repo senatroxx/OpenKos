@@ -5,6 +5,14 @@ import { useState } from 'react';
 import { DocumentPreview } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -61,6 +69,9 @@ export default function TenantDocumentsSheet({
     const [uploading, setUploading] = useState(false);
     const [docType, setDocType] = useState('');
     const [previewDoc, setPreviewDoc] = useState<TenantDocument | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<TenantDocument | null>(
+        null,
+    );
 
     function handleUpload(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -85,17 +96,22 @@ export default function TenantDocumentsSheet({
     }
 
     function handleDelete(document: TenantDocument) {
-        if (!tenant || !confirm('Delete this document?')) {
+        setDeleteConfirm(document);
+    }
+
+    function confirmDelete() {
+        if (!tenant || !deleteConfirm) {
             return;
         }
 
         router.delete(
             tenants.documents.destroy.url({
                 tenant: tenant.id,
-                document: document.id,
+                document: deleteConfirm.id,
             }),
             { preserveState: true, replace: true },
         );
+        setDeleteConfirm(null);
     }
 
     function docUrl(doc: TenantDocument): string | null {
@@ -243,6 +259,34 @@ export default function TenantDocumentsSheet({
                     )}
                 </SheetContent>
             </Sheet>
+
+            <Dialog
+                open={deleteConfirm !== null}
+                onOpenChange={() => setDeleteConfirm(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete document</DialogTitle>
+                        <DialogDescription>
+                            Delete this document? This cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {previewDoc && tenant && (
                 <DocumentPreview
