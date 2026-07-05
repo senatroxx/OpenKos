@@ -138,7 +138,7 @@ class TenantController extends Controller
 
         $availableRooms = Room::query()
             ->with(['property.city', 'activeRates'])
-            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))

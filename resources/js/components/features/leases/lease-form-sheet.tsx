@@ -189,8 +189,8 @@ export default function LeaseFormSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={properties.rooms.leases.store.url({
-                            property: property.id,
-                            room: room!.id,
+                            property: property.slug,
+                            room: room!.slug,
                         })}
                         method="post"
                         onSuccess={() => onOpenChange(false)}

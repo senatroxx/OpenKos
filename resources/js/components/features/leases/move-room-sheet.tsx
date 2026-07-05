@@ -19,8 +19,8 @@ export default function MoveRoomSheet({
     open,
     onOpenChange,
 }: {
-    property: { id: number; name: string };
-    currentRoom: { id: number; name: string; capacity: number };
+    property: { id: number; slug: string; name: string };
+    currentRoom: { id: number; slug: string; name: string; capacity: number };
     availableRooms: { id: number; name: string; capacity: number; occupied_count?: number }[];
     lease: { id: number };
     open: boolean;
@@ -56,8 +56,8 @@ export default function MoveRoomSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={properties.rooms.leases.move.url({
-                            property: property.id,
-                            room: currentRoom.id,
+                            property: property.slug,
+                            room: currentRoom.slug,
                             lease: lease.id,
                         })}
                         method="post"

@@ -43,6 +43,11 @@ class Property extends Model
         ];
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     public function propertyType(): BelongsTo
     {
         return $this->belongsTo(PropertyType::class, 'type', 'slug');

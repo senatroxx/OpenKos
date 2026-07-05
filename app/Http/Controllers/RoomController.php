@@ -68,8 +68,8 @@ class RoomController extends Controller
 
         return Inertia::render('properties/rooms/lease-history', [
             ...$result,
-            'property' => $property->only('id', 'name'),
-            'room' => $room->only('id', 'name', 'floor'),
+            'property' => $property->only('id', 'slug', 'name'),
+            'room' => $room->only('id', 'slug', 'name', 'floor'),
         ]);
     }
 
@@ -116,7 +116,7 @@ class RoomController extends Controller
 
         $availableRooms = $property->rooms()
             ->with('property.city')
-            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
             ->orderBy('name')
@@ -231,8 +231,8 @@ class RoomController extends Controller
 
         return Inertia::render('properties/rooms/maintenance-history', [
             ...$result,
-            'property' => $property->only('id', 'name'),
-            'room' => $room->only('id', 'name', 'floor'),
+            'property' => $property->only('id', 'slug', 'name'),
+            'room' => $room->only('id', 'slug', 'name', 'floor'),
         ]);
     }
 }
