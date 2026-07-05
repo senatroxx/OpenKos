@@ -216,11 +216,11 @@ Every foreign key intentionally chooses one of four strategies:
 | `cascadeOnDelete` | The child is meaningless without the parent (auth credentials, dependent files), or is a framework table (Spatie). |
 | `noActionOnDelete` | Reserved for transactional integrity (not currently used). |
 
-**Historical business records** (leases, payments, maintenance tickets, reminders, documents, pricing history, audit trails) must use `restrictOnDelete` on their parent FK. This ensures soft deletion is the only path for record removal — hard-deleting a parent is blocked at the database level. Controllers use `$model->delete()` which triggers Eloquent's soft delete; the FK constraint only fires on `forceDelete()` or raw SQL deletes.
+**Historical business records** (leases, payments, maintenance tickets, reminders, documents, pricing history, audit trails) must use `restrictOnDelete` on their parent FK. This prevents hard-deleting a parent model while its business records still reference it. Soft-deletable parents (Property, Unit, Lease, Tenant) use `$model->delete()` which sets `deleted_at` — the FK constraint only fires on `forceDelete()` or raw SQL deletes. Child records themselves may be hard-deleted (e.g. MaintenanceTicket, TenantDocument) — the constraint protects the parent, not the child.
 
 **User audit references** (created_by, confirmed_by, recorded_by, etc.) use `nullOnDelete` — the record survives even if the user is hard-deleted.
 
-**Pivot tables and framework tables** use `cascadeOnDelete` — they are ephemeral metadata.
+**Framework pivot tables** (Spatie role/permission assignments, property_user) use `cascadeOnDelete` — they are ephemeral metadata. Domain pivot tables linking business records (e.g. `lease_tenant`) follow the same strategy as the business records they connect.
 
 The full FK inventory with per-constraint rationale is enforced by `tests/Feature/Schema/ForeignKeyDeleteStrategyTest.php`.
 
