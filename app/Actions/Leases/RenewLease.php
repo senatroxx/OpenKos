@@ -43,7 +43,7 @@ class RenewLease
                 ->exists();
 
             if ($existingActive) {
-                return RenewLeaseResult::error('Room already has an active lease.');
+                return RenewLeaseResult::error('Unit already has an active lease.');
             }
 
             $lease->update([

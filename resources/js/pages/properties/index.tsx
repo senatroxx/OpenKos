@@ -140,7 +140,7 @@ export default function Index({
         },
         {
             key: 'units_count',
-            label: 'Total Rooms',
+            label: 'Total Units',
             sortable: true,
             className: 'tabular-nums',
         },

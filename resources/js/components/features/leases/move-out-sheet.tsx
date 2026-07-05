@@ -109,7 +109,7 @@ export default function MoveOutSheet({
     const tenantName =
         lease?.primary_tenant?.name ?? lease?.tenants?.[0]?.name ?? 'Unknown';
     const tenantList = lease?.tenants ?? [];
-    const roomName = lease?.unit?.name ?? 'Unknown';
+    const unitLabel = lease?.unit?.name ?? 'Unknown';
     const isCurrentlyOccupied = Boolean(lease);
 
     if (!isCurrentlyOccupied) {
@@ -122,7 +122,7 @@ export default function MoveOutSheet({
                 <SheetHeader>
                     <SheetTitle>Move Out Tenant</SheetTitle>
                     <SheetDescription>
-                        {tenantName} · {roomName}
+                        {tenantName} · {unitLabel}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -148,7 +148,7 @@ export default function MoveOutSheet({
                                                     <span className="text-xs text-muted-foreground">
                                                         {t.pivot?.is_primary
                                                             ? 'Primary'
-                                                            : roomName}
+                                                            : unitLabel}
                                                     </span>
                                                 </div>
                                             ))
@@ -158,7 +158,7 @@ export default function MoveOutSheet({
                                                     {tenantName}
                                                 </span>
                                                 <span className="text-muted-foreground">
-                                                    {roomName}
+                                                    {unitLabel}
                                                 </span>
                                             </div>
                                         )}
