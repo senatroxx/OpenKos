@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\LeaseStatus;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Payment;
@@ -153,13 +154,13 @@ describe('Lease', function () {
     it('has active status by default', function () {
         $lease = Lease::factory()->create();
 
-        expect($lease->status)->toBe('active');
+        expect($lease->status)->toBe(LeaseStatus::Active);
     });
 
     it('can be terminated', function () {
         $lease = Lease::factory()->terminated()->create();
 
-        expect($lease->status)->toBe('terminated');
+        expect($lease->status)->toBe(LeaseStatus::Terminated);
         expect($lease->termination_date)->not->toBeNull();
         expect($lease->termination_reason)->not->toBeNull();
     });

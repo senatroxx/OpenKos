@@ -3,8 +3,11 @@
 namespace App\Actions\Leases;
 
 use App\Business\Leases\LeaseFinancialChecker;
+use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\RenewalEligibilityChecker;
 use App\Data\Lease\RenewLeaseData;
+use App\Enums\LeaseStatus;
+use App\Events\Lease\LeaseStatusChanged;
 use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
 use App\Models\Unit;
@@ -16,6 +19,7 @@ class RenewLease
     public function __construct(
         private readonly RenewalEligibilityChecker $eligibility,
         private readonly LeaseFinancialChecker $financial,
+        private readonly LeaseStatusValidator $leaseStatusValidator,
     ) {}
 
     public function execute(Lease $lease, RenewLeaseData $data): RenewLeaseResult
@@ -35,10 +39,14 @@ class RenewLease
         }
 
         return DB::transaction(function () use ($lease, $data) {
+            $oldStatus = $lease->status;
+
             $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
 
+            $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Renewed);
+
             $existingActive = $unit->leases()
-                ->where('status', 'active')
+                ->where('status', LeaseStatus::Active->value)
                 ->where('id', '!=', $lease->id)
                 ->exists();
 
@@ -47,8 +55,10 @@ class RenewLease
             }
 
             $lease->update([
-                'status' => 'renewed',
+                'status' => LeaseStatus::Renewed,
             ]);
+
+            LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Renewed);
 
             $newEndDate = $data->endDate;
 
@@ -65,7 +75,7 @@ class RenewLease
                 'rent_due_day' => $lease->rent_due_day,
                 'is_custom_price' => $lease->is_custom_price,
                 'unit_rate_id' => $lease->unit_rate_id,
-                'status' => 'active',
+                'status' => LeaseStatus::Active,
             ]);
 
             foreach ($lease->tenants as $tenant) {
