@@ -51,7 +51,7 @@ class BlockUnit
             'to_unit_id' => $targetUnit->id,
             'transferred_by' => auth()->id(),
             'reason' => 'maintenance',
-            'notes' => __('Room :from blocked for maintenance. Transfer to :to.', ['from' => $unit->name, 'to' => $targetUnit->name]),
+            'notes' => __('Unit :from blocked for maintenance. Transfer to :to.', ['from' => $unit->name, 'to' => $targetUnit->name]),
             'effective_date' => now(),
         ]);
 

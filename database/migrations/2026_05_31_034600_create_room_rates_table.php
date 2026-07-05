@@ -28,11 +28,11 @@ return new class extends Migration
         $rates = DB::table('units')
             ->whereNotNull('base_price')
             ->get()
-            ->map(fn ($room) => [
-                'unit_id' => $room->id,
+            ->map(fn ($row) => [
+                'unit_id' => $row->id,
                 'billing_interval' => 1,
                 'billing_unit' => 'month',
-                'amount' => $room->base_price,
+                'amount' => $row->base_price,
                 'is_active' => true,
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
