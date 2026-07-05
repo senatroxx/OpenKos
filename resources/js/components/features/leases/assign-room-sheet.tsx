@@ -1,6 +1,6 @@
 import { Form } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -116,18 +116,20 @@ export default function AssignRoomSheet({
     const [billingInterval, setBillingInterval] = useState('1');
     const [billingUnit, setBillingUnit] = useState('month');
     const [isCustom, setIsCustom] = useState(false);
+    const [prevRoomId, setPrevRoomId] = useState(selectedRoomId);
 
     // Reset the rate/rent fields to the newly selected room's default rate.
-    useEffect(() => {
-        const room = availableRooms.find((r) => r.id === selectedRoomId) ?? null;
-        const defaultRate = room?.active_rates?.[0] ?? null;
+    if (selectedRoomId !== prevRoomId) {
+        setPrevRoomId(selectedRoomId);
+
+        const defaultRate = selectedRoom?.active_rates?.[0] ?? null;
 
         setSelectedRateId(defaultRate?.id ?? null);
         setRentAmount(defaultRate?.amount ?? '');
         setBillingInterval(String(defaultRate?.billing_interval ?? 1));
         setBillingUnit(defaultRate?.billing_unit ?? 'month');
         setIsCustom(false);
-    }, [selectedRoomId, availableRooms]);
+    }
 
     const selectedRate = rates.find((r) => r.id === selectedRateId) ?? null;
 
@@ -141,13 +143,13 @@ export default function AssignRoomSheet({
         [rentAmount, billingInterval, billingUnit],
     );
 
-    const handleRateSelect = useCallback((rate: RoomRate) => {
+    function handleRateSelect(rate: RoomRate) {
         setSelectedRateId(rate.id ?? null);
         setRentAmount(rate.amount);
         setBillingInterval(String(rate.billing_interval));
         setBillingUnit(rate.billing_unit);
         setIsCustom(false);
-    }, []);
+    }
 
     const propertyOptions = useMemo(() => {
         const seen = new Set<number>();
@@ -180,11 +182,12 @@ export default function AssignRoomSheet({
 
     const roomOptions = filteredRooms.map((r) => {
         const spotsLeft = r.capacity - r.occupied_count;
-        const suffix = r.occupied_count > 0
-            ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
-            : r.capacity > 1
-                ? ` (capacity ${r.capacity})`
-                : '';
+        const suffix =
+            r.occupied_count > 0
+                ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+                : r.capacity > 1
+                  ? ` (capacity ${r.capacity})`
+                  : '';
 
         return {
             value: r.id,
@@ -420,13 +423,12 @@ export default function AssignRoomSheet({
                                                     setIsCustom(
                                                         Boolean(
                                                             selectedRate &&
+                                                            Number.parseFloat(
+                                                                e.target.value,
+                                                            ) !==
                                                                 Number.parseFloat(
-                                                                    e.target
-                                                                        .value,
-                                                                ) !==
-                                                                    Number.parseFloat(
-                                                                        selectedRate.amount,
-                                                                    ),
+                                                                    selectedRate.amount,
+                                                                ),
                                                         ),
                                                     );
                                                 }}

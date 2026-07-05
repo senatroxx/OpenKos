@@ -2,7 +2,6 @@ import { Form, router } from '@inertiajs/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -82,10 +81,18 @@ export default function PropertyTypes({
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b bg-muted/50 text-left text-muted-foreground">
-                                    <th className="px-4 py-3 font-medium">Label</th>
-                                    <th className="px-4 py-3 font-medium">Slug</th>
-                                    <th className="px-4 py-3 font-medium">In use</th>
-                                    <th className="px-4 py-3 font-medium">Active</th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Label
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Slug
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        In use
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
+                                        Active
+                                    </th>
                                     <th className="px-4 py-3 font-medium" />
                                 </tr>
                             </thead>
@@ -167,9 +174,7 @@ export default function PropertyTypes({
 
                     <div className="px-4">
                         <Form
-                            action={
-                                editing ? `${BASE}/${editing.slug}` : BASE
-                            }
+                            action={editing ? `${BASE}/${editing.slug}` : BASE}
                             method={editing ? 'patch' : 'post'}
                             onSuccess={() => setSheetOpen(false)}
                         >

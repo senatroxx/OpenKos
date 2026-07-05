@@ -21,7 +21,12 @@ export default function MoveRoomSheet({
 }: {
     property: { id: number; slug: string; name: string };
     currentRoom: { id: number; slug: string; name: string; capacity: number };
-    availableRooms: { id: number; name: string; capacity: number; occupied_count?: number }[];
+    availableRooms: {
+        id: number;
+        name: string;
+        capacity: number;
+        occupied_count?: number;
+    }[];
     lease: { id: number };
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -31,11 +36,12 @@ export default function MoveRoomSheet({
     const roomOptions = availableRooms.map((r) => {
         const occupiedCount = r.occupied_count ?? 0;
         const spotsLeft = r.capacity - occupiedCount;
-        const suffix = occupiedCount > 0
-            ? ` (${occupiedCount}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
-            : r.capacity > 1
-                ? ` (capacity ${r.capacity})`
-                : '';
+        const suffix =
+            occupiedCount > 0
+                ? ` (${occupiedCount}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+                : r.capacity > 1
+                  ? ` (capacity ${r.capacity})`
+                  : '';
 
         return {
             value: r.id,
