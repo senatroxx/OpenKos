@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Enums\LeaseStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
@@ -77,7 +79,7 @@ class LeaseSeeder extends Seeder
                 'deposit_amount' => fake()->randomElement([500_000, 1_000_000, 1_500_000]),
                 'deposit_paid_at' => $startDate,
                 'rent_due_day' => fake()->randomElement([1, 5, 10, 15, 20, 25]),
-                'status' => 'active',
+                'status' => LeaseStatus::Active,
                 'notes' => null,
             ]);
 
@@ -117,7 +119,7 @@ class LeaseSeeder extends Seeder
                 'deposit_amount' => fake()->randomElement([500_000, 1_000_000, 1_500_000]),
                 'deposit_paid_at' => $startDate,
                 'rent_due_day' => fake()->randomElement([1, 5, 10, 15, 20, 25]),
-                'status' => 'active',
+                'status' => LeaseStatus::Active,
                 'notes' => null,
             ]);
 
@@ -162,7 +164,7 @@ class LeaseSeeder extends Seeder
                 'deposit_refund_amount' => fake()->randomElement([null, 500_000, 1_000_000]),
                 'deposit_refunded_at' => fake()->randomElement([null, $endDate]),
                 'rent_due_day' => fake()->randomElement([1, 5, 10]),
-                'status' => 'terminated',
+                'status' => LeaseStatus::Terminated,
                 'termination_date' => $endDate,
                 'termination_reason' => fake()->randomElement([
                     'move_out', 'contract_ended', 'mutual_agreement',
@@ -174,7 +176,7 @@ class LeaseSeeder extends Seeder
         }
 
         // Ensure dashboard rent status coverage, then create payments for the rest
-        $activeLeases = Lease::where('status', 'active')->get();
+        $activeLeases = Lease::where('status', LeaseStatus::Active->value)->get();
         $today = (int) $now->day;
 
         if ($activeLeases->isNotEmpty()) {
@@ -195,13 +197,13 @@ class LeaseSeeder extends Seeder
                     'period_start' => $now->copy()->startOfMonth(),
                     'period_end' => $now->copy()->endOfMonth(),
                     'payment_method' => 'cash',
-                    'status' => 'confirmed',
+                    'status' => PaymentStatus::Confirmed,
                 ]);
             }
         }
 
         Unit::query()
-            ->whereIn('id', Lease::where('status', 'active')->pluck('unit_id'))
+            ->whereIn('id', Lease::where('status', LeaseStatus::Active->value)->pluck('unit_id'))
             ->update(['status' => UnitStatus::Occupied->value]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Actions\Maintenance;
 
+use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
@@ -32,7 +33,7 @@ class ResolveTicket
             $this->moveOccupantsBack($ticket, $unit);
         }
 
-        $hasActiveLease = $unit->leases()->where('status', 'active')->exists();
+        $hasActiveLease = $unit->leases()->where('status', LeaseStatus::Active->value)->exists();
         $newUnitStatus = $hasActiveLease ? UnitStatus::Occupied : UnitStatus::Available;
         $unit->update(['status' => $newUnitStatus]);
     }
@@ -49,7 +50,7 @@ class ResolveTicket
             return;
         }
 
-        $movedLease = Lease::where('status', 'active')
+        $movedLease = Lease::where('status', LeaseStatus::Active->value)
             ->where('unit_id', $transfer->to_unit_id)
             ->first();
 
@@ -58,7 +59,7 @@ class ResolveTicket
         }
 
         $targetHasLease = $unit->leases()
-            ->where('status', 'active')
+            ->where('status', LeaseStatus::Active->value)
             ->whereKeyNot($movedLease->id)
             ->exists();
 
@@ -86,7 +87,7 @@ class ResolveTicket
         ]);
 
         $targetUnit = Unit::lockForUpdate()->findOrFail($transfer->to_unit_id);
-        $targetUnitStillOccupied = $targetUnit->leases()->where('status', 'active')->exists();
+        $targetUnitStillOccupied = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->exists();
         $targetUnit->update(['status' => $targetUnitStillOccupied ? UnitStatus::Occupied : UnitStatus::Available]);
     }
 }

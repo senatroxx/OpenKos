@@ -2,6 +2,7 @@
 
 namespace App\Business\Leases;
 
+use App\Enums\LeaseStatus;
 use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
 
@@ -9,7 +10,7 @@ class RenewalEligibilityChecker
 {
     public function canRenew(Lease $lease): bool
     {
-        return $lease->status === 'active'
+        return $lease->status === LeaseStatus::Active
             && $lease->end_date !== null;
     }
 

@@ -1,6 +1,15 @@
 import { Link, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Sheet,
     SheetContent,
@@ -23,16 +32,25 @@ export default function PropertyDetailSheet({
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
 }) {
+    const [archiveConfirm, setArchiveConfirm] = useState(false);
+
     function archive() {
         if (!property) {
             return;
         }
 
-        if (confirm('Are you sure you want to archive this property?')) {
-            router.delete(properties.destroy.url(property), {
-                onSuccess: () => onOpenChange(false),
-            });
+        setArchiveConfirm(true);
+    }
+
+    function confirmArchive() {
+        if (!property) {
+            return;
         }
+
+        router.delete(properties.destroy.url(property), {
+            onSuccess: () => onOpenChange(false),
+        });
+        setArchiveConfirm(false);
     }
 
     const city =
@@ -185,6 +203,38 @@ export default function PropertyDetailSheet({
                     </div>
                 )}
             </SheetContent>
+
+            <Dialog
+                open={archiveConfirm}
+                onOpenChange={setArchiveConfirm}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Archive property</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to archive{' '}
+                            <span className="font-medium">
+                                {property?.name}
+                            </span>
+                            ?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setArchiveConfirm(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmArchive}
+                        >
+                            Archive
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Sheet>
     );
 }
