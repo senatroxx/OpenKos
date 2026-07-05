@@ -10,6 +10,7 @@ use App\Models\Property;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -40,6 +41,9 @@ class RentController extends Controller
 
         $statsResult = $stats->computeStats($allActive, $today, $currentMonth, $currentYear);
 
+        $periodStart = Carbon::create($currentYear, $currentMonth, 1)->startOfDay();
+        $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay();
+
         $table = Table::make()
             ->columns([
                 Column::make('tenant_name', 'Tenant')->searchable(function (Builder $q, string $search): void {
@@ -59,18 +63,16 @@ class RentController extends Controller
                     ['value' => 'due_soon', 'label' => 'Due Soon'],
                     ['value' => 'paid', 'label' => 'Paid'],
                 ])
-                    ->query(function (Builder $q, string $value) use ($today, $currentMonth, $currentYear): void {
+                    ->query(function (Builder $q, string $value) use ($today, $periodStart, $periodEnd): void {
                         $hasPayment = fn (Builder $q) => $q->whereHas('payments', fn (Builder $q) => $q
                             ->where('paymentable_type', Lease::class)
                             ->whereNotIn('status', ['cancelled'])
-                            ->whereMonth('period_start', $currentMonth)
-                            ->whereYear('period_start', $currentYear));
+                            ->whereBetween('period_start', [$periodStart, $periodEnd]));
 
                         $noPayment = fn (Builder $q) => $q->whereDoesntHave('payments', fn (Builder $q) => $q
                             ->where('paymentable_type', Lease::class)
                             ->whereNotIn('status', ['cancelled'])
-                            ->whereMonth('period_start', $currentMonth)
-                            ->whereYear('period_start', $currentYear));
+                            ->whereBetween('period_start', [$periodStart, $periodEnd]));
 
                         match ($value) {
                             'paid' => $hasPayment($q),
@@ -104,8 +106,7 @@ class RentController extends Controller
                 ->whereColumn('paymentable_id', 'leases.id')
                 ->where('paymentable_type', Lease::class)
                 ->whereNotIn('status', ['cancelled'])
-                ->whereMonth('period_start', $currentMonth)
-                ->whereYear('period_start', $currentYear),
+                ->whereBetween('period_start', [$periodStart, $periodEnd]),
             ]);
 
         $result = $table->paginate($query, $request, 'entries');
