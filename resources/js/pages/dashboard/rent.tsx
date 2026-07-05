@@ -94,9 +94,9 @@ export default function Rent({
             render: (entry) => entry.tenant_name,
         },
         {
-            key: 'room_name',
-            label: 'Room',
-            render: (entry) => entry.room_name,
+            key: 'unit_name',
+            label: 'Unit',
+            render: (entry) => entry.unit_name,
         },
         {
             key: 'property_name',
@@ -219,7 +219,7 @@ export default function Rent({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search tenant, room, property..."
+                            placeholder="Search tenant, unit, property..."
                         />
                     }
                 />

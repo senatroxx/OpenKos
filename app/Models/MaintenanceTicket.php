@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'property_id',
-    'room_id',
+    'unit_id',
     'location',
     'title',
     'description',
@@ -63,9 +63,9 @@ class MaintenanceTicket extends Model
         return $this->belongsTo(Property::class);
     }
 
-    public function room(): BelongsTo
+    public function unit(): BelongsTo
     {
-        return $this->belongsTo(Room::class);
+        return $this->belongsTo(Unit::class);
     }
 
     public function assignee(): BelongsTo

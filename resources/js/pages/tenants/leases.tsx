@@ -4,7 +4,7 @@ import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { PaginatedData, RoomWithProperty, TableMeta } from '@/types';
+import type { PaginatedData, UnitWithProperty, TableMeta } from '@/types';
 import type { WorkspaceTenant } from './layout';
 import { TenantLayout } from './layout';
 
@@ -15,7 +15,7 @@ type LeaseRow = {
     end_date: string | null;
     rent_amount: string;
     status: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
 };
 
 const columns: TableColumn<LeaseRow>[] = [
@@ -28,11 +28,11 @@ const columns: TableColumn<LeaseRow>[] = [
     },
     {
         key: '_room',
-        label: 'Room',
+        label: 'Unit',
         className: 'font-medium',
         render: (l) =>
-            l.room
-                ? `${l.room.name}${l.room.property ? ` — ${l.room.property.name}` : ''}`
+            l.unit
+                ? `${l.unit.name}${l.unit.property ? ` — ${l.unit.property.name}` : ''}`
                 : '—',
     },
     {
@@ -105,7 +105,7 @@ export default function TenantLeases({
                     perPage={per_page}
                     filterValues={{ status }}
                     defaultSort="-start_date"
-                    searchPlaceholder="Search by reference or room..."
+                    searchPlaceholder="Search by reference or unit..."
                     emptyMessage="No leases for this tenant yet."
                     onRowClick={(l) => router.get(`/leases/${l.id}`)}
                 />

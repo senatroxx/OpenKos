@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
-import type { RoomWithProperty, TenantInfo } from '@/types';
+import type { UnitWithProperty, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -18,7 +18,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -107,8 +107,8 @@ export default function TenantDetailSheet({
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium">
-                                                {activeLease.room?.name ??
-                                                    'Unknown Room'}
+                                                {activeLease.unit?.name ??
+                                                    'Unknown Unit'}
                                             </span>
                                             <span className="text-xs font-mono text-muted-foreground">
                                                 {activeLease.reference}
@@ -116,7 +116,7 @@ export default function TenantDetailSheet({
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm text-muted-foreground">
-                                                {activeLease.room?.property
+                                                {activeLease.unit?.property
                                                     ?.name ??
                                                     'Unknown Property'}
                                             </span>
@@ -283,7 +283,7 @@ export default function TenantDetailSheet({
                                 <>
                                     {!activeLease && onAssignToRoom && (
                                         <Button onClick={onAssignToRoom}>
-                                            Assign to Room
+                                            Assign to Unit
                                         </Button>
                                     )}
                                     {activeLease && onMoveOut && (

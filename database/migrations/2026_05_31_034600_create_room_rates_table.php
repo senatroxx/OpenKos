@@ -10,9 +10,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('room_rates', function (Blueprint $table) {
+        Schema::create('unit_rates', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('unit_id')->constrained()->cascadeOnDelete();
             $table->unsignedTinyInteger('billing_interval');
             $table->string('billing_unit');
             $table->decimal('amount', 12, 2);
@@ -21,15 +21,15 @@ return new class extends Migration
             $table->date('effective_until')->nullable();
             $table->timestamps();
 
-            $table->unique(['room_id', 'billing_interval', 'billing_unit']);
+            $table->unique(['unit_id', 'billing_interval', 'billing_unit']);
         });
 
         $timestamp = Carbon::now();
-        $rates = DB::table('rooms')
+        $rates = DB::table('units')
             ->whereNotNull('base_price')
             ->get()
             ->map(fn ($room) => [
-                'room_id' => $room->id,
+                'unit_id' => $room->id,
                 'billing_interval' => 1,
                 'billing_unit' => 'month',
                 'amount' => $room->base_price,
@@ -40,12 +40,12 @@ return new class extends Migration
             ->toArray();
 
         if (! empty($rates)) {
-            DB::table('room_rates')->insert($rates);
+            DB::table('unit_rates')->insert($rates);
         }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('room_rates');
+        Schema::dropIfExists('unit_rates');
     }
 };

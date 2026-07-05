@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Lease;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +18,7 @@ class LeaseFactory extends Factory
     {
         return [
             'primary_tenant_id' => Tenant::factory(),
-            'room_id' => Room::factory(),
+            'unit_id' => Unit::factory(),
             'start_date' => fake()->dateTimeBetween('-6 months', 'now'),
             'end_date' => null,
             'rent_amount' => null,

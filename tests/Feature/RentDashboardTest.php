@@ -2,8 +2,8 @@
 
 use App\Models\Lease;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Support\Carbon;
@@ -224,7 +224,7 @@ test('rent dashboard scopes to user properties for non-owner', function () {
     $propertyA = Property::factory()->create();
     $tenantA = Tenant::factory()->create();
     Lease::factory()->create([
-        'room_id' => Room::factory()->create(['property_id' => $propertyA->id])->id,
+        'unit_id' => Unit::factory()->create(['property_id' => $propertyA->id])->id,
         'primary_tenant_id' => $tenantA->id,
         'start_date' => now()->subMonths(2),
         'rent_due_day' => 5,
@@ -233,7 +233,7 @@ test('rent dashboard scopes to user properties for non-owner', function () {
     $propertyB = Property::factory()->create();
     $tenantB = Tenant::factory()->create();
     Lease::factory()->create([
-        'room_id' => Room::factory()->create(['property_id' => $propertyB->id])->id,
+        'unit_id' => Unit::factory()->create(['property_id' => $propertyB->id])->id,
         'primary_tenant_id' => $tenantB->id,
         'start_date' => now()->subMonths(2),
         'rent_due_day' => 3,

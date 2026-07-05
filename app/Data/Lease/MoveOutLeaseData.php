@@ -11,8 +11,8 @@ final readonly class MoveOutLeaseData
         public bool $depositReturned = false,
         public ?int $depositRefundAmount = null,
         public ?string $notes = null,
-        public bool $moveToAnotherRoom = false,
-        public ?int $targetRoomId = null,
+        public bool $moveToAnotherUnit = false,
+        public ?int $targetUnitId = null,
         public bool $carryDepositRefund = false,
     ) {}
 }

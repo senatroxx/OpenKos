@@ -19,11 +19,11 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import leases from '@/routes/leases';
-import type { AvailableRoom, LeaseData } from '@/types';
+import type { AvailableUnit, LeaseData } from '@/types';
 
 const REASONS = [
     { value: 'contract_ended', label: 'Contract ended' },
-    { value: 'moved_room', label: 'Moved room' },
+    { value: 'moved_room', label: 'Moved unit' },
     { value: 'left_early', label: 'Left early' },
     { value: 'evicted', label: 'Evicted' },
     { value: 'other', label: 'Other' },
@@ -31,31 +31,31 @@ const REASONS = [
 
 export default function MoveOutSheet({
     lease,
-    availableRooms,
+    availableUnits,
     open,
     onOpenChange,
     onClose,
 }: {
     lease?: LeaseData | null;
-    availableRooms?: AvailableRoom[];
+    availableUnits?: AvailableUnit[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onClose?: () => void;
 }) {
     const [reason, setReason] = useState('');
     const [depositReturned, setDepositReturned] = useState<string | null>(null);
-    const [moveToAnotherRoom, setMoveToAnotherRoom] = useState(false);
+    const [moveToAnotherUnit, setMoveToAnotherUnit] = useState(false);
     const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
         null,
     );
-    const [selectedTargetRoomId, setSelectedTargetRoomId] = useState<
+    const [selectedTargetUnitId, setSelectedTargetUnitId] = useState<
         number | null
     >(null);
 
     const propertyOptions = useMemo(() => {
         const seen = new Set<number>();
 
-        return (availableRooms ?? [])
+        return (availableUnits ?? [])
             .filter((r) => {
                 if (seen.has(r.property_id)) {
                     return false;
@@ -69,19 +69,19 @@ export default function MoveOutSheet({
                 propertyId: r.property_id,
                 label: `${r.property?.name ?? 'Unknown'} — ${r.property?.city?.name ?? ''}`,
             }));
-    }, [availableRooms]);
+    }, [availableUnits]);
 
-    const filteredRooms = useMemo(
+    const filteredUnits = useMemo(
         () =>
             selectedPropertyId
-                ? (availableRooms ?? []).filter(
+                ? (availableUnits ?? []).filter(
                       (r) => r.property_id === selectedPropertyId,
                   )
                 : [],
-        [availableRooms, selectedPropertyId],
+        [availableUnits, selectedPropertyId],
     );
 
-    const targetRoomOptions = filteredRooms.map((r) => {
+    const targetUnitOptions = filteredUnits.map((r) => {
         const spotsLeft = r.capacity - r.occupied_count;
         const suffix = r.occupied_count > 0
             ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
@@ -97,7 +97,7 @@ export default function MoveOutSheet({
 
     function handlePropertyChange(val: number | string | null) {
         setSelectedPropertyId(val as number | null);
-        setSelectedTargetRoomId(null);
+        setSelectedTargetUnitId(null);
     }
 
     function handleClose() {
@@ -109,7 +109,7 @@ export default function MoveOutSheet({
         ?? lease?.tenants?.[0]?.name
         ?? 'Unknown';
     const tenantList = lease?.tenants ?? [];
-    const roomName = lease?.room?.name ?? 'Unknown';
+    const roomName = lease?.unit?.name ?? 'Unknown';
     const isCurrentlyOccupied = Boolean(lease);
 
     if (!isCurrentlyOccupied) {
@@ -282,26 +282,26 @@ export default function MoveOutSheet({
                                 <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
                                     <input
                                         type="checkbox"
-                                        checked={moveToAnotherRoom}
+                                        checked={moveToAnotherUnit}
                                         onChange={(e) => {
-                                            setMoveToAnotherRoom(
+                                            setMoveToAnotherUnit(
                                                 e.target.checked,
                                             );
 
                                             if (!e.target.checked) {
                                                 setSelectedPropertyId(null);
-                                                setSelectedTargetRoomId(null);
+                                                setSelectedTargetUnitId(null);
                                             }
                                         }}
                                         className="mt-0.5 size-4"
                                     />
                                     <div>
                                         <span className="font-medium">
-                                            Moving to another room?
+                                            Moving to another unit?
                                         </span>
                                         <p className="text-xs text-muted-foreground">
                                             Terminate this lease and create a
-                                            new one in a different room. Deposit
+                                            new one in a different unit. Deposit
                                             carries forward.
                                         </p>
                                     </div>
@@ -309,11 +309,11 @@ export default function MoveOutSheet({
 
                                 <input
                                     type="hidden"
-                                    name="move_to_another_room"
-                                    value={moveToAnotherRoom ? '1' : '0'}
+                                    name="move_to_another_unit"
+                                    value={moveToAnotherUnit ? '1' : '0'}
                                 />
 
-                                {moveToAnotherRoom && (
+                                {moveToAnotherUnit && (
                                     <div className="space-y-3 rounded-md border p-3">
                                         <div className="grid gap-2">
                                             <Label>Property</Label>
@@ -328,41 +328,41 @@ export default function MoveOutSheet({
                                                 onChange={handlePropertyChange}
                                                 placeholder="Select property..."
                                                 searchPlaceholder="Search property..."
-                                                emptyText="No available rooms."
+                                                emptyText="No available units."
                                             />
                                         </div>
 
                                         <div className="grid gap-2">
-                                            <Label>Target Room</Label>
+                                            <Label>Target Unit</Label>
                                             <input
                                                 type="hidden"
-                                                name="target_room_id"
+                                                name="target_unit_id"
                                                 value={
-                                                    selectedTargetRoomId ?? ''
+                                                    selectedTargetUnitId ?? ''
                                                 }
                                             />
                                             <SearchableSelect
                                                 key={
                                                     selectedPropertyId ?? 'none'
                                                 }
-                                                options={targetRoomOptions}
-                                                value={selectedTargetRoomId}
+                                                options={targetUnitOptions}
+                                                value={selectedTargetUnitId}
                                                 onChange={(val) =>
-                                                    setSelectedTargetRoomId(
+                                                    setSelectedTargetUnitId(
                                                         val as number | null,
                                                     )
                                                 }
                                                 placeholder={
                                                     selectedPropertyId
-                                                        ? 'Select room...'
+                                                        ? 'Select unit...'
                                                         : 'Choose a property first'
                                                 }
-                                                searchPlaceholder="Search room..."
-                                                emptyText="No available rooms."
+                                                searchPlaceholder="Search unit..."
+                                                emptyText="No available units."
                                                 disabled={!selectedPropertyId}
                                             />
                                             <InputError
-                                                message={errors.target_room_id}
+                                                message={errors.target_unit_id}
                                             />
                                         </div>
                                     </div>

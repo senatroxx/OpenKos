@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { RoomWithProperty, TenantInfo } from '@/types';
+import type { UnitWithProperty, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -8,7 +8,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -49,11 +49,11 @@ export default function TenantOverview({ tenant }: { tenant: Tenant }) {
                 {activeLease ? (
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{activeLease.room?.name ?? 'Unknown Room'}</span>
+                            <span className="text-sm font-medium">{activeLease.unit?.name ?? 'Unknown Unit'}</span>
                             <span className="text-xs font-mono text-muted-foreground">{activeLease.reference}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">{activeLease.room?.property?.name ?? 'Unknown Property'}</span>
+                            <span className="text-muted-foreground">{activeLease.unit?.property?.name ?? 'Unknown Property'}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">

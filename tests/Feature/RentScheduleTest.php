@@ -3,8 +3,8 @@
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RegionAndCitySeeder;
@@ -18,11 +18,11 @@ uses()->beforeEach(function () {
 function createScheduleLease(array $overrides = [])
 {
     $property = Property::factory()->create();
-    $room = Room::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create();
     $tenant = Tenant::factory()->create();
 
     return Lease::factory()->create(array_merge([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'primary_tenant_id' => $tenant->id,
         'start_date' => '2026-05-24',
         'rent_amount' => 1_500_000,
@@ -180,10 +180,10 @@ it('authorizes schedule view for owner on property', function () {
     $property = Property::factory()->create();
     $user->properties()->attach($property);
 
-    $room = Room::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create();
     $tenant = Tenant::factory()->create();
     $lease = Lease::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'primary_tenant_id' => $tenant->id,
         'start_date' => '2026-05-24',
         'rent_amount' => 1_500_000,

@@ -16,9 +16,9 @@ const DUE_DAY_LABELS: Record<number, string> = {
 
 export default function LeaseOverview({ lease }: { lease: Lease }) {
     const isActive = lease.status === 'active';
-    const roomName = lease.room?.name ?? '—';
-    const propertyName = lease.room?.property?.name ?? '—';
-    const city = lease.room?.property?.city;
+    const roomName = lease.unit?.name ?? '—';
+    const propertyName = lease.unit?.property?.name ?? '—';
+    const city = lease.unit?.property?.city;
     const propertyCity = city && typeof city === 'object' ? city.name : city ?? '';
 
     return (
@@ -63,7 +63,7 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                 </div>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">Room</span>
+                                <span className="text-sm text-muted-foreground">Unit</span>
                                 <span className="text-sm">{roomName}</span>
                             </div>
                             <div className="flex items-center justify-between">

@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\MaintenanceTicket;
-use App\Models\Room;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,9 +16,9 @@ class MaintenanceTicketFactory extends Factory
     public function definition(): array
     {
         return [
-            'room_id' => Room::factory(),
+            'unit_id' => Unit::factory(),
             'property_id' => function (array $attributes) {
-                return Room::find($attributes['room_id'])?->property_id;
+                return Unit::find($attributes['unit_id'])?->property_id;
             },
             'title' => fake()->sentence(4),
             'description' => fake()->paragraph(),

@@ -14,7 +14,7 @@ type LeaseRow = {
     end_date: string | null;
     rent_amount: string;
     status: string;
-    room: { id: number; name: string } | null;
+    unit: { id: number; name: string } | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -34,9 +34,9 @@ const columns: TableColumn<LeaseRow>[] = [
     },
     {
         key: '_room',
-        label: 'Room',
+        label: 'Unit',
         className: 'font-medium',
-        render: (l) => l.room?.name ?? '—',
+        render: (l) => l.unit?.name ?? '—',
     },
     {
         key: '_tenants',
@@ -125,7 +125,7 @@ export default function PropertyLeases({
                     perPage={per_page}
                     filterValues={{ status }}
                     defaultSort="-start_date"
-                    searchPlaceholder="Search by reference, tenant, or room..."
+                    searchPlaceholder="Search by reference, tenant, or unit..."
                     emptyMessage="No leases for this property yet."
                     onRowClick={(l) => router.get(`/leases/${l.id}`)}
                 />
