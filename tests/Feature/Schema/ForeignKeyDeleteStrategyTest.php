@@ -11,25 +11,37 @@ use Illuminate\Support\Facades\DB;
  */
 $expected = [
     // RESTRICT — historical business records, block parent force-delete
-    'leases' => ['unit_id' => 'RESTRICT'],
+    'leases' => [
+        'unit_id' => 'RESTRICT',
+        'primary_tenant_id' => 'SET NULL',
+        'unit_rate_id' => 'SET NULL',
+        'previous_lease_id' => 'SET NULL',
+    ],
     'lease_tenant' => ['lease_id' => 'RESTRICT', 'tenant_id' => 'RESTRICT'],
-    'lease_unit_histories' => ['lease_id' => 'RESTRICT', 'from_unit_id' => 'RESTRICT', 'to_unit_id' => 'RESTRICT'],
+    'lease_unit_histories' => [
+        'lease_id' => 'RESTRICT',
+        'from_unit_id' => 'RESTRICT',
+        'to_unit_id' => 'RESTRICT',
+        'transferred_by' => 'SET NULL',
+    ],
     'reminder_logs' => ['lease_id' => 'RESTRICT'],
     'tenant_documents' => ['tenant_id' => 'RESTRICT'],
     'unit_rates' => ['unit_id' => 'RESTRICT'],
-    'maintenance_tickets' => ['property_id' => 'RESTRICT'],
+    'maintenance_tickets' => [
+        'property_id' => 'RESTRICT',
+        'unit_id' => 'SET NULL',
+        'assigned_to' => 'SET NULL',
+        'created_by' => 'SET NULL',
+    ],
     'units' => ['property_id' => 'RESTRICT'],
     'cities' => ['region_id' => 'RESTRICT'],
 
     // SET NULL — nullable audit/user references, record survives
-    'lease_unit_histories' => ['transferred_by' => 'SET NULL'],
-    'leases' => ['primary_tenant_id' => 'SET NULL', 'unit_rate_id' => 'SET NULL', 'previous_lease_id' => 'SET NULL'],
-    'maintenance_tickets' => ['unit_id' => 'SET NULL', 'assigned_to' => 'SET NULL', 'created_by' => 'SET NULL'],
     'payments' => ['confirmed_by' => 'SET NULL', 'recorded_by' => 'SET NULL', 'verified_by' => 'SET NULL'],
     'properties' => ['region_id' => 'SET NULL', 'city_id' => 'SET NULL'],
     'tenants' => ['user_id' => 'SET NULL'],
 
-    // CASCADE — auth, framework, pivot, dependent content
+    // CASCADE — framework pivots, dependent content
     'passkeys' => ['user_id' => 'CASCADE'],
     'model_has_permissions' => ['permission_id' => 'CASCADE'],
     'model_has_roles' => ['role_id' => 'CASCADE'],
@@ -49,6 +61,13 @@ it('every foreign key matches its declared delete strategy', function () use ($e
             $actualStrategy = $actual[$table][$column] ?? null;
             expect($actualStrategy)
                 ->toBe($expectedStrategy, "{$table}.{$column}: expected {$expectedStrategy}, got {$actualStrategy}");
+        }
+    }
+
+    foreach ($actual as $table => $columns) {
+        expect(isset($expected[$table]))->toBeTrue("Unexpected FK entry for table: {$table}");
+        foreach ($columns as $column => $actualStrategy) {
+            expect(isset($expected[$table][$column]))->toBeTrue("Unexpected FK {$table}.{$column}");
         }
     }
 });
