@@ -35,7 +35,15 @@ type Tenant = {
     deleted_at: string | null;
     active_leases_count: number;
     leases?: Lease[];
-    documents?: { id: number; type: string; original_name: string; size: number; mime_type: string; created_at: string; download_url: string }[];
+    documents?: {
+        id: number;
+        type: string;
+        original_name: string;
+        size: number;
+        mime_type: string;
+        created_at: string;
+        download_url: string;
+    }[];
 };
 
 export default function TenantDetailSheet({
@@ -72,7 +80,10 @@ export default function TenantDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg" expandTo={tenant ? tenants.show.url(tenant) : undefined}>
+            <SheetContent
+                className="sm:max-w-lg"
+                expandTo={tenant ? tenants.show.url(tenant) : undefined}
+            >
                 <SheetHeader>
                     <SheetTitle>{tenant?.name}</SheetTitle>
                     <SheetDescription>Tenant details</SheetDescription>
@@ -110,7 +121,7 @@ export default function TenantDetailSheet({
                                                 {activeLease.unit?.name ??
                                                     'Unknown Unit'}
                                             </span>
-                                            <span className="text-xs font-mono text-muted-foreground">
+                                            <span className="font-mono text-xs text-muted-foreground">
                                                 {activeLease.reference}
                                             </span>
                                         </div>

@@ -32,9 +32,21 @@ export function LeaseLayout({
                 activeTab={activeTab}
                 hrefParams={{ id: lease.id }}
                 tabs={[
-                    { key: 'overview', label: 'Overview', href: `/leases/${lease.id}` },
-                    { key: 'payments', label: 'Payments', href: `/leases/${lease.id}/payments` },
-                    { key: 'documents', label: 'Documents', href: `/leases/${lease.id}/documents` },
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/leases/${lease.id}`,
+                    },
+                    {
+                        key: 'payments',
+                        label: 'Payments',
+                        href: `/leases/${lease.id}/payments`,
+                    },
+                    {
+                        key: 'documents',
+                        label: 'Documents',
+                        href: `/leases/${lease.id}/documents`,
+                    },
                 ]}
             />
 

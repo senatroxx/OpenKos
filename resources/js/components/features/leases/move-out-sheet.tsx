@@ -83,11 +83,12 @@ export default function MoveOutSheet({
 
     const targetUnitOptions = filteredUnits.map((r) => {
         const spotsLeft = r.capacity - r.occupied_count;
-        const suffix = r.occupied_count > 0
-            ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
-            : r.capacity > 1
-                ? ` (capacity ${r.capacity})`
-                : '';
+        const suffix =
+            r.occupied_count > 0
+                ? ` (${r.occupied_count}/${r.capacity} occupied, ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left)`
+                : r.capacity > 1
+                  ? ` (capacity ${r.capacity})`
+                  : '';
 
         return {
             value: r.id,
@@ -105,9 +106,8 @@ export default function MoveOutSheet({
         onClose?.();
     }
 
-    const tenantName = lease?.primary_tenant?.name
-        ?? lease?.tenants?.[0]?.name
-        ?? 'Unknown';
+    const tenantName =
+        lease?.primary_tenant?.name ?? lease?.tenants?.[0]?.name ?? 'Unknown';
     const tenantList = lease?.tenants ?? [];
     const roomName = lease?.unit?.name ?? 'Unknown';
     const isCurrentlyOccupied = Boolean(lease);
@@ -136,32 +136,32 @@ export default function MoveOutSheet({
                             <div className="space-y-6 pt-4">
                                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
                                     <div className="space-y-1">
-                                        {tenantList.length > 0
-                                            ? tenantList.map((t) => (
-                                                  <div
-                                                      key={t.id}
-                                                      className="flex items-center justify-between"
-                                                  >
-                                                      <span className="font-medium">
-                                                          {t.name}
-                                                      </span>
-                                                      <span className="text-xs text-muted-foreground">
-                                                          {t.pivot?.is_primary
-                                                              ? 'Primary'
-                                                              : roomName}
-                                                      </span>
-                                                  </div>
-                                              ))
-                                            : (
-                                                <div className="flex items-center justify-between">
+                                        {tenantList.length > 0 ? (
+                                            tenantList.map((t) => (
+                                                <div
+                                                    key={t.id}
+                                                    className="flex items-center justify-between"
+                                                >
                                                     <span className="font-medium">
-                                                        {tenantName}
+                                                        {t.name}
                                                     </span>
-                                                    <span className="text-muted-foreground">
-                                                        {roomName}
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {t.pivot?.is_primary
+                                                            ? 'Primary'
+                                                            : roomName}
                                                     </span>
                                                 </div>
-                                            )}
+                                            ))
+                                        ) : (
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium">
+                                                    {tenantName}
+                                                </span>
+                                                <span className="text-muted-foreground">
+                                                    {roomName}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

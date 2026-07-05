@@ -231,7 +231,9 @@ export default function Index({
                         align="end"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <DropdownMenuItem onClick={() => router.visit(`/users/${u.id}`)}>
+                        <DropdownMenuItem
+                            onClick={() => router.visit(`/users/${u.id}`)}
+                        >
                             <Eye className="size-4" />
                             View
                         </DropdownMenuItem>

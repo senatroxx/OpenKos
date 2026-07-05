@@ -13,7 +13,11 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
     );
 }
 
-export default function MaintenanceTicketWorkspace({ ticket }: { ticket: MaintenanceTicket }) {
+export default function MaintenanceTicketWorkspace({
+    ticket,
+}: {
+    ticket: MaintenanceTicket;
+}) {
     return (
         <EntityWorkspaceLayout
             title={ticket.title}
@@ -28,7 +32,11 @@ export default function MaintenanceTicketWorkspace({ ticket }: { ticket: Mainten
                 activeTab="overview"
                 hrefParams={{ id: ticket.id }}
                 tabs={[
-                    { key: 'overview', label: 'Overview', href: `/maintenance-tickets/${ticket.id}` },
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/maintenance-tickets/${ticket.id}`,
+                    },
                 ]}
             />
 
@@ -40,20 +48,34 @@ export default function MaintenanceTicketWorkspace({ ticket }: { ticket: Mainten
 
                 <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 md:grid-cols-4">
                     <Field label="Property" value={ticket.property?.name} />
-                    <Field label="Unit" value={ticket.unit?.name ?? ticket.location} />
+                    <Field
+                        label="Unit"
+                        value={ticket.unit?.name ?? ticket.location}
+                    />
                     <Field label="Assigned to" value={ticket.assignee?.name} />
                     <Field label="Reported by" value={ticket.creator?.name} />
                     <Field label="Cost" value={ticket.cost} />
-                    <Field label="Created" value={new Date(ticket.created_at).toLocaleDateString()} />
+                    <Field
+                        label="Created"
+                        value={new Date(ticket.created_at).toLocaleDateString()}
+                    />
                     <Field
                         label="Resolved"
-                        value={ticket.resolved_at ? new Date(ticket.resolved_at).toLocaleDateString() : '—'}
+                        value={
+                            ticket.resolved_at
+                                ? new Date(
+                                      ticket.resolved_at,
+                                  ).toLocaleDateString()
+                                : '—'
+                        }
                     />
                 </div>
 
                 {ticket.description && (
                     <div>
-                        <p className="mb-2 text-xs text-muted-foreground">Description</p>
+                        <p className="mb-2 text-xs text-muted-foreground">
+                            Description
+                        </p>
                         <p className="rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
                             {ticket.description}
                         </p>
@@ -62,7 +84,9 @@ export default function MaintenanceTicketWorkspace({ ticket }: { ticket: Mainten
 
                 {ticket.resolution_notes && (
                     <div>
-                        <p className="mb-2 text-xs text-muted-foreground">Resolution notes</p>
+                        <p className="mb-2 text-xs text-muted-foreground">
+                            Resolution notes
+                        </p>
                         <p className="rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
                             {ticket.resolution_notes}
                         </p>

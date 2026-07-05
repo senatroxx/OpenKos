@@ -1,5 +1,14 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { Ban, Check, EllipsisVertical, Eye, Pencil, Play, Trash2, UserPlus } from 'lucide-react';
+import {
+    Ban,
+    Check,
+    EllipsisVertical,
+    Eye,
+    Pencil,
+    Play,
+    Trash2,
+    UserPlus,
+} from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -81,8 +90,20 @@ export default function Index({
 }: {
     tickets: PaginatedData<MaintenanceTicket>;
     properties: { id: number; name: string }[];
-    units: { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] }[];
-    users: { id: number; name: string; roles?: { name: string; label?: string }[] }[];
+    units: {
+        id: number;
+        name: string;
+        property_id: number;
+        status: string;
+        active_lease_count: number;
+        has_maintenance_transfer?: number;
+        leases?: { tenants: { id: number; name: string }[] }[];
+    }[];
+    users: {
+        id: number;
+        name: string;
+        roles?: { name: string; label?: string }[];
+    }[];
     can: { create: boolean; update: boolean; delete: boolean; assign: boolean };
     table: { filters: TableFilterMeta[] };
     sort?: string;
@@ -94,10 +115,16 @@ export default function Index({
 }) {
     const [formOpen, setFormOpen] = useState(false);
     const [formVersion, setFormVersion] = useState(0);
-    const [editingTicket, setEditingTicket] = useState<MaintenanceTicket | null>(null);
-    const [detailTicket, setDetailTicket] = useState<MaintenanceTicket | null>(null);
-    const [resolveTicket, setResolveTicket] = useState<MaintenanceTicket | null>(null);
-    const [assignTicket, setAssignTicket] = useState<MaintenanceTicket | null>(null);
+    const [editingTicket, setEditingTicket] =
+        useState<MaintenanceTicket | null>(null);
+    const [detailTicket, setDetailTicket] = useState<MaintenanceTicket | null>(
+        null,
+    );
+    const [resolveTicket, setResolveTicket] =
+        useState<MaintenanceTicket | null>(null);
+    const [assignTicket, setAssignTicket] = useState<MaintenanceTicket | null>(
+        null,
+    );
     const [assigneeId, setAssigneeId] = useState('');
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
@@ -192,48 +219,76 @@ export default function Index({
             label: '',
             render: (ticket) => (
                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuTrigger
+                        asChild
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <Button variant="ghost" size="icon" className="size-8">
                             <EllipsisVertical className="size-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={() => router.visit(`/maintenance-tickets/${ticket.id}`)}>
+                    <DropdownMenuContent
+                        align="end"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <DropdownMenuItem
+                            onClick={() =>
+                                router.visit(
+                                    `/maintenance-tickets/${ticket.id}`,
+                                )
+                            }
+                        >
                             <Eye className="size-4" />
                             Open
                         </DropdownMenuItem>
                         {ticket.status === 'reported' && can.update && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(ticket, 'in_progress')}>
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    handleStatusChange(ticket, 'in_progress')
+                                }
+                            >
                                 <Play className="size-4" />
                                 Start
                             </DropdownMenuItem>
                         )}
                         {ticket.status === 'in_progress' && can.update && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(ticket, 'resolved')}>
+                            <DropdownMenuItem
+                                onClick={() =>
+                                    handleStatusChange(ticket, 'resolved')
+                                }
+                            >
                                 <Check className="size-4" />
                                 Resolve
                             </DropdownMenuItem>
                         )}
-                        {(ticket.status === 'reported' || ticket.status === 'in_progress') && can.update && (
-                            <DropdownMenuItem onClick={() => handleStatusChange(ticket, 'cancelled')}>
-                                <Ban className="size-4" />
-                                Cancel
-                            </DropdownMenuItem>
-                        )}
+                        {(ticket.status === 'reported' ||
+                            ticket.status === 'in_progress') &&
+                            can.update && (
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        handleStatusChange(ticket, 'cancelled')
+                                    }
+                                >
+                                    <Ban className="size-4" />
+                                    Cancel
+                                </DropdownMenuItem>
+                            )}
+                        {can.update && <DropdownMenuSeparator />}
                         {can.update && (
-                            <DropdownMenuSeparator />
-                        )}
-                        {can.update && (
-                            <DropdownMenuItem onClick={() => handleAssignToMe(ticket)}>
+                            <DropdownMenuItem
+                                onClick={() => handleAssignToMe(ticket)}
+                            >
                                 <UserPlus className="size-4" />
                                 Assign to me
                             </DropdownMenuItem>
                         )}
                         {can.assign && (
-                            <DropdownMenuItem onClick={() => {
-                                setAssignTicket(ticket);
-                                setAssigneeId('');
-                            }}>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    setAssignTicket(ticket);
+                                    setAssigneeId('');
+                                }}
+                            >
                                 <UserPlus className="size-4" />
                                 Assign to...
                             </DropdownMenuItem>
@@ -257,7 +312,11 @@ export default function Index({
                                 className="text-red-600"
                                 onClick={() => {
                                     if (confirm('Delete this ticket?')) {
-                                        router.delete(maintenanceTickets.destroy.url(ticket.id));
+                                        router.delete(
+                                            maintenanceTickets.destroy.url(
+                                                ticket.id,
+                                            ),
+                                        );
                                     }
                                 }}
                             >
@@ -282,9 +341,15 @@ export default function Index({
                         description="Track and manage maintenance issues."
                     />
                     {can.create && (
-                        <Button onClick={() => {
- setEditingTicket(null); setFormVersion((v) => v + 1); setFormOpen(true); 
-}}>New Ticket</Button>
+                        <Button
+                            onClick={() => {
+                                setEditingTicket(null);
+                                setFormVersion((v) => v + 1);
+                                setFormOpen(true);
+                            }}
+                        >
+                            New Ticket
+                        </Button>
                     )}
                 </div>
 
@@ -318,21 +383,28 @@ export default function Index({
                     empty={{
                         message: 'No maintenance tickets yet.',
                         createLabel: can.create ? 'Report an issue' : undefined,
-                        onCreate: can.create ? () => {
- setFormVersion((v) => v + 1); setFormOpen(true); 
-} : undefined,
+                        onCreate: can.create
+                            ? () => {
+                                  setFormVersion((v) => v + 1);
+                                  setFormOpen(true);
+                              }
+                            : undefined,
                     }}
                 />
 
                 <TicketFormSheet
-                    key={editingTicket ? `edit-${editingTicket.id}` : `create-${formVersion}`}
+                    key={
+                        editingTicket
+                            ? `edit-${editingTicket.id}`
+                            : `create-${formVersion}`
+                    }
                     open={formOpen}
                     onOpenChange={(open) => {
                         setFormOpen(open);
 
-                        if (! open) {
-setEditingTicket(null);
-}
+                        if (!open) {
+                            setEditingTicket(null);
+                        }
                     }}
                     ticket={editingTicket}
                     properties={properties}
@@ -343,9 +415,9 @@ setEditingTicket(null);
                     ticket={detailTicket}
                     open={detailTicket !== null}
                     onOpenChange={(open) => {
-                        if (! open) {
-setDetailTicket(null);
-}
+                        if (!open) {
+                            setDetailTicket(null);
+                        }
                     }}
                     canUpdate={can.update}
                     canDelete={can.delete}
@@ -362,50 +434,72 @@ setDetailTicket(null);
                     }}
                 />
 
-                <Dialog open={resolveTicket !== null} onOpenChange={() => setResolveTicket(null)}>
+                <Dialog
+                    open={resolveTicket !== null}
+                    onOpenChange={() => setResolveTicket(null)}
+                >
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Restore Occupant?</DialogTitle>
                             <DialogDescription>
-                                This unit was vacated for maintenance. Move the occupant back?
+                                This unit was vacated for maintenance. Move the
+                                occupant back?
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => {
-                                const ticket = resolveTicket;
-                                setResolveTicket(null);
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    const ticket = resolveTicket;
+                                    setResolveTicket(null);
 
-                                if (ticket) {
-                                    router.put(maintenanceTickets.update.url(ticket.id), {
-                                        status: 'resolved',
-                                        restore_unit: '1',
-                                    });
-                                }
-                            }}>
+                                    if (ticket) {
+                                        router.put(
+                                            maintenanceTickets.update.url(
+                                                ticket.id,
+                                            ),
+                                            {
+                                                status: 'resolved',
+                                                restore_unit: '1',
+                                            },
+                                        );
+                                    }
+                                }}
+                            >
                                 Keep in current unit
                             </Button>
-                            <Button onClick={() => {
-                                const ticket = resolveTicket;
-                                setResolveTicket(null);
+                            <Button
+                                onClick={() => {
+                                    const ticket = resolveTicket;
+                                    setResolveTicket(null);
 
-                                if (ticket) {
-                                    router.put(maintenanceTickets.update.url(ticket.id), {
-                                        status: 'resolved',
-                                        restore_unit: '1',
-                                        move_back: '1',
-                                    });
-                                }
-                            }}>
+                                    if (ticket) {
+                                        router.put(
+                                            maintenanceTickets.update.url(
+                                                ticket.id,
+                                            ),
+                                            {
+                                                status: 'resolved',
+                                                restore_unit: '1',
+                                                move_back: '1',
+                                            },
+                                        );
+                                    }
+                                }}
+                            >
                                 Move back
                             </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
 
-                <Dialog open={assignTicket !== null} onOpenChange={() => {
-                    setAssignTicket(null);
-                    setAssigneeId('');
-                }}>
+                <Dialog
+                    open={assignTicket !== null}
+                    onOpenChange={() => {
+                        setAssignTicket(null);
+                        setAssigneeId('');
+                    }}
+                >
                     <DialogContent className="sm:max-w-sm">
                         <DialogHeader>
                             <DialogTitle>Assign Ticket</DialogTitle>
@@ -414,42 +508,61 @@ setDetailTicket(null);
                             </DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
-                            <Select value={assigneeId} onValueChange={setAssigneeId}>
+                            <Select
+                                value={assigneeId}
+                                onValueChange={setAssigneeId}
+                            >
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select staff..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {users.filter((u) => u.id !== auth.user.id).map((u) => {
-                                        const role = u.roles?.[0];
-                                        const label = role ? ` — ${role.label ?? role.name}` : '';
+                                    {users
+                                        .filter((u) => u.id !== auth.user.id)
+                                        .map((u) => {
+                                            const role = u.roles?.[0];
+                                            const label = role
+                                                ? ` — ${role.label ?? role.name}`
+                                                : '';
 
-                                        return (
-                                            <SelectItem key={u.id} value={String(u.id)}>
-                                                {u.name}{label}
-                                            </SelectItem>
-                                        );
-                                    })}
+                                            return (
+                                                <SelectItem
+                                                    key={u.id}
+                                                    value={String(u.id)}
+                                                >
+                                                    {u.name}
+                                                    {label}
+                                                </SelectItem>
+                                            );
+                                        })}
                                 </SelectContent>
                             </Select>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => {
-                                setAssignTicket(null);
-                                setAssigneeId('');
-                            }}>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setAssignTicket(null);
+                                    setAssigneeId('');
+                                }}
+                            >
                                 Cancel
                             </Button>
                             <Button
-                                disabled={! assigneeId}
+                                disabled={!assigneeId}
                                 onClick={() => {
                                     const ticket = assignTicket;
                                     setAssignTicket(null);
                                     setAssigneeId('');
 
                                     if (ticket && assigneeId) {
-                                        router.post(maintenanceTickets.assign.url(ticket.id), {
-                                            assigned_to: Number(assigneeId),
-                                        });
+                                        router.post(
+                                            maintenanceTickets.assign.url(
+                                                ticket.id,
+                                            ),
+                                            {
+                                                assigned_to: Number(assigneeId),
+                                            },
+                                        );
                                     }
                                 }}
                             >

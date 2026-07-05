@@ -180,8 +180,7 @@ export default function Index({
                                                                       .name
                                                               }
                                                           </p>
-                                                          {lease
-                                                              .primary_tenant
+                                                          {lease.primary_tenant
                                                               .phone && (
                                                               <p className="text-xs text-muted-foreground">
                                                                   {

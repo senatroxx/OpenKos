@@ -1,31 +1,31 @@
-'use client'
+'use client';
 
-import { Check, ChevronsUpDown, SearchIcon } from 'lucide-react'
-import * as React from 'react'
+import { Check, ChevronsUpDown, SearchIcon } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-} from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 export type Option = {
-    value: string | number
-    label: string
-}
+    value: string | number;
+    label: string;
+};
 
 type SearchableSelectProps = {
-    options: Option[]
-    value?: string | number | null
-    onChange: (value: string | number | null) => void
-    placeholder?: string
-    searchPlaceholder?: string
-    emptyText?: string
-    disabled?: boolean
-}
+    options: Option[];
+    value?: string | number | null;
+    onChange: (value: string | number | null) => void;
+    placeholder?: string;
+    searchPlaceholder?: string;
+    emptyText?: string;
+    disabled?: boolean;
+};
 
 export default function SearchableSelect({
     options,
@@ -36,10 +36,10 @@ export default function SearchableSelect({
     emptyText = 'No results found.',
     disabled = false,
 }: SearchableSelectProps) {
-    const [open, setOpen] = React.useState(false)
-    const [search, setSearch] = React.useState('')
+    const [open, setOpen] = React.useState(false);
+    const [search, setSearch] = React.useState('');
 
-    const selected = options.find((o) => String(o.value) === String(value))
+    const selected = options.find((o) => String(o.value) === String(value));
 
     const filtered = React.useMemo(
         () =>
@@ -47,7 +47,7 @@ export default function SearchableSelect({
                 o.label.toLowerCase().includes(search.toLowerCase()),
             ),
         [options, search],
-    )
+    );
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -82,7 +82,10 @@ export default function SearchableSelect({
                         className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
                     />
                 </div>
-                <div style={{ height: '200px', overflowY: 'scroll' }} className="p-1">
+                <div
+                    style={{ height: '200px', overflowY: 'scroll' }}
+                    className="p-1"
+                >
                     {filtered.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
                             {emptyText}
@@ -102,15 +105,14 @@ export default function SearchableSelect({
                                         option.value === value
                                             ? null
                                             : option.value,
-                                    )
-                                    setOpen(false)
+                                    );
+                                    setOpen(false);
                                 }}
                             >
                                 <Check
                                     className={cn(
                                         'mr-2 size-4',
-                                        String(value) ===
-                                            String(option.value)
+                                        String(value) === String(option.value)
                                             ? 'opacity-100'
                                             : 'opacity-0',
                                     )}
@@ -122,5 +124,5 @@ export default function SearchableSelect({
                 </div>
             </PopoverContent>
         </Popover>
-    )
+    );
 }

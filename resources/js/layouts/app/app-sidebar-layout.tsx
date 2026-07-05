@@ -1,4 +1,9 @@
-import { AppContent, AppShell, AppSidebar, AppSidebarHeader } from '@/components/features';
+import {
+    AppContent,
+    AppShell,
+    AppSidebar,
+    AppSidebarHeader,
+} from '@/components/features';
 import type { AppLayoutProps } from '@/types';
 
 export default function AppSidebarLayout({

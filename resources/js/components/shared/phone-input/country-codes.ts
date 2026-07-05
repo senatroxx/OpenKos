@@ -205,9 +205,13 @@ export const countryCodes: CountryCode[] = [
     { iso2: 'ZW', name: 'Zimbabwe', dialCode: '+263' },
 ];
 
-const sorted = [...countryCodes].sort((a, b) => b.dialCode.length - a.dialCode.length);
+const sorted = [...countryCodes].sort(
+    (a, b) => b.dialCode.length - a.dialCode.length,
+);
 
-export function parseE164(value?: string | null): CountryCode & { number: string } {
+export function parseE164(
+    value?: string | null,
+): CountryCode & { number: string } {
     let digits = value?.replace(/[^0-9]/g, '') ?? '';
 
     for (const c of sorted) {

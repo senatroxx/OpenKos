@@ -1,10 +1,5 @@
 import { Head } from '@inertiajs/react';
-import {
-    AlertTriangle,
-    Bell,
-    CalendarClock,
-    CheckCircle,
-} from 'lucide-react';
+import { AlertTriangle, Bell, CalendarClock, CheckCircle } from 'lucide-react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -151,7 +146,7 @@ export default function Rent({
                                 <p className="text-sm text-muted-foreground">
                                     Overdue
                                 </p>
-                                <p className="truncate text-2xl font-bold tabular-nums text-red-600">
+                                <p className="truncate text-2xl font-bold text-red-600 tabular-nums">
                                     {stats.overdue.count}
                                 </p>
                                 {stats.overdue.amount > 0 && (
@@ -172,7 +167,7 @@ export default function Rent({
                                 <p className="text-sm text-muted-foreground">
                                     Due Today
                                 </p>
-                                <p className="truncate text-2xl font-bold tabular-nums text-amber-600">
+                                <p className="truncate text-2xl font-bold text-amber-600 tabular-nums">
                                     {stats.due_today}
                                 </p>
                             </div>
@@ -186,7 +181,7 @@ export default function Rent({
                                 <p className="text-sm text-muted-foreground">
                                     Due Soon
                                 </p>
-                                <p className="truncate text-2xl font-bold tabular-nums text-blue-600">
+                                <p className="truncate text-2xl font-bold text-blue-600 tabular-nums">
                                     {stats.due_soon}
                                 </p>
                             </div>
@@ -200,7 +195,7 @@ export default function Rent({
                                 <p className="text-sm text-muted-foreground">
                                     Paid
                                 </p>
-                                <p className="truncate text-2xl font-bold tabular-nums text-green-600">
+                                <p className="truncate text-2xl font-bold text-green-600 tabular-nums">
                                     {stats.paid}
                                 </p>
                             </div>
