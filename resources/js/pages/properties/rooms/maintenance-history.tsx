@@ -108,8 +108,8 @@ export default function MaintenanceHistory({
     per_page = 15,
     table,
 }: {
-    property: { id: number; name: string };
-    room: { id: number; name: string; floor?: string | number | null };
+    property: { id: number; slug: string; name: string };
+    room: { id: number; slug: string; name: string; floor?: string | number | null };
     tickets: PaginatedData<MaintenanceTicket>;
     sort?: string;
     search?: string;
@@ -122,7 +122,7 @@ export default function MaintenanceHistory({
         <RoomLayout property={property} room={room} activeTab="maintenance">
             <PluginRegion name="workspace-tab-maintenance">
                 <WorkspaceTable
-                    url={`/properties/${property.id}/rooms/${room.id}/maintenance-history`}
+                    url={`/properties/${property.slug}/rooms/${room.slug}/maintenance-history`}
                     noun="tickets"
                     rows={tickets}
                     columns={columns}

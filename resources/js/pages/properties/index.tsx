@@ -22,6 +22,7 @@ import type { PaginatedData, TableMeta } from '@/types';
 type ManagedProperty = {
     id: number;
     name: string;
+    slug: string;
     type: string;
     type_label?: string;
     address: string | null;

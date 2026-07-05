@@ -44,8 +44,8 @@ export default function RoomFormSheet({
     const isEdit = Boolean(room);
     const [status, setStatus] = useState(room?.status ?? 'available');
     const formAction = isEdit
-        ? properties.rooms.update.url({ property: property.id, room: room!.id })
-        : properties.rooms.store.url(property.id);
+        ? properties.rooms.update.url({ property: property.slug, room: room!.slug })
+        : properties.rooms.store.url(property.slug);
     const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
     const [rates, setRates] = useState<RoomRate[]>(() =>

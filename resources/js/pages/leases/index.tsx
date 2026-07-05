@@ -178,7 +178,7 @@ export default function Index({
                         <p className="mt-0.5 text-xs text-muted-foreground">
                             <Link
                                 href={rooms.index({
-                                    property: lease.room.property_id,
+                                    property: lease.room.property!.slug,
                                 })}
                                 onClick={(e: React.MouseEvent) =>
                                     e.stopPropagation()
