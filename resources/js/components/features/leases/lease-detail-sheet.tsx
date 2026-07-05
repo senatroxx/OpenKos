@@ -105,7 +105,7 @@ export default function LeaseDetailSheet({
             month: 'long',
         });
     }
-    const roomName = lease?.unit?.name ?? '—';
+    const unitLabel = lease?.unit?.name ?? '—';
     const propertyName = lease?.unit?.property?.name ?? '—';
     const city = lease?.unit?.property?.city;
     const propertyCity =
@@ -219,7 +219,7 @@ export default function LeaseDetailSheet({
                                                     Unit
                                                 </span>
                                                 <span className="text-sm">
-                                                    {roomName}
+                                                    {unitLabel}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between">

@@ -43,19 +43,19 @@ type RoomOption = {
 
 function formatRoomOption(r: RoomOption): string {
     const tenants = r.leases?.[0]?.tenants ?? [];
-    const roomName = r.name.length > 20 ? r.name.slice(0, 19) + '...' : r.name;
+    const unitLabel = r.name.length > 20 ? r.name.slice(0, 19) + '...' : r.name;
 
     if (tenants.length === 0) {
-        return roomName;
+        return unitLabel;
     }
 
     const names = tenants.map((t) => t.name);
 
     if (names.length > 2) {
-        return `${roomName} - ${names.slice(0, 2).join(', ')}, +${names.length - 2}`;
+        return `${unitLabel} - ${names.slice(0, 2).join(', ')}, +${names.length - 2}`;
     }
 
-    return `${roomName} - ${names.join(', ')}`;
+    return `${unitLabel} - ${names.join(', ')}`;
 }
 
 export default function TicketFormSheet({
@@ -93,7 +93,7 @@ export default function TicketFormSheet({
     const [restoreUnit, setRestoreUnit] = useState(false);
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
-    const filteredRooms = selectedProperty
+    const filteredUnits = selectedProperty
         ? units.filter((r) => r.property_id === Number(selectedProperty))
         : [];
 
@@ -104,7 +104,7 @@ export default function TicketFormSheet({
     const selectedUnitOccupied =
         (selectedUnitData?.active_lease_count ?? 0) > 0;
 
-    const availableMoveRooms = selectedProperty
+    const availableMoveUnits = selectedProperty
         ? units.filter(
               (r) =>
                   r.property_id === Number(selectedProperty) &&
@@ -225,7 +225,7 @@ export default function TicketFormSheet({
                                                             <SelectValue placeholder="Select a unit (optional)" />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {filteredRooms.map(
+                                                            {filteredUnits.map(
                                                                 (r) => (
                                                                     <SelectItem
                                                                         key={
@@ -459,7 +459,7 @@ export default function TicketFormSheet({
                     <div className="space-y-4 py-4">
                         <div className="flex items-start gap-3">
                             <div className="flex w-full flex-col gap-3">
-                                {availableMoveRooms.length > 0 && (
+                                {availableMoveUnits.length > 0 && (
                                     <label className="flex cursor-pointer items-center gap-3">
                                         <input
                                             type="radio"
@@ -480,7 +480,7 @@ export default function TicketFormSheet({
                                                     <SelectValue placeholder="Select unit" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {availableMoveRooms.map(
+                                                    {availableMoveUnits.map(
                                                         (r) => (
                                                             <SelectItem
                                                                 key={r.id}
