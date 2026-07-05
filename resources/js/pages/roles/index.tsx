@@ -122,7 +122,9 @@ export default function Index({
             label: 'Description',
             render: (role) =>
                 role.description ?? (
-                    <span className="italic text-muted-foreground">No description</span>
+                    <span className="text-muted-foreground italic">
+                        No description
+                    </span>
                 ),
         },
         {

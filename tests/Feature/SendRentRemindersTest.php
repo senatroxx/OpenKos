@@ -6,9 +6,9 @@ use App\Data\Reminder\ReminderSettings;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\ReminderLog;
-use App\Models\Room;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\RentReminder;
 use Carbon\Carbon;
@@ -21,11 +21,11 @@ uses()->beforeEach(function () {
 function createLeaseWithTenant(array $overrides = []): Lease
 {
     $property = Property::factory()->create();
-    $room = Room::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create();
     $tenant = Tenant::factory()->create(['phone' => '628123456789']);
 
     return Lease::factory()->create(array_merge([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'primary_tenant_id' => $tenant->id,
         'start_date' => now()->subMonths(3),
         'rent_amount' => 1500000.00,
@@ -187,11 +187,11 @@ describe('SendRentRemindersAction', function () {
         Notification::fake();
 
         $property = Property::factory()->create();
-        $room = Room::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
         $tenant = Tenant::factory()->create(['phone' => null]);
 
         $lease = Lease::factory()->create([
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'primary_tenant_id' => $tenant->id,
             'start_date' => '2026-06-01',
             'rent_amount' => 1500000.00,
@@ -257,7 +257,7 @@ describe('Manual Send via Controller', function () {
 
         $owner = User::factory()->owner()->create();
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->room->property->users()->attach($owner);
+        $lease->unit->property->users()->attach($owner);
 
         $this->actingAs($owner)
             ->post(route('leases.send-reminder', $lease))
@@ -275,7 +275,7 @@ describe('Manual Send via Controller', function () {
         $admin->revokePermissionTo('reminders.send');
 
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->room->property->users()->attach($admin);
+        $lease->unit->property->users()->attach($admin);
 
         $this->actingAs($admin)
             ->post(route('leases.send-reminder', $lease))

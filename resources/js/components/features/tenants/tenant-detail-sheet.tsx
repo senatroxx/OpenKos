@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
-import type { RoomWithProperty, TenantInfo } from '@/types';
+import type { UnitWithProperty, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -18,7 +18,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -35,7 +35,15 @@ type Tenant = {
     deleted_at: string | null;
     active_leases_count: number;
     leases?: Lease[];
-    documents?: { id: number; type: string; original_name: string; size: number; mime_type: string; created_at: string; download_url: string }[];
+    documents?: {
+        id: number;
+        type: string;
+        original_name: string;
+        size: number;
+        mime_type: string;
+        created_at: string;
+        download_url: string;
+    }[];
 };
 
 export default function TenantDetailSheet({
@@ -43,7 +51,7 @@ export default function TenantDetailSheet({
     open,
     onOpenChange,
     onEdit,
-    onAssignToRoom,
+    onAssignToUnit,
     onMoveOut,
     onDocuments,
 }: {
@@ -51,7 +59,7 @@ export default function TenantDetailSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
-    onAssignToRoom?: () => void;
+    onAssignToUnit?: () => void;
     onMoveOut?: () => void;
     onDocuments?: () => void;
 }) {
@@ -72,7 +80,10 @@ export default function TenantDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg" expandTo={tenant ? tenants.show.url(tenant) : undefined}>
+            <SheetContent
+                className="sm:max-w-lg"
+                expandTo={tenant ? tenants.show.url(tenant) : undefined}
+            >
                 <SheetHeader>
                     <SheetTitle>{tenant?.name}</SheetTitle>
                     <SheetDescription>Tenant details</SheetDescription>
@@ -107,16 +118,16 @@ export default function TenantDetailSheet({
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium">
-                                                {activeLease.room?.name ??
-                                                    'Unknown Room'}
+                                                {activeLease.unit?.name ??
+                                                    'Unknown Unit'}
                                             </span>
-                                            <span className="text-xs font-mono text-muted-foreground">
+                                            <span className="font-mono text-xs text-muted-foreground">
                                                 {activeLease.reference}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm text-muted-foreground">
-                                                {activeLease.room?.property
+                                                {activeLease.unit?.property
                                                     ?.name ??
                                                     'Unknown Property'}
                                             </span>
@@ -281,9 +292,9 @@ export default function TenantDetailSheet({
                             </Button>
                             {!isArchived && (
                                 <>
-                                    {!activeLease && onAssignToRoom && (
-                                        <Button onClick={onAssignToRoom}>
-                                            Assign to Room
+                                    {!activeLease && onAssignToUnit && (
+                                        <Button onClick={onAssignToUnit}>
+                                            Assign to Unit
                                         </Button>
                                     )}
                                     {activeLease && onMoveOut && (

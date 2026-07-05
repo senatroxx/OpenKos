@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\RoomStatus;
+use App\Enums\UnitStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -87,9 +87,9 @@ class Property extends Model
         return $this->belongsTo(City::class);
     }
 
-    public function rooms(): HasMany
+    public function units(): HasMany
     {
-        return $this->hasMany(Room::class);
+        return $this->hasMany(Unit::class);
     }
 
     public function users(): BelongsToMany
@@ -99,7 +99,7 @@ class Property extends Model
 
     public function leases(): HasManyThrough
     {
-        return $this->hasManyThrough(Lease::class, Room::class);
+        return $this->hasManyThrough(Lease::class, Unit::class);
     }
 
     /**
@@ -108,15 +108,15 @@ class Property extends Model
     public function scopeWithWorkspaceStats(Builder $query): void
     {
         $query->with(['city', 'region'])
-            ->withCount('rooms')
-            ->withOccupiedRoomsCount()
+            ->withCount('units')
+            ->withOccupiedUnitsCount()
             ->withTenantsCount();
     }
 
-    public function scopeWithOccupiedRoomsCount(Builder $query): void
+    public function scopeWithOccupiedUnitsCount(Builder $query): void
     {
-        $query->withCount(['rooms as occupied_rooms_count' => fn (Builder $q) => $q->where(function (Builder $q) {
-            $q->where('status', RoomStatus::Occupied)
+        $query->withCount(['units as occupied_units_count' => fn (Builder $q) => $q->where(function (Builder $q) {
+            $q->where('status', UnitStatus::Occupied)
                 ->orWhereHas('leases', fn (Builder $q) => $q->where('status', 'active'));
         })]);
     }
@@ -127,8 +127,8 @@ class Property extends Model
             'tenants_count' => DB::table('leases')
                 ->selectRaw('COALESCE(COUNT(DISTINCT lease_tenant.tenant_id), 0)')
                 ->join('lease_tenant', 'lease_tenant.lease_id', '=', 'leases.id')
-                ->join('rooms', 'rooms.id', '=', 'leases.room_id')
-                ->whereColumn('rooms.property_id', 'properties.id')
+                ->join('units', 'units.id', '=', 'leases.unit_id')
+                ->whereColumn('units.property_id', 'properties.id')
                 ->where('leases.status', 'active'),
         ]);
     }

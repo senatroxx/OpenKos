@@ -10,7 +10,7 @@ use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Enums\RoomStatus;
+use App\Enums\UnitStatus;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\RenewLeaseRequest;
@@ -20,7 +20,7 @@ use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\PaymentProof;
 use App\Models\Property;
-use App\Models\Room;
+use App\Models\Unit;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -40,10 +40,10 @@ class LeaseController extends Controller
         $lease->load([
             'tenants:id,name,phone',
             'primaryTenant:id,name,phone',
-            'room.property.city',
+            'unit.property.city',
             'payments.confirmedBy:id,name',
             'payments.proofs',
-            'roomHistories.transferredBy:id,name',
+            'unitHistories.transferredBy:id,name',
         ]);
 
         return Inertia::render('leases/show', [
@@ -114,20 +114,20 @@ class LeaseController extends Controller
         ]);
     }
 
-    public function index(Property $property, Room $room): Response
+    public function index(Property $property, Unit $unit): Response
     {
         $this->authorize('viewAny', [Lease::class, $property]);
 
-        $room->load('property.city');
+        $unit->load('property.city');
 
-        $leases = $room->leases()
+        $leases = $unit->leases()
             ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
-            ->each->setRelation('room', $room);
+            ->each->setRelation('unit', $unit);
 
-        $availableRooms = $property->rooms()
+        $availableUnits = $property->units()
             ->with('property.city')
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
@@ -135,11 +135,11 @@ class LeaseController extends Controller
             ->orderBy('name')
             ->get();
 
-        return Inertia::render('properties/rooms/leases/index', [
+        return Inertia::render('properties/units/leases/index', [
             'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
-            'room' => $room->only('id', 'slug', 'name', 'floor'),
+            'unit' => $unit->only('id', 'slug', 'name', 'floor'),
             'leases' => $leases,
-            'availableRooms' => $availableRooms,
+            'availableUnits' => $availableUnits,
         ]);
     }
 
@@ -157,10 +157,10 @@ class LeaseController extends Controller
             ->columns([
                 Column::make('tenant_name', 'Tenant')->searchable(function (Builder $q, string $search): void {
                     $q->whereHas('tenants', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
-                        ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
-                        ->orWhereHas('room.property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
+                        ->orWhereHas('unit', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
+                        ->orWhereHas('unit.property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
                 }),
-                Column::make('room_name', 'Room'),
+                Column::make('unit_name', 'Unit'),
                 Column::make('property_name', 'Property'),
                 Column::make('start_date', 'Start')->sortable(),
                 Column::make('end_date', 'End')->sortable(),
@@ -191,14 +191,14 @@ class LeaseController extends Controller
                     'label' => $p->name,
                 ])->all())
                     ->query(fn (Builder $q, string $value) => $q->whereHas(
-                        'room',
+                        'unit',
                         fn (Builder $q) => $q->whereIn('property_id', explode(',', $value)),
                     )),
             ])
             ->defaultSort('status,-start_date');
 
         $query = Lease::query()
-            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,slug,name,property_id', 'room.property:id,slug,name'])
+            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name'])
             ->addSelect(['payment_status' => Payment::query()
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'paid' ELSE 'overdue' END")
                 ->whereColumn('paymentable_id', 'leases.id')
@@ -208,16 +208,16 @@ class LeaseController extends Controller
                 ->whereYear('period_start', now()->year),
             ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
-                'room.property.users',
+                'unit.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ));
 
         $result = $table->paginate($query, $request, 'leases');
 
         $leases = $result['leases'];
-        $leases->loadMissing(['room.property.city', 'payments.confirmedBy:id,name', 'payments.proofs']);
+        $leases->loadMissing(['unit.property.city', 'payments.confirmedBy:id,name', 'payments.proofs']);
 
-        $availableRooms = Room::query()
+        $availableUnits = Unit::query()
             ->with('property.city')
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
@@ -231,7 +231,7 @@ class LeaseController extends Controller
 
         $accessibleQuery = fn (Builder $q) => $request->user()->isOwner()
             ? $q
-            : $q->whereHas('room.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
+            : $q->whereHas('unit.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
 
         $activeLeases = Lease::query()
             ->where('status', 'active')
@@ -259,7 +259,7 @@ class LeaseController extends Controller
 
         return Inertia::render('leases/index', [
             ...$result,
-            'availableRooms' => $availableRooms,
+            'availableUnits' => $availableUnits,
             'stats' => [
                 'active_leases' => $activeLeases,
                 'collected_this_month' => $collectedThisMonth,
@@ -268,7 +268,7 @@ class LeaseController extends Controller
         ]);
     }
 
-    public function store(StoreLeaseRequest $request, Property $property, Room $room, CreateLease $action): RedirectResponse
+    public function store(StoreLeaseRequest $request, Property $property, Unit $unit, CreateLease $action): RedirectResponse
     {
         $this->authorize('create', [Lease::class, $property]);
 
@@ -279,7 +279,7 @@ class LeaseController extends Controller
             rentAmount: $request->rent_amount,
             billingInterval: $request->billing_interval,
             billingUnit: $request->billing_unit,
-            roomRateId: $request->room_rate_id,
+            unitRateId: $request->unit_rate_id,
             depositAmount: $request->deposit_amount,
             depositPaidAt: $request->deposit_paid_at,
             depositRefundAmount: $request->deposit_refund_amount,
@@ -288,21 +288,21 @@ class LeaseController extends Controller
             notes: $request->notes,
         );
 
-        $lease = $action->execute($room, $data);
+        $lease = $action->execute($unit, $data);
 
         $lease->load('tenants:id,name,phone', 'primaryTenant:id,name,phone');
 
         $count = $lease->tenants->count();
         $message = $count > 1
-            ? __(':count tenants assigned to room.', ['count' => $count])
-            : __('Tenant assigned to room.');
+            ? __(':count tenants assigned to unit.', ['count' => $count])
+            : __('Tenant assigned to unit.');
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
-        return to_route('properties.rooms.index', $property);
+        return to_route('properties.units.index', $property);
     }
 
-    public function update(UpdateLeaseRequest $request, Property $property, Room $room, Lease $lease): RedirectResponse
+    public function update(UpdateLeaseRequest $request, Property $property, Unit $unit, Lease $lease): RedirectResponse
     {
         $this->authorize('update', $lease);
 
@@ -310,14 +310,14 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease updated.')]);
 
-        return to_route('properties.rooms.leases.index', [$property, $room]);
+        return to_route('properties.units.leases.index', [$property, $unit]);
     }
 
-    public function destroy(Property $property, Room $room, Lease $lease): RedirectResponse
+    public function destroy(Property $property, Unit $unit, Lease $lease): RedirectResponse
     {
         $this->authorize('delete', $lease);
 
-        DB::transaction(function () use ($lease, $room) {
+        DB::transaction(function () use ($lease, $unit) {
             $lease->update([
                 'end_date' => now(),
                 'status' => 'terminated',
@@ -325,27 +325,27 @@ class LeaseController extends Controller
                 'termination_reason' => request('reason'),
             ]);
 
-            $room->unsetRelation('leases');
+            $unit->unsetRelation('leases');
 
-            if ($room->leases()->where('status', 'active')->doesntExist() && $room->status !== RoomStatus::Maintenance) {
-                $room->update(['status' => RoomStatus::Available]);
+            if ($unit->leases()->where('status', 'active')->doesntExist() && $unit->status !== UnitStatus::Maintenance) {
+                $unit->update(['status' => UnitStatus::Available]);
             }
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease terminated.')]);
 
-        return to_route('properties.rooms.index', $property);
+        return to_route('properties.units.index', $property);
     }
 
     public function moveOut(MoveOutRequest $request, Lease $lease, MoveOutLease $action): RedirectResponse
     {
         $validated = $request->validated();
 
-        $targetRoom = ($validated['move_to_another_room'] ?? false)
-            ? Room::findOrFail($validated['target_room_id'])
+        $targetUnit = ($validated['move_to_another_unit'] ?? false)
+            ? Unit::findOrFail($validated['target_unit_id'])
             : null;
 
-        $this->authorize('moveOut', [$lease, $targetRoom]);
+        $this->authorize('moveOut', [$lease, $targetUnit]);
 
         $data = new MoveOutLeaseData(
             terminationDate: now()->toDateString(),
@@ -354,8 +354,8 @@ class LeaseController extends Controller
             depositReturned: $validated['deposit_returned'] ?? false,
             depositRefundAmount: $validated['deposit_refund_amount'] ?? null,
             notes: $validated['notes'] ?? null,
-            moveToAnotherRoom: $validated['move_to_another_room'] ?? false,
-            targetRoomId: $validated['target_room_id'] ?? null,
+            moveToAnotherUnit: $validated['move_to_another_unit'] ?? false,
+            targetUnitId: $validated['target_unit_id'] ?? null,
         );
 
         $result = $action->execute($lease, $data);
@@ -366,13 +366,13 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $validated['move_to_another_room']
-                ? __('Tenant moved to new room.')
+            'message' => $validated['move_to_another_unit']
+                ? __('Tenant moved to new unit.')
                 : __('Tenant moved out.'),
         ]);
 
-        if ($validated['move_to_another_room']) {
-            return to_route('properties.rooms.index', $lease->room->property_id);
+        if ($validated['move_to_another_unit']) {
+            return to_route('properties.units.index', $lease->unit->property_id);
         }
 
         return back();
@@ -417,19 +417,19 @@ class LeaseController extends Controller
         return back();
     }
 
-    public function move(MoveLeaseRequest $request, Property $property, Room $room, Lease $lease, MoveOutLease $action): RedirectResponse
+    public function move(MoveLeaseRequest $request, Property $property, Unit $unit, Lease $lease, MoveOutLease $action): RedirectResponse
     {
-        $targetRoom = Room::findOrFail($request->validated('target_room_id'));
+        $targetUnit = Unit::findOrFail($request->validated('target_unit_id'));
 
-        $this->authorize('move', [$lease, $targetRoom]);
+        $this->authorize('move', [$lease, $targetUnit]);
 
         $data = new MoveOutLeaseData(
             terminationDate: now()->toDateString(),
             endDate: now()->toDateString(),
-            reason: 'Moved to room '.$targetRoom->name,
-            notes: ($lease->notes ? $lease->notes."\n" : '').'Moved to room '.$targetRoom->name.' on '.now()->format('Y-m-d'),
-            moveToAnotherRoom: true,
-            targetRoomId: $targetRoom->id,
+            reason: 'Moved to unit '.$targetUnit->name,
+            notes: ($lease->notes ? $lease->notes."\n" : '').'Moved to unit '.$targetUnit->name.' on '.now()->format('Y-m-d'),
+            moveToAnotherUnit: true,
+            targetUnitId: $targetUnit->id,
             carryDepositRefund: true,
         );
 
@@ -439,8 +439,8 @@ class LeaseController extends Controller
             abort(422, $result->error);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new room.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new unit.')]);
 
-        return to_route('properties.rooms.index', $property);
+        return to_route('properties.units.index', $property);
     }
 }

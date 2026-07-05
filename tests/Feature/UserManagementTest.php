@@ -3,8 +3,8 @@
 use App\Enums\Role;
 use App\Models\Property;
 use App\Models\Role as RoleModel;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\UserInvitation;
 use Database\Seeders\RegionAndCitySeeder;
@@ -254,8 +254,8 @@ test('assigned property scope limits non owner dashboard and property list', fun
     $admin = User::factory()->admin()->create();
     $assignedProperty = Property::factory()->create(['name' => 'Assigned Kos']);
     $otherProperty = Property::factory()->create(['name' => 'Hidden Kos']);
-    Room::factory()->count(2)->create(['property_id' => $assignedProperty->id]);
-    Room::factory()->count(3)->create(['property_id' => $otherProperty->id]);
+    Unit::factory()->count(2)->create(['property_id' => $assignedProperty->id]);
+    Unit::factory()->count(3)->create(['property_id' => $otherProperty->id]);
 
     $admin->properties()->sync([$assignedProperty->id]);
 
@@ -263,7 +263,7 @@ test('assigned property scope limits non owner dashboard and property list', fun
         ->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('stats.total_rooms', 2)
+            ->where('stats.total_units', 2)
             ->has('stats.properties', 1)
             ->where('stats.properties.0.name', 'Assigned Kos')
         );
@@ -277,7 +277,7 @@ test('assigned property scope limits non owner dashboard and property list', fun
         );
 });
 
-test('non owner cannot access unassigned property rooms', function () {
+test('non owner cannot access unassigned property units', function () {
     $admin = User::factory()->admin()->create();
     $assignedProperty = Property::factory()->create();
     $otherProperty = Property::factory()->create();
@@ -285,6 +285,6 @@ test('non owner cannot access unassigned property rooms', function () {
     $admin->properties()->sync([$assignedProperty->id]);
 
     $this->actingAs($admin)
-        ->get(route('properties.rooms.index', $otherProperty))
+        ->get(route('properties.units.index', $otherProperty))
         ->assertForbidden();
 });

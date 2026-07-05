@@ -117,7 +117,9 @@ export default function TenantFormSheet({
                                         }
                                         placeholder="e.g. 81234567890"
                                     />
-                                    <InputError message={errors.emergency_contact_phone} />
+                                    <InputError
+                                        message={errors.emergency_contact_phone}
+                                    />
                                 </div>
 
                                 <div className="grid gap-2">
@@ -128,15 +130,12 @@ export default function TenantFormSheet({
                                         id="emergency_contact_name"
                                         name="emergency_contact_name"
                                         defaultValue={
-                                            tenant?.emergency_contact_name ??
-                                            ''
+                                            tenant?.emergency_contact_name ?? ''
                                         }
                                         placeholder="e.g. Siti Nurhaliza"
                                     />
                                     <InputError
-                                        message={
-                                            errors.emergency_contact_name
-                                        }
+                                        message={errors.emergency_contact_name}
                                     />
                                 </div>
 

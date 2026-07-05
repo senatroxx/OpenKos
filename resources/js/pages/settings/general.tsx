@@ -1,11 +1,24 @@
 import { Form } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { edit as editGeneral, update as updateGeneral } from '@/routes/settings/general';
+import {
+    edit as editGeneral,
+    update as updateGeneral,
+} from '@/routes/settings/general';
 
-export default function General({ settings }: { settings: { lease_id_prefix: string } }) {
+export default function General({
+    settings,
+}: {
+    settings: { lease_id_prefix: string };
+}) {
     return (
         <div className="space-y-6">
             <div>
@@ -20,17 +33,20 @@ export default function General({ settings }: { settings: { lease_id_prefix: str
                     <CardTitle>Lease Reference</CardTitle>
                     <CardDescription>
                         Prefix used for auto-generated lease reference numbers.
-                        Format: <code className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono">{settings.lease_id_prefix}20260001</code>
+                        Format:{' '}
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-sm">
+                            {settings.lease_id_prefix}20260001
+                        </code>
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form
-                        action={updateGeneral()}
-                    >
+                    <Form action={updateGeneral()}>
                         {({ processing, errors }) => (
                             <div className="space-y-4">
-                                <div className="grid gap-2 max-w-xs">
-                                    <Label htmlFor="lease_id_prefix">Prefix</Label>
+                                <div className="grid max-w-xs gap-2">
+                                    <Label htmlFor="lease_id_prefix">
+                                        Prefix
+                                    </Label>
                                     <Input
                                         id="lease_id_prefix"
                                         name="lease_id_prefix"
@@ -41,12 +57,12 @@ export default function General({ settings }: { settings: { lease_id_prefix: str
                                         required
                                     />
                                     {errors.lease_id_prefix && (
-                                        <p className="text-sm text-red-600">{errors.lease_id_prefix}</p>
+                                        <p className="text-sm text-red-600">
+                                            {errors.lease_id_prefix}
+                                        </p>
                                     )}
                                 </div>
-                                <Button disabled={processing}>
-                                    Save
-                                </Button>
+                                <Button disabled={processing}>Save</Button>
                             </div>
                         )}
                     </Form>
@@ -57,7 +73,5 @@ export default function General({ settings }: { settings: { lease_id_prefix: str
 }
 
 General.layout = {
-    breadcrumbs: [
-        { title: 'General settings', href: editGeneral() },
-    ],
+    breadcrumbs: [{ title: 'General settings', href: editGeneral() }],
 };

@@ -13,7 +13,7 @@ import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
-    AssignRoomSheet,
+    AssignUnitSheet,
     MoveOutSheet,
     TenantDetailSheet,
     TenantDocumentsSheet,
@@ -30,7 +30,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { AvailableRoom, PaginatedData, RoomWithProperty, TableMeta, TenantInfo } from '@/types';
+import type {
+    AvailableUnit,
+    PaginatedData,
+    UnitWithProperty,
+    TableMeta,
+    TenantInfo,
+} from '@/types';
 
 type Lease = {
     id: number;
@@ -38,7 +44,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -60,7 +66,7 @@ type Tenant = {
 
 type PageProps = {
     tenants: PaginatedData<Tenant>;
-    availableRooms: AvailableRoom[];
+    availableUnits: AvailableUnit[];
     sort?: string;
     search?: string;
     status?: string;
@@ -70,7 +76,7 @@ type PageProps = {
 
 export default function Index({
     tenants: data,
-    availableRooms: _availableRooms,
+    availableUnits: _availableUnits,
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -83,7 +89,7 @@ export default function Index({
     const [detailOpen, setDetailOpen] = useState(false);
     const [viewingTenant, setViewingTenant] = useState<Tenant | null>(null);
 
-    const [assignRoomOpen, setAssignRoomOpen] = useState(false);
+    const [assignUnitOpen, setAssignUnitOpen] = useState(false);
     const [assignTenant, setAssignTenant] = useState<Tenant | null>(null);
 
     const [moveOutOpen, setMoveOutOpen] = useState(false);
@@ -130,14 +136,14 @@ export default function Index({
         setDialogOpen(true);
     }
 
-    function openAssignRoom() {
+    function openAssignUnit() {
         if (!viewingTenant) {
             return;
         }
 
         setAssignTenant(viewingTenant);
         setDetailOpen(false);
-        setAssignRoomOpen(true);
+        setAssignUnitOpen(true);
     }
 
     function openMoveOut() {
@@ -226,7 +232,9 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                        <DropdownMenuItem onClick={() => router.get(tenants.show.url(t))}>
+                        <DropdownMenuItem
+                            onClick={() => router.get(tenants.show.url(t))}
+                        >
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>
@@ -238,11 +246,11 @@ export default function Index({
                             <DropdownMenuItem
                                 onClick={() => {
                                     setAssignTenant(t);
-                                    setAssignRoomOpen(true);
+                                    setAssignUnitOpen(true);
                                 }}
                             >
                                 <DoorOpen className="size-4" />
-                                Assign to Room
+                                Assign to Unit
                             </DropdownMenuItem>
                         )}
                         {!t.deleted_at && (
@@ -320,7 +328,7 @@ export default function Index({
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
                 onEdit={editFromDetail}
-                onAssignToRoom={openAssignRoom}
+                onAssignToUnit={openAssignUnit}
                 onMoveOut={openMoveOut}
                 onDocuments={openDocuments}
             />
@@ -332,11 +340,11 @@ export default function Index({
             />
 
             {assignTenant && (
-                <AssignRoomSheet
+                <AssignUnitSheet
                     tenant={assignTenant}
-                    availableRooms={_availableRooms}
-                    open={assignRoomOpen}
-                    onOpenChange={setAssignRoomOpen}
+                    availableUnits={_availableUnits}
+                    open={assignUnitOpen}
+                    onOpenChange={setAssignUnitOpen}
                 />
             )}
 
@@ -351,22 +359,24 @@ export default function Index({
                     moveOutTenant
                         ? {
                               id: moveOutTenant.leases?.[0]?.id ?? 0,
-                              tenants: [{
-                                  id: moveOutTenant.id,
-                                  name: moveOutTenant.name,
-                                  phone: moveOutTenant.phone,
-                                  pivot: { is_primary: true },
-                              }],
+                              tenants: [
+                                  {
+                                      id: moveOutTenant.id,
+                                      name: moveOutTenant.name,
+                                      phone: moveOutTenant.phone,
+                                      pivot: { is_primary: true },
+                                  },
+                              ],
                               primary_tenant: {
                                   id: moveOutTenant.id,
                                   name: moveOutTenant.name,
                                   phone: moveOutTenant.phone,
                               },
-                              room: moveOutTenant.leases?.[0]?.room ?? null,
+                              unit: moveOutTenant.leases?.[0]?.unit ?? null,
                           }
                         : null
                 }
-                availableRooms={_availableRooms}
+                availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />

@@ -1,6 +1,10 @@
 import { Link } from '@inertiajs/react';
 import { ChevronRight } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     SidebarGroup,
     SidebarGroupLabel,
@@ -48,14 +52,28 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                                     <CollapsibleContent>
                                         <SidebarMenuSub>
                                             {item.children.map((child) => (
-                                                <SidebarMenuSubItem key={child.title}>
+                                                <SidebarMenuSubItem
+                                                    key={child.title}
+                                                >
                                                     <SidebarMenuSubButton
                                                         asChild
-                                                        isActive={isCurrentUrl(child.href ?? '')}
+                                                        isActive={isCurrentUrl(
+                                                            child.href ?? '',
+                                                        )}
                                                     >
-                                                        <Link href={child.href ?? '#'} prefetch>
-                                                            {child.icon && <child.icon />}
-                                                            <span>{child.title}</span>
+                                                        <Link
+                                                            href={
+                                                                child.href ??
+                                                                '#'
+                                                            }
+                                                            prefetch
+                                                        >
+                                                            {child.icon && (
+                                                                <child.icon />
+                                                            )}
+                                                            <span>
+                                                                {child.title}
+                                                            </span>
                                                         </Link>
                                                     </SidebarMenuSubButton>
                                                 </SidebarMenuSubItem>
@@ -71,7 +89,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
                                 asChild
-                                // parent match keeps the item active on workspace child pages, e.g. /properties/5/rooms
+                                // parent match keeps the item active on workspace child pages, e.g. /properties/5/units
                                 isActive={
                                     item.href
                                         ? isCurrentOrParentUrl(item.href)

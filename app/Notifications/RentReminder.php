@@ -68,15 +68,15 @@ class RentReminder extends Notification implements ShouldQueue
 
         if ($template) {
             return str_replace(
-                [':name', ':room', ':days', ':amount', ':date'],
-                [$notifiable->name, $this->event->lease->room?->name ?? '—', $days, $amount, $date],
+                [':name', ':unit:', ':days', ':amount', ':date'],
+                [$notifiable->name, $this->event->lease->unit?->name ?? '—', $this->event->lease->unit?->name ?? '—', $days, $amount, $date],
                 $template,
             );
         }
 
         return __("notifications.rent.{$this->event->type->value}", [
             'name' => $notifiable->name,
-            'room' => $this->event->lease->room?->name ?? '—',
+            'unit' => $this->event->lease->unit?->name ?? '—',
             'days' => $days,
             'amount' => $amount,
             'date' => $date,
