@@ -41,8 +41,7 @@ class PropertyType extends Model
 
     public function scopeActive(Builder $query): void
     {
-        // whereRaw: Postgres won't compare a boolean column to an int-bound value.
-        $query->whereRaw('is_active is true');
+        $query->where('is_active', true);
     }
 
     public function scopeOrdered(Builder $query): void

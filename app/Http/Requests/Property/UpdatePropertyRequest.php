@@ -15,7 +15,7 @@ class UpdatePropertyRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['sometimes', Rule::exists('property_types', 'slug')->where(fn ($q) => $q->whereRaw('is_active is true'))],
+            'type' => ['sometimes', Rule::exists('property_types', 'slug')->where('is_active', true)],
             'slug' => ['nullable', 'string', 'max:255', 'unique:properties,slug,'.$this->route('property')?->id],
             'address' => ['nullable', 'string', 'max:65535'],
             'region_id' => ['nullable', 'integer', 'exists:regions,id'],
