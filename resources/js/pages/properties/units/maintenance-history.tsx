@@ -5,7 +5,7 @@ import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { MaintenanceTicket, PaginatedData, TableMeta } from '@/types';
-import { RoomLayout } from './layout';
+import { UnitLayout } from './layout';
 
 const priorityColors: Record<string, string> = {
     low: 'bg-slate-100 text-slate-700',
@@ -124,7 +124,7 @@ export default function MaintenanceHistory({
     table: TableMeta;
 }) {
     return (
-        <RoomLayout property={property} unit={unit} activeTab="maintenance">
+        <UnitLayout property={property} unit={unit} activeTab="maintenance">
             <PluginRegion name="workspace-tab-maintenance">
                 <WorkspaceTable
                     url={`/properties/${property.slug}/units/${unit.slug}/maintenance-history`}
@@ -144,6 +144,6 @@ export default function MaintenanceHistory({
                     }
                 />
             </PluginRegion>
-        </RoomLayout>
+        </UnitLayout>
     );
 }

@@ -1,8 +1,8 @@
 import { UnitOverview } from '@/components/features';
 import type { Property, Unit } from '@/types';
-import { RoomLayout } from './layout';
+import { UnitLayout } from './layout';
 
-export default function RoomWorkspace({
+export default function UnitWorkspace({
     property,
     unit,
 }: {
@@ -10,8 +10,8 @@ export default function RoomWorkspace({
     unit: Unit;
 }) {
     return (
-        <RoomLayout property={property} unit={unit} activeTab="overview">
+        <UnitLayout property={property} unit={unit} activeTab="overview">
             <UnitOverview unit={unit} />
-        </RoomLayout>
+        </UnitLayout>
     );
 }
