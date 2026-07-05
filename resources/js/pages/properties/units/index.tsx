@@ -16,9 +16,9 @@ import { SearchInput } from '@/components/data-table/search-input';
 import {
     LeaseFormSheet,
     MoveOutSheet,
-    MoveRoomSheet,
-    RoomDetailSheet,
-    RoomFormSheet,
+    MoveUnitSheet,
+    UnitDetailSheet,
+    UnitFormSheet,
 } from '@/components/features';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -463,7 +463,7 @@ export default function Index({
                 />
             </div>
 
-            <RoomDetailSheet
+            <UnitDetailSheet
                 unit={viewingRoom}
                 property={property}
                 open={detailOpen}
@@ -474,7 +474,7 @@ export default function Index({
                 onMoveRoom={openMoveRoom}
             />
 
-            <RoomFormSheet
+            <UnitFormSheet
                 key={editingRoom?.id ?? 'new'}
                 unit={editingRoom}
                 property={property}
@@ -492,7 +492,7 @@ export default function Index({
             )}
 
             {moveLease && moveFromRoom && (
-                <MoveRoomSheet
+                <MoveUnitSheet
                     property={property}
                     currentRoom={moveFromRoom}
                     availableRooms={getFilteredRoomsForMove(moveFromRoom.id)}

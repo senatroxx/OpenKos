@@ -33,12 +33,12 @@ The `units.status` column holds one of four values:
 `LeaseController::store()` aborts with 422 if unit status is `maintenance`.
 
 ### Tenant Assignment
-`TenantController::assignRoom()` aborts with 422 if unit status is `maintenance`.
+`TenantController::assignUnit()` aborts with 422 if unit status is `maintenance`.
 
 ### Lease Move
 `LeaseController::move()` aborts with 422 if target unit status is `maintenance`.
 
-`LeaseController::moveOut()` aborts with 422 if target unit status is `maintenance` (when `move_to_another_room` is selected).
+`LeaseController::moveOut()` aborts with 422 if target unit status is `maintenance` (when `move_to_another_unit` is selected).
 
 ### Available Unit Queries
 All four "available units" queries now exclude maintenance units:
@@ -66,11 +66,11 @@ When editing a ticket (status change via the Resolve or Cancel action), if the t
 ### Request Fields
 
 **StoreMaintenanceTicketRequest:**
-- `block_room` — boolean, optional. When true, sets the selected unit's status to `maintenance`.
-- `move_tenant_to_unit_id` — integer, optional. When provided with `block_room`, moves the active lease from the blocked unit to the target unit before blocking.
+- `block_unit` — boolean, optional. When true, sets the selected unit's status to `maintenance`.
+- `move_tenant_to_unit_id` — integer, optional. When provided with `block_unit`, moves the active lease from the blocked unit to the target unit before blocking.
 
 **UpdateMaintenanceTicketRequest:**
-- `restore_room` — boolean, optional. When true on status transition to Resolved/Cancelled, restores the unit's availability if no other open tickets exist.
+- `restore_unit` — boolean, optional. When true on status transition to Resolved/Cancelled, restores the unit's availability if no other open tickets exist.
 
 ### Controller Logic
 
@@ -113,7 +113,7 @@ The `Lease` model has a `roomHistories()` HasMany relationship.
 - Dialog `showOccupiedDialog` triggers when block + occupied:
   - "Move tenant" radio with target unit dropdown (available units, same property, not maintenance)
   - "Keep tenant, just mark as maintenance" radio
-- On continue: submits form with `block_room=true` and optional `move_tenant_to_unit_id`
+- On continue: submits form with `block_unit=true` and optional `move_tenant_to_unit_id`
 
 ### Database
 

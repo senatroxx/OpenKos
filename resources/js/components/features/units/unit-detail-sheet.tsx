@@ -46,7 +46,7 @@ const DUE_DAY_LABELS: Record<number, string> = {
     31: 'Last day',
 };
 
-export default function RoomDetailSheet({
+export default function UnitDetailSheet({
     unit,
     property,
     open,

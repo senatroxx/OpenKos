@@ -11,7 +11,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import properties from '@/routes/properties';
-export default function MoveRoomSheet({
+export default function MoveUnitSheet({
     property,
     currentRoom,
     availableUnits,
