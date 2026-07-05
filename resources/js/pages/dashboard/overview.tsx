@@ -11,7 +11,13 @@ function formatRupiah(n: number): string {
     }).format(n);
 }
 
-export default function Overview({ finance, stats }: { finance: Finance; stats: Stats }) {
+export default function Overview({
+    finance,
+    stats,
+}: {
+    finance: Finance;
+    stats: Stats;
+}) {
     return (
         <>
             <Head title="Dashboard" />

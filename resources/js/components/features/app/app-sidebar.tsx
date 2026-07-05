@@ -50,8 +50,16 @@ export function AppSidebar() {
                       title: 'Dashboard',
                       icon: LayoutGrid,
                       children: [
-                          { title: 'Overview', icon: LayoutGrid, href: dashboard() },
-                          { title: 'Rent', icon: Receipt, href: dashboardRent() },
+                          {
+                              title: 'Overview',
+                              icon: LayoutGrid,
+                              href: dashboard(),
+                          },
+                          {
+                              title: 'Rent',
+                              icon: Receipt,
+                              href: dashboardRent(),
+                          },
                           ...platformPageNavItems(platform.dashboard, auth),
                       ],
                   },
@@ -73,7 +81,13 @@ export function AppSidebar() {
             ? [{ title: 'Leases', href: leases.index(), icon: FileText }]
             : []),
         ...(isOwner || permissions.includes('maintenance-tickets.view')
-            ? [{ title: 'Maintenance', href: maintenanceTickets.index(), icon: Wrench }]
+            ? [
+                  {
+                      title: 'Maintenance',
+                      href: maintenanceTickets.index(),
+                      icon: Wrench,
+                  },
+              ]
             : []),
         ...(isOwner || permissions.includes('users.view')
             ? [{ title: 'Users', href: userRoutes.index(), icon: UserCog }]

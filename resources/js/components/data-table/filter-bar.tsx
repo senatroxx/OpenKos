@@ -139,7 +139,9 @@ export function FilterBar({
                 key: `${key}-${v}`,
                 filterKey: key,
                 value: v,
-                display: filter ? `${label}: ${optLabel(filter, v) ?? v}` : `${label}: ${v}`,
+                display: filter
+                    ? `${label}: ${optLabel(filter, v) ?? v}`
+                    : `${label}: ${v}`,
             }));
         },
     );

@@ -39,7 +39,13 @@ export default function UserWorkspace({ user }: { user: WorkspaceUser }) {
                 workspace="user"
                 activeTab="overview"
                 hrefParams={{ id: user.id }}
-                tabs={[{ key: 'overview', label: 'Overview', href: `/users/${user.id}` }]}
+                tabs={[
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/users/${user.id}`,
+                    },
+                ]}
             />
 
             <div className="space-y-6">
@@ -55,22 +61,40 @@ export default function UserWorkspace({ user }: { user: WorkspaceUser }) {
                 <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 md:grid-cols-3">
                     <Field
                         label="Last login"
-                        value={user.last_login_at ? new Date(user.last_login_at).toLocaleString() : 'Never'}
+                        value={
+                            user.last_login_at
+                                ? new Date(user.last_login_at).toLocaleString()
+                                : 'Never'
+                        }
                     />
                     <Field
                         label="Email verified"
-                        value={user.email_verified_at ? new Date(user.email_verified_at).toLocaleDateString() : 'No'}
+                        value={
+                            user.email_verified_at
+                                ? new Date(
+                                      user.email_verified_at,
+                                  ).toLocaleDateString()
+                                : 'No'
+                        }
                     />
                     <Field
                         label="Invited"
-                        value={user.invited_at ? new Date(user.invited_at).toLocaleDateString() : '—'}
+                        value={
+                            user.invited_at
+                                ? new Date(user.invited_at).toLocaleDateString()
+                                : '—'
+                        }
                     />
                 </div>
 
                 <div>
-                    <p className="mb-2 text-xs text-muted-foreground">Assigned properties</p>
+                    <p className="mb-2 text-xs text-muted-foreground">
+                        Assigned properties
+                    </p>
                     {user.properties.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No properties assigned.</p>
+                        <p className="text-sm text-muted-foreground">
+                            No properties assigned.
+                        </p>
                     ) : (
                         <div className="flex flex-wrap gap-2">
                             {user.properties.map((property) => (
