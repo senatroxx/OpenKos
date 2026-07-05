@@ -83,7 +83,7 @@ export default function Index({
     const [detailOpen, setDetailOpen] = useState(false);
     const [viewingTenant, setViewingTenant] = useState<Tenant | null>(null);
 
-    const [assignRoomOpen, setAssignRoomOpen] = useState(false);
+    const [assignUnitOpen, setAssignUnitOpen] = useState(false);
     const [assignTenant, setAssignTenant] = useState<Tenant | null>(null);
 
     const [moveOutOpen, setMoveOutOpen] = useState(false);
@@ -130,14 +130,14 @@ export default function Index({
         setDialogOpen(true);
     }
 
-    function openAssignRoom() {
+    function openAssignUnit() {
         if (!viewingTenant) {
             return;
         }
 
         setAssignTenant(viewingTenant);
         setDetailOpen(false);
-        setAssignRoomOpen(true);
+        setAssignUnitOpen(true);
     }
 
     function openMoveOut() {
@@ -238,7 +238,7 @@ export default function Index({
                             <DropdownMenuItem
                                 onClick={() => {
                                     setAssignTenant(t);
-                                    setAssignRoomOpen(true);
+                                    setAssignUnitOpen(true);
                                 }}
                             >
                                 <DoorOpen className="size-4" />
@@ -320,7 +320,7 @@ export default function Index({
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
                 onEdit={editFromDetail}
-                onAssignToRoom={openAssignRoom}
+                onAssignToUnit={openAssignUnit}
                 onMoveOut={openMoveOut}
                 onDocuments={openDocuments}
             />
@@ -335,8 +335,8 @@ export default function Index({
                 <AssignRoomSheet
                     tenant={assignTenant}
                     availableRooms={_availableRooms}
-                    open={assignRoomOpen}
-                    onOpenChange={setAssignRoomOpen}
+                    open={assignUnitOpen}
+                    onOpenChange={setAssignUnitOpen}
                 />
             )}
 

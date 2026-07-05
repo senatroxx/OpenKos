@@ -61,8 +61,8 @@ export type Property = {
     is_active?: boolean;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
-    rooms_count?: number;
-    occupied_rooms_count?: number;
+    units_count?: number;
+    occupied_units_count?: number;
     tenants_count?: number;
 };
 

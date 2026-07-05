@@ -378,7 +378,7 @@ setDetailTicket(null);
                                 if (ticket) {
                                     router.put(maintenanceTickets.update.url(ticket.id), {
                                         status: 'resolved',
-                                        restore_room: '1',
+                                        restore_unit: '1',
                                     });
                                 }
                             }}>
@@ -391,7 +391,7 @@ setDetailTicket(null);
                                 if (ticket) {
                                     router.put(maintenanceTickets.update.url(ticket.id), {
                                         status: 'resolved',
-                                        restore_room: '1',
+                                        restore_unit: '1',
                                         move_back: '1',
                                     });
                                 }
