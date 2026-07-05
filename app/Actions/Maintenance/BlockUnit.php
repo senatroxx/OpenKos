@@ -28,7 +28,7 @@ class BlockUnit
     {
         $targetUnit = Unit::lockForUpdate()->findOrFail($targetUnitId);
 
-        abort_if($targetUnit->status === UnitStatus::Maintenance, 422, __('Target unit is under maintenance.'));
+        abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
         abort_if($targetUnit->id === $unit->id, 422, __('Cannot move to the same unit.'));
 
         $targetHasLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->exists();

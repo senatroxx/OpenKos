@@ -25,7 +25,7 @@ class CreateLease
         return DB::transaction(function () use ($unit, $data, $tenantIds) {
             $unit = Unit::lockForUpdate()->findOrFail($unit->id);
 
-            abort_if($unit->status === UnitStatus::Maintenance, 422, __('This unit is under maintenance and cannot be leased.'));
+            abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('This unit is not available for lease.'));
 
             $existingLease = $unit->leases()->where('status', LeaseStatus::Active->value)->first();
             $activeTenantsCount = $this->occupancy->activeOccupantCount($unit);

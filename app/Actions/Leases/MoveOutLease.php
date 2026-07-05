@@ -70,7 +70,7 @@ class MoveOutLease
 
         $targetUnit = Unit::lockForUpdate()->findOrFail($data->targetUnitId);
 
-        abort_if($targetUnit->status === UnitStatus::Maintenance, 422, __('Target unit is under maintenance.'));
+        abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
 
         $lease->load('tenants');
 
