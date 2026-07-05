@@ -270,7 +270,7 @@ it('prevents assigning tenant to maintenance unit', function () {
         ->assertStatus(422);
 });
 
-it('restores unit availability when resolving ticket with restore_room flag', function () {
+it('restores unit availability when resolving ticket with restore_unit flag', function () {
     $owner = User::factory()->owner()->create();
     $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
     $ticket = MaintenanceTicket::factory()->create([

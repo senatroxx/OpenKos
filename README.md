@@ -56,7 +56,7 @@ npm run dev
 ## Architecture
 
 - **Owner**: Full access to all features
-- **Admin**: Operational access (properties, rooms, tenants, reports)
+- **Admin**: Operational access (properties, units, tenants, reports)
 - **Staff**: Limited access (tenants, dashboard)
 
 ## Testing

@@ -341,11 +341,11 @@ describe('move unit', function () {
             'unit_id' => $unitA->id,
             'status' => 'active',
         ]);
-        $targetRoomInB = Unit::factory()->for($propertyB)->create();
+        $targetUnitInB = Unit::factory()->for($propertyB)->create();
 
         $this->actingAs($admin)
             ->post(route('properties.units.leases.move', [$propertyA, $unitA, $lease]), [
-                'target_unit_id' => $targetRoomInB->id,
+                'target_unit_id' => $targetUnitInB->id,
             ])
             ->assertForbidden();
     });
