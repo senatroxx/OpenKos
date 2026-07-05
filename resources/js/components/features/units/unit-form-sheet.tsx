@@ -30,7 +30,7 @@ const emptyRate: UnitRate = {
     amount: '',
 };
 
-export default function RoomFormSheet({
+export default function UnitFormSheet({
     unit,
     property,
     open,

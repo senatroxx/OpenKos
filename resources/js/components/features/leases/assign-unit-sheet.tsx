@@ -88,7 +88,7 @@ function computeMonthlyEquivalent(
     return `≈ ${formatCurrency(Math.round(monthly))}/month`;
 }
 
-export default function AssignRoomSheet({
+export default function AssignUnitSheet({
     tenant,
     availableRooms,
     open,

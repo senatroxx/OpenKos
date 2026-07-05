@@ -13,7 +13,7 @@ import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
-    AssignRoomSheet,
+    AssignUnitSheet,
     MoveOutSheet,
     TenantDetailSheet,
     TenantDocumentsSheet,
@@ -332,7 +332,7 @@ export default function Index({
             />
 
             {assignTenant && (
-                <AssignRoomSheet
+                <AssignUnitSheet
                     tenant={assignTenant}
                     availableRooms={_availableRooms}
                     open={assignUnitOpen}

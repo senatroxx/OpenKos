@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<string, string> = {
     unavailable: 'bg-gray-400',
 };
 
-export default function RoomOverview({ unit }: { unit: Unit }) {
+export default function UnitOverview({ unit }: { unit: Unit }) {
     const isOccupied = (unit.active_leases ?? 0) > 0;
     const allTenants = isOccupied && unit.leases
         ? unit.leases.flatMap((l) => l.tenants ?? (l.primary_tenant ? [l.primary_tenant] : []))
