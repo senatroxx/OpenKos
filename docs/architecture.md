@@ -110,8 +110,8 @@ New domains should follow the same pattern: pick the layers you need, place file
 ```
 Property (has a type — see below)
   ├── Regions / Cities (location)
-  └── Rooms
-       ├── RoomRates (pricing history)
+  └── Units
+       ├── UnitRates (pricing history)
        └── Leases
             ├── Tenants (pivot: lease_tenant)
             ├── Payments
@@ -132,7 +132,7 @@ Every property has a `type` (`properties.type`), backed by the `App\Enums\Proper
 
 ### Multi-Tenant Occupancy
 
-A room can hold multiple tenants on a single lease via the `lease_tenant` pivot table. Each lease has one `primary_tenant_id` (the main point of contact). `rooms.capacity` limits the total occupants. See `docs/multi-tenant-occupancy.md` for the full design.
+A unit can hold multiple tenants on a single lease via the `lease_tenant` pivot table. Each lease has one `primary_tenant_id` (the main point of contact). `units.capacity` limits the total occupants. See `docs/multi-tenant-occupancy.md` for the full design.
 
 ### Payments & Rent Schedule
 

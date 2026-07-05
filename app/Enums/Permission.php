@@ -24,10 +24,10 @@ enum Permission: string
     case PropertiesUpdate = 'properties.update';
     case PropertiesDelete = 'properties.delete';
 
-    case RoomsView = 'rooms.view';
-    case RoomsCreate = 'rooms.create';
-    case RoomsUpdate = 'rooms.update';
-    case RoomsDelete = 'rooms.delete';
+    case UnitsView = 'units.view';
+    case UnitsCreate = 'units.create';
+    case UnitsUpdate = 'units.update';
+    case UnitsDelete = 'units.delete';
 
     case TenantsView = 'tenants.view';
     case TenantsCreate = 'tenants.create';
@@ -70,7 +70,7 @@ enum Permission: string
             'reset_password' => 'Reset Password',
             'resend_invitation' => 'Resend Invitation',
             'export' => 'Export',
-            'move' => 'Move Room',
+            'move' => 'Move Unit',
             'move_out' => 'Move Out',
             'renew' => 'Renew Lease',
             'send' => 'Send',
@@ -103,10 +103,10 @@ enum Permission: string
             self::PropertiesUpdate => 'Edit existing property information.',
             self::PropertiesDelete => 'Archive properties.',
 
-            self::RoomsView => 'View rooms within properties.',
-            self::RoomsCreate => 'Add new rooms to properties.',
-            self::RoomsUpdate => 'Edit existing room details.',
-            self::RoomsDelete => 'Remove rooms from properties.',
+            self::UnitsView => 'View units within properties.',
+            self::UnitsCreate => 'Add new units to properties.',
+            self::UnitsUpdate => 'Edit existing unit details.',
+            self::UnitsDelete => 'Remove units from properties.',
 
             self::TenantsView => 'View the tenant list and details.',
             self::TenantsCreate => 'Register new tenants.',
@@ -115,10 +115,10 @@ enum Permission: string
             self::TenantsExport => 'Export tenant data.',
 
             self::LeasesView => 'View lease agreements and history.',
-            self::LeasesCreate => 'Create new leases and assign tenants to rooms.',
+            self::LeasesCreate => 'Create new leases and assign tenants to units.',
             self::LeasesUpdate => 'Edit existing lease terms.',
             self::LeasesDelete => 'Terminate lease agreements.',
-            self::LeasesMove => 'Move a tenant to a different room.',
+            self::LeasesMove => 'Move a tenant to a different unit.',
             self::LeasesMoveOut => 'Process tenant move-out.',
             self::LeasesRenew => 'Renew a lease agreement.',
 

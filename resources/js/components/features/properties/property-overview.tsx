@@ -71,15 +71,15 @@ export default function PropertyOverview({ property }: { property: Property }) {
                 <div className="mt-2 grid grid-cols-3 gap-4">
                     <div className="rounded-lg border bg-muted/30 p-4">
                         <p className="text-2xl font-semibold tabular-nums">
-                            {property.rooms_count ?? 0}
+                            {property.units_count ?? 0}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Total Rooms
+                            Total Units
                         </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">
                         <p className="text-2xl font-semibold tabular-nums">
-                            {property.occupied_rooms_count ?? 0}
+                            {property.occupied_units_count ?? 0}
                         </p>
                         <p className="text-xs text-muted-foreground">
                             Occupied

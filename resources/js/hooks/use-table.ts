@@ -75,11 +75,12 @@ export function useTable({ routeFn, params, defaults = {} }: UseTableOptions) {
     function toggleSort(column: string) {
         const current = params.sort ?? '';
 
-        const newSort = current === column
-            ? `-${column}`
-            : current === `-${column}`
-                ? column
-                : column;
+        const newSort =
+            current === column
+                ? `-${column}`
+                : current === `-${column}`
+                  ? column
+                  : column;
 
         navigate({ sort: newSort, page: '' });
     }

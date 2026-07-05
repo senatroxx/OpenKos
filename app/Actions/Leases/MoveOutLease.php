@@ -4,9 +4,9 @@ namespace App\Actions\Leases;
 
 use App\Business\Leases\OccupancyCalculator;
 use App\Data\Lease\MoveOutLeaseData;
-use App\Enums\RoomStatus;
+use App\Enums\UnitStatus;
 use App\Models\Lease;
-use App\Models\Room;
+use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
 use Illuminate\Support\Facades\DB;
 
@@ -19,7 +19,7 @@ class MoveOutLease
     public function execute(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
         return DB::transaction(function () use ($lease, $data) {
-            if ($data->moveToAnotherRoom) {
+            if ($data->moveToAnotherUnit) {
                 return $this->transfer($lease, $data);
             }
 
@@ -33,7 +33,7 @@ class MoveOutLease
             ? ($data->depositRefundAmount ?? $lease->deposit_amount)
             : null;
 
-        $oldRoom = $lease->room;
+        $oldUnit = $lease->unit;
 
         $lease->update([
             'end_date' => $data->endDate,
@@ -45,10 +45,10 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
-        $oldRoom->unsetRelation('leases');
+        $oldUnit->unsetRelation('leases');
 
-        if ($oldRoom->leases()->where('status', 'active')->doesntExist() && $oldRoom->status !== RoomStatus::Maintenance) {
-            $oldRoom->update(['status' => RoomStatus::Available]);
+        if ($oldUnit->leases()->where('status', 'active')->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
+            $oldUnit->update(['status' => UnitStatus::Available]);
         }
 
         return MoveOutLeaseResult::success($lease);
@@ -56,28 +56,28 @@ class MoveOutLease
 
     private function transfer(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
-        $targetRoom = Room::lockForUpdate()->findOrFail($data->targetRoomId);
+        $targetUnit = Unit::lockForUpdate()->findOrFail($data->targetUnitId);
 
-        abort_if($targetRoom->status === RoomStatus::Maintenance, 422, __('Target room is under maintenance.'));
+        abort_if($targetUnit->status === UnitStatus::Maintenance, 422, __('Target unit is under maintenance.'));
 
         $lease->load('tenants');
 
         $incomingTenantIds = $lease->tenants->pluck('id')->toArray();
-        $existingLease = $targetRoom->leases()->where('status', 'active')->first();
+        $existingLease = $targetUnit->leases()->where('status', 'active')->first();
 
         $incomingCount = $existingLease
             ? count(array_diff($incomingTenantIds, $existingLease->tenants()->pluck('tenants.id')->all()))
             : count($incomingTenantIds);
 
-        if (! $this->occupancy->canAccommodate($targetRoom, $incomingCount)) {
-            abort(422, __('Room capacity exceeded. Target room can only hold :capacity occupants.', ['capacity' => $targetRoom->capacity]));
+        if (! $this->occupancy->canAccommodate($targetUnit, $incomingCount)) {
+            abort(422, __('Unit capacity exceeded. Target unit can only hold :capacity occupants.', ['capacity' => $targetUnit->capacity]));
         }
 
         $depositRefundAmount = $data->depositReturned
             ? ($data->depositRefundAmount ?? $lease->deposit_amount)
             : null;
 
-        $oldRoom = $lease->room;
+        $oldUnit = $lease->unit;
 
         $lease->update([
             'end_date' => $data->endDate,
@@ -89,14 +89,14 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
-        $oldRoom->unsetRelation('leases');
+        $oldUnit->unsetRelation('leases');
 
-        if ($oldRoom->leases()->where('status', 'active')->doesntExist() && $oldRoom->status !== RoomStatus::Maintenance) {
-            $oldRoom->update(['status' => RoomStatus::Available]);
+        if ($oldUnit->leases()->where('status', 'active')->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
+            $oldUnit->update(['status' => UnitStatus::Available]);
         }
 
         $lease->load('tenants');
-        $existingLease = $targetRoom->leases()->where('status', 'active')->first();
+        $existingLease = $targetUnit->leases()->where('status', 'active')->first();
 
         if ($existingLease) {
             $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
@@ -109,26 +109,26 @@ class MoveOutLease
                 }
             }
         } else {
-            $matchingRate = $targetRoom->rates()
+            $matchingRate = $targetUnit->rates()
                 ->where('billing_interval', $lease->billing_interval)
                 ->where('billing_unit', $lease->billing_unit)
                 ->first();
 
-            $newLease = $targetRoom->leases()->create([
+            $newLease = $targetUnit->leases()->create([
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $data->endDate,
                 'rent_amount' => $lease->rent_amount,
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
                 'is_custom_price' => $lease->is_custom_price,
-                'room_rate_id' => $matchingRate?->id,
+                'unit_rate_id' => $matchingRate?->id,
                 'deposit_amount' => $lease->deposit_amount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'deposit_refund_amount' => $data->carryDepositRefund ? $lease->deposit_refund_amount : null,
                 'deposit_refunded_at' => $data->carryDepositRefund ? $lease->deposit_refunded_at : null,
                 'rent_due_day' => $lease->rent_due_day,
                 'status' => 'active',
-                'notes' => 'Moved from room '.$oldRoom->name.' on '.now()->format('Y-m-d'),
+                'notes' => 'Moved from unit '.$oldUnit->name.' on '.now()->format('Y-m-d'),
             ]);
 
             foreach ($lease->tenants as $tenant) {
@@ -138,7 +138,7 @@ class MoveOutLease
             }
         }
 
-        $targetRoom->update(['status' => RoomStatus::Occupied]);
+        $targetUnit->update(['status' => UnitStatus::Occupied]);
 
         return MoveOutLeaseResult::success($lease, $newLease ?? null);
     }

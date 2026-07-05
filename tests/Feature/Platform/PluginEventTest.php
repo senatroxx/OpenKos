@@ -4,8 +4,8 @@ use App\Events\PaymentRecorded;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -49,9 +49,9 @@ it('dispatches PaymentRecorded when a payment is recorded', function () {
     Event::fake([PaymentRecorded::class]);
 
     $user = User::factory()->owner()->create();
-    $room = Room::factory()->for(Property::factory())->create();
+    $unit = Unit::factory()->for(Property::factory())->create();
     $lease = Lease::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'primary_tenant_id' => Tenant::factory()->create()->id,
     ]);
 

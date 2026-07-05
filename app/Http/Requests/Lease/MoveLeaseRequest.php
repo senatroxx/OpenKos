@@ -13,7 +13,7 @@ class MoveLeaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'target_room_id' => ['required', 'integer', 'exists:rooms,id'],
+            'target_unit_id' => ['required', 'integer', 'exists:units,id'],
         ];
     }
 }

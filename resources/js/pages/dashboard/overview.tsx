@@ -11,25 +11,31 @@ function formatRupiah(n: number): string {
     }).format(n);
 }
 
-export default function Overview({ finance, stats }: { finance: Finance; stats: Stats }) {
+export default function Overview({
+    finance,
+    stats,
+}: {
+    finance: Finance;
+    stats: Stats;
+}) {
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="grid gap-4 md:grid-cols-4">
                     <StatCard
-                        label="Occupied Rooms"
-                        value={stats.occupied_rooms}
+                        label="Occupied Units"
+                        value={stats.occupied_units}
                         bgColor="bg-blue-50 dark:bg-blue-950/20"
                     />
                     <StatCard
-                        label="Available Rooms"
-                        value={stats.available_rooms}
+                        label="Available Units"
+                        value={stats.available_units}
                         bgColor="bg-green-50 dark:bg-green-950/20"
                     />
                     <StatCard
                         label="Maintenance"
-                        value={stats.maintenance_rooms}
+                        value={stats.maintenance_units}
                         bgColor="bg-amber-50 dark:bg-amber-950/20"
                     />
                     <StatCard
@@ -126,19 +132,19 @@ function PropertyCard({ property }: { property: PropertyStats }) {
                 <div>
                     <p className="text-xs text-muted-foreground">Occupied</p>
                     <p className="mt-0.5 text-lg font-bold text-blue-600 tabular-nums dark:text-blue-400">
-                        {property.occupied_rooms}
+                        {property.occupied_units}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-muted-foreground">Available</p>
                     <p className="mt-0.5 text-lg font-bold text-green-600 tabular-nums dark:text-green-400">
-                        {property.available_rooms}
+                        {property.available_units}
                     </p>
                 </div>
                 <div>
                     <p className="text-xs text-muted-foreground">Maintenance</p>
                     <p className="mt-0.5 text-lg font-bold text-amber-600 tabular-nums dark:text-amber-400">
-                        {property.maintenance_rooms}
+                        {property.maintenance_units}
                     </p>
                 </div>
                 <div>
@@ -152,7 +158,7 @@ function PropertyCard({ property }: { property: PropertyStats }) {
             <div className="mt-4">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                        {property.occupied_rooms} / {property.total_rooms} rooms
+                        {property.occupied_units} / {property.total_units} units
                     </span>
                     <span>{property.occupancy_percentage}%</span>
                 </div>

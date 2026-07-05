@@ -3,7 +3,10 @@ import { dashboard, login } from '@/routes';
 import type { Auth } from '@/types/auth';
 
 export default function Welcome() {
-    const { auth, setting } = usePage<{ auth: Auth; setting: { site_name: string } }>().props;
+    const { auth, setting } = usePage<{
+        auth: Auth;
+        setting: { site_name: string };
+    }>().props;
 
     return (
         <>

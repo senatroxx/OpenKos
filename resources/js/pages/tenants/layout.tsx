@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
-import type { RoomWithProperty, TenantDocument, TenantInfo } from '@/types';
+import type { UnitWithProperty, TenantDocument, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -10,7 +10,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -54,9 +54,21 @@ export function TenantLayout({
                 activeTab={activeTab}
                 hrefParams={{ id: tenant.id }}
                 tabs={[
-                    { key: 'overview', label: 'Overview', href: `/tenants/${tenant.id}` },
-                    { key: 'leases', label: 'Leases', href: `/tenants/${tenant.id}/leases` },
-                    { key: 'documents', label: 'Documents', href: `/tenants/${tenant.id}/documents` },
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/tenants/${tenant.id}`,
+                    },
+                    {
+                        key: 'leases',
+                        label: 'Leases',
+                        href: `/tenants/${tenant.id}/leases`,
+                    },
+                    {
+                        key: 'documents',
+                        label: 'Documents',
+                        href: `/tenants/${tenant.id}/documents`,
+                    },
                 ]}
             />
 

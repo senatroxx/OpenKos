@@ -2,8 +2,8 @@
 
 use App\Models\Lease;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 
@@ -199,11 +199,11 @@ describe('cross-property access', function () {
         $propertyA = Property::factory()->create();
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
-        $room = Room::factory()->for($propertyB)->create();
+        $unit = Unit::factory()->for($propertyB)->create();
         $tenant = Tenant::factory()->create();
         Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
         ]);
 
         $this->actingAs($admin)
@@ -216,11 +216,11 @@ describe('cross-property access', function () {
         $propertyA = Property::factory()->create();
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
-        $room = Room::factory()->for($propertyB)->create();
+        $unit = Unit::factory()->for($propertyB)->create();
         $tenant = Tenant::factory()->create();
         Lease::factory()->create([
             'primary_tenant_id' => $tenant->id,
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
         ]);
 
         $this->actingAs($admin)
@@ -228,51 +228,51 @@ describe('cross-property access', function () {
             ->assertForbidden();
     });
 
-    it('denies admin assigning a tenant to a room in a property they are not assigned to', function () {
+    it('denies admin assigning a tenant to a unit in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
         $propertyA = Property::factory()->create();
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
         $tenant = Tenant::factory()->create();
-        $roomInB = Room::factory()->for($propertyB)->create();
+        $unitInB = Unit::factory()->for($propertyB)->create();
 
         $this->actingAs($admin)
-            ->post(route('tenants.assign-room', $tenant), [
-                'room_id' => $roomInB->id,
+            ->post(route('tenants.assign-unit', $tenant), [
+                'unit_id' => $unitInB->id,
                 'start_date' => '2026-06-01',
             ])
             ->assertForbidden();
     });
 });
 
-describe('room assignment pricing', function () {
-    it('ships available rooms with their active rates for the picker', function () {
+describe('unit assignment pricing', function () {
+    it('ships available units with their active rates for the picker', function () {
         $user = User::factory()->owner()->create();
         Tenant::factory()->create();
-        Room::factory()->create(); // auto-seeds a default monthly rate
+        Unit::factory()->create(); // auto-seeds a default monthly rate
 
         $this->actingAs($user)
             ->get(route('tenants.index'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->has('availableRooms.0.active_rates.0.amount'));
+                ->has('availableUnits.0.active_rates.0.amount'));
     });
 
-    it('derives rent from the selected room rate', function () {
+    it('derives rent from the selected unit rate', function () {
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
-        $room = Room::factory()->withRate(1_750_000)->create();
-        $rate = $room->rates()->first();
+        $unit = Unit::factory()->withRate(1_750_000)->create();
+        $rate = $unit->rates()->first();
 
-        $this->actingAs($user)->post(route('tenants.assign-room', $tenant), [
-            'room_id' => $room->id,
-            'room_rate_id' => $rate->id,
+        $this->actingAs($user)->post(route('tenants.assign-unit', $tenant), [
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $rate->id,
             'start_date' => '2026-06-01',
         ]);
 
         $lease = Lease::first();
 
-        expect($lease->room_rate_id)->toBe($rate->id)
+        expect($lease->unit_rate_id)->toBe($rate->id)
             ->and((float) $lease->rent_amount)->toBe(1_750_000.0)
             ->and($lease->is_custom_price)->toBeFalse();
     });

@@ -2,12 +2,32 @@ import { Form, Link } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { edit as editWhatsApp, update as updateWhatsApp, test as testWhatsApp, pair as pairWhatsApp, qr as qrWhatsApp, disconnect as disconnectWhatsApp } from '@/routes/settings/whatsapp';
+import {
+    edit as editWhatsApp,
+    update as updateWhatsApp,
+    test as testWhatsApp,
+    pair as pairWhatsApp,
+    qr as qrWhatsApp,
+    disconnect as disconnectWhatsApp,
+} from '@/routes/settings/whatsapp';
 import type { Driver } from '@/types';
 
 export default function WhatsApp({
@@ -16,18 +36,29 @@ export default function WhatsApp({
     connection,
 }: {
     drivers: Driver[];
-    settings: { whatsapp_driver: string | null; whatsapp_config: Record<string, Record<string, string>> | null };
-    connection: { state: string; phone: string | null; lastConnected: string | null } | null;
+    settings: {
+        whatsapp_driver: string | null;
+        whatsapp_config: Record<string, Record<string, string>> | null;
+    };
+    connection: {
+        state: string;
+        phone: string | null;
+        lastConnected: string | null;
+    } | null;
 }) {
     const [driver, setDriver] = useState(settings.whatsapp_driver ?? 'log');
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [pairingLoading, setPairingLoading] = useState(false);
     const [pairingError, setPairingError] = useState<string | null>(null);
-    const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'disconnected' | 'connecting' | 'connected'>(
-        (connection?.state as 'connected' | 'disconnected') ?? 'unknown',
+    const [connectionStatus, setConnectionStatus] = useState<
+        'unknown' | 'disconnected' | 'connecting' | 'connected'
+    >((connection?.state as 'connected' | 'disconnected') ?? 'unknown');
+    const [devicePhone, setDevicePhone] = useState<string | null>(
+        connection?.phone ?? null,
     );
-    const [devicePhone, setDevicePhone] = useState<string | null>(connection?.phone ?? null);
-    const [deviceLastConnected, setDeviceLastConnected] = useState<string | null>(connection?.lastConnected ?? null);
+    const [deviceLastConnected, setDeviceLastConnected] = useState<
+        string | null
+    >(connection?.lastConnected ?? null);
 
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -63,15 +94,15 @@ export default function WhatsApp({
     };
 
     useEffect(() => {
-        if (! isBaileys) {
+        if (!isBaileys) {
             stopPolling();
             // eslint-disable-next-line react-hooks/set-state-in-effect
             setQrCode(null);
-             
+
             setConnectionStatus('unknown');
-             
+
             setDevicePhone(null);
-             
+
             setDeviceLastConnected(null);
         }
 
@@ -108,13 +139,18 @@ export default function WhatsApp({
                         <CardHeader>
                             <CardTitle>WhatsApp Driver</CardTitle>
                             <CardDescription>
-                                Select the active WhatsApp driver and configure its credentials.
+                                Select the active WhatsApp driver and configure
+                                its credentials.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid max-w-xs gap-2">
                                 <Label htmlFor="whatsapp_driver">Driver</Label>
-                                <input type="hidden" name="whatsapp_driver" value={driver} />
+                                <input
+                                    type="hidden"
+                                    name="whatsapp_driver"
+                                    value={driver}
+                                />
                                 <Select
                                     value={driver}
                                     onValueChange={(value) => setDriver(value)}
@@ -124,44 +160,75 @@ export default function WhatsApp({
                                     </SelectTrigger>
                                     <SelectContent>
                                         {drivers.map((d) => (
-                                            <SelectItem key={d.name} value={d.name}>
+                                            <SelectItem
+                                                key={d.name}
+                                                value={d.name}
+                                            >
                                                 {d.label}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                                 {errors.whatsapp_driver && (
-                                    <p className="text-sm text-red-600">{errors.whatsapp_driver}</p>
+                                    <p className="text-sm text-red-600">
+                                        {errors.whatsapp_driver}
+                                    </p>
                                 )}
                             </div>
 
-                                            {Object.keys(fields).length > 0 && (
+                            {Object.keys(fields).length > 0 && (
                                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                    Values set via environment variables override the fields below and cannot be
+                                    Values set via environment variables
+                                    override the fields below and cannot be
                                     changed here.
                                 </div>
                             )}
 
-                            {Object.keys(fields).length > 0 && Object.entries(fields).map(([key, field]) => (
-                                <div key={key} className="grid max-w-xs gap-2">
-                                    <Label htmlFor={`config-${key}`}>
-                                        {field.label}
-                                        {field.required && <span className="text-destructive"> *</span>}
-                                    </Label>
-                                    <Input
-                                        id={`config-${key}`}
-                                        name={`whatsapp_config[${driver}][${key}]`}
-                                        type={field.type === 'password' ? 'password' : field.type === 'url' ? 'url' : 'text'}
-                                        defaultValue={driverConfig[key] ?? ''}
-                                        placeholder={field.placeholder ?? ''}
-                                    />
-                                    {errors[`whatsapp_config.${driver}.${key}`] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors[`whatsapp_config.${driver}.${key}`]}
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
+                            {Object.keys(fields).length > 0 &&
+                                Object.entries(fields).map(([key, field]) => (
+                                    <div
+                                        key={key}
+                                        className="grid max-w-xs gap-2"
+                                    >
+                                        <Label htmlFor={`config-${key}`}>
+                                            {field.label}
+                                            {field.required && (
+                                                <span className="text-destructive">
+                                                    {' '}
+                                                    *
+                                                </span>
+                                            )}
+                                        </Label>
+                                        <Input
+                                            id={`config-${key}`}
+                                            name={`whatsapp_config[${driver}][${key}]`}
+                                            type={
+                                                field.type === 'password'
+                                                    ? 'password'
+                                                    : field.type === 'url'
+                                                      ? 'url'
+                                                      : 'text'
+                                            }
+                                            defaultValue={
+                                                driverConfig[key] ?? ''
+                                            }
+                                            placeholder={
+                                                field.placeholder ?? ''
+                                            }
+                                        />
+                                        {errors[
+                                            `whatsapp_config.${driver}.${key}`
+                                        ] && (
+                                            <p className="text-sm text-red-600">
+                                                {
+                                                    errors[
+                                                        `whatsapp_config.${driver}.${key}`
+                                                    ]
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
                         </CardContent>
                         <CardFooter>
                             <Button disabled={processing}>Save</Button>
@@ -184,36 +251,47 @@ export default function WhatsApp({
                                 <>
                                     <Badge variant="default">Connected</Badge>
                                     {devicePhone && (
-                                        <span className="text-sm text-muted-foreground">{devicePhone}</span>
+                                        <span className="text-sm text-muted-foreground">
+                                            {devicePhone}
+                                        </span>
                                     )}
                                     {deviceLastConnected && (
                                         <span className="text-xs text-muted-foreground">
-                                            Last connected: {new Date(deviceLastConnected).toLocaleString()}
+                                            Last connected:{' '}
+                                            {new Date(
+                                                deviceLastConnected,
+                                            ).toLocaleString()}
                                         </span>
                                     )}
                                 </>
                             ) : connectionStatus === 'connecting' ? (
                                 <Badge variant="secondary">Connecting</Badge>
                             ) : connectionStatus === 'disconnected' ? (
-                                <Badge variant="destructive">Disconnected</Badge>
+                                <Badge variant="destructive">
+                                    Disconnected
+                                </Badge>
                             ) : null}
                         </div>
 
                         {pairingError && (
-                            <p className="text-sm text-red-600">{pairingError}</p>
-                        )}
-
-                        {(connectionStatus === 'connecting' && !qrCode && !pairingLoading) && (
-                            <p className="text-sm text-muted-foreground">
-                                Generating QR code...
+                            <p className="text-sm text-red-600">
+                                {pairingError}
                             </p>
                         )}
+
+                        {connectionStatus === 'connecting' &&
+                            !qrCode &&
+                            !pairingLoading && (
+                                <p className="text-sm text-muted-foreground">
+                                    Generating QR code...
+                                </p>
+                            )}
 
                         {qrCode && (
                             <div className="space-y-4">
                                 <Separator />
                                 <div className="space-y-3">
-                                    <div className="inline-block border p-2 rounded-lg">
+                                    <div className="inline-block rounded-lg border p-2">
                                         <img
                                             src={`data:image/png;base64,${qrCode}`}
                                             alt="QR Code"
@@ -221,7 +299,8 @@ export default function WhatsApp({
                                         />
                                     </div>
                                     <p className="text-sm text-muted-foreground">
-                                        Scan this QR code with your WhatsApp app to connect your device.
+                                        Scan this QR code with your WhatsApp app
+                                        to connect your device.
                                     </p>
                                 </div>
                             </div>
@@ -229,13 +308,20 @@ export default function WhatsApp({
                     </CardContent>
                     <CardFooter className="gap-2">
                         {connectionStatus !== 'connected' && (
-                            <Button onClick={handlePair} disabled={pairingLoading}>
+                            <Button
+                                onClick={handlePair}
+                                disabled={pairingLoading}
+                            >
                                 {pairingLoading ? 'Pairing...' : 'Pair Device'}
                             </Button>
                         )}
                         {showDisconnect && (
                             <Button variant="destructive" asChild>
-                                <Link href={disconnectWhatsApp().url} method="delete" as="button">
+                                <Link
+                                    href={disconnectWhatsApp().url}
+                                    method="delete"
+                                    as="button"
+                                >
                                     Disconnect
                                 </Link>
                             </Button>
@@ -248,7 +334,8 @@ export default function WhatsApp({
                 <CardHeader>
                     <CardTitle>Test Connection</CardTitle>
                     <CardDescription>
-                        Verify that the active WhatsApp driver is working correctly.
+                        Verify that the active WhatsApp driver is working
+                        correctly.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -258,7 +345,11 @@ export default function WhatsApp({
                 </CardContent>
                 <CardFooter>
                     <Button variant="secondary" asChild>
-                        <Link href={testWhatsApp.url()} method="post" as="button">
+                        <Link
+                            href={testWhatsApp.url()}
+                            method="post"
+                            as="button"
+                        >
                             Test Connection
                         </Link>
                     </Button>
@@ -269,7 +360,5 @@ export default function WhatsApp({
 }
 
 WhatsApp.layout = {
-    breadcrumbs: [
-        { title: 'WhatsApp settings', href: editWhatsApp() },
-    ],
+    breadcrumbs: [{ title: 'WhatsApp settings', href: editWhatsApp() }],
 };

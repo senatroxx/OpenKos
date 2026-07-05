@@ -125,15 +125,15 @@ export default function PropertyDetailSheet({
                                 <div className="mt-1 grid grid-cols-3 gap-4">
                                     <div>
                                         <p className="text-2xl font-semibold tabular-nums">
-                                            {property.rooms_count}
+                                            {property.units_count}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Total Rooms
+                                            Total Units
                                         </p>
                                     </div>
                                     <div>
                                         <p className="text-2xl font-semibold tabular-nums">
-                                            {property.occupied_rooms_count}
+                                            {property.occupied_units_count}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             Occupied
@@ -153,11 +153,11 @@ export default function PropertyDetailSheet({
 
                         <div>
                             <Link
-                                href={properties.rooms.index.url(property)}
+                                href={properties.units.index.url(property)}
                                 className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Manage Rooms ({property.rooms_count})
+                                Manage Units ({property.units_count})
                             </Link>
                         </div>
 

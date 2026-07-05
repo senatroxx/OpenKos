@@ -61,19 +61,19 @@ export type Property = {
     is_active?: boolean;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
-    rooms_count?: number;
-    occupied_rooms_count?: number;
+    units_count?: number;
+    occupied_units_count?: number;
     tenants_count?: number;
 };
 
-export type RoomRate = {
+export type UnitRate = {
     id?: number;
     billing_interval: number;
     billing_unit: 'day' | 'week' | 'month' | 'year';
     amount: string;
 };
 
-export type Room = {
+export type Unit = {
     id: number;
     name: string;
     slug: string; // route key (unique per property)
@@ -88,22 +88,22 @@ export type Room = {
     notes: string | null;
     active_leases?: number;
     leases?: LeaseInfo[];
-    active_rates?: RoomRate[];
+    active_rates?: UnitRate[];
     tenants?: TenantInfo[];
 };
 
-export type RoomWithProperty = Room & {
+export type UnitWithProperty = Unit & {
     property_id: number;
     property: Property | null;
 };
 
-export type AvailableRoom = {
+export type AvailableUnit = {
     id: number;
     name: string;
     property_id: number;
     capacity: number;
     occupied_count: number;
-    active_rates?: RoomRate[];
+    active_rates?: UnitRate[];
     property: {
         id: number;
         name: string;
@@ -117,7 +117,7 @@ export type TenantLease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: Room | null;
+    unit: Unit | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -166,12 +166,12 @@ export type Lease = {
     notes: string | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     payments?: Payment[];
-    room_histories?: {
+    unit_histories?: {
         id: number;
-        from_room: { id: number; name: string } | null;
-        to_room: { id: number; name: string } | null;
+        from_unit: { id: number; name: string } | null;
+        to_unit: { id: number; name: string } | null;
         transferred_by: {
             id: number;
             name: string;
@@ -187,7 +187,7 @@ export type LeaseData = {
     id: number;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
-    room: { id: number; name: string } | null;
+    unit: { id: number; name: string } | null;
 };
 
 export type PaymentProof = {
@@ -232,7 +232,7 @@ export type MaintenanceTicket = {
     id: number;
     reference: string | null;
     property_id: number;
-    room_id: number | null;
+    unit_id: number | null;
     location: string | null;
     title: string;
     description: string | null;
@@ -246,7 +246,7 @@ export type MaintenanceTicket = {
     created_at: string;
     updated_at: string;
     property?: { id: number; name: string } | null;
-    room?: { id: number; name: string } | null;
+    unit?: { id: number; name: string } | null;
     assignee?: {
         id: number;
         name: string;

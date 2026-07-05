@@ -58,7 +58,7 @@ Conventions:
 
 ### Workspaces
 
-`WorkspaceRegistry::for('property')` returns a memoized `Workspace` — a registrar scoped to one entity type. The manager exposes sugar for the aggregate roots: `property()`, `lease()`, `tenant()`; anything else goes through `workspace($name)` (e.g. `'room'`). `WorkspaceTab.key` maps to the frontend `PluginRegion` slot `workspace-tab-{key}` in `entity-workspace-layout.tsx`.
+`WorkspaceRegistry::for('property')` returns a memoized `Workspace` — a registrar scoped to one entity type. The manager exposes sugar for the aggregate roots: `property()`, `lease()`, `tenant()`; anything else goes through `workspace($name)` (e.g. `'unit'`). `WorkspaceTab.key` maps to the frontend `PluginRegion` slot `workspace-tab-{key}` in `entity-workspace-layout.tsx`.
 
 ## Manager & Facade
 
@@ -235,7 +235,7 @@ future concern.
 1. **Shared prop** — `HandleInertiaRequests::share()` exposes `platform` (`navigation`, `workspaces`, `settings`, `dashboard` serialized via `toArray()`). Typed in `resources/js/types/platform.ts`.
 2. **Conversion helpers** — `resources/js/lib/platform.ts`: `canSee()` (owner bypass or permission match), `platformNavItems()` (nav trees, resolves icon names via an explicit lucide map with a fallback), `platformPageNavItems()` (settings pages), `usePlatformTabs(workspace)` (permission-filtered tabs from the shared prop).
 3. **Consumers** — `app-sidebar.tsx` appends `platform.navigation.main`/`.footer` after the hardcoded items and `platform.dashboard` pages as children of the Dashboard group; `layouts/settings/layout.tsx` appends `platform.settings`; every entity workspace layout renders its tab strip through the shared `components/shared/workspace-tabs.tsx`, which appends platform tabs.
-4. **Workspace tabs are URL-routed.** Every workspace (`property`, `tenant`, `lease`, `room`, `maintenance-ticket`, `user`, `role`) uses route-per-tab navigation — clicking a tab navigates (e.g. `/tenants/5/leases`). A platform tab therefore **must** provide `meta: ['href' => ...]`; `{id}` is replaced with the entity id client-side (`{propertyId}` is also available on `room`). Tabs without `meta.href` are skipped. A real plugin registers its own route + Inertia page and points the tab's href at it.
+4. **Workspace tabs are URL-routed.** Every workspace (`property`, `tenant`, `lease`, `unit`, `maintenance-ticket`, `user`, `role`) uses route-per-tab navigation — clicking a tab navigates (e.g. `/tenants/5/leases`). A platform tab therefore **must** provide `meta: ['href' => ...]`; `{id}` is replaced with the entity id client-side (`{propertyId}` is also available on `unit`). Tabs without `meta.href` are skipped. A real plugin registers its own route + Inertia page and points the tab's href at it.
 5. **PluginRegion** — named extension slots (`workspace-header-badge`, `workspace-tabs-before/after`, `workspace-tab-{key}` around built-in tab content, etc.). In-repo plugin frontend code lives in `resources/js/plugins/{name}/` and calls `registerRegion(name, Component)` (loaded via a side-effect import in `app.tsx`).
 
 ### ExamplePlugin (disabled by default)

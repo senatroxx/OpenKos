@@ -22,7 +22,7 @@ class StoreLeaseRequest extends FormRequest
             'rent_amount' => ['nullable', 'numeric', 'min:0'],
             'billing_interval' => ['nullable', 'integer', 'min:1', 'max:255'],
             'billing_unit' => ['nullable', 'string', Rule::in(BillingUnit::values())],
-            'room_rate_id' => ['nullable', 'integer', 'exists:room_rates,id'],
+            'unit_rate_id' => ['nullable', 'integer', 'exists:unit_rates,id'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'deposit_paid_at' => ['nullable', 'date'],
             'deposit_refund_amount' => ['nullable', 'numeric', 'min:0'],

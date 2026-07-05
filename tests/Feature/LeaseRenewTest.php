@@ -4,8 +4,8 @@ use App\Data\Lease\RenewLeaseData;
 use App\Enums\DepositHandling;
 use App\Models\Lease;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RegionAndCitySeeder;
@@ -19,12 +19,12 @@ uses()->beforeEach(function () {
 function createRenewableLease(array $overrides = []): array
 {
     $property = Property::factory()->create();
-    $room = Room::factory()->create(['property_id' => $property->id]);
+    $unit = Unit::factory()->create(['property_id' => $property->id]);
     $tenant = Tenant::factory()->create();
 
     $lease = Lease::factory()->create(array_merge([
         'primary_tenant_id' => $tenant->id,
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'start_date' => '2026-01-01',
         'end_date' => '2026-06-30',
         'rent_amount' => 1_000_000,
@@ -34,12 +34,12 @@ function createRenewableLease(array $overrides = []): array
         'rent_due_day' => 5,
     ], $overrides));
 
-    return [$property, $room, $lease, $tenant];
+    return [$property, $unit, $lease, $tenant];
 }
 
 describe('authorization', function () {
     it('redirects unauthenticated users to login', function () {
-        [, $room, $lease] = createRenewableLease();
+        [, $unit, $lease] = createRenewableLease();
 
         $this->post(route('leases.renew', $lease))
             ->assertRedirect('login');
@@ -200,7 +200,7 @@ describe('renewal', function () {
         expect($newLease->rent_amount)->toBe('1500000.00');
         expect($newLease->start_date->format('Y-m-d'))->toBe('2026-07-01');
         expect($newLease->end_date->format('Y-m-d'))->toBe('2027-06-30');
-        expect($newLease->room_id)->toBe($lease->room_id);
+        expect($newLease->unit_id)->toBe($lease->unit_id);
     });
 
     it('preserves tenants on the new lease', function () {

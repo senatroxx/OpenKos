@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Maintenance\BlockRoom;
+use App\Actions\Maintenance\BlockUnit;
 use App\Actions\Maintenance\ResolveTicket;
 use App\Business\Maintenance\TransitionValidator;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Maintenance\StoreMaintenanceTicketRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceTicketRequest;
-use App\Models\LeaseRoomHistory;
+use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
-use App\Models\Room;
+use App\Models\Unit;
 use App\Models\User;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -26,7 +26,7 @@ class MaintenanceTicketController extends Controller
 {
     public function __construct(
         private TransitionValidator $transitionValidator,
-        private BlockRoom $blockRoom,
+        private BlockUnit $blockUnit,
         private ResolveTicket $resolveTicket,
     ) {}
 
@@ -34,7 +34,7 @@ class MaintenanceTicketController extends Controller
     {
         $this->authorize('view', $ticket);
 
-        $ticket->load(['property:id,name', 'room:id,name,floor', 'assignee:id,name', 'creator:id,name']);
+        $ticket->load(['property:id,name', 'unit:id,name,floor', 'assignee:id,name', 'creator:id,name']);
 
         return Inertia::render('maintenance-tickets/show', [
             'ticket' => $ticket,
@@ -65,14 +65,14 @@ class MaintenanceTicketController extends Controller
             ->defaultSort('-created_at');
 
         $query = MaintenanceTicket::query()
-            ->with(['property:id,name', 'room:id,name', 'assignee.roles', 'creator.roles'])
+            ->with(['property:id,name', 'unit:id,name', 'assignee.roles', 'creator.roles'])
             ->addSelect([
-                'maintenance_transfer_to' => LeaseRoomHistory::query()
-                    ->select('rooms.name')
-                    ->join('rooms', 'lease_room_histories.to_room_id', '=', 'rooms.id')
-                    ->whereColumn('lease_room_histories.from_room_id', 'maintenance_tickets.room_id')
-                    ->where('lease_room_histories.reason', 'maintenance')
-                    ->orderByDesc('lease_room_histories.effective_date')
+                'maintenance_transfer_to' => LeaseUnitHistory::query()
+                    ->select('units.name')
+                    ->join('units', 'lease_unit_histories.to_unit_id', '=', 'units.id')
+                    ->whereColumn('lease_unit_histories.from_unit_id', 'maintenance_tickets.unit_id')
+                    ->where('lease_unit_histories.reason', 'maintenance')
+                    ->orderByDesc('lease_unit_histories.effective_date')
                     ->limit(1),
             ]);
 
@@ -95,14 +95,14 @@ class MaintenanceTicketController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $rooms = Room::query()
+        $units = Unit::query()
             ->select(['id', 'slug', 'name', 'property_id', 'status'])
             ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', 'active')])
             ->with(['leases' => fn ($q) => $q->where('status', 'active')->with('tenants:id,name')])
             ->addSelect([
-                'has_maintenance_transfer' => LeaseRoomHistory::query()
+                'has_maintenance_transfer' => LeaseUnitHistory::query()
                     ->selectRaw('1')
-                    ->whereColumn('from_room_id', 'rooms.id')
+                    ->whereColumn('from_unit_id', 'units.id')
                     ->where('reason', 'maintenance')
                     ->limit(1),
             ])
@@ -113,24 +113,24 @@ class MaintenanceTicketController extends Controller
             ->orderBy('name')
             ->get();
 
-        $transfers = LeaseRoomHistory::query()
-            ->with('toRoom:id,name')
+        $transfers = LeaseUnitHistory::query()
+            ->with('toUnit:id,name')
             ->where('reason', 'maintenance')
-            ->whereIn('from_room_id', $rooms->pluck('id'))
+            ->whereIn('from_unit_id', $units->pluck('id'))
             ->orderBy('effective_date', 'desc')
             ->get()
-            ->keyBy('from_room_id');
+            ->keyBy('from_unit_id');
 
-        foreach ($rooms as $room) {
-            $transfer = $transfers->get($room->id);
-            $room->transfer_to_room_name = $transfer?->toRoom?->name;
+        foreach ($units as $unit) {
+            $transfer = $transfers->get($unit->id);
+            $unit->transfer_to_unit_name = $transfer?->toUnit?->name;
         }
 
         return Inertia::render('maintenance-tickets/index', [
             ...$result,
             'property_id' => $request->query('property_id'),
             'properties' => $properties,
-            'rooms' => $rooms,
+            'units' => $units,
             'users' => User::query()
                 ->with('roles')
                 ->orderBy('name')
@@ -152,14 +152,14 @@ class MaintenanceTicketController extends Controller
         $data['created_by'] = $request->user()->id;
         $data['status'] = MaintenanceStatus::Reported->value;
 
-        $blockRoom = ! empty($data['block_room']);
-        $moveToRoomId = $data['move_tenant_to_room_id'] ?? null;
-        unset($data['block_room'], $data['move_tenant_to_room_id']);
+        $blockUnit = ! empty($data['block_unit']);
+        $moveToUnitId = $data['move_tenant_to_unit_id'] ?? null;
+        unset($data['block_unit'], $data['move_tenant_to_unit_id']);
 
         MaintenanceTicket::create($data);
 
-        if ($blockRoom && ! empty($data['room_id'])) {
-            $this->blockRoom->execute($data['room_id'], $moveToRoomId);
+        if ($blockUnit && ! empty($data['unit_id'])) {
+            $this->blockUnit->execute($data['unit_id'], $moveToUnitId);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket created.')]);
@@ -182,17 +182,17 @@ class MaintenanceTicketController extends Controller
             }
         }
 
-        $restoreRoom = ! empty($validated['restore_room']);
+        $restoreUnit = ! empty($validated['restore_unit']);
         $moveBack = ! empty($validated['move_back']);
-        unset($validated['restore_room'], $validated['move_back']);
+        unset($validated['restore_unit'], $validated['move_back']);
 
         $ticket->update($validated);
 
-        if ($restoreRoom && $ticket->room_id) {
+        if ($restoreUnit && $ticket->unit_id) {
             $this->resolveTicket->execute($ticket, $moveBack);
 
-            $roomName = Room::find($ticket->room_id)?->name ?? '';
-            Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Room :name restored.', ['name' => $roomName])]);
+            $unitName = Unit::find($ticket->unit_id)?->name ?? '';
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Unit :name restored.', ['name' => $unitName])]);
 
             return to_route('maintenance-tickets.index');
         }
