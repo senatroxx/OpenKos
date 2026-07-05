@@ -33,7 +33,7 @@ const columns: TableColumn<LeaseRow>[] = [
         render: (l) => l.reference ?? `#${l.id}`,
     },
     {
-        key: '_room',
+        key: '_unit',
         label: 'Unit',
         className: 'font-medium',
         render: (l) => l.unit?.name ?? '—',

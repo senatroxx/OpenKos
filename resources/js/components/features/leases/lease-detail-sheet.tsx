@@ -31,14 +31,14 @@ export default function LeaseDetailSheet({
     open,
     onOpenChange,
     onMoveOut,
-    onMoveRoom,
+    onMoveUnit,
     onEdit,
 }: {
     lease?: Lease | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onMoveOut?: () => void;
-    onMoveRoom?: () => void;
+    onMoveUnit?: () => void;
     onEdit?: () => void;
 }) {
     const { auth } = usePage<{ auth: { permissions: string[] } }>().props;
@@ -651,8 +651,8 @@ export default function LeaseDetailSheet({
                                     Move Out Tenant
                                 </Button>
                             )}
-                            {isActive && onMoveRoom && (
-                                <Button variant="outline" onClick={onMoveRoom}>
+                            {isActive && onMoveUnit && (
+                                <Button variant="outline" onClick={onMoveUnit}>
                                     Move Unit
                                 </Button>
                             )}

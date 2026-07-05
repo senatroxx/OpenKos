@@ -37,8 +37,8 @@ type ManagedProperty = {
     postal_code: string | null;
     phone: string | null;
     is_active: boolean;
-    rooms_count: number;
-    occupied_rooms_count: number;
+    units_count: number;
+    occupied_units_count: number;
     tenants_count: number;
     city?: { id: number; name: string } | null;
 };
@@ -139,13 +139,13 @@ export default function Index({
             render: (p) => p.city?.name ?? '\u2014',
         },
         {
-            key: 'rooms_count',
+            key: 'units_count',
             label: 'Total Rooms',
             sortable: true,
             className: 'tabular-nums',
         },
         {
-            key: 'occupied_rooms_count',
+            key: 'occupied_units_count',
             label: 'Occupied',
             sortable: true,
             className: 'tabular-nums',
