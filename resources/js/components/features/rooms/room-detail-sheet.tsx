@@ -66,15 +66,29 @@ export default function RoomDetailSheet({
     onMoveRoom?: () => void;
 }) {
     const isOccupied = (room?.active_leases ?? 0) > 0;
-    const allTenants = isOccupied && room?.leases
-        ? room.leases.flatMap((l) => l.tenants ?? (l.primary_tenant ? [l.primary_tenant] : []))
-        : [];
+    const allTenants =
+        isOccupied && room?.leases
+            ? room.leases.flatMap(
+                  (l) =>
+                      l.tenants ?? (l.primary_tenant ? [l.primary_tenant] : []),
+              )
+            : [];
     const occupantCount = allTenants.length;
     const hasSpace = room ? occupantCount < room.capacity : false;
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg" expandTo={room && property ? properties.rooms.show.url({ property: property.slug, room: room.slug }) : undefined}>
+            <SheetContent
+                className="sm:max-w-lg"
+                expandTo={
+                    room && property
+                        ? properties.rooms.show.url({
+                              property: property.slug,
+                              room: room.slug,
+                          })
+                        : undefined
+                }
+            >
                 <SheetHeader>
                     <SheetTitle>{room?.name}</SheetTitle>
                     <SheetDescription>
@@ -173,33 +187,35 @@ export default function RoomDetailSheet({
                                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                         <div>
                                             <p className="mb-2 text-xs text-muted-foreground">
-                                                Tenants ({room.capacity > 0
+                                                Tenants (
+                                                {room.capacity > 0
                                                     ? `${allTenants.length}/${room.capacity}`
-                                                    : ''})
+                                                    : ''}
+                                                )
                                             </p>
                                             <div className="space-y-1">
-                                                {allTenants.length > 0
-                                                    ? allTenants.map((t) => (
-                                                          <div
-                                                              key={t.id}
-                                                              className="flex items-center justify-between text-sm"
-                                                          >
-                                                              <span className="font-medium">
-                                                                  {t.name}
-                                                              </span>
-                                                              {t.pivot
-                                                                  ?.is_primary && (
-                                                                  <span className="text-[10px] font-medium text-blue-600 uppercase">
-                                                                      Primary
-                                                                  </span>
-                                                              )}
-                                                          </div>
-                                                      ))
-                                                    : (
-                                                        <span className="text-sm text-muted-foreground">
-                                                            No tenants
-                                                        </span>
-                                                    )}
+                                                {allTenants.length > 0 ? (
+                                                    allTenants.map((t) => (
+                                                        <div
+                                                            key={t.id}
+                                                            className="flex items-center justify-between text-sm"
+                                                        >
+                                                            <span className="font-medium">
+                                                                {t.name}
+                                                            </span>
+                                                            {t.pivot
+                                                                ?.is_primary && (
+                                                                <span className="text-[10px] font-medium text-blue-600 uppercase">
+                                                                    Primary
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">
+                                                        No tenants
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -218,7 +234,8 @@ export default function RoomDetailSheet({
                                                 Reference
                                             </span>
                                             <span className="font-mono text-xs tabular-nums">
-                                                {room.leases[0].reference ?? '—'}
+                                                {room.leases[0].reference ??
+                                                    '—'}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -227,7 +244,8 @@ export default function RoomDetailSheet({
                                             </span>
                                             <span className="tabular-nums">
                                                 {formatPrice(
-                                                    room.leases[0].monthly_equivalent,
+                                                    room.leases[0]
+                                                        .monthly_equivalent,
                                                 )}
                                                 /mo
                                             </span>
@@ -238,7 +256,8 @@ export default function RoomDetailSheet({
                                             </span>
                                             <span className="tabular-nums">
                                                 {formatPrice(
-                                                    room.leases[0].deposit_amount,
+                                                    room.leases[0]
+                                                        .deposit_amount,
                                                 )}
                                             </span>
                                         </div>
@@ -249,7 +268,8 @@ export default function RoomDetailSheet({
                                             <span className="tabular-nums">
                                                 {DUE_DAY_LABELS[
                                                     room.leases[0].rent_due_day
-                                                ] ?? room.leases[0].rent_due_day}
+                                                ] ??
+                                                    room.leases[0].rent_due_day}
                                             </span>
                                         </div>
                                     </div>
@@ -302,7 +322,8 @@ export default function RoomDetailSheet({
                             )}
                             {hasSpace && onAssignTenant && (
                                 <Button onClick={onAssignTenant}>
-                                    Assign Tenant{room.capacity > 1 ? '(s)' : ''}
+                                    Assign Tenant
+                                    {room.capacity > 1 ? '(s)' : ''}
                                 </Button>
                             )}
                             {room && property && (
@@ -312,10 +333,12 @@ export default function RoomDetailSheet({
                                         onClick={() => {
                                             onOpenChange(false);
                                             router.get(
-                                                properties.rooms.leases.index.url({
-                                                    property: property.slug,
-                                                    room: room.slug,
-                                                }),
+                                                properties.rooms.leases.index.url(
+                                                    {
+                                                        property: property.slug,
+                                                        room: room.slug,
+                                                    },
+                                                ),
                                             );
                                         }}
                                     >
@@ -326,10 +349,12 @@ export default function RoomDetailSheet({
                                         onClick={() => {
                                             onOpenChange(false);
                                             router.get(
-                                                properties.rooms.maintenanceHistory.url({
-                                                    property: property.slug,
-                                                    room: room.slug,
-                                                }),
+                                                properties.rooms.maintenanceHistory.url(
+                                                    {
+                                                        property: property.slug,
+                                                        room: room.slug,
+                                                    },
+                                                ),
                                             );
                                         }}
                                     >

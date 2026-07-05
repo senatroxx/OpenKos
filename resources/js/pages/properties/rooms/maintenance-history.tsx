@@ -109,7 +109,12 @@ export default function MaintenanceHistory({
     table,
 }: {
     property: { id: number; slug: string; name: string };
-    room: { id: number; slug: string; name: string; floor?: string | number | null };
+    room: {
+        id: number;
+        slug: string;
+        name: string;
+        floor?: string | number | null;
+    };
     tickets: PaginatedData<MaintenanceTicket>;
     sort?: string;
     search?: string;
@@ -134,7 +139,9 @@ export default function MaintenanceHistory({
                     defaultSort="-created_at"
                     searchPlaceholder="Search by title or reference..."
                     emptyMessage="No maintenance history for this room."
-                    onRowClick={(t) => router.get(`/maintenance-tickets/${t.id}`)}
+                    onRowClick={(t) =>
+                        router.get(`/maintenance-tickets/${t.id}`)
+                    }
                 />
             </PluginRegion>
         </RoomLayout>

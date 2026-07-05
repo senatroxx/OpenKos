@@ -44,7 +44,10 @@ export default function RoomFormSheet({
     const isEdit = Boolean(room);
     const [status, setStatus] = useState(room?.status ?? 'available');
     const formAction = isEdit
-        ? properties.rooms.update.url({ property: property.slug, room: room!.slug })
+        ? properties.rooms.update.url({
+              property: property.slug,
+              room: room!.slug,
+          })
         : properties.rooms.store.url(property.slug);
     const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
@@ -288,19 +291,44 @@ export default function RoomFormSheet({
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="status">Status</Label>
-                                        <input type="hidden" name="status" value={status} />
-                                        <Select value={status} onValueChange={setStatus}>
-                                            <SelectTrigger id="status" className="w-full">
+                                        <input
+                                            type="hidden"
+                                            name="status"
+                                            value={status}
+                                        />
+                                        <Select
+                                            value={status}
+                                            onValueChange={setStatus}
+                                        >
+                                            <SelectTrigger
+                                                id="status"
+                                                className="w-full"
+                                            >
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {[
-                                                    { value: 'available', label: 'Available' },
-                                                    { value: 'occupied', label: 'Occupied' },
-                                                    { value: 'maintenance', label: 'Maintenance' },
-                                                    { value: 'unavailable', label: 'Unavailable' },
+                                                    {
+                                                        value: 'available',
+                                                        label: 'Available',
+                                                    },
+                                                    {
+                                                        value: 'occupied',
+                                                        label: 'Occupied',
+                                                    },
+                                                    {
+                                                        value: 'maintenance',
+                                                        label: 'Maintenance',
+                                                    },
+                                                    {
+                                                        value: 'unavailable',
+                                                        label: 'Unavailable',
+                                                    },
                                                 ].map((opt) => (
-                                                    <SelectItem key={opt.value} value={opt.value}>
+                                                    <SelectItem
+                                                        key={opt.value}
+                                                        value={opt.value}
+                                                    >
                                                         {opt.label}
                                                     </SelectItem>
                                                 ))}

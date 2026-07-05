@@ -113,8 +113,8 @@ export default function LeaseFormSheet({
     const [rentAmount, setRentAmount] = useState(
         () => defaultRate?.amount ?? '',
     );
-    const [billingInterval, setBillingInterval] = useState(
-        () => String(defaultRate?.billing_interval ?? 1),
+    const [billingInterval, setBillingInterval] = useState(() =>
+        String(defaultRate?.billing_interval ?? 1),
     );
     const [billingUnit, setBillingUnit] = useState(
         () => defaultRate?.billing_unit ?? 'month',
@@ -178,7 +178,9 @@ export default function LeaseFormSheet({
         <Sheet key="lease-form" open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Assign Tenant{capacity > 1 ? 's' : ''}</SheetTitle>
+                    <SheetTitle>
+                        Assign Tenant{capacity > 1 ? 's' : ''}
+                    </SheetTitle>
                     <SheetDescription>
                         Assign {capacity > 1 ? 'tenants' : 'a tenant'} to{' '}
                         {room?.name ?? 'this room'}
