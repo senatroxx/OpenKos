@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use App\Enums\PropertyType;
 use App\Enums\RoomStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,14 +32,29 @@ class Property extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $with = ['region', 'city'];
+    protected $with = ['region', 'city', 'propertyType'];
+
+    protected $appends = ['type_label'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
-            'type' => PropertyType::class,
         ];
+    }
+
+    public function propertyType(): BelongsTo
+    {
+        return $this->belongsTo(PropertyType::class, 'type', 'slug');
+    }
+
+    /**
+     * Human-readable type name, falling back to the raw slug if the type row
+     * is missing (e.g. deleted).
+     */
+    protected function typeLabel(): Attribute
+    {
+        return Attribute::get(fn () => $this->propertyType?->label ?? $this->type);
     }
 
     protected static function booted(): void

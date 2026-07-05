@@ -3,6 +3,7 @@
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\MailController;
 use App\Http\Controllers\Settings\ProfileController;
+use App\Http\Controllers\Settings\PropertyTypeController;
 use App\Http\Controllers\Settings\ReminderController;
 use App\Http\Controllers\Settings\SecurityController;
 use App\Http\Controllers\Settings\WhatsAppController;
@@ -47,5 +48,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('settings/whatsapp/qr', [WhatsAppController::class, 'qr'])->name('settings.whatsapp.qr');
         Route::get('settings/whatsapp/status', [WhatsAppController::class, 'status'])->name('settings.whatsapp.status');
         Route::delete('settings/whatsapp/disconnect', [WhatsAppController::class, 'disconnect'])->name('settings.whatsapp.disconnect');
+
+        Route::get('settings/property-types', [PropertyTypeController::class, 'index'])->name('settings.property-types.index');
+        Route::post('settings/property-types', [PropertyTypeController::class, 'store'])->name('settings.property-types.store');
+        Route::patch('settings/property-types/{propertyType}', [PropertyTypeController::class, 'update'])->name('settings.property-types.update');
+        Route::delete('settings/property-types/{propertyType}', [PropertyTypeController::class, 'destroy'])->name('settings.property-types.destroy');
     });
 });
