@@ -54,9 +54,21 @@ export function TenantLayout({
                 activeTab={activeTab}
                 hrefParams={{ id: tenant.id }}
                 tabs={[
-                    { key: 'overview', label: 'Overview', href: `/tenants/${tenant.id}` },
-                    { key: 'leases', label: 'Leases', href: `/tenants/${tenant.id}/leases` },
-                    { key: 'documents', label: 'Documents', href: `/tenants/${tenant.id}/documents` },
+                    {
+                        key: 'overview',
+                        label: 'Overview',
+                        href: `/tenants/${tenant.id}`,
+                    },
+                    {
+                        key: 'leases',
+                        label: 'Leases',
+                        href: `/tenants/${tenant.id}/leases`,
+                    },
+                    {
+                        key: 'documents',
+                        label: 'Documents',
+                        href: `/tenants/${tenant.id}/documents`,
+                    },
                 ]}
             />
 

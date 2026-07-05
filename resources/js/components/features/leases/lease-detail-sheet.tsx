@@ -5,7 +5,11 @@ import { RecordPaymentSheet } from '@/components/features';
 import { DocumentPreview } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     Sheet,
     SheetContent,
@@ -46,7 +50,11 @@ export default function LeaseDetailSheet({
     const [schedule, setSchedule] = useState<RentScheduleEntry[] | null>(null);
     const [loadingSchedule, setLoadingSchedule] = useState(false);
     const [verifyingId, setVerifyingId] = useState<number | null>(null);
-    const [previewProof, setPreviewProof] = useState<{ src: string; mimeType: string; name: string } | null>(null);
+    const [previewProof, setPreviewProof] = useState<{
+        src: string;
+        mimeType: string;
+        name: string;
+    } | null>(null);
     const isActive = lease?.status === 'active';
     const payments = (lease?.payments ?? []) as Payment[];
     const canVerify = auth.permissions.includes('payments.verify');
@@ -54,11 +62,15 @@ export default function LeaseDetailSheet({
 
     function handleVerify(payment: Payment, action: 'confirm' | 'reject') {
         setVerifyingId(payment.id);
-        router.post(`/payments/${payment.id}/verify`, { action } as Record<string, string>, {
-            preserveState: true,
-            preserveScroll: true,
-            onFinish: () => setVerifyingId(null),
-        });
+        router.post(
+            `/payments/${payment.id}/verify`,
+            { action } as Record<string, string>,
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onFinish: () => setVerifyingId(null),
+            },
+        );
     }
 
     useEffect(() => {
@@ -96,11 +108,15 @@ export default function LeaseDetailSheet({
     const roomName = lease?.unit?.name ?? '—';
     const propertyName = lease?.unit?.property?.name ?? '—';
     const city = lease?.unit?.property?.city;
-    const propertyCity = city && typeof city === 'object' ? city.name : city ?? '';
+    const propertyCity =
+        city && typeof city === 'object' ? city.name : (city ?? '');
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg" expandTo={lease ? leases.show.url(lease) : undefined}>
+            <SheetContent
+                className="sm:max-w-lg"
+                expandTo={lease ? leases.show.url(lease) : undefined}
+            >
                 <SheetHeader>
                     <SheetTitle>
                         {isActive ? 'Active Lease' : 'Lease Details'}
@@ -133,82 +149,90 @@ export default function LeaseDetailSheet({
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                             Occupancy
                                         </h3>
-                                        <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                        <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="mt-3">
-                                <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
-                                    <div>
-                                        <p className="mb-2 text-xs text-muted-foreground">
-                                            Tenants
-                                        </p>
-                                        <div className="space-y-2">
-                                            {(lease?.tenants ?? []).length > 0
-                                                ? lease!.tenants.map((t) => (
-                                                      <div
-                                                          key={t.id}
-                                                          className="flex items-center justify-between"
-                                                      >
-                                                          <div>
-                                                              <span className="text-sm font-medium">
-                                                                  {t.name}
-                                                              </span>
-                                                              {t.pivot
-                                                                  ?.is_primary && (
-                                                                  <span className="ml-2 text-[10px] font-medium text-blue-600 uppercase">
-                                                                      Primary
+                                        <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
+                                            <div>
+                                                <p className="mb-2 text-xs text-muted-foreground">
+                                                    Tenants
+                                                </p>
+                                                <div className="space-y-2">
+                                                    {(lease?.tenants ?? [])
+                                                        .length > 0
+                                                        ? lease!.tenants.map(
+                                                              (t) => (
+                                                                  <div
+                                                                      key={t.id}
+                                                                      className="flex items-center justify-between"
+                                                                  >
+                                                                      <div>
+                                                                          <span className="text-sm font-medium">
+                                                                              {
+                                                                                  t.name
+                                                                              }
+                                                                          </span>
+                                                                          {t
+                                                                              .pivot
+                                                                              ?.is_primary && (
+                                                                              <span className="ml-2 text-[10px] font-medium text-blue-600 uppercase">
+                                                                                  Primary
+                                                                              </span>
+                                                                          )}
+                                                                      </div>
+                                                                      {t.phone && (
+                                                                          <span className="text-xs text-muted-foreground">
+                                                                              {
+                                                                                  t.phone
+                                                                              }
+                                                                          </span>
+                                                                      )}
+                                                                  </div>
+                                                              ),
+                                                          )
+                                                        : lease?.primary_tenant && (
+                                                              <div className="flex items-center justify-between">
+                                                                  <span className="text-sm font-medium">
+                                                                      {
+                                                                          lease
+                                                                              .primary_tenant
+                                                                              .name
+                                                                      }
                                                                   </span>
-                                                              )}
-                                                          </div>
-                                                          {t.phone && (
-                                                              <span className="text-xs text-muted-foreground">
-                                                                  {t.phone}
-                                                              </span>
-                                                          )}
-                                                      </div>
-                                                  ))
-                                                : lease?.primary_tenant && (
-                                                      <div className="flex items-center justify-between">
-                                                          <span className="text-sm font-medium">
-                                                              {
-                                                                  lease
+                                                                  {lease
                                                                       .primary_tenant
-                                                                      .name
-                                                              }
-                                                          </span>
-                                                          {lease
-                                                              .primary_tenant
-                                                              .phone && (
-                                                              <span className="text-xs text-muted-foreground">
-                                                                  {
-                                                                      lease
-                                                                          .primary_tenant
-                                                                          .phone
-                                                                  }
-                                                              </span>
+                                                                      .phone && (
+                                                                      <span className="text-xs text-muted-foreground">
+                                                                          {
+                                                                              lease
+                                                                                  .primary_tenant
+                                                                                  .phone
+                                                                          }
+                                                                      </span>
+                                                                  )}
+                                                              </div>
                                                           )}
-                                                      </div>
-                                                  )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Unit
+                                                </span>
+                                                <span className="text-sm">
+                                                    {roomName}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Property
+                                                </span>
+                                                <span className="text-sm">
+                                                    {propertyName}
+                                                    {propertyCity &&
+                                                        ` — ${propertyCity}`}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Unit
-                                        </span>
-                                        <span className="text-sm">
-                                            {roomName}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-muted-foreground">
-                                            Property
-                                        </span>
-                                        <span className="text-sm">
-                                            {propertyName}
-                                            {propertyCity &&
-                                                ` — ${propertyCity}`}
-                                        </span>
-                                    </div>
-                                </div>
                                     </CollapsibleContent>
                                 </section>
                             </Collapsible>
@@ -220,54 +244,58 @@ export default function LeaseDetailSheet({
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                             Agreement
                                         </h3>
-                                        <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                        <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="mt-3">
-                                <div className="space-y-2 rounded-lg border p-4">
-                                    {lease.reference && (
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                Reference
-                                            </span>
-                                            <span className="font-mono text-xs">
-                                                {lease.reference}
-                                            </span>
+                                        <div className="space-y-2 rounded-lg border p-4">
+                                            {lease.reference && (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        Reference
+                                                    </span>
+                                                    <span className="font-mono text-xs">
+                                                        {lease.reference}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    Start date
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {formatDate(
+                                                        lease.start_date,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    End date
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {lease.termination_date
+                                                        ? formatDate(
+                                                              lease.termination_date,
+                                                          )
+                                                        : formatDate(
+                                                              lease.end_date,
+                                                          )}
+                                                </span>
+                                            </div>
+                                            {lease.termination_reason && (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        Reason
+                                                    </span>
+                                                    <span className="text-right text-sm capitalize">
+                                                        {lease.termination_reason.replace(
+                                                            /_/g,
+                                                            ' ',
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            Start date
-                                        </span>
-                                        <span className="tabular-nums">
-                                            {formatDate(lease.start_date)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            End date
-                                        </span>
-                                        <span className="tabular-nums">
-                                            {lease.termination_date
-                                                ? formatDate(
-                                                      lease.termination_date,
-                                                  )
-                                                : formatDate(lease.end_date)}
-                                        </span>
-                                    </div>
-                                    {lease.termination_reason && (
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                Reason
-                                            </span>
-                                            <span className="text-right text-sm capitalize">
-                                                {lease.termination_reason.replace(
-                                                    /_/g,
-                                                    ' ',
-                                                )}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
                                     </CollapsibleContent>
                                 </section>
                             </Collapsible>
@@ -279,41 +307,43 @@ export default function LeaseDetailSheet({
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                             Rent
                                         </h3>
-                                        <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                        <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="mt-3">
-                                <div className="space-y-2 rounded-lg border p-4">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            Billing rate
-                                        </span>
-                                        <span className="tabular-nums">
-                                            {formatPrice(lease.rent_amount)}
-                                            {lease.billing_label}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            Monthly equivalent
-                                        </span>
-                                        <span className="tabular-nums">
-                                            {formatPrice(
-                                                lease.monthly_equivalent,
-                                            )}
-                                            /mo
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            Due every month
-                                        </span>
-                                        <span className="tabular-nums">
-                                            {DUE_DAY_LABELS[
-                                                lease.rent_due_day
-                                            ] ?? lease.rent_due_day}
-                                        </span>
-                                    </div>
-                                </div>
+                                        <div className="space-y-2 rounded-lg border p-4">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    Billing rate
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {formatPrice(
+                                                        lease.rent_amount,
+                                                    )}
+                                                    {lease.billing_label}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    Monthly equivalent
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {formatPrice(
+                                                        lease.monthly_equivalent,
+                                                    )}
+                                                    /mo
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    Due every month
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {DUE_DAY_LABELS[
+                                                        lease.rent_due_day
+                                                    ] ?? lease.rent_due_day}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </CollapsibleContent>
                                 </section>
                             </Collapsible>
@@ -325,55 +355,57 @@ export default function LeaseDetailSheet({
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                             Deposit
                                         </h3>
-                                        <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                        <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="mt-3">
-                                <div className="space-y-2 rounded-lg border p-4">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                            Amount
-                                        </span>
-                                        <span className="tabular-nums">
-                                            {formatPrice(lease.deposit_amount)}
-                                        </span>
-                                    </div>
-                                    {lease.deposit_paid_at && (
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                Paid at
-                                            </span>
-                                            <span className="tabular-nums">
-                                                {formatDate(
-                                                    lease.deposit_paid_at,
-                                                )}
-                                            </span>
+                                        <div className="space-y-2 rounded-lg border p-4">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    Amount
+                                                </span>
+                                                <span className="tabular-nums">
+                                                    {formatPrice(
+                                                        lease.deposit_amount,
+                                                    )}
+                                                </span>
+                                            </div>
+                                            {lease.deposit_paid_at && (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        Paid at
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {formatDate(
+                                                            lease.deposit_paid_at,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {lease.deposit_refund_amount && (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        Refund
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {formatPrice(
+                                                            lease.deposit_refund_amount,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {lease.deposit_refunded_at && (
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        Refunded at
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {formatDate(
+                                                            lease.deposit_refunded_at,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                    {lease.deposit_refund_amount && (
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                Refund
-                                            </span>
-                                            <span className="tabular-nums">
-                                                {formatPrice(
-                                                    lease.deposit_refund_amount,
-                                                )}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {lease.deposit_refunded_at && (
-                                        <div className="flex items-center justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                                Refunded at
-                                            </span>
-                                            <span className="tabular-nums">
-                                                {formatDate(
-                                                    lease.deposit_refunded_at,
-                                                )}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
                                     </CollapsibleContent>
                                 </section>
                             </Collapsible>
@@ -385,112 +417,149 @@ export default function LeaseDetailSheet({
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                             Payment History
                                         </h3>
-                                        <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                        <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="mt-3">
-
-                                {payments.length === 0 ? (
-                                    <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                                        No payments recorded yet.
-                                    </p>
-                                ) : (
-                                    <div className="space-y-2">
-                                        {payments.map((payment) => (
-                                            <div
-                                                key={payment.id}
-                                                className="rounded-lg border p-3 text-sm"
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="font-medium">
-                                                            {formatPeriod(
-                                                                payment.period_start,
-                                                            )}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {PAYMENT_METHOD_LABELS[
-                                                                payment
-                                                                    .payment_method
-                                                            ] ?? payment.payment_method}
-                                                            {payment
-                                                                .confirmed_by_user &&
-                                                                ` · by ${payment.confirmed_by_user.name}`}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-medium tabular-nums">
-                                                            {formatPrice(
-                                                                payment.amount,
-                                                            )}
-                                                        </p>
-                                                        {payment.status === 'confirmed' ? (
-                                                            <Badge className="bg-green-600 text-white text-[10px] px-1.5 py-0">
-                                                                {payment.verified_at ? 'Verified' : 'Paid'}
-                                                            </Badge>
-                                                        ) : payment.status === 'pending' ? (
-                                                            <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
-                                                                Pending Review
-                                                            </Badge>
-                                                        ) : (
-                                                            <Badge className="bg-gray-400 text-white text-[10px] px-1.5 py-0">
-                                                                Cancelled
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {payment.proofs?.length > 0 && (
-                                                    <div className="mt-2 flex flex-wrap gap-2 border-t pt-2">
-                                                        {(payment.proofs ?? []).map((proof) => (
-                                                            <button
-                                                                key={proof.id}
-                                                                type="button"
-                                                                onClick={() => setPreviewProof({
-                                                                    src: `/payments/${payment.id}/proof/${proof.id}`,
-                                                                    mimeType: proof.mime_type,
-                                                                    name: proof.original_name,
-                                                                })}
-                                                                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                                                            >
-                                                                <FileText className="size-3" />
-                                                                {proof.original_name}
-                                                            </button>
-                                                        ))}
-                                                        {payment.status === 'pending' && canVerify && (
-                                                            <div className="ml-auto flex gap-1">
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="outline"
-                                                                    className="h-6 text-[10px] px-2"
-                                                                    disabled={verifyingId === payment.id}
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        handleVerify(payment, 'confirm');
-                                                                    }}
-                                                                >
-                                                                    Verify
-                                                                </Button>
-                                                                <Button
-                                                                    size="sm"
-                                                                    variant="destructive"
-                                                                    className="h-6 text-[10px] px-2"
-                                                                    disabled={verifyingId === payment.id}
-                                                                    onClick={(e) => {
-                                                                        e.preventDefault();
-                                                                        handleVerify(payment, 'reject');
-                                                                    }}
-                                                                >
-                                                                    Reject
-                                                                </Button>
+                                        {payments.length === 0 ? (
+                                            <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+                                                No payments recorded yet.
+                                            </p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {payments.map((payment) => (
+                                                    <div
+                                                        key={payment.id}
+                                                        className="rounded-lg border p-3 text-sm"
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="font-medium">
+                                                                    {formatPeriod(
+                                                                        payment.period_start,
+                                                                    )}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {PAYMENT_METHOD_LABELS[
+                                                                        payment
+                                                                            .payment_method
+                                                                    ] ??
+                                                                        payment.payment_method}
+                                                                    {payment.confirmed_by_user &&
+                                                                        ` · by ${payment.confirmed_by_user.name}`}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="font-medium tabular-nums">
+                                                                    {formatPrice(
+                                                                        payment.amount,
+                                                                    )}
+                                                                </p>
+                                                                {payment.status ===
+                                                                'confirmed' ? (
+                                                                    <Badge className="bg-green-600 px-1.5 py-0 text-[10px] text-white">
+                                                                        {payment.verified_at
+                                                                            ? 'Verified'
+                                                                            : 'Paid'}
+                                                                    </Badge>
+                                                                ) : payment.status ===
+                                                                  'pending' ? (
+                                                                    <Badge className="bg-amber-500 px-1.5 py-0 text-[10px] text-white">
+                                                                        Pending
+                                                                        Review
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge className="bg-gray-400 px-1.5 py-0 text-[10px] text-white">
+                                                                        Cancelled
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        {payment.proofs
+                                                            ?.length > 0 && (
+                                                            <div className="mt-2 flex flex-wrap gap-2 border-t pt-2">
+                                                                {(
+                                                                    payment.proofs ??
+                                                                    []
+                                                                ).map(
+                                                                    (proof) => (
+                                                                        <button
+                                                                            key={
+                                                                                proof.id
+                                                                            }
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                setPreviewProof(
+                                                                                    {
+                                                                                        src: `/payments/${payment.id}/proof/${proof.id}`,
+                                                                                        mimeType:
+                                                                                            proof.mime_type,
+                                                                                        name: proof.original_name,
+                                                                                    },
+                                                                                )
+                                                                            }
+                                                                            className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                                                                        >
+                                                                            <FileText className="size-3" />
+                                                                            {
+                                                                                proof.original_name
+                                                                            }
+                                                                        </button>
+                                                                    ),
+                                                                )}
+                                                                {payment.status ===
+                                                                    'pending' &&
+                                                                    canVerify && (
+                                                                        <div className="ml-auto flex gap-1">
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="outline"
+                                                                                className="h-6 px-2 text-[10px]"
+                                                                                disabled={
+                                                                                    verifyingId ===
+                                                                                    payment.id
+                                                                                }
+                                                                                onClick={(
+                                                                                    e,
+                                                                                ) => {
+                                                                                    e.preventDefault();
+                                                                                    handleVerify(
+                                                                                        payment,
+                                                                                        'confirm',
+                                                                                    );
+                                                                                }}
+                                                                            >
+                                                                                Verify
+                                                                            </Button>
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="destructive"
+                                                                                className="h-6 px-2 text-[10px]"
+                                                                                disabled={
+                                                                                    verifyingId ===
+                                                                                    payment.id
+                                                                                }
+                                                                                onClick={(
+                                                                                    e,
+                                                                                ) => {
+                                                                                    e.preventDefault();
+                                                                                    handleVerify(
+                                                                                        payment,
+                                                                                        'reject',
+                                                                                    );
+                                                                                }}
+                                                                            >
+                                                                                Reject
+                                                                            </Button>
+                                                                        </div>
+                                                                    )}
                                                             </div>
                                                         )}
                                                     </div>
-                                                )}
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                        )}
                                     </CollapsibleContent>
-                            </section>
+                                </section>
                             </Collapsible>
 
                             {/* Rent Schedule */}
@@ -501,56 +570,61 @@ export default function LeaseDetailSheet({
                                             <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                                 Rent Schedule
                                             </h3>
-                                            <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                            <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                         </CollapsibleTrigger>
                                         <CollapsibleContent className="mt-3">
-
                                             {loadingSchedule ? (
                                                 <div className="flex items-center justify-center gap-2 rounded-lg border p-6 text-sm text-muted-foreground">
                                                     <Loader2 className="size-4 animate-spin" />
                                                     Loading schedule...
                                                 </div>
-                                            ) : schedule && schedule.length > 0 ? (
+                                            ) : schedule &&
+                                              schedule.length > 0 ? (
                                                 <div className="space-y-2">
-                                                    {schedule.map((entry, i) => {
-                                                        const badge =
-                                                            STATUS_BADGE[
-                                                                entry.status
-                                                            ] ?? STATUS_BADGE.upcoming;
+                                                    {schedule.map(
+                                                        (entry, i) => {
+                                                            const badge =
+                                                                STATUS_BADGE[
+                                                                    entry.status
+                                                                ] ??
+                                                                STATUS_BADGE.upcoming;
 
-                                                        return (
-                                                            <div
-                                                                key={i}
-                                                                className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                                                            >
-                                                                <div>
-                                                                    <p className="font-medium">
-                                                                        {formatPeriod(
-                                                                            entry.period_start,
-                                                                        )}
-                                                                    </p>
-                                                                    <p className="text-xs text-muted-foreground">
-                                                                        Due{' '}
-                                                                        {formatDate(
-                                                                            entry.due_date,
-                                                                        )}
-                                                                    </p>
+                                                            return (
+                                                                <div
+                                                                    key={i}
+                                                                    className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                                                                >
+                                                                    <div>
+                                                                        <p className="font-medium">
+                                                                            {formatPeriod(
+                                                                                entry.period_start,
+                                                                            )}
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            Due{' '}
+                                                                            {formatDate(
+                                                                                entry.due_date,
+                                                                            )}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <p className="font-medium tabular-nums">
+                                                                            {formatPrice(
+                                                                                entry.amount,
+                                                                            )}
+                                                                        </p>
+                                                                        <Badge
+                                                                            className={`px-1.5 py-0 text-[10px] ${badge.className}`}
+                                                                        >
+                                                                            {
+                                                                                badge.label
+                                                                            }
+                                                                        </Badge>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="text-right">
-                                                                    <p className="font-medium tabular-nums">
-                                                                        {formatPrice(
-                                                                            entry.amount,
-                                                                        )}
-                                                                    </p>
-                                                                    <Badge
-                                                                        className={`text-[10px] px-1.5 py-0 ${badge.className}`}
-                                                                    >
-                                                                        {badge.label}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            );
+                                                        },
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <p className="rounded-lg border p-4 text-sm text-muted-foreground">
@@ -570,7 +644,7 @@ export default function LeaseDetailSheet({
                                             <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                                 Notes
                                             </h3>
-                                            <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
+                                            <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                         </CollapsibleTrigger>
                                         <CollapsibleContent className="mt-3">
                                             <p className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
@@ -582,50 +656,88 @@ export default function LeaseDetailSheet({
                             )}
 
                             {/* Unit History */}
-                            {lease.unit_histories && lease.unit_histories.length > 0 && (
-                                <Collapsible defaultOpen>
-                                    <section>
-                                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
-                                            <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                                Unit History
-                                            </h3>
-                                            <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent className="mt-3">
-                                            <div className="rounded-lg border">
-                                                {lease.unit_histories.map((h, i) => (
-                                                    <div
-                                                        key={h.id}
-                                                        className={`flex items-start gap-3 p-3 text-sm ${
-                                                            i > 0 ? 'border-t' : ''
-                                                        }`}
-                                                    >
-                                                        <div className="mt-0.5 size-2 shrink-0 rounded-full bg-muted-foreground/30" />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="font-medium">{h.from_unit?.name ?? '—'}</span>
-                                                                <span className="text-muted-foreground">→</span>
-                                                                <span className="font-medium">{h.to_unit?.name ?? '—'}</span>
+                            {lease.unit_histories &&
+                                lease.unit_histories.length > 0 && (
+                                    <Collapsible defaultOpen>
+                                        <section>
+                                            <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
+                                                <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                                                    Unit History
+                                                </h3>
+                                                <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
+                                            </CollapsibleTrigger>
+                                            <CollapsibleContent className="mt-3">
+                                                <div className="rounded-lg border">
+                                                    {lease.unit_histories.map(
+                                                        (h, i) => (
+                                                            <div
+                                                                key={h.id}
+                                                                className={`flex items-start gap-3 p-3 text-sm ${
+                                                                    i > 0
+                                                                        ? 'border-t'
+                                                                        : ''
+                                                                }`}
+                                                            >
+                                                                <div className="mt-0.5 size-2 shrink-0 rounded-full bg-muted-foreground/30" />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <span className="font-medium">
+                                                                            {h
+                                                                                .from_unit
+                                                                                ?.name ??
+                                                                                '—'}
+                                                                        </span>
+                                                                        <span className="text-muted-foreground">
+                                                                            →
+                                                                        </span>
+                                                                        <span className="font-medium">
+                                                                            {h
+                                                                                .to_unit
+                                                                                ?.name ??
+                                                                                '—'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                                                                        {h.reason && (
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className="h-4 px-1.5 py-0 text-[10px]"
+                                                                            >
+                                                                                {
+                                                                                    h.reason
+                                                                                }
+                                                                            </Badge>
+                                                                        )}
+                                                                        <span>
+                                                                            {formatDate(
+                                                                                h.effective_date,
+                                                                            )}
+                                                                        </span>
+                                                                        {h.transferred_by && (
+                                                                            <span>
+                                                                                by{' '}
+                                                                                {
+                                                                                    h
+                                                                                        .transferred_by
+                                                                                        .name
+                                                                                }
+                                                                                {h
+                                                                                    .transferred_by
+                                                                                    .roles?.[0]
+                                                                                    ? ` — ${h.transferred_by.roles[0].label ?? h.transferred_by.roles[0].name}`
+                                                                                    : ''}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                                                                {h.reason && (
-                                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                                                                        {h.reason}
-                                                                    </Badge>
-                                                                )}
-                                                                <span>{formatDate(h.effective_date)}</span>
-                                                                {h.transferred_by && (
-                                                                    <span>by {h.transferred_by.name}{h.transferred_by.roles?.[0] ? ` — ${h.transferred_by.roles[0].label ?? h.transferred_by.roles[0].name}` : ''}</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </CollapsibleContent>
-                                    </section>
-                                </Collapsible>
-                            )}
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </CollapsibleContent>
+                                        </section>
+                                    </Collapsible>
+                                )}
                         </div>
 
                         <div className="flex flex-wrap items-center justify-end gap-4">
@@ -659,7 +771,11 @@ export default function LeaseDetailSheet({
                             {isActive && canSendReminder && (
                                 <Button
                                     variant="outline"
-                                    onClick={() => router.post(`/leases/${lease.id}/send-reminder`)}
+                                    onClick={() =>
+                                        router.post(
+                                            `/leases/${lease.id}/send-reminder`,
+                                        )
+                                    }
                                 >
                                     Send Reminder
                                 </Button>

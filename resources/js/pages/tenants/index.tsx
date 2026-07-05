@@ -30,7 +30,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { AvailableUnit, PaginatedData, UnitWithProperty, TableMeta, TenantInfo } from '@/types';
+import type {
+    AvailableUnit,
+    PaginatedData,
+    UnitWithProperty,
+    TableMeta,
+    TenantInfo,
+} from '@/types';
 
 type Lease = {
     id: number;
@@ -226,7 +232,9 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                        <DropdownMenuItem onClick={() => router.get(tenants.show.url(t))}>
+                        <DropdownMenuItem
+                            onClick={() => router.get(tenants.show.url(t))}
+                        >
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>
@@ -351,12 +359,14 @@ export default function Index({
                     moveOutTenant
                         ? {
                               id: moveOutTenant.leases?.[0]?.id ?? 0,
-                              tenants: [{
-                                  id: moveOutTenant.id,
-                                  name: moveOutTenant.name,
-                                  phone: moveOutTenant.phone,
-                                  pivot: { is_primary: true },
-                              }],
+                              tenants: [
+                                  {
+                                      id: moveOutTenant.id,
+                                      name: moveOutTenant.name,
+                                      phone: moveOutTenant.phone,
+                                      pivot: { is_primary: true },
+                                  },
+                              ],
                               primary_tenant: {
                                   id: moveOutTenant.id,
                                   name: moveOutTenant.name,

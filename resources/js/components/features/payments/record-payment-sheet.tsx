@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
-import {  useRef, useState } from 'react';
-import type {FormEvent} from 'react';
+import { useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -158,7 +158,10 @@ export default function RecordPaymentSheet({
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {YEARS.map((y) => (
-                                                    <SelectItem key={y} value={y}>
+                                                    <SelectItem
+                                                        key={y}
+                                                        value={y}
+                                                    >
                                                         {y}
                                                     </SelectItem>
                                                 ))}
@@ -192,9 +195,7 @@ export default function RecordPaymentSheet({
                                             }
                                             required
                                         />
-                                        <InputError
-                                            message={errors.amount}
-                                        />
+                                        <InputError message={errors.amount} />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -225,38 +226,28 @@ export default function RecordPaymentSheet({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="paid_at">
-                                            Paid At
-                                        </Label>
+                                        <Label htmlFor="paid_at">Paid At</Label>
                                         <Input
                                             id="paid_at"
                                             name="paid_at"
                                             type="date"
                                             defaultValue={
-                                                now
-                                                    .toISOString()
-                                                    .split('T')[0]
+                                                now.toISOString().split('T')[0]
                                             }
                                             required
                                         />
-                                        <InputError
-                                            message={errors.paid_at}
-                                        />
+                                        <InputError message={errors.paid_at} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="notes">
-                                            Notes
-                                        </Label>
+                                        <Label htmlFor="notes">Notes</Label>
                                         <textarea
                                             id="notes"
                                             name="notes"
                                             placeholder="Optional notes"
                                             className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         />
-                                        <InputError
-                                            message={errors.notes}
-                                        />
+                                        <InputError message={errors.notes} />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -272,9 +263,7 @@ export default function RecordPaymentSheet({
                                             onChange={(e) => {
                                                 const file =
                                                     e.target.files?.[0];
-                                                setFileName(
-                                                    file?.name ?? null,
-                                                );
+                                                setFileName(file?.name ?? null);
                                             }}
                                         />
                                         {fileName && (
@@ -282,9 +271,7 @@ export default function RecordPaymentSheet({
                                                 {fileName}
                                             </p>
                                         )}
-                                        <InputError
-                                            message={errors.proof}
-                                        />
+                                        <InputError message={errors.proof} />
                                     </div>
                                 </div>
                             </section>
