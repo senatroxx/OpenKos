@@ -40,7 +40,7 @@ export default function MaintenanceTicketWorkspace({ ticket }: { ticket: Mainten
 
                 <div className="grid grid-cols-2 gap-4 rounded-lg border p-4 md:grid-cols-4">
                     <Field label="Property" value={ticket.property?.name} />
-                    <Field label="Room" value={ticket.room?.name ?? ticket.location} />
+                    <Field label="Unit" value={ticket.unit?.name ?? ticket.location} />
                     <Field label="Assigned to" value={ticket.assignee?.name} />
                     <Field label="Reported by" value={ticket.creator?.name} />
                     <Field label="Cost" value={ticket.cost} />

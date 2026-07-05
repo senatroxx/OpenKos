@@ -3,8 +3,8 @@
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -17,11 +17,11 @@ uses()->beforeEach(function () {
 function createLeaseForProperty(): Lease
 {
     $property = Property::factory()->create();
-    $room = Room::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create();
     $tenant = Tenant::factory()->create();
 
     return Lease::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'primary_tenant_id' => $tenant->id,
     ]);
 }
@@ -38,9 +38,9 @@ describe('authorization', function () {
         $admin = User::factory()->admin()->create();
         $property = Property::factory()->create();
         $admin->properties()->sync([$property->id]);
-        $room = Room::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
         $tenant = Tenant::factory()->create();
-        $lease = Lease::factory()->create(['room_id' => $room->id, 'primary_tenant_id' => $tenant->id]);
+        $lease = Lease::factory()->create(['unit_id' => $unit->id, 'primary_tenant_id' => $tenant->id]);
         $payment = Payment::factory()->create([
             'paymentable_id' => $lease->id,
             'paymentable_type' => Lease::class,
@@ -54,9 +54,9 @@ describe('authorization', function () {
         $propertyA = Property::factory()->create();
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
-        $room = Room::factory()->for($propertyB)->create();
+        $unit = Unit::factory()->for($propertyB)->create();
         $tenant = Tenant::factory()->create();
-        $lease = Lease::factory()->create(['room_id' => $room->id, 'primary_tenant_id' => $tenant->id]);
+        $lease = Lease::factory()->create(['unit_id' => $unit->id, 'primary_tenant_id' => $tenant->id]);
         $payment = Payment::factory()->create([
             'paymentable_id' => $lease->id,
             'paymentable_type' => Lease::class,
@@ -89,10 +89,10 @@ describe('payment recording', function () {
         $admin = User::factory()->admin()->create();
         $property = Property::factory()->create();
         $admin->properties()->sync([$property->id]);
-        $room = Room::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'primary_tenant_id' => $tenant->id,
         ]);
 
@@ -112,10 +112,10 @@ describe('payment recording', function () {
     it('denies admin not assigned to property from recording payment', function () {
         $admin = User::factory()->admin()->create();
         $property = Property::factory()->create();
-        $room = Room::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
         $tenant = Tenant::factory()->create();
         $lease = Lease::factory()->create([
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'primary_tenant_id' => $tenant->id,
         ]);
 

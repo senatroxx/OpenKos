@@ -2,12 +2,12 @@
 
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
-use App\Enums\RoomStatus;
-use App\Models\LeaseRoomHistory;
+use App\Enums\UnitStatus;
+use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Spatie\Permission\Models\Permission;
@@ -147,55 +147,55 @@ it('owner can assign anyone', function () {
     expect($ticket->fresh()->assigned_to)->toBe($staff->id);
 });
 
-it('blocks room when creating a ticket', function () {
+it('blocks unit when creating a ticket', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create();
+    $unit = Unit::factory()->create();
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
-            'property_id' => $room->property_id,
-            'room_id' => $room->id,
+            'property_id' => $unit->property_id,
+            'unit_id' => $unit->id,
             'title' => 'Broken window',
             'priority' => MaintenancePriority::High->value,
-            'block_room' => true,
+            'block_unit' => true,
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
 });
 
-it('blocks occupied room and warns about active lease', function () {
+it('blocks occupied unit and warns about active lease', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create();
+    $unit = Unit::factory()->create();
     $tenant = Tenant::factory()->create();
-    $room->leases()->create([
+    $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',
     ]);
-    $room->leases()->first()->tenants()->attach($tenant->id, ['is_primary' => true]);
+    $unit->leases()->first()->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
-            'property_id' => $room->property_id,
-            'room_id' => $room->id,
+            'property_id' => $unit->property_id,
+            'unit_id' => $unit->id,
             'title' => 'Broken AC',
             'priority' => MaintenancePriority::High->value,
-            'block_room' => true,
+            'block_unit' => true,
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
-    expect($room->leases()->where('status', 'active')->count())->toBe(1);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
+    expect($unit->leases()->where('status', 'active')->count())->toBe(1);
 });
 
-it('moves tenant and blocks room when move_tenant_to_room_id provided', function () {
+it('moves tenant and blocks unit when move_tenant_to_unit_id provided', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create();
-    $targetRoom = Room::factory()->create(['property_id' => $room->property_id]);
+    $unit = Unit::factory()->create();
+    $targetUnit = Unit::factory()->create(['property_id' => $unit->property_id]);
     $tenant = Tenant::factory()->create();
-    $lease = $room->leases()->create([
+    $lease = $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
@@ -205,30 +205,30 @@ it('moves tenant and blocks room when move_tenant_to_room_id provided', function
 
     $this->actingAs($owner)
         ->post(route('maintenance-tickets.store'), [
-            'property_id' => $room->property_id,
-            'room_id' => $room->id,
+            'property_id' => $unit->property_id,
+            'unit_id' => $unit->id,
             'title' => 'Broken ceiling',
             'priority' => MaintenancePriority::Urgent->value,
-            'block_room' => true,
-            'move_tenant_to_room_id' => $targetRoom->id,
+            'block_unit' => true,
+            'move_tenant_to_unit_id' => $targetUnit->id,
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
     expect($lease->fresh()->status)->toBe('active');
-    expect($lease->fresh()->room_id)->toBe($targetRoom->id);
-    expect($targetRoom->fresh()->status)->toBe(RoomStatus::Occupied);
-    expect($targetRoom->leases()->where('status', 'active')->count())->toBe(1);
-    expect($lease->fresh()->roomHistories()->count())->toBe(1);
+    expect($lease->fresh()->unit_id)->toBe($targetUnit->id);
+    expect($targetUnit->fresh()->status)->toBe(UnitStatus::Occupied);
+    expect($targetUnit->leases()->where('status', 'active')->count())->toBe(1);
+    expect($lease->fresh()->unitHistories()->count())->toBe(1);
 });
 
-it('prevents leasing a maintenance room', function () {
+it('prevents leasing a maintenance unit', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
+    $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
     $tenant = Tenant::factory()->create();
 
     $this->actingAs($owner)
-        ->post(route('properties.rooms.leases.store', [$room->property, $room]), [
+        ->post(route('properties.units.leases.store', [$unit->property, $unit]), [
             'tenant_ids' => [$tenant->id],
             'start_date' => now()->format('Y-m-d'),
             'rent_amount' => 1_000_000,
@@ -236,12 +236,12 @@ it('prevents leasing a maintenance room', function () {
         ->assertStatus(422);
 });
 
-it('prevents moving into a maintenance room', function () {
+it('prevents moving into a maintenance unit', function () {
     $owner = User::factory()->owner()->create();
-    $sourceRoom = Room::factory()->create();
-    $targetRoom = Room::factory()->create(['property_id' => $sourceRoom->property_id, 'status' => RoomStatus::Maintenance]);
+    $sourceUnit = Unit::factory()->create();
+    $targetUnit = Unit::factory()->create(['property_id' => $sourceUnit->property_id, 'status' => UnitStatus::Maintenance]);
     $tenant = Tenant::factory()->create();
-    $lease = $sourceRoom->leases()->create([
+    $lease = $sourceUnit->leases()->create([
         'primary_tenant_id' => $tenant->id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
@@ -250,87 +250,87 @@ it('prevents moving into a maintenance room', function () {
     $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
-        ->post(route('properties.rooms.leases.move', [$sourceRoom->property, $sourceRoom, $lease]), [
-            'target_room_id' => $targetRoom->id,
+        ->post(route('properties.units.leases.move', [$sourceUnit->property, $sourceUnit, $lease]), [
+            'target_unit_id' => $targetUnit->id,
         ])
         ->assertStatus(422);
 });
 
-it('prevents assigning tenant to maintenance room', function () {
+it('prevents assigning tenant to maintenance unit', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
+    $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
     $tenant = Tenant::factory()->create();
 
     $this->actingAs($owner)
-        ->post(route('tenants.assign-room', $tenant), [
-            'room_id' => $room->id,
+        ->post(route('tenants.assign-unit', $tenant), [
+            'unit_id' => $unit->id,
             'start_date' => now()->format('Y-m-d'),
             'rent_amount' => 1_000_000,
         ])
         ->assertStatus(422);
 });
 
-it('restores room availability when resolving ticket with restore_room flag', function () {
+it('restores unit availability when resolving ticket with restore_room flag', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
+    $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
     $ticket = MaintenanceTicket::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'status' => MaintenanceStatus::InProgress->value,
     ]);
 
     $this->actingAs($owner)
         ->put(route('maintenance-tickets.update', $ticket), [
             'status' => MaintenanceStatus::Resolved->value,
-            'restore_room' => true,
+            'restore_unit' => true,
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Available);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Available);
 });
 
-it('does not restore room when other tickets still open', function () {
+it('does not restore unit when other tickets still open', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
+    $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
     $ticket1 = MaintenanceTicket::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'status' => MaintenanceStatus::InProgress->value,
     ]);
     MaintenanceTicket::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'status' => MaintenanceStatus::Reported->value,
     ]);
 
     $this->actingAs($owner)
         ->put(route('maintenance-tickets.update', $ticket1), [
             'status' => MaintenanceStatus::Resolved->value,
-            'restore_room' => true,
+            'restore_unit' => true,
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
 });
 
-it('excludes maintenance rooms from available rooms', function () {
+it('excludes maintenance units from available units', function () {
     $owner = User::factory()->owner()->create();
     $property = Property::factory()->create();
     $property->users()->attach($owner->id);
-    Room::factory()->create(['property_id' => $property->id, 'status' => RoomStatus::Maintenance, 'name' => 'Maintenance Room']);
-    Room::factory()->create(['property_id' => $property->id, 'status' => RoomStatus::Available, 'name' => 'Available Room']);
+    Unit::factory()->create(['property_id' => $property->id, 'status' => UnitStatus::Maintenance, 'name' => 'Maintenance Unit']);
+    Unit::factory()->create(['property_id' => $property->id, 'status' => UnitStatus::Available, 'name' => 'Available Unit']);
 
     $response = $this->actingAs($owner)
-        ->get(route('properties.rooms.index', $property));
+        ->get(route('properties.units.index', $property));
 
     $response->assertOk();
-    $available = collect($response->viewData('page')['props']['availableRooms']);
+    $available = collect($response->viewData('page')['props']['availableUnits']);
     expect($available->count())->toBe(1);
-    expect($available->first()['name'])->toBe('Available Room');
+    expect($available->first()['name'])->toBe('Available Unit');
 });
 
 it('preserves maintenance status on lease termination', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
+    $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
     $tenant = Tenant::factory()->create();
-    $lease = $room->leases()->create([
+    $lease = $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
@@ -339,23 +339,23 @@ it('preserves maintenance status on lease termination', function () {
     $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
     $this->actingAs($owner)
-        ->delete(route('properties.rooms.leases.destroy', [$room->property, $room, $lease]), [
+        ->delete(route('properties.units.leases.destroy', [$unit->property, $unit, $lease]), [
             'reason' => 'Testing',
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Maintenance);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
 });
 
 it('moves tenant back when resolving ticket with move_back flag', function () {
     $owner = User::factory()->owner()->create();
-    $room = Room::factory()->create(['status' => RoomStatus::Maintenance]);
-    $targetRoom = Room::factory()->create([
-        'property_id' => $room->property_id,
-        'status' => RoomStatus::Occupied,
+    $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);
+    $targetUnit = Unit::factory()->create([
+        'property_id' => $unit->property_id,
+        'status' => UnitStatus::Occupied,
     ]);
     $tenant = Tenant::factory()->create();
-    $lease = $targetRoom->leases()->create([
+    $lease = $targetUnit->leases()->create([
         'primary_tenant_id' => $tenant->id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
@@ -363,28 +363,28 @@ it('moves tenant back when resolving ticket with move_back flag', function () {
     ]);
     $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
 
-    LeaseRoomHistory::create([
+    LeaseUnitHistory::create([
         'lease_id' => $lease->id,
-        'from_room_id' => $room->id,
-        'to_room_id' => $targetRoom->id,
+        'from_unit_id' => $unit->id,
+        'to_unit_id' => $targetUnit->id,
         'reason' => 'maintenance',
         'effective_date' => now(),
     ]);
 
     $ticket = MaintenanceTicket::factory()->create([
-        'room_id' => $room->id,
+        'unit_id' => $unit->id,
         'status' => MaintenanceStatus::InProgress->value,
     ]);
 
     $this->actingAs($owner)
         ->put(route('maintenance-tickets.update', $ticket), [
             'status' => MaintenanceStatus::Resolved->value,
-            'restore_room' => true,
+            'restore_unit' => true,
             'move_back' => true,
         ])
         ->assertRedirect();
 
-    expect($room->fresh()->status)->toBe(RoomStatus::Occupied);
-    expect($lease->fresh()->room_id)->toBe($room->id);
-    expect($targetRoom->fresh()->status)->toBe(RoomStatus::Available);
+    expect($unit->fresh()->status)->toBe(UnitStatus::Occupied);
+    expect($lease->fresh()->unit_id)->toBe($unit->id);
+    expect($targetUnit->fresh()->status)->toBe(UnitStatus::Available);
 });

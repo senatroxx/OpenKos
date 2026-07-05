@@ -32,15 +32,15 @@ export default function Reminders({ settings }: { settings: { reminder_enabled: 
 
     const preview = {
         name: 'John',
-        room: 'Room A-02',
+        unit: 'Unit A-02',
         days: settings.reminder_days_before,
         amount: '1,500,000',
         date: '01 Jul 2026',
         overdueDays: 3,
     };
 
-    const renderedUpcoming = renderTemplate(template, { name: preview.name, room: preview.room, days: preview.days, amount: preview.amount, date: preview.date });
-    const renderedOverdue = renderTemplate(template, { name: preview.name, room: preview.room, days: preview.overdueDays, amount: preview.amount, date: preview.date });
+    const renderedUpcoming = renderTemplate(template, { name: preview.name, unit: preview.unit, days: preview.days, amount: preview.amount, date: preview.date });
+    const renderedOverdue = renderTemplate(template, { name: preview.name, unit: preview.unit, days: preview.overdueDays, amount: preview.amount, date: preview.date });
 
     return (
         <div className="space-y-6">
@@ -103,7 +103,7 @@ export default function Reminders({ settings }: { settings: { reminder_enabled: 
                                         <pre className="whitespace-pre-wrap text-sm">
                                             {renderedUpcoming ?? `Hi ${preview.name},
 
-Rent for ${preview.room} is due in ${preview.days} days.
+Rent for ${preview.unit} is due in ${preview.days} days.
 
 Amount: ${preview.amount}
 Due date: ${preview.date}`}
@@ -142,7 +142,7 @@ Due date: ${preview.date}`}
                                         <pre className="whitespace-pre-wrap text-sm">
                                             {renderedOverdue ?? `Hi ${preview.name},
 
-Rent for ${preview.room} is overdue by ${preview.overdueDays} day(s).
+Rent for ${preview.unit} is overdue by ${preview.overdueDays} day(s).
 
 Amount: ${preview.amount}`}
                                         </pre>
@@ -185,7 +185,7 @@ Amount: ${preview.amount}`}
                             <CardHeader>
                                 <CardTitle>Message Template</CardTitle>
                                 <CardDescription>
-                                    Customize the reminder message. Available placeholders: <code>:name</code>, <code>:room</code>, <code>:days</code>, <code>:amount</code>, <code>:date</code>. Leave empty to use defaults.
+                                    Customize the reminder message. Available placeholders: <code>:name</code>, <code>:unit</code>, <code>:days</code>, <code>:amount</code>, <code>:date</code>. Leave empty to use defaults.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -197,7 +197,7 @@ Amount: ${preview.amount}`}
                                         className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                                         placeholder={`Hi :name,
 
-Rent for :room is due in :days days.
+Rent for :unit is due in :days days.
 
 Amount: :amount
 Due date: :date`}

@@ -152,7 +152,7 @@ function PropertyCard({ property }: { property: PropertyStats }) {
             <div className="mt-4">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                        {property.occupied_rooms} / {property.total_rooms} rooms
+                        {property.occupied_rooms} / {property.total_rooms} units
                     </span>
                     <span>{property.occupancy_percentage}%</span>
                 </div>

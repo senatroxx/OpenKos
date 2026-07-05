@@ -31,6 +31,6 @@ it('returns correctly scoped workspaces', function () {
         ->and($manager->property()->name)->toBe('property')
         ->and($manager->lease()->name)->toBe('lease')
         ->and($manager->tenant()->name)->toBe('tenant')
-        ->and($manager->workspace('room')->name)->toBe('room')
+        ->and($manager->workspace('unit')->name)->toBe('unit')
         ->and($manager->property())->toBe($manager->workspace('property'));
 });

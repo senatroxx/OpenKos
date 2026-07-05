@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RegionAndCitySeeder::class);
         $this->call(OwnerSeeder::class);
         $this->call(TenantSeeder::class);
-        $this->call(PropertyAndRoomSeeder::class);
+        $this->call(PropertyAndUnitSeeder::class);
         $this->call(LeaseSeeder::class);
     }
 }

@@ -21,7 +21,7 @@ class RentController extends Controller
     {
         $accessibleQuery = function (Builder $q) use ($request): void {
             if (! $request->user()->isOwner()) {
-                $q->whereHas('room.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
+                $q->whereHas('unit.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
             }
         };
 
@@ -44,10 +44,10 @@ class RentController extends Controller
             ->columns([
                 Column::make('tenant_name', 'Tenant')->searchable(function (Builder $q, string $search): void {
                     $q->whereHas('tenants', fn (Builder $q) => $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']))
-                        ->orWhereHas('room', fn (Builder $q) => $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']))
-                        ->orWhereHas('room.property', fn (Builder $q) => $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']));
+                        ->orWhereHas('unit', fn (Builder $q) => $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']))
+                        ->orWhereHas('unit.property', fn (Builder $q) => $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']));
                 }),
-                Column::make('room_name', 'Room'),
+                Column::make('unit_name', 'Unit'),
                 Column::make('property_name', 'Property'),
                 Column::make('rent_due_day', 'Due Date')->sortable(),
                 Column::make('rent_amount', 'Amount Due')->sortable(),
@@ -91,14 +91,14 @@ class RentController extends Controller
                         ->all();
                 })
                     ->query(fn (Builder $q, string $value) => $q->whereHas(
-                        'room',
+                        'unit',
                         fn (Builder $q) => $q->whereIn('property_id', explode(',', $value)),
                     )),
             ])
             ->defaultSort('rent_due_day');
 
         $query = (clone $baseQuery)
-            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
+            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,name,property_id', 'unit.property:id,name'])
             ->addSelect(['has_payment_this_month' => Payment::query()
                 ->selectRaw('COUNT(*) > 0')
                 ->whereColumn('paymentable_id', 'leases.id')

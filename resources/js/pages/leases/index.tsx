@@ -33,10 +33,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import leases from '@/routes/leases';
-import rooms from '@/routes/properties/rooms';
+import units from '@/routes/properties/units';
 import type { Lease, PaginatedData, TableMeta } from '@/types';
 
-type AvailableRoom = {
+type AvailableUnit = {
     id: number;
     name: string;
     property_id: number;
@@ -51,7 +51,7 @@ type AvailableRoom = {
 
 type PageProps = {
     leases: PaginatedData<Lease>;
-    availableRooms: AvailableRoom[];
+    availableRooms: AvailableUnit[];
     sort?: string;
     search?: string;
     status?: string;
@@ -176,21 +176,21 @@ export default function Index({
                               lease.tenants[0]?.name
                             : (lease.primary_tenant?.name ?? '\u2014')}
                     </p>
-                    {lease.room && (
+                    {lease.unit && (
                         <p className="mt-0.5 text-xs text-muted-foreground">
                             <Link
-                                href={rooms.index({
-                                    property: lease.room.property!.slug,
+                                href={units.index({
+                                    property: lease.unit.property!.slug,
                                 })}
                                 onClick={(e: React.MouseEvent) =>
                                     e.stopPropagation()
                                 }
                                 className="text-blue-600 hover:underline"
                             >
-                                {lease.room.name}
+                                {lease.unit.name}
                             </Link>
                             {' · '}
-                            {lease.room.property?.name ?? '\u2014'}
+                            {lease.unit.property?.name ?? '\u2014'}
                         </p>
                     )}
                 </div>
@@ -400,7 +400,7 @@ export default function Index({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search tenant, room, property..."
+                            placeholder="Search tenant, unit, property..."
                         />
                     }
                 />
@@ -447,7 +447,7 @@ export default function Index({
                               id: detailLease.id,
                               tenants: detailLease.tenants,
                               primary_tenant: detailLease.primary_tenant,
-                              room: detailLease.room,
+                              unit: detailLease.unit,
                           }
                         : null
                 }

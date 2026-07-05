@@ -16,13 +16,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('rooms', function (Blueprint $table) {
+        Schema::table('units', function (Blueprint $table) {
             $table->string('slug')->nullable()->after('name');
         });
 
         // Backfill unique-per-property slugs from existing names (incl. trashed).
         $used = [];
-        foreach (DB::table('rooms')->orderBy('id')->get(['id', 'property_id', 'name']) as $room) {
+        foreach (DB::table('units')->orderBy('id')->get(['id', 'property_id', 'name']) as $room) {
             $base = Str::slug($room->name) ?: 'room';
             $slug = $base;
             $counter = 1;
@@ -30,17 +30,17 @@ return new class extends Migration
                 $slug = $base.'-'.++$counter;
             }
             $used[$room->property_id][] = $slug;
-            DB::table('rooms')->where('id', $room->id)->update(['slug' => $slug]);
+            DB::table('units')->where('id', $room->id)->update(['slug' => $slug]);
         }
 
-        Schema::table('rooms', function (Blueprint $table) {
+        Schema::table('units', function (Blueprint $table) {
             $table->unique(['property_id', 'slug']);
         });
     }
 
     public function down(): void
     {
-        Schema::table('rooms', function (Blueprint $table) {
+        Schema::table('units', function (Blueprint $table) {
             $table->dropUnique(['property_id', 'slug']);
             $table->dropColumn('slug');
         });

@@ -33,9 +33,9 @@ export function PropertyLayout({
                         href: `/properties/${property.slug}`,
                     },
                     {
-                        key: 'rooms',
+                        key: 'units',
                         label: 'Rooms',
-                        href: `/properties/${property.slug}/rooms`,
+                        href: `/properties/${property.slug}/units`,
                     },
                     {
                         key: 'leases',

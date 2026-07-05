@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { AvailableRoom, PaginatedData, RoomWithProperty, TableMeta, TenantInfo } from '@/types';
+import type { AvailableUnit, PaginatedData, UnitWithProperty, TableMeta, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -38,7 +38,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };
@@ -60,7 +60,7 @@ type Tenant = {
 
 type PageProps = {
     tenants: PaginatedData<Tenant>;
-    availableRooms: AvailableRoom[];
+    availableRooms: AvailableUnit[];
     sort?: string;
     search?: string;
     status?: string;
@@ -242,7 +242,7 @@ export default function Index({
                                 }}
                             >
                                 <DoorOpen className="size-4" />
-                                Assign to Room
+                                Assign to Unit
                             </DropdownMenuItem>
                         )}
                         {!t.deleted_at && (
@@ -362,7 +362,7 @@ export default function Index({
                                   name: moveOutTenant.name,
                                   phone: moveOutTenant.phone,
                               },
-                              room: moveOutTenant.leases?.[0]?.room ?? null,
+                              unit: moveOutTenant.leases?.[0]?.unit ?? null,
                           }
                         : null
                 }

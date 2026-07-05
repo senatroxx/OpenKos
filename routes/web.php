@@ -10,9 +10,9 @@ use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyDocumentsController;
 use App\Http\Controllers\PropertyLeasesController;
 use App\Http\Controllers\RoleController;
-use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantDocumentController;
+use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,18 +41,18 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::get('leases', PropertyLeasesController::class)->name('workspace.leases')->middleware('permission:properties.view');
                 Route::get('documents', PropertyDocumentsController::class)->name('workspace.documents')->middleware('permission:properties.view');
 
-                Route::prefix('rooms')->name('rooms.')->group(function () {
-                    Route::get('/', [RoomController::class, 'index'])->name('index')->middleware('permission:rooms.view');
-                    Route::post('/', [RoomController::class, 'store'])->name('store')->middleware('permission:rooms.create');
+                Route::prefix('units')->name('units.')->group(function () {
+                    Route::get('/', [UnitController::class, 'index'])->name('index')->middleware('permission:units.view');
+                    Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('permission:units.create');
 
-                    Route::prefix('{room}')->group(function () {
-                        Route::get('/', [RoomController::class, 'show'])->name('show')->middleware('permission:rooms.view');
-                        Route::put('/', [RoomController::class, 'update'])->name('update')->middleware('permission:rooms.update');
-                        Route::delete('/', [RoomController::class, 'destroy'])->name('destroy')->middleware('permission:rooms.delete');
-                        Route::get('maintenance-history', [RoomController::class, 'maintenanceHistory'])
+                    Route::prefix('{unit}')->group(function () {
+                        Route::get('/', [UnitController::class, 'show'])->name('show')->middleware('permission:units.view');
+                        Route::put('/', [UnitController::class, 'update'])->name('update')->middleware('permission:units.update');
+                        Route::delete('/', [UnitController::class, 'destroy'])->name('destroy')->middleware('permission:units.delete');
+                        Route::get('maintenance-history', [UnitController::class, 'maintenanceHistory'])
                             ->name('maintenance-history')
                             ->middleware('permission:maintenance-tickets.view');
-                        Route::get('lease-history', [RoomController::class, 'leaseHistory'])
+                        Route::get('lease-history', [UnitController::class, 'leaseHistory'])
                             ->name('lease-history')
                             ->middleware('permission:leases.view');
 
@@ -79,7 +79,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::delete('/', [TenantController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.delete');
             Route::get('leases', [TenantController::class, 'leases'])->name('workspace.leases')->middleware('permission:tenants.view');
             Route::get('documents', [TenantController::class, 'documents'])->name('workspace.documents')->middleware('permission:tenants.view');
-            Route::post('assign-room', [TenantController::class, 'assignRoom'])->name('assign-room')->middleware('permission:tenants.update');
+            Route::post('assign-unit', [TenantController::class, 'assignUnit'])->name('assign-unit')->middleware('permission:tenants.update');
 
             Route::prefix('documents')->name('documents.')->group(function () {
                 Route::post('/', [TenantDocumentController::class, 'store'])->name('store')->middleware('permission:tenants.update');

@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Actions\Leases\CreateLease;
 use App\Data\Lease\CreateLeaseData;
 use App\Enums\TenantDocumentType;
-use App\Http\Requests\Tenant\AssignRoomRequest;
+use App\Http\Requests\Tenant\AssignUnitRequest;
 use App\Http\Requests\Tenant\StoreTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -29,7 +29,7 @@ class TenantController extends Controller
         $tenant->load([
             'documents',
             'leases' => fn ($q) => $q->where('status', 'active')
-                ->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+                ->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
         ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
 
         return Inertia::render('tenants/show', [
@@ -46,7 +46,7 @@ class TenantController extends Controller
                 Column::make('reference', 'Reference')->sortable()->searchable(function (Builder $q, string $search): void {
                     $s = '%'.mb_strtolower($search).'%';
                     $q->where(DB::raw('lower(leases.reference)'), 'like', $s)
-                        ->orWhereHas('room', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', $s));
+                        ->orWhereHas('unit', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', $s));
                 }),
                 Column::make('start_date', 'Start')->sortable(),
                 Column::make('end_date', 'End')->sortable(),
@@ -60,7 +60,7 @@ class TenantController extends Controller
             ->defaultSort('-start_date');
 
         $result = $table->paginate(
-            $tenant->leases()->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            $tenant->leases()->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
             $request,
             'leases',
         );
@@ -127,16 +127,16 @@ class TenantController extends Controller
             : null;
 
         $query = Tenant::query()
-            ->with(['documents', 'leases' => fn ($q) => $q->where('status', 'active')->with(['room.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
+            ->with(['documents', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
             ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',
-                fn (Builder $q) => $q->whereHas('room', fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds)),
+                fn (Builder $q) => $q->whereHas('unit', fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds)),
             ));
 
         $result = $table->paginate($query, $request, 'tenants');
 
-        $availableRooms = Room::query()
+        $availableUnits = Unit::query()
             ->with(['property.city', 'activeRates'])
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
@@ -147,17 +147,17 @@ class TenantController extends Controller
 
         return Inertia::render('tenants/index', [
             ...$result,
-            'availableRooms' => $availableRooms,
+            'availableUnits' => $availableUnits,
         ]);
     }
 
-    public function assignRoom(AssignRoomRequest $request, Tenant $tenant, CreateLease $action): RedirectResponse
+    public function assignUnit(AssignUnitRequest $request, Tenant $tenant, CreateLease $action): RedirectResponse
     {
         $validated = $request->validated();
 
-        $room = Room::findOrFail($validated['room_id']);
+        $unit = Unit::findOrFail($validated['unit_id']);
 
-        $this->authorize('assignRoom', [Tenant::class, $room]);
+        $this->authorize('assignUnit', [Tenant::class, $unit]);
 
         $tenantIds = isset($validated['tenant_ids'])
             ? array_values(array_unique($validated['tenant_ids']))
@@ -170,7 +170,7 @@ class TenantController extends Controller
             rentAmount: $validated['rent_amount'] ?? null,
             billingInterval: $validated['billing_interval'] ?? null,
             billingUnit: $validated['billing_unit'] ?? null,
-            roomRateId: $validated['room_rate_id'] ?? null,
+            unitRateId: $validated['unit_rate_id'] ?? null,
             depositAmount: $validated['deposit_amount'] ?? null,
             depositPaidAt: $validated['deposit_paid_at'] ?? null,
             depositRefundAmount: null,
@@ -179,9 +179,9 @@ class TenantController extends Controller
             notes: $validated['notes'] ?? null,
         );
 
-        $action->execute($room, $data);
+        $action->execute($unit, $data);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant assigned to room.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant assigned to unit.')]);
 
         return to_route('tenants.index');
     }

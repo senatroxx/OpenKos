@@ -68,7 +68,7 @@ const statusLabel: Record<string, string> = {
 export default function Index({
     tickets: data,
     properties,
-    rooms,
+    units,
     users,
     can,
     table: tableMeta,
@@ -81,7 +81,7 @@ export default function Index({
 }: {
     tickets: PaginatedData<MaintenanceTicket>;
     properties: { id: number; name: string }[];
-    rooms: { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] }[];
+    units: { id: number; name: string; property_id: number; status: string; active_lease_count: number; has_maintenance_transfer?: number; leases?: { tenants: { id: number; name: string }[] }[] }[];
     users: { id: number; name: string; roles?: { name: string; label?: string }[] }[];
     can: { create: boolean; update: boolean; delete: boolean; assign: boolean };
     table: { filters: TableFilterMeta[] };
@@ -119,9 +119,9 @@ export default function Index({
 
     const handleStatusChange = (ticket: MaintenanceTicket, status: string) => {
         if (status === 'resolved') {
-            const room = rooms.find((r) => r.id === ticket.room_id);
+            const unit = units.find((r) => r.id === ticket.unit_id);
 
-            if (room?.has_maintenance_transfer) {
+            if (unit?.has_maintenance_transfer) {
                 setResolveTicket(ticket);
 
                 return;
@@ -154,7 +154,7 @@ export default function Index({
         {
             key: 'location',
             label: 'Location',
-            render: (ticket) => ticket.room?.name ?? ticket.location ?? '—',
+            render: (ticket) => ticket.unit?.name ?? ticket.location ?? '—',
         },
         {
             key: 'priority',
@@ -336,7 +336,7 @@ setEditingTicket(null);
                     }}
                     ticket={editingTicket}
                     properties={properties}
-                    rooms={rooms}
+                    units={units}
                 />
 
                 <TicketDetailSheet
@@ -367,7 +367,7 @@ setDetailTicket(null);
                         <DialogHeader>
                             <DialogTitle>Restore Occupant?</DialogTitle>
                             <DialogDescription>
-                                This room was vacated for maintenance. Move the occupant back?
+                                This unit was vacated for maintenance. Move the occupant back?
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter>
@@ -382,7 +382,7 @@ setDetailTicket(null);
                                     });
                                 }
                             }}>
-                                Keep in current room
+                                Keep in current unit
                             </Button>
                             <Button onClick={() => {
                                 const ticket = resolveTicket;
