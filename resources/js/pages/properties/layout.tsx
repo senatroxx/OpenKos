@@ -25,27 +25,27 @@ export function PropertyLayout({
             <WorkspaceTabs
                 workspace="property"
                 activeTab={activeTab}
-                hrefParams={{ id: property.id }}
+                hrefParams={{ id: property.slug }}
                 tabs={[
                     {
                         key: 'overview',
                         label: 'Overview',
-                        href: `/properties/${property.id}`,
+                        href: `/properties/${property.slug}`,
                     },
                     {
                         key: 'rooms',
                         label: 'Rooms',
-                        href: `/properties/${property.id}/rooms`,
+                        href: `/properties/${property.slug}/rooms`,
                     },
                     {
                         key: 'leases',
                         label: 'Leases',
-                        href: `/properties/${property.id}/leases`,
+                        href: `/properties/${property.slug}/leases`,
                     },
                     {
                         key: 'documents',
                         label: 'Documents',
-                        href: `/properties/${property.id}/documents`,
+                        href: `/properties/${property.slug}/documents`,
                     },
                 ]}
             />

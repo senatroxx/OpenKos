@@ -129,7 +129,7 @@ class LeaseController extends Controller
 
         $availableRooms = $property->rooms()
             ->with('property.city')
-            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
             ->orderBy('name')
@@ -137,7 +137,7 @@ class LeaseController extends Controller
 
         return Inertia::render('properties/rooms/leases/index', [
             'property' => ['id' => $property->id, 'name' => $property->name, 'slug' => $property->slug, 'city' => $property->city?->name],
-            'room' => $room->only('id', 'name', 'floor'),
+            'room' => $room->only('id', 'slug', 'name', 'floor'),
             'leases' => $leases,
             'availableRooms' => $availableRooms,
         ]);
@@ -198,7 +198,7 @@ class LeaseController extends Controller
             ->defaultSort('status,-start_date');
 
         $query = Lease::query()
-            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,name,property_id', 'room.property:id,name'])
+            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'room:id,slug,name,property_id', 'room.property:id,slug,name'])
             ->addSelect(['payment_status' => Payment::query()
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'paid' ELSE 'overdue' END")
                 ->whereColumn('paymentable_id', 'leases.id')
@@ -219,7 +219,7 @@ class LeaseController extends Controller
 
         $availableRooms = Room::query()
             ->with('property.city')
-            ->select(['id', 'name', 'property_id', 'capacity'])
+            ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'property.users',

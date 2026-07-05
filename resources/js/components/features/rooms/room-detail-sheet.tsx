@@ -74,7 +74,7 @@ export default function RoomDetailSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-lg" expandTo={room && property ? properties.rooms.show.url({ property: property.id, room: room.id }) : undefined}>
+            <SheetContent className="sm:max-w-lg" expandTo={room && property ? properties.rooms.show.url({ property: property.slug, room: room.slug }) : undefined}>
                 <SheetHeader>
                     <SheetTitle>{room?.name}</SheetTitle>
                     <SheetDescription>
@@ -313,8 +313,8 @@ export default function RoomDetailSheet({
                                             onOpenChange(false);
                                             router.get(
                                                 properties.rooms.leases.index.url({
-                                                    property: property.id,
-                                                    room: room.id,
+                                                    property: property.slug,
+                                                    room: room.slug,
                                                 }),
                                             );
                                         }}
@@ -327,8 +327,8 @@ export default function RoomDetailSheet({
                                             onOpenChange(false);
                                             router.get(
                                                 properties.rooms.maintenanceHistory.url({
-                                                    property: property.id,
-                                                    room: room.id,
+                                                    property: property.slug,
+                                                    room: room.slug,
                                                 }),
                                             );
                                         }}

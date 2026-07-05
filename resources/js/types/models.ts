@@ -52,7 +52,7 @@ export type Property = {
     name: string;
     type?: string; // property_types.slug
     type_label?: string; // resolved label (appended by the model)
-    slug?: string;
+    slug: string; // route key
     address?: string | null;
     region_id?: number | null;
     city_id?: number | null;
@@ -76,7 +76,7 @@ export type RoomRate = {
 export type Room = {
     id: number;
     name: string;
-    slug?: string;
+    slug: string; // route key (unique per property)
     floor: string | null;
     description: string | null;
     size_sqm: string | null;

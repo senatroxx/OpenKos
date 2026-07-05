@@ -56,6 +56,11 @@ class Room extends Model
         });
     }
 
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
