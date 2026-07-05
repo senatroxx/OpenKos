@@ -29,7 +29,7 @@ export type Stats = {
 export type RentDashboardEntry = {
     id: number;
     tenant_name: string;
-    room_name: string;
+    unit_name: string;
     property_name: string;
     rent_due_day: number;
     days_overdue: number | null;

@@ -33,20 +33,20 @@ class StoreMaintenanceTicketRequest extends FormRequest
                     }
                 },
             ],
-            'room_id' => [
+            'unit_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('rooms', 'id')->where('property_id', $this->input('property_id')),
+                Rule::exists('units', 'id')->where('property_id', $this->input('property_id')),
             ],
             'location' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'priority' => ['required', 'string', Rule::in(MaintenancePriority::values())],
-            'block_room' => ['nullable', 'boolean'],
-            'move_tenant_to_room_id' => [
+            'block_unit' => ['nullable', 'boolean'],
+            'move_tenant_to_unit_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('rooms', 'id')->where('property_id', $this->input('property_id')),
+                Rule::exists('units', 'id')->where('property_id', $this->input('property_id')),
             ],
         ];
     }

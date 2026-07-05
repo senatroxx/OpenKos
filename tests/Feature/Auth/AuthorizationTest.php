@@ -17,7 +17,7 @@ test('admin has operational permissions', function () {
     $user = User::factory()->admin()->create();
 
     expect($user->can('properties.view'))->toBeTrue();
-    expect($user->can('rooms.view'))->toBeTrue();
+    expect($user->can('units.view'))->toBeTrue();
     expect($user->can('tenants.view'))->toBeTrue();
     expect($user->can('leases.view'))->toBeTrue();
     expect($user->can('financials.view'))->toBeTrue();
@@ -50,7 +50,7 @@ test('staff cannot access admin permissions', function () {
     $user = User::factory()->staff()->create();
 
     expect($user->can('properties.view'))->toBeFalse();
-    expect($user->can('rooms.view'))->toBeFalse();
+    expect($user->can('units.view'))->toBeFalse();
     expect($user->can('financials.view'))->toBeFalse();
     expect($user->can('reports.view'))->toBeFalse();
     expect($user->can('users.view'))->toBeFalse();

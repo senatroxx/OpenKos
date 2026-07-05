@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
-import type { RoomWithProperty, TenantDocument, TenantInfo } from '@/types';
+import type { UnitWithProperty, TenantDocument, TenantInfo } from '@/types';
 
 type Lease = {
     id: number;
@@ -10,7 +10,7 @@ type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
-    room: RoomWithProperty | null;
+    unit: UnitWithProperty | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
 };

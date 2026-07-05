@@ -21,7 +21,7 @@ class UpdateMaintenanceTicketRequest extends FormRequest
             'resolution_notes' => ['nullable', 'string'],
             'cost' => ['nullable', 'numeric', 'min:0'],
             'resolved_at' => ['nullable', 'date'],
-            'restore_room' => ['nullable', 'boolean'],
+            'restore_unit' => ['nullable', 'boolean'],
             'move_back' => ['nullable', 'boolean'],
         ];
     }

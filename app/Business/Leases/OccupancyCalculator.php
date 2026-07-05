@@ -2,22 +2,22 @@
 
 namespace App\Business\Leases;
 
-use App\Models\Room;
+use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
 class OccupancyCalculator
 {
-    public function activeOccupantCount(Room $room): int
+    public function activeOccupantCount(Unit $unit): int
     {
         return DB::table('lease_tenant')
             ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
-            ->where('leases.room_id', $room->id)
+            ->where('leases.unit_id', $unit->id)
             ->where('leases.status', 'active')
             ->count();
     }
 
-    public function canAccommodate(Room $room, int $incomingCount): bool
+    public function canAccommodate(Unit $unit, int $incomingCount): bool
     {
-        return ($this->activeOccupantCount($room) + $incomingCount) <= $room->capacity;
+        return ($this->activeOccupantCount($unit) + $incomingCount) <= $unit->capacity;
     }
 }

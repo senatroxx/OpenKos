@@ -5,5 +5,5 @@ export * from './maintenance';
 export * from './payments';
 export * from './properties';
 export * from './roles';
-export * from './rooms';
+export * from './units';
 export * from './tenants';

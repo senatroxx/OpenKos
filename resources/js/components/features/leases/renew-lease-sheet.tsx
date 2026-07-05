@@ -55,7 +55,7 @@ export default function RenewLeaseSheet({
                 <SheetHeader>
                     <SheetTitle>Renew Lease</SheetTitle>
                     <SheetDescription>
-                        {lease.primary_tenant?.name ?? 'Tenant'} · {lease.room?.name}
+                        {lease.primary_tenant?.name ?? 'Tenant'} · {lease.unit?.name}
                     </SheetDescription>
                 </SheetHeader>
 

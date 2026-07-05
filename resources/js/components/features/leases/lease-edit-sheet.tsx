@@ -17,7 +17,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import leases from '@/routes/properties/rooms/leases';
+import leases from '@/routes/properties/units/leases';
 import type { Lease } from '@/types';
 
 const DUE_DAY_OPTIONS = [
@@ -45,7 +45,7 @@ export default function LeaseEditSheet({
 
     const noDeposit = Number.parseFloat(lease?.deposit_amount ?? '0') === 0;
 
-    if (!lease || !lease.room) {
+    if (!lease || !lease.unit) {
         return null;
     }
 
@@ -71,8 +71,8 @@ export default function LeaseEditSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={leases.update.url({
-                            property: lease.room.property!.slug,
-                            room: lease.room.slug,
+                            property: lease.unit.property!.slug,
+                            unit: lease.unit.slug,
                             lease: lease.id,
                         })}
                         method="put"
@@ -126,10 +126,10 @@ export default function LeaseEditSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                Room
+                                                Unit
                                             </span>
                                             <span className="font-medium">
-                                                {lease.room?.name}
+                                                {lease.unit?.name}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -137,7 +137,7 @@ export default function LeaseEditSheet({
                                                 Property
                                             </span>
                                             <span className="font-medium">
-                                                {lease.room?.property?.name ??
+                                                {lease.unit?.property?.name ??
                                                     '—'}
                                             </span>
                                         </div>

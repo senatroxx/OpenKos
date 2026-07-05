@@ -97,7 +97,7 @@ return null;
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">Location</p>
-                                    <p className="text-sm">{ticket.room?.name ?? ticket.location ?? '—'}</p>
+                                    <p className="text-sm">{ticket.unit?.name ?? ticket.location ?? '—'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">Priority</p>

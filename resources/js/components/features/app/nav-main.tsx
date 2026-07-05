@@ -71,7 +71,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                         <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton
                                 asChild
-                                // parent match keeps the item active on workspace child pages, e.g. /properties/5/rooms
+                                // parent match keeps the item active on workspace child pages, e.g. /properties/5/units
                                 isActive={
                                     item.href
                                         ? isCurrentOrParentUrl(item.href)

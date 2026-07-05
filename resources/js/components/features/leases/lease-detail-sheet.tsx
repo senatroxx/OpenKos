@@ -93,9 +93,9 @@ export default function LeaseDetailSheet({
             month: 'long',
         });
     }
-    const roomName = lease?.room?.name ?? '—';
-    const propertyName = lease?.room?.property?.name ?? '—';
-    const city = lease?.room?.property?.city;
+    const roomName = lease?.unit?.name ?? '—';
+    const propertyName = lease?.unit?.property?.name ?? '—';
+    const city = lease?.unit?.property?.city;
     const propertyCity = city && typeof city === 'object' ? city.name : city ?? '';
 
     return (
@@ -192,7 +192,7 @@ export default function LeaseDetailSheet({
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            Room
+                                            Unit
                                         </span>
                                         <span className="text-sm">
                                             {roomName}
@@ -581,19 +581,19 @@ export default function LeaseDetailSheet({
                                 </Collapsible>
                             )}
 
-                            {/* Room History */}
-                            {lease.room_histories && lease.room_histories.length > 0 && (
+                            {/* Unit History */}
+                            {lease.unit_histories && lease.unit_histories.length > 0 && (
                                 <Collapsible defaultOpen>
                                     <section>
                                         <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                             <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                                Room History
+                                                Unit History
                                             </h3>
                                             <ChevronDown className="size-3 text-muted-foreground transition-transform ui-open:rotate-180" />
                                         </CollapsibleTrigger>
                                         <CollapsibleContent className="mt-3">
                                             <div className="rounded-lg border">
-                                                {lease.room_histories.map((h, i) => (
+                                                {lease.unit_histories.map((h, i) => (
                                                     <div
                                                         key={h.id}
                                                         className={`flex items-start gap-3 p-3 text-sm ${
@@ -603,9 +603,9 @@ export default function LeaseDetailSheet({
                                                         <div className="mt-0.5 size-2 shrink-0 rounded-full bg-muted-foreground/30" />
                                                         <div className="flex-1 min-w-0">
                                                             <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="font-medium">{h.from_room?.name ?? '—'}</span>
+                                                                <span className="font-medium">{h.from_unit?.name ?? '—'}</span>
                                                                 <span className="text-muted-foreground">→</span>
-                                                                <span className="font-medium">{h.to_room?.name ?? '—'}</span>
+                                                                <span className="font-medium">{h.to_unit?.name ?? '—'}</span>
                                                             </div>
                                                             <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                                                                 {h.reason && (
@@ -653,7 +653,7 @@ export default function LeaseDetailSheet({
                             )}
                             {isActive && onMoveRoom && (
                                 <Button variant="outline" onClick={onMoveRoom}>
-                                    Move Room
+                                    Move Unit
                                 </Button>
                             )}
                             {isActive && canSendReminder && (

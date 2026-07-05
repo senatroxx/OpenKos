@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('leases', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('unit_id')->constrained()->cascadeOnDelete();
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->decimal('monthly_rent', 12, 2)->nullable();
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->softDeletes();
             $table->index('status');
             $table->index(['tenant_id', 'status']);
-            $table->index(['room_id', 'status']);
+            $table->index(['unit_id', 'status']);
         });
     }
 

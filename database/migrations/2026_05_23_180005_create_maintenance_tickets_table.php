@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('maintenance_tickets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('room_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('unit_id')->constrained()->cascadeOnDelete();
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('status')->default('reported');

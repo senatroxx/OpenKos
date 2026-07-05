@@ -200,8 +200,8 @@ describe('workspace tabs', function () {
             ->assertInertia(fn ($page) => $page
                 ->component('properties/leases')
                 ->where('property.id', $property->id)
-                ->has('property.rooms_count')
-                ->has('property.occupied_rooms_count')
+                ->has('property.units_count')
+                ->has('property.occupied_units_count')
                 ->has('property.tenants_count'));
     });
 

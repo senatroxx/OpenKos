@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Business\Dashboard\OverviewStatsCalculator;
-use App\Enums\RoomStatus;
+use App\Enums\UnitStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Lease;
 use App\Models\Property;
@@ -22,26 +22,26 @@ class OverviewController extends Controller
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
             ->withCount([
-                'rooms',
-                'rooms as occupied_rooms_count' => fn (Builder $q) => $q
+                'units',
+                'units as occupied_units_count' => fn (Builder $q) => $q
                     ->where(function (Builder $q) {
-                        $q->where('status', RoomStatus::Occupied)
+                        $q->where('status', UnitStatus::Occupied)
                             ->orWhereHas('leases', fn (Builder $q) => $q->where('status', 'active'));
                     }),
-                'rooms as maintenance_rooms_count' => fn (Builder $q) => $q
-                    ->where('status', RoomStatus::Maintenance)
+                'units as maintenance_units_count' => fn (Builder $q) => $q
+                    ->where('status', UnitStatus::Maintenance)
                     ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active')),
-                'rooms as unavailable_rooms_count' => fn (Builder $q) => $q
-                    ->where('status', RoomStatus::Unavailable)
+                'units as unavailable_units_count' => fn (Builder $q) => $q
+                    ->where('status', UnitStatus::Unavailable)
                     ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active')),
             ])
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $totalRooms = $properties->sum('rooms_count');
-        $occupiedRooms = $properties->sum('occupied_rooms_count');
-        $maintenanceRooms = $properties->sum('maintenance_rooms_count');
-        $unavailableRooms = $properties->sum('unavailable_rooms_count');
+        $totalUnits = $properties->sum('units_count');
+        $occupiedUnits = $properties->sum('occupied_units_count');
+        $maintenanceUnits = $properties->sum('maintenance_units_count');
+        $unavailableUnits = $properties->sum('unavailable_units_count');
 
         $accessibleProperties = Property::query()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -51,31 +51,31 @@ class OverviewController extends Controller
             ->pluck('id');
 
         $activeLeases = Lease::where('status', 'active')
-            ->whereHas('room.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
+            ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
 
         $financeResult = $finance->computeFinance($activeLeases);
 
         return Inertia::render('dashboard/overview', [
             'finance' => $financeResult,
             'stats' => [
-                'total_rooms' => $totalRooms,
-                'occupied_rooms' => $occupiedRooms,
-                'available_rooms' => $totalRooms - $occupiedRooms - $maintenanceRooms - $unavailableRooms,
-                'maintenance_rooms' => $maintenanceRooms,
-                'unavailable_rooms' => $unavailableRooms,
-                'occupancy_percentage' => $totalRooms > 0
-                    ? round(($occupiedRooms / $totalRooms) * 100)
+                'total_units' => $totalUnits,
+                'occupied_units' => $occupiedUnits,
+                'available_units' => $totalUnits - $occupiedUnits - $maintenanceUnits - $unavailableUnits,
+                'maintenance_units' => $maintenanceUnits,
+                'unavailable_units' => $unavailableUnits,
+                'occupancy_percentage' => $totalUnits > 0
+                    ? round(($occupiedUnits / $totalUnits) * 100)
                     : 0,
                 'properties' => $properties->map(fn (Property $p) => [
                     'id' => $p->id,
                     'name' => $p->name,
-                    'total_rooms' => $p->rooms_count,
-                    'occupied_rooms' => $p->occupied_rooms_count,
-                    'available_rooms' => $p->rooms_count - $p->occupied_rooms_count - $p->maintenance_rooms_count - $p->unavailable_rooms_count,
-                    'maintenance_rooms' => $p->maintenance_rooms_count,
-                    'unavailable_rooms' => $p->unavailable_rooms_count,
-                    'occupancy_percentage' => $p->rooms_count > 0
-                        ? round(($p->occupied_rooms_count / $p->rooms_count) * 100)
+                    'total_units' => $p->units_count,
+                    'occupied_units' => $p->occupied_units_count,
+                    'available_units' => $p->units_count - $p->occupied_units_count - $p->maintenance_units_count - $p->unavailable_units_count,
+                    'maintenance_units' => $p->maintenance_units_count,
+                    'unavailable_units' => $p->unavailable_units_count,
+                    'occupancy_percentage' => $p->units_count > 0
+                        ? round(($p->occupied_units_count / $p->units_count) * 100)
                         : 0,
                 ])->values()->toArray(),
             ],

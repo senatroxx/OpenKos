@@ -153,7 +153,7 @@ export default function PropertyDetailSheet({
 
                         <div>
                             <Link
-                                href={properties.rooms.index.url(property)}
+                                href={properties.units.index.url(property)}
                                 className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                 onClick={() => onOpenChange(false)}
                             >

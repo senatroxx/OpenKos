@@ -49,13 +49,13 @@ export default function TicketFormSheet({
     onOpenChange,
     ticket,
     properties,
-    rooms,
+    units,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     ticket?: MaintenanceTicket | null;
     properties: { id: number; name: string }[];
-    rooms: RoomOption[];
+    units: RoomOption[];
 }) {
     const isEdit = Boolean(ticket);
     const formAction = isEdit
@@ -63,28 +63,28 @@ export default function TicketFormSheet({
         : maintenanceTickets.store.url();
     const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
-    const [locationType, setLocationType] = useState(ticket?.room_id ? 'room' : ticket?.location ? 'area' : 'room');
+    const [locationType, setLocationType] = useState(ticket?.unit_id ? 'unit' : ticket?.location ? 'area' : 'unit');
     const [selectedProperty, setSelectedProperty] = useState(ticket?.property_id ? String(ticket.property_id) : '');
     const [priority, setPriority] = useState(ticket?.priority ?? 'medium');
-    const [selectedRoomId, setSelectedRoomId] = useState(ticket?.room_id ? String(ticket.room_id) : '');
-    const [blockRoom, setBlockRoom] = useState(false);
+    const [selectedRoomId, setSelectedRoomId] = useState(ticket?.unit_id ? String(ticket.unit_id) : '');
+    const [blockUnit, setBlockUnit] = useState(false);
     const [showOccupiedDialog, setShowOccupiedDialog] = useState(false);
     const [moveToRoomId, setMoveToRoomId] = useState('');
-    const [restoreRoom, setRestoreRoom] = useState(false);
+    const [restoreUnit, setRestoreUnit] = useState(false);
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
     const filteredRooms = selectedProperty
-        ? rooms.filter((r) => r.property_id === Number(selectedProperty))
+        ? units.filter((r) => r.property_id === Number(selectedProperty))
         : [];
 
     const selectedRoomData = selectedRoomId
-        ? rooms.find((r) => r.id === Number(selectedRoomId))
+        ? units.find((r) => r.id === Number(selectedRoomId))
         : undefined;
 
     const selectedRoomOccupied = (selectedRoomData?.active_lease_count ?? 0) > 0;
 
     const availableMoveRooms = selectedProperty
-        ? rooms.filter(
+        ? units.filter(
             (r) => r.property_id === Number(selectedProperty)
                 && r.id !== Number(selectedRoomId)
                 && r.status !== 'maintenance'
@@ -93,10 +93,10 @@ export default function TicketFormSheet({
         : [];
 
     const handleCreateClick = (e: React.MouseEvent) => {
-        if (isEdit && restoreRoom && ticket?.room_id) {
-            const room = rooms.find((r) => r.id === ticket.room_id);
+        if (isEdit && restoreUnit && ticket?.unit_id) {
+            const unit = units.find((r) => r.id === ticket.unit_id);
 
-            if (room?.has_maintenance_transfer) {
+            if (unit?.has_maintenance_transfer) {
                 e.preventDefault();
                 setShowMoveBackDialog(true);
             }
@@ -104,7 +104,7 @@ export default function TicketFormSheet({
             return;
         }
 
-        if (!isEdit && blockRoom && selectedRoomOccupied) {
+        if (!isEdit && blockUnit && selectedRoomOccupied) {
             e.preventDefault();
             setShowOccupiedDialog(true);
         }
@@ -139,7 +139,7 @@ export default function TicketFormSheet({
                                                 onValueChange={(v) => {
                                                     setSelectedProperty(v);
                                                     setSelectedRoomId('');
-                                                    setBlockRoom(false);
+                                                    setBlockUnit(false);
                                                 }}
                                             >
                                                 <SelectTrigger className="w-full">
@@ -166,21 +166,21 @@ export default function TicketFormSheet({
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="room">Room</SelectItem>
+                                                        <SelectItem value="unit">Unit</SelectItem>
                                                         <SelectItem value="area">Common Area</SelectItem>
                                                     </SelectContent>
                                                 </Select>
-                                                {locationType === 'room' ? (
+                                                {locationType === 'unit' ? (
                                                     <Select
-                                                        name="room_id"
+                                                        name="unit_id"
                                                         value={selectedRoomId}
                                                         onValueChange={(v) => {
                                                             setSelectedRoomId(v);
-                                                            setBlockRoom(false);
+                                                            setBlockUnit(false);
                                                         }}
                                                     >
                                                         <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Select a room (optional)" />
+                                                            <SelectValue placeholder="Select a unit (optional)" />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {filteredRooms.map((r) => (
@@ -198,21 +198,21 @@ export default function TicketFormSheet({
                                                     />
                                                 )}
                                             </div>
-                                            <InputError message={errors.room_id ?? errors.location} />
+                                            <InputError message={errors.unit_id ?? errors.location} />
                                         </div>
                                     )}
 
                                     {! isEdit && selectedRoomId && (
                                         <div className="flex items-center gap-2">
                                             <Checkbox
-                                                id="block_room"
-                                                name="block_room"
-                                                checked={blockRoom}
-                                                onCheckedChange={(checked) => setBlockRoom(Boolean(checked))}
+                                                id="block_unit"
+                                                name="block_unit"
+                                                checked={blockUnit}
+                                                onCheckedChange={(checked) => setBlockUnit(Boolean(checked))}
                                                 value="1"
                                             />
-                                            <Label htmlFor="block_room" className="cursor-pointer text-sm font-normal">
-                                                Block room for maintenance
+                                            <Label htmlFor="block_unit" className="cursor-pointer text-sm font-normal">
+                                                Block unit for maintenance
                                             </Label>
                                         </div>
                                     )}
@@ -280,10 +280,10 @@ export default function TicketFormSheet({
                                         </>
                                     )}
 
-                                    {isEdit && ticket?.status !== 'resolved' && ticket?.room_id && (
+                                    {isEdit && ticket?.status !== 'resolved' && ticket?.unit_id && (
                                         (() => {
-                                            const room = rooms.find((r) => r.id === ticket!.room_id);
-                                            const isBlocked = room?.status === 'maintenance';
+                                            const unit = units.find((r) => r.id === ticket!.unit_id);
+                                            const isBlocked = unit?.status === 'maintenance';
 
                                             if (! isBlocked) {
 return null;
@@ -291,9 +291,9 @@ return null;
 
                                             return (
                                                 <div className="flex items-center gap-2">
-                                                    <Checkbox id="restore_room" name="restore_room" value="1" checked={restoreRoom} onCheckedChange={(v) => setRestoreRoom(Boolean(v))} />
-                                                    <Label htmlFor="restore_room" className="cursor-pointer text-sm font-normal">
-                                                        Restore room availability
+                                                    <Checkbox id="restore_unit" name="restore_unit" value="1" checked={restoreUnit} onCheckedChange={(v) => setRestoreUnit(Boolean(v))} />
+                                                    <Label htmlFor="restore_unit" className="cursor-pointer text-sm font-normal">
+                                                        Restore unit availability
                                                     </Label>
                                                 </div>
                                             );
@@ -323,7 +323,7 @@ return null;
             <Dialog open={showOccupiedDialog} onOpenChange={setShowOccupiedDialog}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Room Occupied</DialogTitle>
+                        <DialogTitle>Unit Occupied</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground">
                             {selectedRoomData?.name} has an active lease. What would you like to do?
                         </DialogDescription>
@@ -335,10 +335,10 @@ return null;
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <input type="radio" name="occupant_action" defaultChecked onChange={() => {}} className="mt-0.5" />
                                         <div className="flex-1">
-                                            <div className="text-sm font-medium">Move tenant to another room</div>
+                                            <div className="text-sm font-medium">Move tenant to another unit</div>
                                             <Select value={moveToRoomId} onValueChange={setMoveToRoomId}>
                                                 <SelectTrigger className="mt-2 w-full">
-                                                    <SelectValue placeholder="Select room" />
+                                                    <SelectValue placeholder="Select unit" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {availableMoveRooms.map((r) => (
@@ -377,7 +377,7 @@ return;
                                 });
 
                                 if (moveToRoomId) {
-                                    data.move_tenant_to_room_id = moveToRoomId;
+                                    data.move_tenant_to_unit_id = moveToRoomId;
                                 }
 
                                 router.visit(formAction, {
@@ -398,7 +398,7 @@ return;
                     <DialogHeader>
                         <DialogTitle>Restore Occupant?</DialogTitle>
                         <DialogDescription>
-                            This room was vacated for maintenance. Move the occupant back?
+                            This unit was vacated for maintenance. Move the occupant back?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -420,7 +420,7 @@ return;
                                 onSuccess: () => onOpenChange(false),
                             });
                         }}>
-                            Keep in current room
+                            Keep in current unit
                         </Button>
                         <Button onClick={() => {
                             setShowMoveBackDialog(false);

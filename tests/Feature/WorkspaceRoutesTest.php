@@ -3,8 +3,8 @@
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Role;
-use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -48,16 +48,16 @@ describe('lease workspace', function () {
     ]);
 });
 
-describe('room workspace', function () {
+describe('unit workspace', function () {
     it('renders the lease history tab', function () {
-        $room = Room::factory()->create();
+        $unit = Unit::factory()->create();
 
         $this->actingAs($this->owner)
-            ->get(route('properties.rooms.lease-history', [$room->property, $room]))
+            ->get(route('properties.units.lease-history', [$unit->property, $unit]))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
-                ->component('properties/rooms/lease-history')
-                ->where('room.id', $room->id)
+                ->component('properties/units/lease-history')
+                ->where('unit.id', $unit->id)
                 ->has('leases.data')
                 ->has('table.filters'));
     });

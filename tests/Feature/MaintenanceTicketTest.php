@@ -2,7 +2,7 @@
 
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
-use App\Models\Room;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 
@@ -22,9 +22,9 @@ describe('authorization', function () {
         $admin = User::factory()->admin()->create();
         $property = Property::factory()->create();
         $admin->properties()->sync([$property->id]);
-        $room = Room::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
         $ticket = MaintenanceTicket::factory()->create([
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'property_id' => $property->id,
         ]);
 
@@ -36,9 +36,9 @@ describe('authorization', function () {
         $propertyA = Property::factory()->create();
         $propertyB = Property::factory()->create();
         $admin->properties()->sync([$propertyA->id]);
-        $room = Room::factory()->for($propertyB)->create();
+        $unit = Unit::factory()->for($propertyB)->create();
         $ticket = MaintenanceTicket::factory()->create([
-            'room_id' => $room->id,
+            'unit_id' => $unit->id,
             'property_id' => $propertyB->id,
         ]);
 
