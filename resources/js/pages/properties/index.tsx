@@ -1,5 +1,11 @@
 import { Head, router } from '@inertiajs/react';
-import { EllipsisVertical, ExternalLink, Eye, Pencil, Trash2 } from 'lucide-react';
+import {
+    EllipsisVertical,
+    ExternalLink,
+    Eye,
+    Pencil,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -122,9 +128,7 @@ export default function Index({
             label: 'Type',
             sortable: true,
             render: (p) => (
-                <Badge variant="outline">
-                    {p.type_label ?? p.type}
-                </Badge>
+                <Badge variant="outline">{p.type_label ?? p.type}</Badge>
             ),
         },
         {
@@ -181,7 +185,9 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                        <DropdownMenuItem onClick={() => router.get(properties.show.url(p))}>
+                        <DropdownMenuItem
+                            onClick={() => router.get(properties.show.url(p))}
+                        >
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>

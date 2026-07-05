@@ -4,7 +4,12 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 
 type WorkspaceProperty = { id: number; slug: string; name: string };
-type WorkspaceRoom = { id: number; slug: string; name: string; floor?: string | number | null };
+type WorkspaceRoom = {
+    id: number;
+    slug: string;
+    name: string;
+    floor?: string | number | null;
+};
 
 export function RoomLayout({
     property,
@@ -34,8 +39,16 @@ export function RoomLayout({
                 hrefParams={{ id: room.slug, propertyId: property.slug }}
                 tabs={[
                     { key: 'overview', label: 'Overview', href: base },
-                    { key: 'maintenance', label: 'Maintenance', href: `${base}/maintenance-history` },
-                    { key: 'lease-history', label: 'Lease History', href: `${base}/lease-history` },
+                    {
+                        key: 'maintenance',
+                        label: 'Maintenance',
+                        href: `${base}/maintenance-history`,
+                    },
+                    {
+                        key: 'lease-history',
+                        label: 'Lease History',
+                        href: `${base}/lease-history`,
+                    },
                 ]}
             />
 

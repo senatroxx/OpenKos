@@ -15,14 +15,16 @@ import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import { LeaseDetailSheet, LeaseEditSheet, MoveOutSheet, RenewLeaseSheet } from '@/components/features';
+import {
+    LeaseDetailSheet,
+    LeaseEditSheet,
+    MoveOutSheet,
+    RenewLeaseSheet,
+} from '@/components/features';
 import { Heading } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -172,7 +174,7 @@ export default function Index({
                         {(lease.tenants ?? []).length > 0
                             ? lease.tenants.map((t) => t.name).join(', ') ||
                               lease.tenants[0]?.name
-                            : lease.primary_tenant?.name ?? '\u2014'}
+                            : (lease.primary_tenant?.name ?? '\u2014')}
                     </p>
                     {lease.room && (
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -223,7 +225,8 @@ export default function Index({
             className: 'tabular-nums',
             render: (lease) =>
                 lease.status === 'active'
-                    ? (DUE_DAY_LABELS[lease.rent_due_day] ?? `${lease.rent_due_day}th`)
+                    ? (DUE_DAY_LABELS[lease.rent_due_day] ??
+                      `${lease.rent_due_day}th`)
                     : '—',
         },
         {
@@ -238,9 +241,7 @@ export default function Index({
                                 : 'bg-red-600 text-white'
                         }
                     >
-                        {lease.payment_status === 'paid'
-                            ? 'Paid'
-                            : 'Overdue'}
+                        {lease.payment_status === 'paid' ? 'Paid' : 'Overdue'}
                     </Badge>
                 ) : (
                     <span className="text-muted-foreground">—</span>
@@ -275,7 +276,9 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                        <DropdownMenuItem onClick={() => router.get(leases.show.url(lease))}>
+                        <DropdownMenuItem
+                            onClick={() => router.get(leases.show.url(lease))}
+                        >
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>

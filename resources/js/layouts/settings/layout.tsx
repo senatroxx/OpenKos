@@ -76,8 +76,11 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                     >
                         {navItems.map((item, index) =>
                             item.children ? (
-                                <div key={`group-${index}`} className="space-y-1">
-                                    <p className="px-3 text-xs font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                                <div
+                                    key={`group-${index}`}
+                                    className="space-y-1"
+                                >
+                                    <p className="px-3 pt-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                         {item.title}
                                     </p>
                                     {item.children.map((child, childIndex) => (
@@ -86,9 +89,15 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                             size="sm"
                                             variant="ghost"
                                             asChild
-                                            className={cn('w-full justify-start pl-6', {
-                                                'bg-muted': isCurrentOrParentUrl(child.href!),
-                                            })}
+                                            className={cn(
+                                                'w-full justify-start pl-6',
+                                                {
+                                                    'bg-muted':
+                                                        isCurrentOrParentUrl(
+                                                            child.href!,
+                                                        ),
+                                                },
+                                            )}
                                         >
                                             <Link href={child.href}>
                                                 {child.icon && (
@@ -106,7 +115,9 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                     variant="ghost"
                                     asChild
                                     className={cn('w-full justify-start', {
-                                        'bg-muted': isCurrentOrParentUrl(item.href!),
+                                        'bg-muted': isCurrentOrParentUrl(
+                                            item.href!,
+                                        ),
                                     })}
                                 >
                                     <Link href={item.href}>

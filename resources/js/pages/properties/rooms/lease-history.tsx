@@ -92,7 +92,12 @@ export default function RoomLeaseHistory({
     table,
 }: {
     property: { id: number; slug: string; name: string };
-    room: { id: number; slug: string; name: string; floor?: string | number | null };
+    room: {
+        id: number;
+        slug: string;
+        name: string;
+        floor?: string | number | null;
+    };
     leases: PaginatedData<LeaseRow>;
     sort?: string;
     search?: string;
