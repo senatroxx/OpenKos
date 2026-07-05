@@ -36,25 +36,22 @@ export type Region = {
     cities: { id: number; name: string }[];
 };
 
-// Mirrors App\Enums\PropertyType.
-export type PropertyType = 'kos' | 'apartment' | 'villa' | 'hostel' | 'hotel';
-
-export const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
-    { value: 'kos', label: 'Kos' },
-    { value: 'apartment', label: 'Apartment' },
-    { value: 'villa', label: 'Villa' },
-    { value: 'hostel', label: 'Hostel' },
-    { value: 'hotel', label: 'Hotel' },
-];
-
-export const PROPERTY_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-    PROPERTY_TYPES.map((t) => [t.value, t.label]),
-);
+// A user-managed property classification (App\Models\PropertyType). The slug
+// is stored on properties.type; the label is the editable display name.
+export type PropertyTypeOption = {
+    id?: number;
+    slug: string;
+    label: string;
+    is_active?: boolean;
+    sort_order?: number;
+    properties_count?: number;
+};
 
 export type Property = {
     id: number;
     name: string;
-    type?: PropertyType;
+    type?: string; // property_types.slug
+    type_label?: string; // resolved label (appended by the model)
     slug?: string;
     address?: string | null;
     region_id?: number | null;

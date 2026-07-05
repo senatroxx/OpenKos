@@ -11,7 +11,6 @@ import {
 import properties from '@/routes/properties';
 
 import type { Property } from '@/types';
-import { PROPERTY_TYPE_LABELS } from '@/types/models';
 
 export default function PropertyDetailSheet({
     property,
@@ -71,8 +70,7 @@ export default function PropertyDetailSheet({
                                 )}
                                 {property.type && (
                                     <Badge variant="outline">
-                                        {PROPERTY_TYPE_LABELS[property.type] ??
-                                            property.type}
+                                        {property.type_label ?? property.type}
                                     </Badge>
                                 )}
                             </div>

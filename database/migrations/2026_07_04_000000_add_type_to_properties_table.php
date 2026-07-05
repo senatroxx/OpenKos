@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('properties', function (Blueprint $table) {
-            // Existing rows are boarding houses, so default to 'kos'.
-            $table->string('type')->default('kos')->after('name');
+            // Existing rows are boarding houses.
+            $table->string('type')->default('boarding_house')->after('name');
         });
     }
 

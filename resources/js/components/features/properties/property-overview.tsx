@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/badge';
 import type { Property } from '@/types';
-import { PROPERTY_TYPE_LABELS } from '@/types/models';
 
 export default function PropertyOverview({ property }: { property: Property }) {
     const city =
@@ -22,7 +21,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
                 )}
                 {property.type && (
                     <Badge variant="outline">
-                        {PROPERTY_TYPE_LABELS[property.type] ?? property.type}
+                        {property.type_label ?? property.type}
                     </Badge>
                 )}
             </div>
