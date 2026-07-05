@@ -23,14 +23,14 @@ return new class extends Migration
             });
 
             Schema::table('maintenance_tickets', function (Blueprint $table) {
-                $table->unsignedBigInteger('room_id_new')->nullable()->after('location');
+                $table->unsignedBigInteger('unit_id_new')->nullable()->after('location');
             });
 
-            DB::statement('UPDATE maintenance_tickets SET room_id_new = unit_id');
+            DB::statement('UPDATE maintenance_tickets SET unit_id_new = unit_id');
 
             Schema::table('maintenance_tickets', function (Blueprint $table) {
                 $table->dropColumn('unit_id');
-                $table->renameColumn('room_id_new', 'unit_id');
+                $table->renameColumn('unit_id_new', 'unit_id');
             });
 
             Schema::table('maintenance_tickets', function (Blueprint $table) {

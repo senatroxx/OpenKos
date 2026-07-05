@@ -25,5 +25,5 @@ enum UnitStatus: string
     }
 }
 
-// ponytail: RoomStatus alias for backward-compat; delete when all callers are updated
+// ponytail: alias file removed; all callers migrated to UnitStatus
 class_alias(UnitStatus::class, 'App\Enums\RoomStatus');
