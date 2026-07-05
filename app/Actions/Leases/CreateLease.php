@@ -31,7 +31,7 @@ class CreateLease
                 $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
                 $newTenantIds = array_diff($tenantIds, $existingTenantIds->all());
 
-                abort_if(! $this->occupancy->canAccommodate($unit, count($newTenantIds)), 422, __('Unit capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+                abort_if(! $this->occupancy->canAccommodate($unit, count($newTenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
                 foreach ($newTenantIds as $tenantId) {
                     $existingLease->tenants()->attach($tenantId, ['is_primary' => false]);
@@ -42,7 +42,7 @@ class CreateLease
                 return $existingLease;
             }
 
-            abort_if(! $this->occupancy->canAccommodate($unit, count($tenantIds)), 422, __('Unit capacity exceeded. Room can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+            abort_if(! $this->occupancy->canAccommodate($unit, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
             $roomRate = $data->unitRateId ? UnitRate::find($data->unitRateId) : null;
             $rentAmount = $data->rentAmount ?? $roomRate?->amount ?? $unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
