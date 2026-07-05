@@ -3,6 +3,7 @@
 namespace App\Actions\Payments;
 
 use App\Data\Payment\RecordPaymentData;
+use App\Enums\PaymentStatus;
 use App\Events\PaymentRecorded;
 use App\Models\Lease;
 use App\Models\User;
@@ -28,7 +29,7 @@ class RecordPayment
                 'period_end' => $periodEnd,
                 'payment_method' => $data->paymentMethod,
                 'notes' => $data->notes,
-                'status' => $hasProof && ! $canAutoVerify ? 'pending' : 'confirmed',
+                'status' => $hasProof && ! $canAutoVerify ? PaymentStatus::Pending : PaymentStatus::Confirmed,
                 'confirmed_by' => $canAutoVerify || ! $hasProof ? $user->id : null,
                 'recorded_by' => $user->id,
                 'verified_by' => $canAutoVerify ? $user->id : null,

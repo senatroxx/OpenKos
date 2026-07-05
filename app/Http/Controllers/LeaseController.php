@@ -8,9 +8,11 @@ use App\Actions\Leases\RenewLease;
 use App\Actions\Reminders\ForceSendReminder;
 use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
+use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
+use App\Events\Lease\LeaseStatusChanged;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\RenewLeaseRequest;
@@ -169,7 +171,7 @@ class LeaseController extends Controller
                 Column::make('created_at', 'Created')->sortable(),
             ])
             ->filters([
-                Filter::select('status', 'Status', ['active', 'terminated'])
+                Filter::select('status', 'Status', [LeaseStatus::Active->value, LeaseStatus::Terminated->value])
                     ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
                 Filter::select('payment_status', 'Payment', [
                     ['value' => 'paid', 'label' => 'Paid'],
@@ -178,12 +180,12 @@ class LeaseController extends Controller
                     ->query(fn (Builder $q, string $value) => $value === 'paid'
                         ? $q->whereHas('payments', fn (Builder $q) => $q
                             ->where('paymentable_type', Lease::class)
-                            ->whereNotIn('status', ['cancelled'])
+                            ->whereNotIn('status', [PaymentStatus::Cancelled->value])
                             ->whereMonth('period_start', now()->month)
                             ->whereYear('period_start', now()->year))
-                        : $q->where('status', 'active')->whereDoesntHave('payments', fn (Builder $q) => $q
+                        : $q->where('status', LeaseStatus::Active->value)->whereDoesntHave('payments', fn (Builder $q) => $q
                             ->where('paymentable_type', Lease::class)
-                            ->whereNotIn('status', ['cancelled'])
+                            ->whereNotIn('status', [PaymentStatus::Cancelled->value])
                             ->whereMonth('period_start', now()->month)
                             ->whereYear('period_start', now()->year))),
                 Filter::select('properties', 'Property', $allProperties->map(fn (Property $p) => [
@@ -203,7 +205,7 @@ class LeaseController extends Controller
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'paid' ELSE 'overdue' END")
                 ->whereColumn('paymentable_id', 'leases.id')
                 ->where('paymentable_type', Lease::class)
-                ->whereNotIn('status', ['cancelled'])
+                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
                 ->whereMonth('period_start', now()->month)
                 ->whereYear('period_start', now()->year),
             ])
@@ -234,24 +236,24 @@ class LeaseController extends Controller
             : $q->whereHas('unit.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
 
         $activeLeases = Lease::query()
-            ->where('status', 'active')
+            ->where('status', LeaseStatus::Active->value)
             ->when($accessibleQuery)
             ->count();
 
         $collectedThisMonth = (float) Payment::query()
             ->where('paymentable_type', Lease::class)
-            ->whereNotIn('status', ['cancelled'])
+            ->whereNotIn('status', [PaymentStatus::Cancelled->value])
             ->whereMonth('period_start', now()->month)
             ->whereYear('period_start', now()->year)
-            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->where('status', 'active')->when($accessibleQuery))
+            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
             ->sum('amount');
 
         $overdueAmount = (float) Lease::query()
-            ->where('status', 'active')
+            ->where('status', LeaseStatus::Active->value)
             ->where('start_date', '<=', now())
             ->whereDoesntHave('payments', fn (Builder $q) => $q
                 ->where('paymentable_type', Lease::class)
-                ->whereNotIn('status', ['cancelled'])
+                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
                 ->whereMonth('period_start', now()->month)
                 ->whereYear('period_start', now()->year))
             ->when($accessibleQuery)
@@ -317,17 +319,21 @@ class LeaseController extends Controller
     {
         $this->authorize('delete', $lease);
 
-        DB::transaction(function () use ($lease, $unit) {
+        $oldStatus = $lease->status;
+
+        DB::transaction(function () use ($lease, $unit, $oldStatus) {
             $lease->update([
                 'end_date' => now(),
-                'status' => 'terminated',
+                'status' => LeaseStatus::Terminated,
                 'termination_date' => now(),
                 'termination_reason' => request('reason'),
             ]);
 
+            LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
+
             $unit->unsetRelation('leases');
 
-            if ($unit->leases()->where('status', 'active')->doesntExist() && $unit->status !== UnitStatus::Maintenance) {
+            if ($unit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $unit->status !== UnitStatus::Maintenance) {
                 $unit->update(['status' => UnitStatus::Available]);
             }
         });

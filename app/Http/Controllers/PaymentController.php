@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Payments\RecordPayment;
+use App\Business\Payments\PaymentStatusValidator;
 use App\Data\Payment\RecordPaymentData;
+use App\Enums\PaymentStatus;
+use App\Events\Payment\PaymentStatusChanged;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Lease;
 use App\Models\Payment;
@@ -64,6 +67,10 @@ class PaymentController extends Controller
         return response()->file($path);
     }
 
+    public function __construct(
+        private PaymentStatusValidator $paymentStatusValidator,
+    ) {}
+
     public function verify(Request $request, Payment $payment): RedirectResponse
     {
         $this->authorize('verify', $payment);
@@ -72,12 +79,18 @@ class PaymentController extends Controller
             'action' => ['required', 'string', 'in:confirm,reject'],
         ]);
 
+        $newStatus = $request->action === 'confirm' ? PaymentStatus::Confirmed : PaymentStatus::Cancelled;
+
+        $this->paymentStatusValidator->validate($payment->status, $newStatus);
+
         $payment->update([
-            'status' => $request->action === 'confirm' ? 'confirmed' : 'cancelled',
+            'status' => $newStatus,
             'confirmed_by' => $request->user()->id,
             'verified_by' => $request->user()->id,
             'verified_at' => now(),
         ]);
+
+        PaymentStatusChanged::dispatch($payment, $payment->getOriginal('status'), $newStatus);
 
         $message = $request->action === 'confirm'
             ? __('Payment verified successfully.')

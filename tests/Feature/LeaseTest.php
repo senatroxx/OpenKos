@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\LeaseStatus;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -118,7 +119,7 @@ describe('CRUD', function () {
         expect($lease->rent_amount)->toBe('1500000.00');
         expect($lease->deposit_amount)->toBe('1000000.00');
         expect($lease->rent_due_day)->toBe(5);
-        expect($lease->status)->toBe('active');
+        expect($lease->status)->toBe(LeaseStatus::Active);
     });
 
     it('uses unit base price when rent amount is not specified', function () {
@@ -205,7 +206,7 @@ describe('termination', function () {
 
         $lease->refresh();
 
-        expect($lease->status)->toBe('terminated');
+        expect($lease->status)->toBe(LeaseStatus::Terminated);
         expect($lease->end_date)->not->toBeNull();
         expect($lease->termination_date)->not->toBeNull();
     });
@@ -238,14 +239,14 @@ describe('move unit', function () {
 
         $lease->refresh();
 
-        expect($lease->status)->toBe('terminated');
+        expect($lease->status)->toBe(LeaseStatus::Terminated);
         expect($lease->end_date->format('Y-m-d'))->toBe(now()->format('Y-m-d'));
 
         $newLease = Lease::where('unit_id', $unitB->id)->first();
 
         expect($newLease)->not->toBeNull();
         expect($newLease->primary_tenant_id)->toBe($tenant->id);
-        expect($newLease->status)->toBe('active');
+        expect($newLease->status)->toBe(LeaseStatus::Active);
         expect($newLease->rent_amount)->toBe('1000000.00');
         expect($newLease->deposit_amount)->toBe('500000.00');
     });

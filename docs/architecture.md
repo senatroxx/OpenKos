@@ -196,6 +196,65 @@ routes/
 
 Named routes follow the Laravel resource convention (`{plural}.{action}`). Settings routes are namespaced under `settings.`. Scheduled commands are defined in `console.php` using the `Schedule` facade.
 
+## Domain State Machines
+
+Status fields on core entities are backed by string enums with model casts and centralized transition validators that prevent invalid state changes.
+
+### Lease Lifecycle
+
+```
+Active ──→ Terminated   (destroy, moveOut)
+Active ──→ Renewed      (renewal)
+```
+
+- **Enum:** `App\Enums\LeaseStatus` (Active, Expired, Terminated, Renewed)
+- **Validator:** `App\Business\Leases\LeaseStatusValidator`
+- **Cast on** `Lease.status`
+- `Expired` is reserved for future use (no code path sets it yet).
+- Terminal states: `Terminated`, `Renewed`.
+
+### Payment Lifecycle
+
+```
+Pending ──→ Confirmed   (verify: confirm)
+Pending ──→ Cancelled   (verify: reject)
+```
+
+Created as `Confirmed` (auto-verify or no proof) or `Pending` (proof uploaded, cannot auto-verify).
+
+- **Enum:** `App\Enums\PaymentStatus` (Pending, Confirmed, Cancelled)
+- **Validator:** `App\Business\Payments\PaymentStatusValidator`
+- **Cast on** `Payment.status`
+
+### Maintenance Ticket Lifecycle
+
+```
+Reported ──→ InProgress ──→ Resolved
+    │             │
+    └──→ Cancelled └──→ Cancelled
+```
+
+- **Enum:** `App\Enums\MaintenanceStatus` (Reported, InProgress, Resolved, Cancelled)
+- **Validator:** `App\Business\Maintenance\TransitionValidator`
+
+### Unit Lifecycle (Programmatic Only)
+
+Programmatic transitions from Actions are validated. Manual edits via the unit form bypass validation (admin can set any status).
+
+```
+Available  ──→ Occupied       (lease created)
+Available  ──→ Maintenance     (ticket blocks empty unit)
+Occupied   ──→ Maintenance     (ticket blocks occupied unit)
+Maintenance ──→ Available      (ticket resolved, no active lease)
+Maintenance ──→ Occupied       (ticket resolved, active lease exists)
+Occupied   ──→ Available       (all leases terminated)
+```
+
+- **Enum:** `App\Enums\UnitStatus` (Available, Occupied, Maintenance, Unavailable)
+- **Validator:** `App\Business\Units\UnitStatusValidator`
+- **Cast on** `Unit.status`
+- `Unavailable` is a manual-only state — no programmatic transition targets it.
+
 ## Database Conventions
 
 - Migrations include a descriptive name (not just `create_*_table`).

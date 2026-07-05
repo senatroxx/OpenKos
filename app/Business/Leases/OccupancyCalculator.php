@@ -2,6 +2,7 @@
 
 namespace App\Business\Leases;
 
+use App\Enums\LeaseStatus;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
@@ -12,7 +13,7 @@ class OccupancyCalculator
         return DB::table('lease_tenant')
             ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
             ->where('leases.unit_id', $unit->id)
-            ->where('leases.status', 'active')
+            ->where('leases.status', LeaseStatus::Active->value)
             ->count();
     }
 
