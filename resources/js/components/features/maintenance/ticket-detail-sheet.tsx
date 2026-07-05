@@ -1,6 +1,15 @@
 import { router, usePage } from '@inertiajs/react';
 import { Check, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Sheet,
     SheetContent,
@@ -47,6 +56,7 @@ export default function TicketDetailSheet({
     onStatusChange?: (ticket: MaintenanceTicket, status: string) => void;
     onAssignTo?: () => void;
 }) {
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
     const { auth } = usePage<{ auth: { user: { id: number } } }>().props;
 
     if (!ticket) {
@@ -80,10 +90,12 @@ export default function TicketDetailSheet({
     };
 
     const handleDelete = () => {
-        if (confirm('Delete this ticket?')) {
-            router.delete(maintenanceTickets.destroy.url(ticket.id));
-            onOpenChange(false);
-        }
+        setDeleteConfirm(true);
+    };
+
+    const confirmDelete = () => {
+        router.delete(maintenanceTickets.destroy.url(ticket.id));
+        onOpenChange(false);
     };
 
     return (
@@ -275,6 +287,34 @@ export default function TicketDetailSheet({
                     </div>
                 </div>
             </SheetContent>
+
+            <Dialog
+                open={deleteConfirm}
+                onOpenChange={setDeleteConfirm}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete ticket</DialogTitle>
+                        <DialogDescription>
+                            Delete this ticket? This cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Sheet>
     );
 }

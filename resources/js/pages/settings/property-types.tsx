@@ -4,6 +4,14 @@ import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     Card,
     CardContent,
     CardDescription,
@@ -31,6 +39,8 @@ export default function PropertyTypes({
 }) {
     const [editing, setEditing] = useState<PropertyTypeOption | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] =
+        useState<PropertyTypeOption | null>(null);
 
     function openNew() {
         setEditing(null);
@@ -50,9 +60,16 @@ export default function PropertyTypes({
     }
 
     function destroy(type: PropertyTypeOption) {
-        if (confirm(`Delete "${type.label}"?`)) {
-            router.delete(`${BASE}/${type.slug}`);
+        setDeleteConfirm(type);
+    }
+
+    function confirmDelete() {
+        if (!deleteConfirm) {
+            return;
         }
+
+        router.delete(`${BASE}/${deleteConfirm.slug}`);
+        setDeleteConfirm(null);
     }
 
     return (
@@ -219,6 +236,38 @@ export default function PropertyTypes({
                     </div>
                 </SheetContent>
             </Sheet>
+
+            <Dialog
+                open={deleteConfirm !== null}
+                onOpenChange={() => setDeleteConfirm(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete type</DialogTitle>
+                        <DialogDescription>
+                            Delete{' '}
+                            <span className="font-medium">
+                                {deleteConfirm?.label}
+                            </span>
+                            ?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                        >
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
