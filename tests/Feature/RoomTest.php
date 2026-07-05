@@ -204,3 +204,28 @@ describe('cross-property access', function () {
             ->assertForbidden();
     });
 });
+
+describe('slug', function () {
+    it('auto-generates a slug from the name', function () {
+        $room = Room::factory()->create(['name' => 'Room A1']);
+
+        expect($room->slug)->toBe('room-a1');
+    });
+
+    it('allows the same slug across different properties', function () {
+        $a = Room::factory()->for(Property::factory())->create(['name' => 'A1']);
+        $b = Room::factory()->for(Property::factory())->create(['name' => 'A1']);
+
+        expect($a->slug)->toBe('a1')->and($b->slug)->toBe('a1');
+    });
+
+    it('disambiguates a slug collision within a property', function () {
+        $property = Property::factory()->create();
+
+        // Distinct names (property_id + name is unique) that slugify identically.
+        $first = Room::factory()->for($property)->create(['name' => 'A1']);
+        $second = Room::factory()->for($property)->create(['name' => 'A1.']);
+
+        expect($first->slug)->toBe('a1')->and($second->slug)->toBe('a1-2');
+    });
+});
