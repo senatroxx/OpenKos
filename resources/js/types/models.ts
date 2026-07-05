@@ -76,6 +76,7 @@ export type RoomRate = {
 export type Room = {
     id: number;
     name: string;
+    slug?: string;
     floor: string | null;
     description: string | null;
     size_sqm: string | null;
