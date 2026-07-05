@@ -113,8 +113,8 @@ export default function LeaseFormSheet({
     const [rentAmount, setRentAmount] = useState(
         () => defaultRate?.amount ?? '',
     );
-    const [billingInterval, setBillingInterval] = useState(
-        () => String(defaultRate?.billing_interval ?? 1),
+    const [billingInterval, setBillingInterval] = useState(() =>
+        String(defaultRate?.billing_interval ?? 1),
     );
     const [billingUnit, setBillingUnit] = useState(
         () => defaultRate?.billing_unit ?? 'month',
@@ -178,7 +178,9 @@ export default function LeaseFormSheet({
         <Sheet key="lease-form" open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Assign Tenant{capacity > 1 ? 's' : ''}</SheetTitle>
+                    <SheetTitle>
+                        Assign Tenant{capacity > 1 ? 's' : ''}
+                    </SheetTitle>
                     <SheetDescription>
                         Assign {capacity > 1 ? 'tenants' : 'a tenant'} to{' '}
                         {room?.name ?? 'this room'}
@@ -189,8 +191,8 @@ export default function LeaseFormSheet({
                 <div className="flex-1 overflow-y-auto px-4">
                     <Form
                         action={properties.rooms.leases.store.url({
-                            property: property.id,
-                            room: room!.id,
+                            property: property.slug,
+                            room: room!.slug,
                         })}
                         method="post"
                         onSuccess={() => onOpenChange(false)}

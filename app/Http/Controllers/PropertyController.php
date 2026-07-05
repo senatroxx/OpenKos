@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PropertyType;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\City;
 use App\Models\Property;
+use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
 use App\Tables\Column;
@@ -58,11 +58,11 @@ class PropertyController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['active', 'archived'])
                     ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->whereRaw('is_active is true'),
-                        'archived' => $q->whereRaw('is_active is false'),
+                        'active' => $q->where('is_active', true),
+                        'archived' => $q->where('is_active', false),
                         default => $q,
                     }),
-                Filter::select('type', 'Type', PropertyType::values())
+                Filter::select('type', 'Type', PropertyType::ordered()->pluck('slug')->all())
                     ->query(fn (Builder $q, string $value) => $q->where('type', $value)),
             ])
             ->defaultSort('name');
@@ -87,6 +87,7 @@ class PropertyController extends Controller
         return Inertia::render('properties/index', [
             ...$result,
             'regions' => $regions,
+            'propertyTypes' => PropertyType::active()->ordered()->get(['slug', 'label']),
         ]);
     }
 
@@ -114,7 +115,7 @@ class PropertyController extends Controller
     {
         $this->authorize('delete', $property);
 
-        Property::query()->whereKey($property->id)->update(['is_active' => DB::raw('false')]);
+        Property::query()->whereKey($property->id)->update(['is_active' => false]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
 

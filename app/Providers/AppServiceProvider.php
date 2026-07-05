@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Database\PostgresConnection;
 use App\Models\Setting;
 use App\Models\User;
 use App\Services\WhatsAppManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Database\Connection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(WhatsAppManager::class);
+
+        // Bind PHP booleans as 'true'/'false' on Postgres instead of 1/0 (see the class).
+        Connection::resolverFor('pgsql', fn ($pdo, $database, $prefix, $config) => new PostgresConnection($pdo, $database, $prefix, $config));
     }
 
     /**

@@ -2,10 +2,9 @@
 
 namespace App\Http\Requests\Property;
 
-use App\Enums\PropertyType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rule;
 
 class StorePropertyRequest extends FormRequest
 {
@@ -16,7 +15,7 @@ class StorePropertyRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'type' => ['sometimes', new Enum(PropertyType::class)],
+            'type' => ['sometimes', Rule::exists('property_types', 'slug')->where('is_active', true)],
             'slug' => ['nullable', 'string', 'max:255', 'unique:properties,slug'],
             'address' => ['nullable', 'string', 'max:65535'],
             'region_id' => ['nullable', 'integer', 'exists:regions,id'],

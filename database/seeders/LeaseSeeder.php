@@ -10,7 +10,6 @@ use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class LeaseSeeder extends Seeder
 {
@@ -73,7 +72,7 @@ class LeaseSeeder extends Seeder
                 'rent_amount' => $rate?->amount ?? 1_500_000,
                 'billing_interval' => $rate?->billing_interval ?? 1,
                 'billing_unit' => $rate?->billing_unit ?? 'month',
-                'is_custom_price' => DB::raw('false'),
+                'is_custom_price' => false,
                 'room_rate_id' => $rate?->id ?? null,
                 'deposit_amount' => fake()->randomElement([500_000, 1_000_000, 1_500_000]),
                 'deposit_paid_at' => $startDate,
@@ -82,7 +81,7 @@ class LeaseSeeder extends Seeder
                 'notes' => null,
             ]);
 
-            $lease->tenants()->attach($tenantId, ['is_primary' => DB::raw('true')]);
+            $lease->tenants()->attach($tenantId, ['is_primary' => true]);
         }
 
         foreach ($this->sharedAssignments as $assignment) {
@@ -113,7 +112,7 @@ class LeaseSeeder extends Seeder
                 'rent_amount' => $rate?->amount ?? 1_500_000,
                 'billing_interval' => $rate?->billing_interval ?? 1,
                 'billing_unit' => $rate?->billing_unit ?? 'month',
-                'is_custom_price' => DB::raw('false'),
+                'is_custom_price' => false,
                 'room_rate_id' => $rate?->id ?? null,
                 'deposit_amount' => fake()->randomElement([500_000, 1_000_000, 1_500_000]),
                 'deposit_paid_at' => $startDate,
@@ -122,10 +121,10 @@ class LeaseSeeder extends Seeder
                 'notes' => null,
             ]);
 
-            $lease->tenants()->attach($primaryId, ['is_primary' => DB::raw('true')]);
+            $lease->tenants()->attach($primaryId, ['is_primary' => true]);
 
             foreach ($tenantIds as $extraId) {
-                $lease->tenants()->attach($extraId, ['is_primary' => DB::raw('false')]);
+                $lease->tenants()->attach($extraId, ['is_primary' => false]);
             }
         }
 
@@ -156,7 +155,7 @@ class LeaseSeeder extends Seeder
                 'rent_amount' => $rate?->amount ?? 1_500_000,
                 'billing_interval' => $rate?->billing_interval ?? 1,
                 'billing_unit' => $rate?->billing_unit ?? 'month',
-                'is_custom_price' => DB::raw('false'),
+                'is_custom_price' => false,
                 'room_rate_id' => $rate?->id ?? null,
                 'deposit_amount' => fake()->randomElement([500_000, 1_000_000]),
                 'deposit_paid_at' => $startDate,
@@ -171,7 +170,7 @@ class LeaseSeeder extends Seeder
                 'notes' => null,
             ]);
 
-            $lease->tenants()->attach($tenantId, ['is_primary' => DB::raw('true')]);
+            $lease->tenants()->attach($tenantId, ['is_primary' => true]);
         }
 
         // Ensure dashboard rent status coverage, then create payments for the rest

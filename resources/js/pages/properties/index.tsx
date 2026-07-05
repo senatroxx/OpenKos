@@ -1,5 +1,11 @@
 import { Head, router } from '@inertiajs/react';
-import { EllipsisVertical, ExternalLink, Eye, Pencil, Trash2 } from 'lucide-react';
+import {
+    EllipsisVertical,
+    ExternalLink,
+    Eye,
+    Pencil,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -17,13 +23,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import properties from '@/routes/properties';
-import type { PaginatedData, PropertyType, TableMeta } from '@/types';
-import { PROPERTY_TYPE_LABELS } from '@/types/models';
+import type { PaginatedData, TableMeta } from '@/types';
 
 type ManagedProperty = {
     id: number;
     name: string;
-    type: PropertyType;
+    slug: string;
+    type: string;
+    type_label?: string;
     address: string | null;
     region_id: number | null;
     city_id: number | null;
@@ -121,9 +128,7 @@ export default function Index({
             label: 'Type',
             sortable: true,
             render: (p) => (
-                <Badge variant="outline">
-                    {PROPERTY_TYPE_LABELS[p.type] ?? p.type}
-                </Badge>
+                <Badge variant="outline">{p.type_label ?? p.type}</Badge>
             ),
         },
         {
@@ -180,7 +185,9 @@ export default function Index({
                         align="end"
                         onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                        <DropdownMenuItem onClick={() => router.get(properties.show.url(p))}>
+                        <DropdownMenuItem
+                            onClick={() => router.get(properties.show.url(p))}
+                        >
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>
