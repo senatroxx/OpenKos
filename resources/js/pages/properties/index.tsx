@@ -17,13 +17,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import properties from '@/routes/properties';
-import type { PaginatedData, PropertyType, TableMeta } from '@/types';
-import { PROPERTY_TYPE_LABELS } from '@/types/models';
+import type { PaginatedData, TableMeta } from '@/types';
 
 type ManagedProperty = {
     id: number;
     name: string;
-    type: PropertyType;
+    type: string;
+    type_label?: string;
     address: string | null;
     region_id: number | null;
     city_id: number | null;
@@ -122,7 +122,7 @@ export default function Index({
             sortable: true,
             render: (p) => (
                 <Badge variant="outline">
-                    {PROPERTY_TYPE_LABELS[p.type] ?? p.type}
+                    {p.type_label ?? p.type}
                 </Badge>
             ),
         },

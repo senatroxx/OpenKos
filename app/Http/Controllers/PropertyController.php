@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PropertyType;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\City;
 use App\Models\Property;
+use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
 use App\Tables\Column;
@@ -62,7 +62,7 @@ class PropertyController extends Controller
                         'archived' => $q->whereRaw('is_active is false'),
                         default => $q,
                     }),
-                Filter::select('type', 'Type', PropertyType::values())
+                Filter::select('type', 'Type', PropertyType::ordered()->pluck('slug')->all())
                     ->query(fn (Builder $q, string $value) => $q->where('type', $value)),
             ])
             ->defaultSort('name');
@@ -87,6 +87,7 @@ class PropertyController extends Controller
         return Inertia::render('properties/index', [
             ...$result,
             'regions' => $regions,
+            'propertyTypes' => PropertyType::active()->ordered()->get(['slug', 'label']),
         ]);
     }
 

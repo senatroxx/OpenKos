@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Enums\PropertyType;
 use App\Models\City;
 use App\Models\Property;
 use App\Models\Region;
@@ -18,7 +17,7 @@ class PropertyFactory extends Factory
 
         return [
             'name' => fake()->company(),
-            'type' => PropertyType::Kos,
+            'type' => 'boarding_house',
             'address' => fake()->address(),
             'region_id' => $region->id,
             'city_id' => City::where('region_id', $region->id)->inRandomOrder()->first()?->id

@@ -33,6 +33,10 @@ const sidebarNavItems: NavItem[] = [
         href: editReminders(),
     },
     {
+        title: 'Property Types',
+        href: '/settings/property-types',
+    },
+    {
         title: 'Credentials',
         children: [
             {
