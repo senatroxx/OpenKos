@@ -13,14 +13,14 @@ import {
 import properties from '@/routes/properties';
 export default function MoveUnitSheet({
     property,
-    currentRoom,
+    currentUnit,
     availableUnits,
     lease,
     open,
     onOpenChange,
 }: {
     property: { id: number; slug: string; name: string };
-    currentRoom: { id: number; slug: string; name: string; capacity: number };
+    currentUnit: { id: number; slug: string; name: string; capacity: number };
     availableUnits: {
         id: number;
         name: string;
@@ -31,9 +31,9 @@ export default function MoveUnitSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [targetRoomId, setTargetRoomId] = useState<number | null>(null);
+    const [targetUnitId, setTargetUnitId] = useState<number | null>(null);
 
-    const roomOptions = availableUnits.map((r) => {
+    const unitOptions = availableUnits.map((r) => {
         const occupiedCount = r.occupied_count ?? 0;
         const spotsLeft = r.capacity - occupiedCount;
         const suffix =
@@ -55,7 +55,7 @@ export default function MoveUnitSheet({
                 <SheetHeader>
                     <SheetTitle>Move Tenant</SheetTitle>
                     <SheetDescription>
-                        Move tenant from {currentRoom.name} to another unit
+                        Move tenant from {currentUnit.name} to another unit
                     </SheetDescription>
                 </SheetHeader>
 
@@ -63,7 +63,7 @@ export default function MoveUnitSheet({
                     <Form
                         action={properties.units.leases.move.url({
                             property: property.slug,
-                            unit: currentRoom.slug,
+                            unit: currentUnit.slug,
                             lease: lease.id,
                         })}
                         method="post"
@@ -74,16 +74,16 @@ export default function MoveUnitSheet({
                                 <input
                                     type="hidden"
                                     name="target_unit_id"
-                                    value={targetRoomId ?? ''}
+                                    value={targetUnitId ?? ''}
                                 />
 
                                 <div className="grid gap-2">
                                     <Label>Target Unit</Label>
                                     <SearchableSelect
-                                        options={roomOptions}
-                                        value={targetRoomId}
+                                        options={unitOptions}
+                                        value={targetUnitId}
                                         onChange={(val) =>
-                                            setTargetRoomId(
+                                            setTargetUnitId(
                                                 val as number | null,
                                             )
                                         }

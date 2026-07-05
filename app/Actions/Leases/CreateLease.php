@@ -44,9 +44,9 @@ class CreateLease
 
             abort_if(! $this->occupancy->canAccommodate($unit, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
-            $roomRate = $data->unitRateId ? UnitRate::find($data->unitRateId) : null;
-            $rentAmount = $data->rentAmount ?? $roomRate?->amount ?? $unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
-            $isCustomPrice = $data->rentAmount !== null && $roomRate && (float) $data->rentAmount !== (float) $roomRate->amount;
+            $unitRate = $data->unitRateId ? UnitRate::find($data->unitRateId) : null;
+            $rentAmount = $data->rentAmount ?? $unitRate?->amount ?? $unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
+            $isCustomPrice = $data->rentAmount !== null && $unitRate && (float) $data->rentAmount !== (float) $unitRate->amount;
 
             $primaryTenantId = $tenantIds[0];
 
@@ -55,8 +55,8 @@ class CreateLease
                 'start_date' => $data->startDate,
                 'end_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
-                'billing_interval' => $data->billingInterval ?? $roomRate?->billing_interval ?? 1,
-                'billing_unit' => $data->billingUnit ?? $roomRate?->billing_unit ?? 'month',
+                'billing_interval' => $data->billingInterval ?? $unitRate?->billing_interval ?? 1,
+                'billing_unit' => $data->billingUnit ?? $unitRate?->billing_unit ?? 'month',
                 'is_custom_price' => $isCustomPrice,
                 'unit_rate_id' => $data->unitRateId,
                 'deposit_amount' => $data->depositAmount ?? 0,

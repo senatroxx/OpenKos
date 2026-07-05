@@ -91,7 +91,7 @@ function formatPrice(cents: string): string {
 export default function Index({
     property,
     units: data,
-    availableUnits: _availableRooms,
+    availableUnits: _availableUnits,
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -99,13 +99,13 @@ export default function Index({
     table: tableMeta,
 }: PageProps) {
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingRoom, setEditingRoom] = useState<Unit | null>(null);
+    const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
     const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingRoom, setViewingRoom] = useState<Unit | null>(null);
+    const [viewingUnit, setViewingUnit] = useState<Unit | null>(null);
 
     const [leaseFormOpen, setLeaseFormOpen] = useState(false);
-    const [assignRoom, setAssignRoom] = useState<Unit | null>(null);
+    const [assignUnit, setAssignUnit] = useState<Unit | null>(null);
 
     const [moveOpen, setMoveOpen] = useState(false);
     const [moveLease, setMoveLease] = useState<LeaseInfo | null>(null);
@@ -147,48 +147,48 @@ export default function Index({
     });
 
     function openCreate() {
-        setEditingRoom(null);
+        setEditingUnit(null);
         setDialogOpen(true);
     }
 
     function openEdit(unit: Unit) {
-        setEditingRoom(unit);
+        setEditingUnit(unit);
         setDialogOpen(true);
     }
 
     function openDetail(unit: Unit) {
-        setViewingRoom(unit);
+        setViewingUnit(unit);
         setDetailOpen(true);
     }
 
     function editFromDetail() {
-        if (!viewingRoom) {
+        if (!viewingUnit) {
             return;
         }
 
-        setEditingRoom(viewingRoom);
+        setEditingUnit(viewingUnit);
         setDialogOpen(true);
     }
 
     function openAssignTenant() {
-        if (!viewingRoom) {
+        if (!viewingUnit) {
             return;
         }
 
-        setAssignRoom(viewingRoom);
+        setAssignUnit(viewingUnit);
         setDetailOpen(false);
         setLeaseFormOpen(true);
     }
 
     function openMoveRoom() {
-        if (!viewingRoom) {
+        if (!viewingUnit) {
             return;
         }
 
-        const lease = viewingRoom.leases?.[0];
+        const lease = viewingUnit.leases?.[0];
 
         if (lease) {
-            setMoveFromRoom(viewingRoom);
+            setMoveFromRoom(viewingUnit);
             setMoveLease(lease);
             setDetailOpen(false);
             setMoveOpen(true);
@@ -196,11 +196,11 @@ export default function Index({
     }
 
     function openMoveOut() {
-        if (!viewingRoom) {
+        if (!viewingUnit) {
             return;
         }
 
-        const lease = viewingRoom.leases?.[0];
+        const lease = viewingUnit.leases?.[0];
 
         if (!lease) {
             return;
@@ -211,8 +211,8 @@ export default function Index({
             tenants: lease.tenants ?? [],
             primary_tenant: lease.primary_tenant ?? null,
             unit: {
-                id: viewingRoom.id,
-                name: viewingRoom.name,
+                id: viewingUnit.id,
+                name: viewingUnit.name,
                 property_id: property.id,
                 property: {
                     id: property.id,
@@ -241,8 +241,8 @@ export default function Index({
 
     function getFilteredUnitsForMove(
         currentUnitId: number,
-    ): (typeof _availableRooms)[number][] {
-        return _availableRooms.filter((r) => r.id !== currentUnitId);
+    ): (typeof _availableUnits)[number][] {
+        return _availableUnits.filter((r) => r.id !== currentUnitId);
     }
 
     const columns: TableColumn<Unit>[] = [
@@ -372,7 +372,7 @@ export default function Index({
                             {r.capacity > occupants.length && (
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        setAssignRoom(r);
+                                        setAssignUnit(r);
                                         setLeaseFormOpen(true);
                                     }}
                                 >
@@ -384,7 +384,7 @@ export default function Index({
                             {hasActiveLease && (
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        setViewingRoom(r);
+                                        setViewingUnit(r);
                                         setDetailOpen(false);
                                         const lease = r.leases?.[0];
 
@@ -464,27 +464,27 @@ export default function Index({
             </div>
 
             <UnitDetailSheet
-                unit={viewingRoom}
+                unit={viewingUnit}
                 property={property}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
                 onEdit={editFromDetail}
                 onAssignTenant={openAssignTenant}
                 onMoveOut={openMoveOut}
-                onMoveRoom={openMoveRoom}
+                onMoveUnit={openMoveRoom}
             />
 
             <UnitFormSheet
-                key={editingRoom?.id ?? 'new'}
-                unit={editingRoom}
+                key={editingUnit?.id ?? 'new'}
+                unit={editingUnit}
                 property={property}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
             />
 
-            {assignRoom && (
+            {assignUnit && (
                 <LeaseFormSheet
-                    unit={assignRoom}
+                    unit={assignUnit}
                     property={property}
                     open={leaseFormOpen}
                     onOpenChange={setLeaseFormOpen}
@@ -494,7 +494,7 @@ export default function Index({
             {moveLease && moveFromUnit && (
                 <MoveUnitSheet
                     property={property}
-                    currentRoom={moveFromUnit}
+                    currentUnit={moveFromUnit}
                     availableUnits={getFilteredUnitsForMove(moveFromUnit.id)}
                     lease={moveLease}
                     open={moveOpen}
@@ -504,7 +504,7 @@ export default function Index({
 
             <MoveOutSheet
                 lease={moveOutLeaseData}
-                availableUnits={_availableRooms}
+                availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
