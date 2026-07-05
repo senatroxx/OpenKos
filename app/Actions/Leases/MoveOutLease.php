@@ -53,8 +53,6 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
-        $oldUnit->unsetRelation('leases');
-
         LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
 
         if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
@@ -102,6 +100,8 @@ class MoveOutLease
             'deposit_refunded_at' => $data->depositReturned ? now() : null,
             'notes' => $data->notes ?? $lease->notes,
         ]);
+
+        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
 
         $oldUnit->unsetRelation('leases');
 

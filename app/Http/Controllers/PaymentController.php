@@ -80,8 +80,9 @@ class PaymentController extends Controller
         ]);
 
         $newStatus = $request->action === 'confirm' ? PaymentStatus::Confirmed : PaymentStatus::Cancelled;
+        $oldStatus = $payment->status;
 
-        $this->paymentStatusValidator->validate($payment->status, $newStatus);
+        $this->paymentStatusValidator->validate($oldStatus, $newStatus);
 
         $payment->update([
             'status' => $newStatus,
@@ -90,7 +91,7 @@ class PaymentController extends Controller
             'verified_at' => now(),
         ]);
 
-        PaymentStatusChanged::dispatch($payment, $payment->getOriginal('status'), $newStatus);
+        PaymentStatusChanged::dispatch($payment, $oldStatus, $newStatus);
 
         $message = $request->action === 'confirm'
             ? __('Payment verified successfully.')

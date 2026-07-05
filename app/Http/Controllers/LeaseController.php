@@ -6,6 +6,7 @@ use App\Actions\Leases\CreateLease;
 use App\Actions\Leases\MoveOutLease;
 use App\Actions\Leases\RenewLease;
 use App\Actions\Reminders\ForceSendReminder;
+use App\Business\Leases\LeaseStatusValidator;
 use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\LeaseStatus;
@@ -35,6 +36,10 @@ use Inertia\Response;
 
 class LeaseController extends Controller
 {
+    public function __construct(
+        private LeaseStatusValidator $leaseStatusValidator,
+    ) {}
+
     public function show(Lease $lease): Response
     {
         $this->authorize('view', $lease);
@@ -321,7 +326,9 @@ class LeaseController extends Controller
 
         $oldStatus = $lease->status;
 
-        DB::transaction(function () use ($lease, $unit, $oldStatus) {
+        $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Terminated);
+
+        DB::transaction(function () use ($lease, $unit) {
             $lease->update([
                 'end_date' => now(),
                 'status' => LeaseStatus::Terminated,
@@ -329,14 +336,14 @@ class LeaseController extends Controller
                 'termination_reason' => request('reason'),
             ]);
 
-            LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
-
             $unit->unsetRelation('leases');
 
             if ($unit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $unit->status !== UnitStatus::Maintenance) {
                 $unit->update(['status' => UnitStatus::Available]);
             }
         });
+
+        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease terminated.')]);
 

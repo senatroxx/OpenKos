@@ -38,9 +38,9 @@ class RenewLease
             );
         }
 
-        return DB::transaction(function () use ($lease, $data) {
-            $oldStatus = $lease->status;
+        $oldStatus = $lease->status;
 
+        $result = DB::transaction(function () use ($lease, $data, $oldStatus) {
             $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
 
             $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Renewed);
@@ -57,8 +57,6 @@ class RenewLease
             $lease->update([
                 'status' => LeaseStatus::Renewed,
             ]);
-
-            LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Renewed);
 
             $newEndDate = $data->endDate;
 
@@ -88,5 +86,11 @@ class RenewLease
 
             return RenewLeaseResult::success($newLease);
         });
+
+        if ($result->succeeded()) {
+            LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Renewed);
+        }
+
+        return $result;
     }
 }
