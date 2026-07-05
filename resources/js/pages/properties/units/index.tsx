@@ -109,7 +109,7 @@ export default function Index({
 
     const [moveOpen, setMoveOpen] = useState(false);
     const [moveLease, setMoveLease] = useState<LeaseInfo | null>(null);
-    const [moveFromUnit, setMoveFromRoom] = useState<Unit | null>(null);
+    const [moveFromUnit, setMoveFromUnit] = useState<Unit | null>(null);
 
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
@@ -180,7 +180,7 @@ export default function Index({
         setLeaseFormOpen(true);
     }
 
-    function openMoveRoom() {
+    function openMoveUnit() {
         if (!viewingUnit) {
             return;
         }
@@ -188,7 +188,7 @@ export default function Index({
         const lease = viewingUnit.leases?.[0];
 
         if (lease) {
-            setMoveFromRoom(viewingUnit);
+            setMoveFromUnit(viewingUnit);
             setMoveLease(lease);
             setDetailOpen(false);
             setMoveOpen(true);
@@ -389,7 +389,7 @@ export default function Index({
                                         const lease = r.leases?.[0];
 
                                         if (lease) {
-                                            setMoveFromRoom(r);
+                                            setMoveFromUnit(r);
                                             setMoveLease(lease);
                                             setMoveOpen(true);
                                         }
@@ -421,7 +421,7 @@ export default function Index({
 
     return (
         <PropertyLayout property={property} activeTab="units">
-            <Head title={`Rooms - ${property.name}`} />
+            <Head title={`Units - `} />
 
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-end">
@@ -471,7 +471,7 @@ export default function Index({
                 onEdit={editFromDetail}
                 onAssignTenant={openAssignTenant}
                 onMoveOut={openMoveOut}
-                onMoveUnit={openMoveRoom}
+                onMoveUnit={openMoveUnit}
             />
 
             <UnitFormSheet

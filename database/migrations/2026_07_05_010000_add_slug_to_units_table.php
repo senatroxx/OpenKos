@@ -23,7 +23,7 @@ return new class extends Migration
         // Backfill unique-per-property slugs from existing names (incl. trashed).
         $used = [];
         foreach (DB::table('units')->orderBy('id')->get(['id', 'property_id', 'name']) as $row) {
-            $base = Str::slug($row->name) ?: 'room';
+            $base = Str::slug($row->name) ?: 'unit';
             $slug = $base;
             $counter = 1;
             while (in_array($slug, $used[$row->property_id] ?? [], true)) {

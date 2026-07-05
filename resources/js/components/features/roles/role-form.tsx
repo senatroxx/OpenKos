@@ -12,7 +12,7 @@ const PERMISSION_LABELS: Record<string, string> = {
     users: 'Users',
     roles: 'Roles',
     properties: 'Properties',
-    units: 'Rooms',
+    units: 'Units',
     tenants: 'Tenants',
     leases: 'Leases',
     financials: 'Financials',
