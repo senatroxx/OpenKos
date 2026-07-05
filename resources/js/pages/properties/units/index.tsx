@@ -44,7 +44,7 @@ type PageProps = {
     property: Property;
     units: PaginatedData<Unit>;
     tenants: { id: number; name: string; phone: string }[];
-    availableRooms: {
+    availableUnits: {
         id: number;
         name: string;
         property_id: number;
@@ -91,7 +91,7 @@ function formatPrice(cents: string): string {
 export default function Index({
     property,
     units: data,
-    availableRooms: _availableRooms,
+    availableUnits: _availableRooms,
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
@@ -109,7 +109,7 @@ export default function Index({
 
     const [moveOpen, setMoveOpen] = useState(false);
     const [moveLease, setMoveLease] = useState<LeaseInfo | null>(null);
-    const [moveFromRoom, setMoveFromRoom] = useState<Unit | null>(null);
+    const [moveFromUnit, setMoveFromRoom] = useState<Unit | null>(null);
 
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
@@ -239,10 +239,10 @@ export default function Index({
         }
     }
 
-    function getFilteredRoomsForMove(
-        currentRoomId: number,
+    function getFilteredUnitsForMove(
+        currentUnitId: number,
     ): (typeof _availableRooms)[number][] {
-        return _availableRooms.filter((r) => r.id !== currentRoomId);
+        return _availableRooms.filter((r) => r.id !== currentUnitId);
     }
 
     const columns: TableColumn<Unit>[] = [
@@ -491,11 +491,11 @@ export default function Index({
                 />
             )}
 
-            {moveLease && moveFromRoom && (
+            {moveLease && moveFromUnit && (
                 <MoveUnitSheet
                     property={property}
-                    currentRoom={moveFromRoom}
-                    availableRooms={getFilteredRoomsForMove(moveFromRoom.id)}
+                    currentRoom={moveFromUnit}
+                    availableUnits={getFilteredUnitsForMove(moveFromUnit.id)}
                     lease={moveLease}
                     open={moveOpen}
                     onOpenChange={setMoveOpen}
@@ -504,7 +504,7 @@ export default function Index({
 
             <MoveOutSheet
                 lease={moveOutLeaseData}
-                availableRooms={_availableRooms}
+                availableUnits={_availableRooms}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
             />
