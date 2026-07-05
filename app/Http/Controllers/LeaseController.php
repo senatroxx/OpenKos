@@ -27,6 +27,7 @@ use App\Models\Unit;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -182,17 +183,20 @@ class LeaseController extends Controller
                     ['value' => 'paid', 'label' => 'Paid'],
                     ['value' => 'overdue', 'label' => 'Overdue'],
                 ])
-                    ->query(fn (Builder $q, string $value) => $value === 'paid'
-                        ? $q->whereHas('payments', fn (Builder $q) => $q
-                            ->where('paymentable_type', Lease::class)
-                            ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-                            ->whereMonth('period_start', now()->month)
-                            ->whereYear('period_start', now()->year))
-                        : $q->where('status', LeaseStatus::Active->value)->whereDoesntHave('payments', fn (Builder $q) => $q
-                            ->where('paymentable_type', Lease::class)
-                            ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-                            ->whereMonth('period_start', now()->month)
-                            ->whereYear('period_start', now()->year))),
+                    ->query(function (Builder $q, string $value) {
+                        $periodStart = Carbon::now()->startOfMonth()->startOfDay();
+                        $periodEnd = Carbon::now()->endOfMonth()->endOfDay();
+
+                        return $value === 'paid'
+                            ? $q->whereHas('payments', fn (Builder $q) => $q
+                                ->where('paymentable_type', Lease::class)
+                                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
+                                ->whereBetween('period_start', [$periodStart, $periodEnd]))
+                            : $q->where('status', LeaseStatus::Active->value)->whereDoesntHave('payments', fn (Builder $q) => $q
+                                ->where('paymentable_type', Lease::class)
+                                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
+                                ->whereBetween('period_start', [$periodStart, $periodEnd]));
+                    }),
                 Filter::select('properties', 'Property', $allProperties->map(fn (Property $p) => [
                     'value' => (string) $p->id,
                     'label' => $p->name,
@@ -211,8 +215,7 @@ class LeaseController extends Controller
                 ->whereColumn('paymentable_id', 'leases.id')
                 ->where('paymentable_type', Lease::class)
                 ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-                ->whereMonth('period_start', now()->month)
-                ->whereYear('period_start', now()->year),
+                ->whereBetween('period_start', [Carbon::now()->startOfMonth()->startOfDay(), Carbon::now()->endOfMonth()->endOfDay()]),
             ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'unit.property.users',
@@ -245,11 +248,13 @@ class LeaseController extends Controller
             ->when($accessibleQuery)
             ->count();
 
+        $periodStart = Carbon::now()->startOfMonth()->startOfDay();
+        $periodEnd = Carbon::now()->endOfMonth()->endOfDay();
+
         $collectedThisMonth = (float) Payment::query()
             ->where('paymentable_type', Lease::class)
             ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-            ->whereMonth('period_start', now()->month)
-            ->whereYear('period_start', now()->year)
+            ->whereBetween('period_start', [$periodStart, $periodEnd])
             ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
             ->sum('amount');
 
@@ -259,8 +264,7 @@ class LeaseController extends Controller
             ->whereDoesntHave('payments', fn (Builder $q) => $q
                 ->where('paymentable_type', Lease::class)
                 ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-                ->whereMonth('period_start', now()->month)
-                ->whereYear('period_start', now()->year))
+                ->whereBetween('period_start', [$periodStart, $periodEnd]))
             ->when($accessibleQuery)
             ->sum('rent_amount');
 
