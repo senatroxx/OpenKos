@@ -65,7 +65,7 @@ trait Auditable
         $except = $this->getAuditableExcept();
         $mask = $this->getAuditableMask();
 
-        $keys = $source ? array_keys($fields) : $allowed;
+        $keys = $source ? array_intersect(array_keys($fields), $allowed) : $allowed;
         $values = $source
             ? array_intersect_key($source, array_flip($keys))
             : array_intersect_key($fields, array_flip($keys));
@@ -117,7 +117,7 @@ trait Auditable
     protected function resolveAuditSource(): string
     {
         if (app()->runningInConsole()) {
-            return 'Scheduler';
+            return 'CLI';
         }
 
         return 'UI';
