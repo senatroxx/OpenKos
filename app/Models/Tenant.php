@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +26,9 @@ use Illuminate\Notifications\Notification;
 ])]
 class Tenant extends Model
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use Auditable, HasFactory, Notifiable, SoftDeletes;
+
+    protected array $auditableMask = ['phone', 'email', 'id_card_number', 'emergency_contact_phone'];
 
     protected function casts(): array
     {
