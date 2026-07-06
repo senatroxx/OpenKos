@@ -240,7 +240,7 @@ future concern.
 
 ### ExamplePlugin (disabled by default)
 
-`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, a declared permission (`example.view`) gating its nav item and route, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `Payment\PaymentRecorded`), its own `routes/web.php` (an invokable-controller `/example` endpoint), and a `database/migrations/` migration.
+`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, a declared permission (`example.view`) gating its nav item and route, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `App\Events\Payment\PaymentRecorded`), its own `routes/web.php` (an invokable-controller `/example` endpoint), and a `database/migrations/` migration.
 
 It ships **disabled** so the demo stays out of the real UI. To enable it:
 
