@@ -7,9 +7,6 @@ use App\Actions\Maintenance\ResolveTicket;
 use App\Business\Maintenance\TransitionValidator;
 use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
-use App\Events\Maintenance\MaintenanceResolved;
-use App\Events\Maintenance\MaintenanceTicketCreated;
-use App\Events\Unit\UnitStatusChanged;
 use App\Http\Requests\Maintenance\StoreMaintenanceTicketRequest;
 use App\Http\Requests\Maintenance\UpdateMaintenanceTicketRequest;
 use App\Models\LeaseUnitHistory;
@@ -160,30 +157,10 @@ class MaintenanceTicketController extends Controller
         $moveToUnitId = $data['move_tenant_to_unit_id'] ?? null;
         unset($data['block_unit'], $data['move_tenant_to_unit_id']);
 
-        $ticket = MaintenanceTicket::create($data);
-
-        MaintenanceTicketCreated::dispatch($ticket);
+        MaintenanceTicket::create($data);
 
         if ($blockUnit && ! empty($data['unit_id'])) {
-            $unit = Unit::findOrFail($data['unit_id']);
-            $oldStatus = $unit->status;
-
-            $targetUnit = $moveToUnitId ? Unit::find($moveToUnitId) : null;
-            $oldTargetStatus = $targetUnit?->status;
-
             $this->blockUnit->execute($data['unit_id'], $moveToUnitId);
-
-            $unit->refresh();
-            if ($oldStatus !== $unit->status) {
-                UnitStatusChanged::dispatch($unit, $oldStatus, $unit->status);
-            }
-
-            if ($targetUnit) {
-                $targetUnit->refresh();
-                if ($oldTargetStatus !== $targetUnit->status) {
-                    UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
-                }
-            }
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket created.')]);
@@ -204,8 +181,6 @@ class MaintenanceTicketController extends Controller
             if ($newStatus === MaintenanceStatus::Resolved) {
                 $validated['resolved_at'] ??= now();
             }
-
-            $statusChangedToResolved = $newStatus === MaintenanceStatus::Resolved;
         }
 
         $restoreUnit = ! empty($validated['restore_unit']);
@@ -214,37 +189,10 @@ class MaintenanceTicketController extends Controller
 
         $ticket->update($validated);
 
-        if (($statusChangedToResolved ?? false)) {
-            MaintenanceResolved::dispatch($ticket);
-        }
-
         if ($restoreUnit && $ticket->unit_id) {
-            $unit = Unit::findOrFail($ticket->unit_id);
-            $oldStatus = $unit->status;
-
-            $transfer = LeaseUnitHistory::query()
-                ->where('from_unit_id', $ticket->unit_id)
-                ->where('reason', 'maintenance')
-                ->orderBy('effective_date', 'desc')
-                ->first();
-            $targetUnit = $transfer ? Unit::find($transfer->to_unit_id) : null;
-            $oldTargetStatus = $targetUnit?->status;
-
             $this->resolveTicket->execute($ticket, $moveBack);
 
-            $unit->refresh();
-            if ($oldStatus !== $unit->status) {
-                UnitStatusChanged::dispatch($unit, $oldStatus, $unit->status);
-            }
-
-            if ($targetUnit) {
-                $targetUnit->refresh();
-                if ($oldTargetStatus !== $targetUnit->status) {
-                    UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
-                }
-            }
-
-            $unitName = $unit->name ?? '';
+            $unitName = Unit::find($ticket->unit_id)?->name ?? '';
             Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Unit :name restored.', ['name' => $unitName])]);
 
             return to_route('maintenance-tickets.index');

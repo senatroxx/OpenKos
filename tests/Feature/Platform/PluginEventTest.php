@@ -1,6 +1,6 @@
 <?php
 
-use App\Events\Payment\PaymentRecorded;
+use App\Events\PaymentRecorded;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;

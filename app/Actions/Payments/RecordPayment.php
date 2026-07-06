@@ -4,6 +4,7 @@ namespace App\Actions\Payments;
 
 use App\Data\Payment\RecordPaymentData;
 use App\Enums\PaymentStatus;
+use App\Events\PaymentRecorded;
 use App\Models\Lease;
 use App\Models\User;
 use App\Results\Payment\RecordPaymentResult;
@@ -55,6 +56,8 @@ class RecordPayment
         });
 
         $payment->load('confirmedBy:id,name', 'recordedBy:id,name', 'proofs');
+
+        PaymentRecorded::dispatch($payment);
 
         return RecordPaymentResult::success($payment);
     }

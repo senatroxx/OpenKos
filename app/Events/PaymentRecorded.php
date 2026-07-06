@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Events\Payment;
+namespace App\Events;
 
 use App\Models\Payment;
 use Illuminate\Foundation\Events\Dispatchable;
