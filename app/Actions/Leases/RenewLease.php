@@ -7,6 +7,7 @@ use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\RenewalEligibilityChecker;
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\LeaseStatus;
+use App\Events\Lease\LeaseStatusChanged;
 use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
 use App\Models\Unit;
@@ -85,6 +86,10 @@ class RenewLease
 
             return RenewLeaseResult::success($newLease);
         });
+
+        if ($result->succeeded()) {
+            LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Renewed);
+        }
 
         return $result;
     }

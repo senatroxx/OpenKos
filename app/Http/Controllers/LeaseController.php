@@ -13,9 +13,7 @@ use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
-use App\Events\Lease\LeaseCreated;
 use App\Events\Lease\LeaseStatusChanged;
-use App\Events\Unit\UnitStatusChanged;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\RenewLeaseRequest;
@@ -301,20 +299,9 @@ class LeaseController extends Controller
             notes: $request->notes,
         );
 
-        $oldUnitStatus = $unit->status;
-
         $lease = $action->execute($unit, $data);
 
         $lease->load('tenants:id,name,phone', 'primaryTenant:id,name,phone');
-
-        if ($lease->wasRecentlyCreated) {
-            LeaseCreated::dispatch($lease, $lease->tenants->pluck('id')->toArray());
-        }
-
-        $unit->refresh();
-        if ($oldUnitStatus !== $unit->status) {
-            UnitStatusChanged::dispatch($unit, $oldUnitStatus, $unit->status);
-        }
 
         $count = $lease->tenants->count();
         $message = $count > 1
@@ -356,12 +343,7 @@ class LeaseController extends Controller
             $unit->unsetRelation('leases');
 
             if ($unit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $unit->status !== UnitStatus::Maintenance) {
-                $oldUnitStatus = $unit->status;
                 $unit->update(['status' => UnitStatus::Available]);
-
-                if ($oldUnitStatus !== $unit->status) {
-                    UnitStatusChanged::dispatch($unit, $oldUnitStatus, $unit->status);
-                }
             }
         });
 
@@ -393,33 +375,10 @@ class LeaseController extends Controller
             targetUnitId: $validated['target_unit_id'] ?? null,
         );
 
-        $oldLeaseStatus = $lease->status;
-        $sourceUnit = $lease->unit;
-        $oldSourceStatus = $sourceUnit->status;
-
-        $oldTargetStatus = $targetUnit?->status;
-
         $result = $action->execute($lease, $data);
 
         if ($result->failed()) {
             abort(422, $result->error);
-        }
-
-        $lease->refresh();
-        if ($oldLeaseStatus !== $lease->status) {
-            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status);
-        }
-
-        $sourceUnit->refresh();
-        if ($oldSourceStatus !== $sourceUnit->status) {
-            UnitStatusChanged::dispatch($sourceUnit, $oldSourceStatus, $sourceUnit->status);
-        }
-
-        if ($targetUnit) {
-            $targetUnit->refresh();
-            if ($oldTargetStatus !== $targetUnit->status) {
-                UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
-            }
         }
 
         Inertia::flash('toast', [
@@ -440,19 +399,12 @@ class LeaseController extends Controller
     {
         $this->authorize('renew', $lease);
 
-        $oldLeaseStatus = $lease->status;
-
         $result = $action->execute($lease, $request->toData());
 
         if ($result->failed()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => $result->error]);
 
             return back();
-        }
-
-        $lease->refresh();
-        if ($oldLeaseStatus !== $lease->status) {
-            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease renewed. New lease created.')]);
@@ -498,29 +450,10 @@ class LeaseController extends Controller
             carryDepositRefund: true,
         );
 
-        $oldLeaseStatus = $lease->status;
-        $oldSourceStatus = $unit->status;
-        $oldTargetStatus = $targetUnit->status;
-
         $result = $action->execute($lease, $data);
 
         if ($result->failed()) {
             abort(422, $result->error);
-        }
-
-        $lease->refresh();
-        if ($oldLeaseStatus !== $lease->status) {
-            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status);
-        }
-
-        $unit->refresh();
-        if ($oldSourceStatus !== $unit->status) {
-            UnitStatusChanged::dispatch($unit, $oldSourceStatus, $unit->status);
-        }
-
-        $targetUnit->refresh();
-        if ($oldTargetStatus !== $targetUnit->status) {
-            UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new unit.')]);

@@ -2,7 +2,7 @@
 
 namespace OpenKOS\Plugins\Example;
 
-use App\Events\Payment\PaymentRecorded;
+use App\Events\PaymentRecorded;
 use OpenKOS\Platform\Dashboard\DashboardPage;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
