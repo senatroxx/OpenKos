@@ -33,6 +33,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -308,12 +309,12 @@ class LeaseController extends Controller
         $lease->load('tenants:id,name,phone', 'primaryTenant:id,name,phone');
 
         if ($lease->wasRecentlyCreated) {
-            LeaseCreated::dispatch($lease, $lease->tenants->pluck('id')->toArray());
+            LeaseCreated::dispatch($lease, $lease->tenants->pluck('id')->toArray(), actorId: Auth::id());
         }
 
         $unit->refresh();
         if ($oldUnitStatus !== $unit->status) {
-            UnitStatusChanged::dispatch($unit, $oldUnitStatus, $unit->status);
+            UnitStatusChanged::dispatch($unit, $oldUnitStatus, $unit->status, actorId: Auth::id());
         }
 
         $count = $lease->tenants->count();
@@ -360,12 +361,12 @@ class LeaseController extends Controller
                 $unit->update(['status' => UnitStatus::Available]);
 
                 if ($oldUnitStatus !== $unit->status) {
-                    UnitStatusChanged::dispatch($unit, $oldUnitStatus, $unit->status);
+                    UnitStatusChanged::dispatch($unit, $oldUnitStatus, $unit->status, actorId: Auth::id());
                 }
             }
         });
 
-        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
+        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated, actorId: Auth::id());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease terminated.')]);
 
@@ -407,18 +408,18 @@ class LeaseController extends Controller
 
         $lease->refresh();
         if ($oldLeaseStatus !== $lease->status) {
-            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status);
+            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status, actorId: Auth::id());
         }
 
         $sourceUnit->refresh();
         if ($oldSourceStatus !== $sourceUnit->status) {
-            UnitStatusChanged::dispatch($sourceUnit, $oldSourceStatus, $sourceUnit->status);
+            UnitStatusChanged::dispatch($sourceUnit, $oldSourceStatus, $sourceUnit->status, actorId: Auth::id());
         }
 
         if ($targetUnit) {
             $targetUnit->refresh();
             if ($oldTargetStatus !== $targetUnit->status) {
-                UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
+                UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status, actorId: Auth::id());
             }
         }
 
@@ -452,7 +453,7 @@ class LeaseController extends Controller
 
         $lease->refresh();
         if ($oldLeaseStatus !== $lease->status) {
-            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status);
+            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status, actorId: Auth::id());
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease renewed. New lease created.')]);
@@ -510,17 +511,17 @@ class LeaseController extends Controller
 
         $lease->refresh();
         if ($oldLeaseStatus !== $lease->status) {
-            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status);
+            LeaseStatusChanged::dispatch($lease, $oldLeaseStatus, $lease->status, actorId: Auth::id());
         }
 
         $unit->refresh();
         if ($oldSourceStatus !== $unit->status) {
-            UnitStatusChanged::dispatch($unit, $oldSourceStatus, $unit->status);
+            UnitStatusChanged::dispatch($unit, $oldSourceStatus, $unit->status, actorId: Auth::id());
         }
 
         $targetUnit->refresh();
         if ($oldTargetStatus !== $targetUnit->status) {
-            UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
+            UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status, actorId: Auth::id());
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new unit.')]);
