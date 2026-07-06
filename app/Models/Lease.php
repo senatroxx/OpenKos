@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\Auditable;
 use App\Enums\BillingUnit;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentStatus;
@@ -42,7 +43,7 @@ use Illuminate\Support\Collection;
 ])]
 class Lease extends Model
 {
-    use HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
 
     protected static function boot(): void
     {
