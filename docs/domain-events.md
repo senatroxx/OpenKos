@@ -14,7 +14,7 @@
 ### Lease
 
 | Event | Payload | Dispatched from |
-|---|---|---|---|
+|---|---|---|
 | `Lease\LeaseCreated` | `Lease $lease, array $tenantIds` | `LeaseController::store` |
 | `Lease\LeaseStatusChanged` | `Lease $lease, LeaseStatus $from, LeaseStatus $to` | `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::renew`, `LeaseController::destroy` |
 
