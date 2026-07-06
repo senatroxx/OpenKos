@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\Auditable;
 use App\Enums\UnitStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,7 +31,9 @@ use Illuminate\Support\Str;
 ])]
 class Property extends Model
 {
-    use HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes;
+
+    protected array $auditableMask = ['phone'];
 
     protected $with = ['region', 'city', 'propertyType'];
 
