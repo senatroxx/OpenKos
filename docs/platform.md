@@ -32,7 +32,7 @@ src/
                               database/migrations/) — disabled by default (see below)
 ```
 
-Core also dispatches domain events plugins can subscribe to, e.g. `App\Events\PaymentRecorded`.
+Core also dispatches domain events plugins can subscribe to, e.g. `App\Events\Payment\PaymentRecorded`.
 
 `src/Core/` currently holds only contracts. It is the designated future home for domain code migrating out of `app/` — nothing has been moved yet, deliberately.
 
@@ -83,7 +83,7 @@ A plugin is a class extending `Plugin` that declares a **manifest** and register
 extensions. The `src/Plugins/Example/` plugin is a working reference for everything below.
 
 ```php
-use App\Events\PaymentRecorded;
+use App\Events\Payment\PaymentRecorded;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
@@ -176,7 +176,7 @@ src/Plugins/MyPlugin/
 
 ### Domain events
 
-Core dispatches domain events (e.g. `App\Events\PaymentRecorded`); plugins subscribe
+Core dispatches domain events (e.g. `App\Events\Payment\PaymentRecorded`); plugins subscribe
 declaratively via `listens()` (`event => listener` / `[listeners]`), wired onto Laravel's
 event dispatcher at boot. This is the standard extension seam for reacting to core
 activity (accounting, analytics, notifications) **without modifying core** — the action
@@ -240,7 +240,7 @@ future concern.
 
 ### ExamplePlugin (disabled by default)
 
-`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, a declared permission (`example.view`) gating its nav item and route, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `PaymentRecorded`), its own `routes/web.php` (an invokable-controller `/example` endpoint), and a `database/migrations/` migration.
+`ExamplePlugin` (`src/Plugins/Example/`) is a working reference for **every** extension point: a manifest, a declared permission (`example.view`) gating its nav item and route, the consumed registries (sidebar nav item, Dashboard sub-page, settings nav entry, plus a `workspace-header-badge` region — client half in `resources/js/plugins/example/`), a domain-event listener (`Listeners/LogPaymentRecorded` on `Payment\PaymentRecorded`), its own `routes/web.php` (an invokable-controller `/example` endpoint), and a `database/migrations/` migration.
 
 It ships **disabled** so the demo stays out of the real UI. To enable it:
 
