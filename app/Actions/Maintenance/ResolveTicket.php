@@ -34,7 +34,8 @@ class ResolveTicket
         }
 
         $hasActiveLease = $unit->leases()->where('status', LeaseStatus::Active->value)->exists();
-        $unit->update(['status' => $hasActiveLease ? UnitStatus::Occupied : UnitStatus::Available]);
+        $newUnitStatus = $hasActiveLease ? UnitStatus::Occupied : UnitStatus::Available;
+        $unit->update(['status' => $newUnitStatus]);
     }
 
     private function moveOccupantsBack(MaintenanceTicket $ticket, Unit $unit): void

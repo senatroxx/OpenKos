@@ -17,6 +17,8 @@ class BlockUnit
 
         if ($activeLease && $moveToUnitId) {
             $this->transferOccupants($unit, $activeLease, $moveToUnitId);
+        } elseif ($activeLease) {
+            $unit->update(['status' => UnitStatus::Maintenance]);
         } else {
             $unit->update(['status' => UnitStatus::Maintenance]);
         }
@@ -64,7 +66,6 @@ class BlockUnit
         ]);
 
         $targetUnit->update(['status' => UnitStatus::Occupied]);
-
         $unit->update(['status' => UnitStatus::Maintenance]);
     }
 }
