@@ -14,5 +14,6 @@ class LeaseStatusChanged
         public readonly Lease $lease,
         public readonly LeaseStatus $from,
         public readonly LeaseStatus $to,
+        public readonly ?int $actorId = null,
     ) {}
 }

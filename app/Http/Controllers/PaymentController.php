@@ -13,6 +13,7 @@ use App\Models\Lease;
 use App\Models\Payment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
@@ -42,7 +43,7 @@ class PaymentController extends Controller
 
         $payment = $result->payment;
 
-        PaymentRecorded::dispatch($payment);
+        PaymentRecorded::dispatch($payment, actorId: Auth::id());
 
         $periodStart = sprintf('%04d-%02d-01', $request->period_year, $request->period_month);
 
@@ -94,7 +95,7 @@ class PaymentController extends Controller
             'verified_at' => now(),
         ]);
 
-        PaymentStatusChanged::dispatch($payment, $oldStatus, $newStatus);
+        PaymentStatusChanged::dispatch($payment, $oldStatus, $newStatus, actorId: Auth::id());
 
         $message = $request->action === 'confirm'
             ? __('Payment verified successfully.')
