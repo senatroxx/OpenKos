@@ -23,6 +23,7 @@ use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -162,7 +163,7 @@ class MaintenanceTicketController extends Controller
 
         $ticket = MaintenanceTicket::create($data);
 
-        MaintenanceTicketCreated::dispatch($ticket);
+        MaintenanceTicketCreated::dispatch($ticket, actorId: Auth::id());
 
         if ($blockUnit && ! empty($data['unit_id'])) {
             $unit = Unit::findOrFail($data['unit_id']);
@@ -175,13 +176,13 @@ class MaintenanceTicketController extends Controller
 
             $unit->refresh();
             if ($oldStatus !== $unit->status) {
-                UnitStatusChanged::dispatch($unit, $oldStatus, $unit->status);
+                UnitStatusChanged::dispatch($unit, $oldStatus, $unit->status, actorId: Auth::id());
             }
 
             if ($targetUnit) {
                 $targetUnit->refresh();
                 if ($oldTargetStatus !== $targetUnit->status) {
-                    UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
+                    UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status, actorId: Auth::id());
                 }
             }
         }
@@ -215,7 +216,7 @@ class MaintenanceTicketController extends Controller
         $ticket->update($validated);
 
         if (($statusChangedToResolved ?? false)) {
-            MaintenanceResolved::dispatch($ticket);
+            MaintenanceResolved::dispatch($ticket, actorId: Auth::id());
         }
 
         if ($restoreUnit && $ticket->unit_id) {
@@ -234,13 +235,13 @@ class MaintenanceTicketController extends Controller
 
             $unit->refresh();
             if ($oldStatus !== $unit->status) {
-                UnitStatusChanged::dispatch($unit, $oldStatus, $unit->status);
+                UnitStatusChanged::dispatch($unit, $oldStatus, $unit->status, actorId: Auth::id());
             }
 
             if ($targetUnit) {
                 $targetUnit->refresh();
                 if ($oldTargetStatus !== $targetUnit->status) {
-                    UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status);
+                    UnitStatusChanged::dispatch($targetUnit, $oldTargetStatus, $targetUnit->status, actorId: Auth::id());
                 }
             }
 
