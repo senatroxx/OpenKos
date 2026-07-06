@@ -17,6 +17,7 @@ use App\Models\MaintenanceTicket;
 use App\Models\Payment;
 use App\Models\Unit;
 use App\Models\User;
+use Database\Seeders\RoleAndPermissionSeeder;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
