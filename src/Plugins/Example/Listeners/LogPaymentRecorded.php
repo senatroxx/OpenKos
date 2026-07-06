@@ -2,7 +2,7 @@
 
 namespace OpenKOS\Plugins\Example\Listeners;
 
-use App\Events\PaymentRecorded;
+use App\Events\Payment\PaymentRecorded;
 use Illuminate\Support\Facades\Log;
 
 /**

@@ -6,6 +6,7 @@ use App\Actions\Payments\RecordPayment;
 use App\Business\Payments\PaymentStatusValidator;
 use App\Data\Payment\RecordPaymentData;
 use App\Enums\PaymentStatus;
+use App\Events\Payment\PaymentRecorded;
 use App\Events\Payment\PaymentStatusChanged;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Lease;
@@ -40,6 +41,8 @@ class PaymentController extends Controller
         }
 
         $payment = $result->payment;
+
+        PaymentRecorded::dispatch($payment);
 
         $periodStart = sprintf('%04d-%02d-01', $request->period_year, $request->period_month);
 
