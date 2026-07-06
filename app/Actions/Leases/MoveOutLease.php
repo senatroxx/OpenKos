@@ -7,7 +7,6 @@ use App\Business\Leases\OccupancyCalculator;
 use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
-use App\Events\Lease\LeaseStatusChanged;
 use App\Models\Lease;
 use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
@@ -52,8 +51,6 @@ class MoveOutLease
             'deposit_refunded_at' => $data->depositReturned ? now() : null,
             'notes' => $data->notes ?? $lease->notes,
         ]);
-
-        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
 
         if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
@@ -100,8 +97,6 @@ class MoveOutLease
             'deposit_refunded_at' => $data->depositReturned ? now() : null,
             'notes' => $data->notes ?? $lease->notes,
         ]);
-
-        LeaseStatusChanged::dispatch($lease, $oldStatus, LeaseStatus::Terminated);
 
         $oldUnit->unsetRelation('leases');
 
