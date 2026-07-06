@@ -12,5 +12,6 @@ class LeaseCreated
     public function __construct(
         public readonly Lease $lease,
         public readonly array $tenantIds,
+        public readonly ?int $actorId = null,
     ) {}
 }
