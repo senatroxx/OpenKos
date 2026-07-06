@@ -14,5 +14,6 @@ class UnitStatusChanged
         public readonly Unit $unit,
         public readonly UnitStatus $from,
         public readonly UnitStatus $to,
+        public readonly ?int $actorId = null,
     ) {}
 }

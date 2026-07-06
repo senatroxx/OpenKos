@@ -11,5 +11,6 @@ class MaintenanceTicketCreated
 
     public function __construct(
         public readonly MaintenanceTicket $ticket,
+        public readonly ?int $actorId = null,
     ) {}
 }

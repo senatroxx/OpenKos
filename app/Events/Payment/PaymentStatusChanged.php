@@ -14,5 +14,6 @@ class PaymentStatusChanged
         public readonly Payment $payment,
         public readonly PaymentStatus $from,
         public readonly PaymentStatus $to,
+        public readonly ?int $actorId = null,
     ) {}
 }
