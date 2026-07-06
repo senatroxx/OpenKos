@@ -4,6 +4,7 @@ use App\Models\AuditLog;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\User;
+use Database\Seeders\RoleAndPermissionSeeder;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);

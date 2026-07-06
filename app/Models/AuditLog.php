@@ -21,6 +21,14 @@ class AuditLog extends Model
         'metadata',
     ];
 
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::updating(fn () => false);
+        static::deleting(fn () => false);
+    }
+
     protected function casts(): array
     {
         return [

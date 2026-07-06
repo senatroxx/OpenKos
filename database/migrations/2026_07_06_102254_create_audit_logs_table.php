@@ -15,7 +15,8 @@ return new class extends Migration
             $table->string('operation'); // create, update, delete, restore
             $table->json('before')->nullable();
             $table->json('after')->nullable();
-            $table->nullableMorphs('actor'); // actor_type + actor_id
+            $table->string('actor_type')->nullable();
+            $table->unsignedBigInteger('actor_id')->nullable();
             $table->string('source')->default('UI'); // UI, API, Plugin, Scheduler, System
             $table->json('metadata')->nullable();
             $table->timestamp('created_at');
