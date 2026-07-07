@@ -13,6 +13,7 @@ use OpenKOS\Platform\Permission\PermissionRegistry;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginLoader;
 use OpenKOS\Platform\Settings\SettingsManager;
+use OpenKOS\Platform\Settings\SettingsPage;
 use OpenKOS\Platform\Settings\SettingsRegistry;
 use OpenKOS\Platform\Workspace\WorkspaceRegistry;
 use ReflectionClass;
@@ -66,6 +67,16 @@ class PlatformServiceProvider extends ServiceProvider
         foreach ($plugins as $plugin) {
             $this->registerListeners($plugin);
         }
+
+        $this->registerCoreSettingsPages($manager);
+    }
+
+    private function registerCoreSettingsPages(OpenKOSManager $manager): void
+    {
+        $manager->settings()
+            ->registerPage(new SettingsPage('general', 'General', '/settings/general', routeName: 'settings.general.edit'))
+            ->registerPage(new SettingsPage('reminders', 'Reminders', '/settings/reminders', routeName: 'settings.reminders.edit'))
+            ->registerPage(new SettingsPage('mail', 'Mail', '/settings/mail', group: 'Credentials', routeName: 'settings.mail.edit'));
     }
 
     /**
