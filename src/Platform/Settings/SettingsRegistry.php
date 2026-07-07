@@ -3,7 +3,6 @@
 namespace OpenKOS\Platform\Settings;
 
 use Illuminate\Contracts\Support\Arrayable;
-use InvalidArgumentException;
 
 class SettingsRegistry implements Arrayable
 {
@@ -15,10 +14,6 @@ class SettingsRegistry implements Arrayable
 
     public function registerPage(SettingsPage $page): static
     {
-        if (isset($this->pages[$page->key])) {
-            throw new InvalidArgumentException("Settings page [{$page->key}] is already registered.");
-        }
-
         $this->pages[$page->key] = $page;
 
         return $this;
