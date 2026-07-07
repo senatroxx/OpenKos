@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Database\PostgresConnection;
 use App\Models\Setting;
+use App\Services\Settings\SettingManager;
 use App\Services\WhatsAppManager;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\Events\Login;
@@ -19,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(SettingManager::class);
         $this->app->singleton(WhatsAppManager::class);
 
         Connection::resolverFor('pgsql', fn ($pdo, $database, $prefix, $config) => new PostgresConnection($pdo, $database, $prefix, $config));

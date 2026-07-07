@@ -47,10 +47,10 @@ describe('Setting', function () {
         expect($result['locale'])->toBe('id');
     });
 
-    it('includes defaults in allWithDefaults', function () {
+    it('includes defaults when getting all', function () {
         Setting::set('site_name', 'Kos Saya');
 
-        $all = Setting::allWithDefaults();
+        $all = Setting::get();
 
         expect($all['site_name'])->toBe('Kos Saya');
         expect($all['locale'])->toBe('id');
