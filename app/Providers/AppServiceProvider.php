@@ -60,24 +60,24 @@ class AppServiceProvider extends ServiceProvider
     protected function configureMail(): void
     {
         try {
-            $host = Setting::get('mail_host');
+            $config = Setting::get('mail_config');
         } catch (QueryException) {
             return;
         }
 
-        if (! $host) {
+        if (! $config) {
             return;
         }
 
-        config()->set('mail.mailers.smtp.host', $host);
-        config()->set('mail.mailers.smtp.port', Setting::get('mail_port'));
-        config()->set('mail.mailers.smtp.username', Setting::get('mail_username'));
-        config()->set('mail.mailers.smtp.password', Setting::get('mail_password'));
-        config()->set('mail.mailers.smtp.encryption', Setting::get('mail_encryption'));
+        config()->set('mail.mailers.smtp.host', $config['host'] ?? '');
+        config()->set('mail.mailers.smtp.port', $config['port'] ?? 587);
+        config()->set('mail.mailers.smtp.username', $config['username'] ?? '');
+        config()->set('mail.mailers.smtp.password', $config['password'] ?? '');
+        config()->set('mail.mailers.smtp.encryption', $config['encryption'] ?? 'tls');
 
-        if ($fromAddress = Setting::get('mail_from_address')) {
+        if ($fromAddress = $config['from_address'] ?? null) {
             config()->set('mail.from.address', $fromAddress);
-            config()->set('mail.from.name', Setting::get('mail_from_name'));
+            config()->set('mail.from.name', $config['from_name'] ?? '');
         }
 
         config()->set('mail.default', 'smtp');

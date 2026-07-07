@@ -62,13 +62,7 @@ class Setting extends Model
             'reminder_days_before' => '3',
             'reminder_overdue_intervals' => '[1,3,7]',
             'reminder_channels' => '["log"]',
-            'mail_driver' => 'smtp',
-            'mail_host' => '',
-            'mail_port' => '587',
-            'mail_username' => '',
-            'mail_encryption' => 'tls',
-            'mail_from_address' => '',
-            'mail_from_name' => '',
+            'mail_config' => '[]',
             'whatsapp_config' => '[]',
         ];
 
@@ -98,13 +92,7 @@ class Setting extends Model
             'reminder_days_before' => ['3', 'integer'],
             'reminder_overdue_intervals' => ['[1,3,7]', 'array'],
             'reminder_channels' => ['["log"]', 'array'],
-            'mail_driver' => ['smtp', 'string'],
-            'mail_host' => ['', 'string'],
-            'mail_port' => ['587', 'integer'],
-            'mail_username' => ['', 'string'],
-            'mail_encryption' => ['tls', 'string'],
-            'mail_from_address' => ['', 'string'],
-            'mail_from_name' => ['', 'string'],
+            'mail_config' => ['[]', 'encrypted:array'],
             'whatsapp_config' => ['[]', 'encrypted:array'],
         ];
     }

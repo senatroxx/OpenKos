@@ -23,19 +23,23 @@ import {
     test as testMail,
 } from '@/routes/settings/mail';
 
+interface MailConfig {
+    driver?: string;
+    host?: string;
+    port?: number;
+    username?: string;
+    encryption?: string;
+    from_address?: string;
+    from_name?: string;
+}
+
 export default function Mail({
     settings,
 }: {
-    settings: {
-        mail_driver: string;
-        mail_host: string | null;
-        mail_port: number | null;
-        mail_username: string | null;
-        mail_encryption: string | null;
-        mail_from_address: string | null;
-        mail_from_name: string | null;
-    };
+    settings: { mail_config: MailConfig | null };
 }) {
+    const config = settings.mail_config ?? {};
+
     return (
         <div className="space-y-6">
             <div>
@@ -58,82 +62,84 @@ export default function Mail({
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_host">SMTP Host</Label>
+                                    <Label htmlFor="mail_config[host]">
+                                        SMTP Host
+                                    </Label>
                                     <Input
-                                        id="mail_host"
-                                        name="mail_host"
+                                        id="mail_config[host]"
+                                        name="mail_config[host]"
                                         type="text"
-                                        defaultValue={settings.mail_host ?? ''}
+                                        defaultValue={config.host ?? ''}
                                         placeholder="smtp.example.com"
                                     />
-                                    {errors.mail_host && (
+                                    {errors['mail_config.host'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_host}
+                                            {errors['mail_config.host']}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_port">Port</Label>
+                                    <Label htmlFor="mail_config[port]">
+                                        Port
+                                    </Label>
                                     <Input
-                                        id="mail_port"
-                                        name="mail_port"
+                                        id="mail_config[port]"
+                                        name="mail_config[port]"
                                         type="number"
-                                        defaultValue={settings.mail_port ?? ''}
+                                        defaultValue={config.port ?? ''}
                                         placeholder="587"
                                     />
-                                    {errors.mail_port && (
+                                    {errors['mail_config.port'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_port}
+                                            {errors['mail_config.port']}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_username">
+                                    <Label htmlFor="mail_config[username]">
                                         Username
                                     </Label>
                                     <Input
-                                        id="mail_username"
-                                        name="mail_username"
+                                        id="mail_config[username]"
+                                        name="mail_config[username]"
                                         type="text"
-                                        defaultValue={
-                                            settings.mail_username ?? ''
-                                        }
+                                        defaultValue={config.username ?? ''}
                                         placeholder="user@example.com"
                                     />
-                                    {errors.mail_username && (
+                                    {errors['mail_config.username'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_username}
+                                            {errors['mail_config.username']}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_password">
+                                    <Label htmlFor="mail_config[password]">
                                         Password
                                     </Label>
                                     <Input
-                                        id="mail_password"
-                                        name="mail_password"
+                                        id="mail_config[password]"
+                                        name="mail_config[password]"
                                         type="password"
                                         placeholder="Enter SMTP password"
                                     />
-                                    {errors.mail_password && (
+                                    {errors['mail_config.password'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_password}
+                                            {errors['mail_config.password']}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_encryption">
+                                    <Label htmlFor="mail_config[encryption]">
                                         Encryption
                                     </Label>
                                     <Select
-                                        name="mail_encryption"
+                                        name="mail_config[encryption]"
                                         defaultValue={
-                                            settings.mail_encryption ?? 'null'
+                                            config.encryption ?? 'null'
                                         }
                                     >
                                         <SelectTrigger>
@@ -151,49 +157,49 @@ export default function Mail({
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    {errors.mail_encryption && (
+                                    {errors['mail_config.encryption'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_encryption}
+                                            {errors['mail_config.encryption']}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_from_address">
+                                    <Label htmlFor="mail_config[from_address]">
                                         From Address
                                     </Label>
                                     <Input
-                                        id="mail_from_address"
-                                        name="mail_from_address"
+                                        id="mail_config[from_address]"
+                                        name="mail_config[from_address]"
                                         type="email"
                                         defaultValue={
-                                            settings.mail_from_address ?? ''
+                                            config.from_address ?? ''
                                         }
                                         placeholder="noreply@openkos.app"
                                     />
-                                    {errors.mail_from_address && (
+                                    {errors['mail_config.from_address'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_from_address}
+                                            {errors['mail_config.from_address']}
                                         </p>
                                     )}
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_from_name">
+                                    <Label htmlFor="mail_config[from_name]">
                                         From Name
                                     </Label>
                                     <Input
-                                        id="mail_from_name"
-                                        name="mail_from_name"
+                                        id="mail_config[from_name]"
+                                        name="mail_config[from_name]"
                                         type="text"
                                         defaultValue={
-                                            settings.mail_from_name ?? ''
+                                            config.from_name ?? ''
                                         }
                                         placeholder="OpenKOS"
                                     />
-                                    {errors.mail_from_name && (
+                                    {errors['mail_config.from_name'] && (
                                         <p className="text-sm text-red-600">
-                                            {errors.mail_from_name}
+                                            {errors['mail_config.from_name']}
                                         </p>
                                     )}
                                 </div>

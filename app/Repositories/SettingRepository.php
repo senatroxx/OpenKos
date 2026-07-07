@@ -26,11 +26,10 @@ class SettingRepository
     private function resolveType(string $key, mixed $value): string
     {
         return match (true) {
-            $key === 'mail_password' => 'encrypted',
-            $key === 'whatsapp_config' => 'encrypted:array',
+            $key === 'mail_config', $key === 'whatsapp_config' => 'encrypted:array',
             $key === 'reminder_overdue_intervals', $key === 'reminder_channels' => 'array',
             $key === 'reminder_enabled' => 'boolean',
-            $key === 'reminder_days_before', $key === 'mail_port' => 'integer',
+            $key === 'reminder_days_before' => 'integer',
             default => 'string',
         };
     }
