@@ -11,7 +11,6 @@ use App\Events\Payment\PaymentStatusChanged;
 use App\Events\Settings\SettingsUpdated;
 use App\Events\Unit\UnitStatusChanged;
 use App\Models\ActivityLog;
-use App\Models\Setting;
 use Illuminate\Events\Dispatcher;
 
 class RecordActivitySubscriber
@@ -34,7 +33,7 @@ class RecordActivitySubscriber
     {
         ActivityLog::record(
             event: 'settings.updated',
-            subject: Setting::get(),
+            subject: null,
             metadata: ['group' => $event->group, 'keys' => $event->keys],
             actorId: $event->actorId,
         );

@@ -16,13 +16,17 @@ class SendRentReminders
     public function __construct(
         private PaymentReminderScheduler $scheduler,
         private ReminderRepository $repository,
-        private Setting $settings,
     ) {}
 
     /** @return Collection<int, ReminderLog> */
     public function execute(?Lease $lease = null): Collection
     {
-        $settings = ReminderSettings::fromSetting($this->settings->get());
+        $settings = new ReminderSettings(
+            enabled: Setting::get('reminder_enabled') ?? true,
+            daysBefore: Setting::get('reminder_days_before') ?? 3,
+            overdueIntervals: Setting::get('reminder_overdue_intervals') ?? [1, 3, 7],
+        );
+
         if (! $settings->enabled) {
             return collect();
         }
@@ -33,7 +37,7 @@ class SendRentReminders
 
         $sent = collect();
 
-        $channels = $this->settings->get()->reminder_channels ?? ['log'];
+        $channels = Setting::get('reminder_channels') ?? ['log'];
 
         foreach ($leases as $lease) {
             $tenant = $lease->primaryTenant;

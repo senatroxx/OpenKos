@@ -4,7 +4,6 @@ namespace App\Actions\Settings;
 
 use App\Events\Settings\SettingsUpdated;
 use App\Models\AuditLog;
-use App\Models\Setting;
 use App\Repositories\SettingRepository;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Events\Dispatcher;
@@ -21,8 +20,8 @@ class UpdateSettings
         $result = $this->repository->update($data);
 
         AuditLog::record(
-            auditable: Setting::get(),
-            operation: 'update',
+            auditable: null,
+            operation: 'settings.update',
             before: $result->original,
             after: $result->values,
             actor: $actor,

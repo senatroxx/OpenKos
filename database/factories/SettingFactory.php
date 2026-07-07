@@ -14,12 +14,6 @@ class SettingFactory extends Factory
 
     public function definition(): array
     {
-        return [
-            'site_name' => 'OpenKOS',
-            'country_code' => 'ID',
-            'locale' => 'id',
-            'currency' => 'IDR',
-            'timezone' => 'Asia/Jakarta',
-        ];
+        return [];
     }
 }

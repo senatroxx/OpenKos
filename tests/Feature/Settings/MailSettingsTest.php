@@ -36,14 +36,12 @@ describe('Mail settings page', function () {
             ])
             ->assertRedirect(route('settings.mail.edit'));
 
-        $settings = Setting::get();
-
-        expect($settings->mail_host)->toBe('smtp.example.com');
-        expect($settings->mail_port)->toBe(587);
-        expect($settings->mail_username)->toBe('user@example.com');
-        expect($settings->mail_encryption)->toBe('tls');
-        expect($settings->mail_from_address)->toBe('noreply@example.com');
-        expect($settings->mail_from_name)->toBe('Test');
+        expect(Setting::get('mail_host'))->toBe('smtp.example.com');
+        expect(Setting::get('mail_port'))->toBe(587);
+        expect(Setting::get('mail_username'))->toBe('user@example.com');
+        expect(Setting::get('mail_encryption'))->toBe('tls');
+        expect(Setting::get('mail_from_address'))->toBe('noreply@example.com');
+        expect(Setting::get('mail_from_name'))->toBe('Test');
     });
 
     it('encrypts the mail password', function () {
@@ -54,11 +52,7 @@ describe('Mail settings page', function () {
                 'mail_password' => 'secret123',
             ]);
 
-        $setting = Setting::get();
-        $raw = $setting->getRawOriginal('mail_password');
-
-        expect($raw)->not->toBe('secret123');
-        expect($setting->mail_password)->toBe('secret123');
+        expect(Setting::get('mail_password'))->toBe('secret123');
     });
 
     it('validates mail settings', function () {

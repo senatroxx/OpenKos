@@ -63,7 +63,7 @@ class WhatsAppManager
     private function resolveDefaultDriver(): string
     {
         try {
-            return Setting::get()->whatsapp_driver ?? config('services.whatsapp.default', 'log');
+            return Setting::get('whatsapp_driver') ?? config('services.whatsapp.default', 'log');
         } catch (QueryException) {
             return config('services.whatsapp.default', 'log');
         }
@@ -74,7 +74,8 @@ class WhatsAppManager
         $envDefaults = array_filter($defaults, fn ($value) => $value !== null);
 
         try {
-            $dbConfig = Setting::get()->whatsapp_config[$name] ?? [];
+            $dbConfig = Setting::get('whatsapp_config');
+            $dbConfig = is_array($dbConfig) ? ($dbConfig[$name] ?? []) : [];
         } catch (QueryException) {
             $dbConfig = [];
         }

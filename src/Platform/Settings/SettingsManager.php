@@ -3,7 +3,7 @@
 namespace OpenKOS\Platform\Settings;
 
 use App\Events\Settings\SettingsUpdated;
-use App\Models\SettingValue;
+use App\Models\Setting;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Events\Dispatcher;
 use Illuminate\Support\Facades\Validator;
@@ -19,13 +19,8 @@ class SettingsManager
     public function get(string $key): mixed
     {
         $definition = $this->findDefinition($key);
-        $raw = SettingValue::get($key);
 
-        if ($raw === null) {
-            return $definition->default;
-        }
-
-        return $this->castValue($raw, $definition->type);
+        return Setting::get($key) ?? $definition->default;
     }
 
     public function set(string $key, mixed $value, ?Authenticatable $actor = null): void
@@ -43,7 +38,7 @@ class SettingsManager
             }
         }
 
-        SettingValue::set($key, $value, $definition->type);
+        Setting::set($key, $value, $definition->type);
 
         $this->events->dispatch(new SettingsUpdated(
             group: $definition->page ?? 'general',
@@ -77,16 +72,5 @@ class SettingsManager
         }
 
         return $definitions[$key];
-    }
-
-    private function castValue(?string $raw, string $type): mixed
-    {
-        return match ($type) {
-            'bool' => $raw !== null ? (bool) $raw : null,
-            'int' => $raw !== null ? (int) $raw : null,
-            'json' => $raw !== null ? json_decode($raw, true) : null,
-            'encrypted' => $raw, // stored encrypted by the model
-            default => $raw,
-        };
     }
 }
