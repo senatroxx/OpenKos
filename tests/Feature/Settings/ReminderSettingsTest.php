@@ -40,7 +40,7 @@ describe('Reminder settings page', function () {
     });
 
     it('initial default is log channel', function () {
-        expect(Setting::get('reminder_channels'))->toBeNull();
+        expect(Setting::get('reminder_channels'))->toBe(['log']);
     });
 
     it('updates reminder channels', function () {

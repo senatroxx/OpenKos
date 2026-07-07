@@ -14,12 +14,12 @@ class Setting extends Model
     public static function get(?string $key = null): mixed
     {
         if ($key === null) {
-            return self::pluck('value', 'key')->all();
+            return self::allWithDefaults();
         }
 
         $setting = self::where('key', $key)->first();
 
-        return $setting?->resolveValue();
+        return $setting?->resolveValue() ?? self::defaultValues()[$key] ?? null;
     }
 
     public static function set(string $key, mixed $value, string $type = 'string'): static
@@ -39,17 +39,19 @@ class Setting extends Model
 
     public static function some(array $keys): array
     {
-        $all = self::get();
+        $result = [];
+        foreach ($keys as $key) {
+            $result[$key] = self::get($key);
+        }
 
-        return array_merge(
-            array_combine($keys, array_fill(0, count($keys), null)),
-            array_intersect_key($all, array_flip($keys)),
-        );
+        return $result;
     }
 
     public static function allWithDefaults(): array
     {
-        $defaults = [
+        static $defaults;
+
+        $defaults ??= [
             'site_name' => 'OpenKOS',
             'country_code' => 'ID',
             'locale' => 'id',
@@ -61,9 +63,67 @@ class Setting extends Model
             'reminder_overdue_intervals' => '[1,3,7]',
             'reminder_channels' => '["log"]',
             'mail_driver' => 'smtp',
+            'mail_host' => '',
+            'mail_port' => '587',
+            'mail_username' => '',
+            'mail_encryption' => 'tls',
+            'mail_from_address' => '',
+            'mail_from_name' => '',
+            'whatsapp_config' => '[]',
         ];
 
         return array_merge($defaults, self::pluck('value', 'key')->all());
+    }
+
+    public static function defaultValues(): array
+    {
+        $typed = [];
+        foreach (self::allDefaultsRaw() as $key => [$value, $type]) {
+            $typed[$key] = self::resolveValueFromRaw($value, $type);
+        }
+
+        return $typed;
+    }
+
+    private static function allDefaultsRaw(): array
+    {
+        return [
+            'site_name' => ['OpenKOS', 'string'],
+            'country_code' => ['ID', 'string'],
+            'locale' => ['id', 'string'],
+            'currency' => ['IDR', 'string'],
+            'timezone' => ['Asia/Jakarta', 'string'],
+            'lease_id_prefix' => ['LSX', 'string'],
+            'reminder_enabled' => ['true', 'boolean'],
+            'reminder_days_before' => ['3', 'integer'],
+            'reminder_overdue_intervals' => ['[1,3,7]', 'array'],
+            'reminder_channels' => ['["log"]', 'array'],
+            'mail_driver' => ['smtp', 'string'],
+            'mail_host' => ['', 'string'],
+            'mail_port' => ['587', 'integer'],
+            'mail_username' => ['', 'string'],
+            'mail_encryption' => ['tls', 'string'],
+            'mail_from_address' => ['', 'string'],
+            'mail_from_name' => ['', 'string'],
+            'whatsapp_config' => ['[]', 'encrypted:array'],
+        ];
+    }
+
+    private static function resolveValueFromRaw(string $value, string $type): mixed
+    {
+        if ($type === 'encrypted' || $type === 'encrypted:array') {
+            return match ($type) {
+                'encrypted:array' => json_decode($value, true) ?: [],
+                default => $value,
+            };
+        }
+
+        return match ($type) {
+            'boolean' => filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            'integer' => (int) $value,
+            'array' => json_decode($value, true),
+            default => $value,
+        };
     }
 
     public function resolveValue(): mixed
