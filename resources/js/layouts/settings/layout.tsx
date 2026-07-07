@@ -9,46 +9,14 @@ import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit } from '@/routes/profile';
 import { edit as editSecurity } from '@/routes/security';
-import { edit as editMail } from '@/routes/settings/mail';
-import { edit as editReminders } from '@/routes/settings/reminders';
-import { edit as editWhatsApp } from '@/routes/settings/whatsapp';
 import type { Auth, NavItem } from '@/types';
 import type { Platform } from '@/types/platform';
 
 const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Profile',
-        href: edit(),
-    },
-    {
-        title: 'Security',
-        href: editSecurity(),
-    },
-    {
-        title: 'Appearance',
-        href: editAppearance(),
-    },
-    {
-        title: 'Reminders',
-        href: editReminders(),
-    },
-    {
-        title: 'Property Types',
-        href: '/settings/property-types',
-    },
-    {
-        title: 'Credentials',
-        children: [
-            {
-                title: 'Mail',
-                href: editMail(),
-            },
-            {
-                title: 'WhatsApp',
-                href: editWhatsApp(),
-            },
-        ],
-    },
+    { title: 'Profile', href: edit() },
+    { title: 'Security', href: editSecurity() },
+    { title: 'Appearance', href: editAppearance() },
+    { title: 'Property Types', href: '/settings/property-types' },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

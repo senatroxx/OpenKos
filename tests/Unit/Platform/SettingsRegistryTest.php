@@ -15,12 +15,15 @@ it('registers pages keyed by page key', function () {
             'title' => 'Billing',
             'href' => '/settings/billing',
             'permission' => null,
+            'group' => null,
         ]]);
 });
 
-it('throws on duplicate page keys', function () {
+it('replaces on duplicate page keys', function () {
     $registry = new SettingsRegistry;
     $registry->registerPage(new SettingsPage(key: 'billing', title: 'Billing', href: '/a'));
 
     $registry->registerPage(new SettingsPage(key: 'billing', title: 'Other', href: '/b'));
-})->throws(InvalidArgumentException::class, 'Settings page [billing] is already registered.');
+
+    expect($registry->pages()['billing']->title)->toBe('Other');
+});
