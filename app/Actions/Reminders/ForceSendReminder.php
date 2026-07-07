@@ -14,7 +14,6 @@ class ForceSendReminder
 {
     public function __construct(
         private ReminderRepository $repository,
-        private Setting $settings,
     ) {}
 
     public function execute(Lease $lease): string
@@ -22,7 +21,7 @@ class ForceSendReminder
         $lease->load(['primaryTenant', 'payments']);
         $tenant = $lease->primaryTenant;
 
-        $channels = $this->settings->get()->reminder_channels ?? ['log'];
+        $channels = Setting::get('reminder_channels') ?? ['log'];
         $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
 
         if (! $hasContact) {

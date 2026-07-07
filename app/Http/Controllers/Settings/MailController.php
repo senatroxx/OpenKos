@@ -20,7 +20,7 @@ class MailController extends Controller
     public function edit(): Response
     {
         return Inertia::render('settings/mail', [
-            'settings' => Setting::get()->only(
+            'settings' => Setting::some([
                 'mail_driver',
                 'mail_host',
                 'mail_port',
@@ -28,7 +28,7 @@ class MailController extends Controller
                 'mail_encryption',
                 'mail_from_address',
                 'mail_from_name',
-            ),
+            ]),
         ]);
     }
 
@@ -58,17 +58,15 @@ class MailController extends Controller
 
     public function test(): RedirectResponse
     {
-        $setting = Setting::get();
-
-        if (! $setting->mail_host) {
+        if (! Setting::get('mail_host')) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Configure SMTP host before testing.')]);
 
             return to_route('settings.mail.edit');
         }
 
         try {
-            Mail::raw(__('Test email from OpenKOS.'), function ($message) use ($setting): void {
-                $message->to($setting->mail_from_address)
+            Mail::raw(__('Test email from OpenKOS.'), function ($message): void {
+                $message->to(Setting::get('mail_from_address'))
                     ->subject(__('Test Email'));
             });
 

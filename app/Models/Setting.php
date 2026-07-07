@@ -2,64 +2,79 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable([
-    'site_name',
-    'country_code',
-    'locale',
-    'currency',
-    'timezone',
-    'lease_id_prefix',
-    'reminder_enabled',
-    'reminder_days_before',
-    'reminder_overdue_intervals',
-    'reminder_message_template',
-    'reminder_channels',
-    'mail_driver',
-    'mail_host',
-    'mail_port',
-    'mail_username',
-    'mail_password',
-    'mail_encryption',
-    'mail_from_address',
-    'mail_from_name',
-    'whatsapp_driver',
-    'whatsapp_config',
-])]
 class Setting extends Model
 {
     use HasFactory;
 
-    protected function casts(): array
+    protected $fillable = ['key', 'value', 'type'];
+
+    public static function get(?string $key = null): mixed
     {
-        return [
-            'reminder_enabled' => 'boolean',
-            'reminder_days_before' => 'integer',
-            'reminder_overdue_intervals' => 'array',
-            'reminder_channels' => 'array',
-            'mail_port' => 'integer',
-            'mail_password' => 'encrypted',
-            'whatsapp_config' => 'encrypted:array',
-        ];
+        if ($key === null) {
+            return self::pluck('value', 'key')->all();
+        }
+
+        $setting = self::where('key', $key)->first();
+
+        return $setting?->resolveValue();
     }
 
-    public static function get(): self
+    public static function set(string $key, mixed $value, string $type = 'string'): static
     {
-        return self::firstOrCreate([], [
+        $stored = match ($type) {
+            'array' => json_encode($value),
+            'encrypted:array' => encrypt(json_encode($value)),
+            'encrypted' => encrypt($value),
+            default => (string) $value,
+        };
+
+        return static::updateOrCreate(
+            ['key' => $key],
+            ['value' => $stored, 'type' => $type],
+        );
+    }
+
+    public static function some(array $keys): array
+    {
+        $all = self::get();
+
+        return array_merge(
+            array_combine($keys, array_fill(0, count($keys), null)),
+            array_intersect_key($all, array_flip($keys)),
+        );
+    }
+
+    public static function allWithDefaults(): array
+    {
+        $defaults = [
             'site_name' => 'OpenKOS',
             'country_code' => 'ID',
             'locale' => 'id',
             'currency' => 'IDR',
             'timezone' => 'Asia/Jakarta',
             'lease_id_prefix' => 'LSX',
-            'reminder_enabled' => true,
-            'reminder_days_before' => 3,
-            'reminder_overdue_intervals' => [1, 3, 7],
-            'reminder_channels' => ['log'],
+            'reminder_enabled' => 'true',
+            'reminder_days_before' => '3',
+            'reminder_overdue_intervals' => '[1,3,7]',
+            'reminder_channels' => '["log"]',
             'mail_driver' => 'smtp',
-        ]);
+        ];
+
+        return array_merge($defaults, self::pluck('value', 'key')->all());
+    }
+
+    public function resolveValue(): mixed
+    {
+        return match ($this->type) {
+            'boolean' => filter_var($this->value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            'integer' => (int) $this->value,
+            'array' => json_decode($this->value, true),
+            'encrypted' => decrypt($this->value),
+            'encrypted:array' => json_decode(decrypt($this->value), true) ?: [],
+            default => $this->value,
+        };
     }
 }

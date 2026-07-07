@@ -2,48 +2,58 @@
 
 use App\Models\Setting;
 
-describe('Setting::get()', function () {
-    it('creates a record with Indonesia defaults when none exists', function () {
-        $setting = Setting::get();
+describe('Setting', function () {
+    it('sets and gets values', function () {
+        Setting::set('site_name', 'OpenKOS');
 
-        expect($setting)->toBeInstanceOf(Setting::class);
-        expect($setting->site_name)->toBe('OpenKOS');
-        expect($setting->country_code)->toBe('ID');
-        expect($setting->locale)->toBe('id');
-        expect($setting->currency)->toBe('IDR');
-        expect($setting->timezone)->toBe('Asia/Jakarta');
-        expect(Setting::count())->toBe(1);
+        expect(Setting::get('site_name'))->toBe('OpenKOS');
     });
 
-    it('returns existing record on subsequent calls', function () {
-        Setting::create([
-            'site_name' => 'Kos Pak Budi',
-            'country_code' => 'ID',
-            'locale' => 'id',
-            'currency' => 'IDR',
-            'timezone' => 'Asia/Jakarta',
-        ]);
-
-        $setting = Setting::get();
-
-        expect($setting->site_name)->toBe('Kos Pak Budi');
-        expect(Setting::count())->toBe(1);
+    it('returns null for missing keys', function () {
+        expect(Setting::get('nonexistent'))->toBeNull();
     });
 
-    it('preserves overridden values', function () {
-        Setting::create([
-            'site_name' => 'My Boarding House',
-            'country_code' => 'XX',
-            'locale' => 'en',
-            'currency' => 'USD',
-            'timezone' => 'UTC',
-        ]);
+    it('gets all settings as array', function () {
+        Setting::set('site_name', 'Kos Ku');
+        Setting::set('country_code', 'XX');
 
-        $setting = Setting::get();
+        $all = Setting::get();
 
-        expect($setting->country_code)->toBe('XX');
-        expect($setting->locale)->toBe('en');
-        expect($setting->currency)->toBe('USD');
-        expect($setting->timezone)->toBe('UTC');
+        expect($all)->toBeArray();
+        expect($all['site_name'])->toBe('Kos Ku');
+        expect($all['country_code'])->toBe('XX');
+    });
+
+    it('returns typed values', function () {
+        Setting::set('reminder_enabled', true, 'boolean');
+        Setting::set('reminder_days_before', 5, 'integer');
+        Setting::set('reminder_overdue_intervals', [1, 3, 7], 'array');
+
+        expect(Setting::get('reminder_enabled'))->toBeTrue();
+        expect(Setting::get('reminder_days_before'))->toBe(5);
+        expect(Setting::get('reminder_overdue_intervals'))->toBe([1, 3, 7]);
+    });
+
+    it('returns only specified keys', function () {
+        Setting::set('site_name', 'Kos Budi');
+        Setting::set('country_code', 'ID');
+        Setting::set('locale', 'id');
+
+        $result = Setting::some(['site_name', 'locale']);
+
+        expect($result)->toHaveKeys(['site_name', 'locale']);
+        expect($result)->not->toHaveKey('country_code');
+        expect($result['site_name'])->toBe('Kos Budi');
+        expect($result['locale'])->toBe('id');
+    });
+
+    it('includes defaults in allWithDefaults', function () {
+        Setting::set('site_name', 'Kos Saya');
+
+        $all = Setting::allWithDefaults();
+
+        expect($all['site_name'])->toBe('Kos Saya');
+        expect($all['locale'])->toBe('id');
+        expect($all['timezone'])->toBe('Asia/Jakarta');
     });
 });

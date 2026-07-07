@@ -20,7 +20,7 @@ class GeneralController extends Controller
     public function edit(): Response
     {
         return Inertia::render('settings/general', [
-            'settings' => Setting::get()->only('lease_id_prefix'),
+            'settings' => Setting::some(['lease_id_prefix']),
         ]);
     }
 

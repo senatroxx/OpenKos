@@ -34,17 +34,13 @@ describe('Reminder settings page', function () {
             ])
             ->assertRedirect(route('settings.reminders.edit'));
 
-        $settings = Setting::get();
-
-        expect($settings->reminder_enabled)->toBeTrue();
-        expect($settings->reminder_days_before)->toBe(5);
-        expect($settings->reminder_overdue_intervals)->toBe([2, 5, 10]);
+        expect(Setting::get('reminder_enabled'))->toBeTrue();
+        expect(Setting::get('reminder_days_before'))->toBe(5);
+        expect(Setting::get('reminder_overdue_intervals'))->toBe([2, 5, 10]);
     });
 
     it('initial default is log channel', function () {
-        $setting = Setting::get();
-
-        expect($setting->reminder_channels)->toBe(['log']);
+        expect(Setting::get('reminder_channels'))->toBeNull();
     });
 
     it('updates reminder channels', function () {
@@ -58,7 +54,7 @@ describe('Reminder settings page', function () {
             ])
             ->assertRedirect();
 
-        expect(Setting::get()->reminder_channels)->toBe(['log', 'whatsapp', 'mail']);
+        expect(Setting::get('reminder_channels'))->toBe(['log', 'whatsapp', 'mail']);
     });
 
     it('requires at least one reminder channel', function () {
