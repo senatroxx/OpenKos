@@ -13,7 +13,7 @@ class SettingRepository
 
         foreach ($data as $key => $value) {
             $original[$key] = Setting::get($key);
-            Setting::set($key, $value, $this->resolveType($key, $value));
+            Setting::set($key, $value);
         }
 
         return new SettingUpdateData(
@@ -21,16 +21,5 @@ class SettingRepository
             original: $original,
             group: 'core',
         );
-    }
-
-    private function resolveType(string $key, mixed $value): string
-    {
-        return match (true) {
-            $key === 'mail_config', $key === 'whatsapp_config' => 'encrypted:array',
-            $key === 'reminder_overdue_intervals', $key === 'reminder_channels' => 'array',
-            $key === 'reminder_enabled' => 'boolean',
-            $key === 'reminder_days_before' => 'integer',
-            default => 'string',
-        };
     }
 }
