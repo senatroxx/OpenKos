@@ -56,7 +56,7 @@ Conventions:
 - `icon` is a **lucide icon name string** (PHP can't ship React components); the frontend resolves it to a component.
 - `permission` is a Spatie permission string (e.g. `properties.view`), matching how the sidebar gates visibility today.
 
-### Settings Storage (`SettingsManager + SettingValue`)
+### Settings Storage (key-value via `Setting` model)
 
 In addition to sidebar pages, `SettingsRegistry` now manages **setting definitions** that plugins register to persist key-value configuration without schema migrations:
 
@@ -71,7 +71,7 @@ $platform->settings()->registerSetting(new SettingDefinition(
 ));
 ```
 
-Supported types: `string`, `bool`, `int`, `json`, `encrypted` (Laravel's native encrypted cast).
+Supported types: `string`, `boolean`, `integer`, `array`, `encrypted`, `encrypted:array`.
 
 **Reading and writing** goes through `SettingsManager`, accessible via the manager:
 
@@ -93,9 +93,9 @@ OpenKOS::settingsManager()->get('my_plugin.api_key');
 
 **Automated UI**: Registering settings with a `page` key enables a generic settings page at `/settings/{page}`. The `DynamicSettingsForm` React component renders form fields from the registered definitions. Plugins can either use this generic endpoint or build custom pages.
 
-**Audit trail**: Both `Setting` (core) and `SettingValue` (plugin) models use the `Auditable` trait — all writes are recorded to `audit_logs` with before/after snapshots. Every change also dispatches `App\Events\Settings\SettingsUpdated`, which `RecordActivitySubscriber` writes to `activity_logs`.
+**Storage**: All settings (core and plugin) live in a single key-value `settings` table. The `Setting` model provides `get(key)`, `set(key, value, type)`, and `only(keys)` helpers. Core controllers go through `UpdateSettings` action (which records audit logs and dispatches `SettingsUpdated`). Plugin settings go through `SettingsManager` (which validates against registered `SettingDefinition` rules).
 
-**Core settings** remain in the typed-column `settings` table (one singleton row). Plugin settings use the key-value `setting_values` table. No migration of existing data — the two systems coexist.
+**Audit trail**: Settings updates are recorded to `audit_logs` via `UpdateSettings`. Every change also dispatches `App\Events\Settings\SettingsUpdated`, which `RecordActivitySubscriber` writes to `activity_logs`.
 
 ### Workspaces
 

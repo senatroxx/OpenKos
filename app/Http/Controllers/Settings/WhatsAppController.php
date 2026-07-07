@@ -76,7 +76,7 @@ class WhatsAppController extends Controller
             })
             ->values();
 
-        $settings = Setting::get()->only('whatsapp_driver', 'whatsapp_config');
+        $settings = Setting::some(['whatsapp_driver', 'whatsapp_config']);
 
         $connection = null;
         if (($settings['whatsapp_driver'] ?? null) === 'baileys') {
@@ -111,11 +111,9 @@ class WhatsAppController extends Controller
             'whatsapp_config' => ['nullable', 'array'],
         ]);
 
-        $setting = Setting::get();
-
         $data = $validated;
         if (isset($validated['whatsapp_config'])) {
-            $existing = $setting->whatsapp_config ?? [];
+            $existing = Setting::get('whatsapp_config') ?? [];
             $data['whatsapp_config'] = array_merge($existing, $validated['whatsapp_config']);
         }
 
