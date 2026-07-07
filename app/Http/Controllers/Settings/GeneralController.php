@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +13,10 @@ use Inertia\Response;
 
 class GeneralController extends Controller
 {
+    public function __construct(
+        private UpdateSettings $updateSettings,
+    ) {}
+
     public function edit(): Response
     {
         return Inertia::render('settings/general', [
@@ -25,8 +30,7 @@ class GeneralController extends Controller
             'lease_id_prefix' => ['required', 'string', 'max:10', Rule::regex('/^[A-Z]+$/')],
         ]);
 
-        $setting = Setting::get();
-        $setting->update($validated);
+        $this->updateSettings->execute($validated, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('General settings updated.')]);
 
