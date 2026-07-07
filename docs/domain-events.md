@@ -53,6 +53,20 @@ public readonly UnitStatus $from;   // previous status
 public readonly UnitStatus $to;     // new status
 ```
 
+### Settings
+
+| Event | Payload | Dispatched from |
+|---|---|---|
+| `Settings\SettingsUpdated` | `string $group, array $keys` | `UpdateSettings` action, `SettingsManager::set()` |
+
+**Payload: `SettingsUpdated`**
+
+```php
+public readonly string $group;  // 'core' for core settings, page key for plugin settings
+public readonly array $keys;    // affected setting keys
+public readonly ?int $actorId;
+```
+
 ## Plugin Subscription
 
 Plugins subscribe to events via `listens()` in their `Plugin` subclass:

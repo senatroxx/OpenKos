@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
@@ -12,6 +13,10 @@ use Inertia\Response;
 
 class MailController extends Controller
 {
+    public function __construct(
+        private UpdateSettings $updateSettings,
+    ) {}
+
     public function edit(): Response
     {
         return Inertia::render('settings/mail', [
@@ -40,13 +45,11 @@ class MailController extends Controller
             'mail_from_name' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $setting = Setting::get();
-
         if (blank($validated['mail_password'] ?? null)) {
             unset($validated['mail_password']);
         }
 
-        $setting->update($validated);
+        $this->updateSettings->execute($validated, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Mail settings updated.')]);
 

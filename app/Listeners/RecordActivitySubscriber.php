@@ -8,8 +8,10 @@ use App\Events\Maintenance\MaintenanceResolved;
 use App\Events\Maintenance\MaintenanceTicketCreated;
 use App\Events\Payment\PaymentRecorded;
 use App\Events\Payment\PaymentStatusChanged;
+use App\Events\Settings\SettingsUpdated;
 use App\Events\Unit\UnitStatusChanged;
 use App\Models\ActivityLog;
+use App\Models\Setting;
 use Illuminate\Events\Dispatcher;
 
 class RecordActivitySubscriber
@@ -24,7 +26,18 @@ class RecordActivitySubscriber
             MaintenanceTicketCreated::class => 'handleMaintenanceTicketCreated',
             MaintenanceResolved::class => 'handleMaintenanceResolved',
             UnitStatusChanged::class => 'handleUnitStatusChanged',
+            SettingsUpdated::class => 'handleSettingsUpdated',
         ];
+    }
+
+    public function handleSettingsUpdated(SettingsUpdated $event): void
+    {
+        ActivityLog::record(
+            event: 'settings.updated',
+            subject: Setting::get(),
+            metadata: ['group' => $event->group, 'keys' => $event->keys],
+            actorId: $event->actorId,
+        );
     }
 
     public function handleLeaseCreated(LeaseCreated $event): void

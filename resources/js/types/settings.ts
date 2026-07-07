@@ -1,13 +1,14 @@
-export type DriverSchemaField = {
+export type SettingDefinition = {
+    key: string;
     label: string;
-    type: string;
-    required: boolean;
-    placeholder?: string;
+    type: 'string' | 'bool' | 'int' | 'json' | 'encrypted';
+    default: unknown;
+    rules: string[];
+    page: string | null;
 };
 
-export type Driver = {
-    name: string;
-    label: string;
-    configuration_schema: Record<string, DriverSchemaField>;
-    supports_pairing: boolean;
+export type DynamicSettingsFormProps = {
+    page: string;
+    definitions: SettingDefinition[];
+    values: Record<string, unknown>;
 };

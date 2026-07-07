@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Services\WhatsAppManager;
@@ -18,6 +19,7 @@ class WhatsAppController extends Controller
     public function __construct(
         private WhatsAppManager $whatsapp,
         private NotificationRegistry $registry,
+        private UpdateSettings $updateSettings,
     ) {}
 
     public function pair(): JsonResponse
@@ -117,7 +119,7 @@ class WhatsAppController extends Controller
             $data['whatsapp_config'] = array_merge($existing, $validated['whatsapp_config']);
         }
 
-        $setting->update($data);
+        $this->updateSettings->execute($data, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('WhatsApp settings updated.')]);
 

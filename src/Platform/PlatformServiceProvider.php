@@ -12,6 +12,7 @@ use OpenKOS\Platform\Payment\PaymentRegistry;
 use OpenKOS\Platform\Permission\PermissionRegistry;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginLoader;
+use OpenKOS\Platform\Settings\SettingsManager;
 use OpenKOS\Platform\Settings\SettingsRegistry;
 use OpenKOS\Platform\Workspace\WorkspaceRegistry;
 use ReflectionClass;
@@ -24,6 +25,7 @@ class PlatformServiceProvider extends ServiceProvider
         $this->app->singleton(NavigationRegistry::class);
         $this->app->singleton(WorkspaceRegistry::class);
         $this->app->singleton(SettingsRegistry::class);
+        $this->app->singleton(SettingsManager::class);
         $this->app->singleton(NotificationRegistry::class);
         $this->app->singleton(PaymentRegistry::class);
         $this->app->singleton(PermissionRegistry::class);

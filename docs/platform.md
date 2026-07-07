@@ -56,6 +56,47 @@ Conventions:
 - `icon` is a **lucide icon name string** (PHP can't ship React components); the frontend resolves it to a component.
 - `permission` is a Spatie permission string (e.g. `properties.view`), matching how the sidebar gates visibility today.
 
+### Settings Storage (`SettingsManager + SettingValue`)
+
+In addition to sidebar pages, `SettingsRegistry` now manages **setting definitions** that plugins register to persist key-value configuration without schema migrations:
+
+```php
+$platform->settings()->registerSetting(new SettingDefinition(
+    key: 'my_plugin.api_key',
+    label: 'API Key',
+    type: 'encrypted',
+    default: null,
+    rules: ['nullable', 'string', 'max:255'],
+    page: 'my-plugin',          // groups settings under a settings page key
+));
+```
+
+Supported types: `string`, `bool`, `int`, `json`, `encrypted` (Laravel's native encrypted cast).
+
+**Reading and writing** goes through `SettingsManager`, accessible via the manager:
+
+```php
+// In a plugin's controller or Boot method:
+$manager = $platform->settingsManager();
+
+$value = $manager->get('my_plugin.api_key');
+$manager->set('my_plugin.api_key', 'new-value', auth()->user());
+```
+
+Alternatively, app code can inject `SettingsManager` or use the facade:
+
+```php
+OpenKOS::settingsManager()->get('my_plugin.api_key');
+```
+
+**Validation** is defined per key on the `SettingDefinition` and enforced at write time by the manager via Laravel's `Validator`. A plugin's controller can also use its own FormRequest for HTTP-level validation.
+
+**Automated UI**: Registering settings with a `page` key enables a generic settings page at `/settings/{page}`. The `DynamicSettingsForm` React component renders form fields from the registered definitions. Plugins can either use this generic endpoint or build custom pages.
+
+**Audit trail**: Both `Setting` (core) and `SettingValue` (plugin) models use the `Auditable` trait — all writes are recorded to `audit_logs` with before/after snapshots. Every change also dispatches `App\Events\Settings\SettingsUpdated`, which `RecordActivitySubscriber` writes to `activity_logs`.
+
+**Core settings** remain in the typed-column `settings` table (one singleton row). Plugin settings use the key-value `setting_values` table. No migration of existing data — the two systems coexist.
+
 ### Workspaces
 
 `WorkspaceRegistry::for('property')` returns a memoized `Workspace` — a registrar scoped to one entity type. The manager exposes sugar for the aggregate roots: `property()`, `lease()`, `tenant()`; anything else goes through `workspace($name)` (e.g. `'unit'`). `WorkspaceTab.key` maps to the frontend `PluginRegion` slot `workspace-tab-{key}` in `entity-workspace-layout.tsx`.
