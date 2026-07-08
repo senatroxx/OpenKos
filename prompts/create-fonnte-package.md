@@ -11,10 +11,8 @@ openkos-fonnte/
 │   ├── FonntePlugin.php
 │   ├── Drivers/
 │   │   └── FonnteDriver.php
-│   ├── routes/
-│   │   └── web.php
-│   └── config/
-│       └── settings.php
+│   └── routes/
+│       └── web.php
 ├── tests/
 │   └── Feature/
 │       └── FonnteDriverTest.php
@@ -35,9 +33,16 @@ openkos-fonnte/
 Extends `OpenKOS\Platform\Plugin\Plugin`:
 
 - **Manifest:** id `openkos/fonnte`, name `Fonnte Driver`, version `1.0.0`, coreVersion `^0.1`
-- **register():** calls `$platform->notifications()->registerDriver(...)` with channel `'whatsapp'`, driverClass `FonnteDriver::class`, label `'Fonnte (Unofficial)'`, config `['token' => env('FONNTE_TOKEN')]`
+- **register():**
+  1. Calls `$platform->notifications()->registerDriver(...)` with channel `'whatsapp'`, driverClass `FonnteDriver::class`, label `'Fonnte (Unofficial)'`, config `['token' => env('FONNTE_TOKEN')]`
+  2. Calls `$platform->settings()->registerSetting(new SettingDefinition(key: 'fonnte_config', label: 'Fonnte Configuration', type: 'encrypted:array', default: []))` to register `fonnte_config` so `SettingsManager` recognizes it
 - **boot():** registers a settings page — `new SettingsPage(key: 'fonnte', title: 'Fonnte', href: '/settings/fonnte', group: 'Credentials', order: 410, routeName: 'settings.fonnte.edit')` (order 410 places it right after WhatsApp at 400)
-- **Import:** `use OpenKOS\Platform\Notification\NotificationDriverRegistration;`, `use OpenKOS\Platform\Settings\SettingsPage;`
+- **Imports:**
+  ```php
+  use OpenKOS\Platform\Notification\NotificationDriverRegistration;
+  use OpenKOS\Platform\Settings\SettingDefinition;
+  use OpenKOS\Platform\Settings\SettingsPage;
+  ```
 
 ### `src/Drivers/FonnteDriver.php`
 
@@ -59,6 +64,9 @@ Methods: `send()`, `health()`, `supportsPairing()` (false), `configurationSchema
 ### `src/routes/web.php`
 
 ```php
+use App\Models\Setting;
+use Illuminate\Support\Facades\Route;
+
 Route::get('/settings/fonnte', fn () => inertia('settings/fonnte', [
     'config' => Setting::get('fonnte_config') ?? [],
 ]))->middleware(['auth', 'role:owner'])->name('settings.fonnte.edit');
@@ -97,6 +105,7 @@ return [
 | `PluginManifest` | `OpenKOS\Platform\Plugin` | openkos/core |
 | `NotificationDriverRegistration` | `OpenKOS\Platform\Notification` | openkos/core |
 | `SettingsPage` | `OpenKOS\Platform\Settings` | openkos/core |
+| `SettingDefinition` | `OpenKOS\Platform\Settings` | openkos/core |
 | `OpenKOSManager` | `OpenKOS\Platform` | openkos/core |
 | `NotificationRegistry` | `OpenKOS\Platform\Notification` | openkos/core |
 
