@@ -45,14 +45,14 @@ Six registries, each bound as a **container singleton** (no static state) in `Pl
 | `NavigationRegistry` | Sidebar nav items, grouped (`main`, `footer`, …) | `NavigationItem(title, href?, icon?, permission?, children[])` — mirrors the TS `NavItem` type |
 | `DashboardRegistry` | Dashboard pages | `DashboardPage(key, title, href, permission?)` |
 | `WorkspaceRegistry` | Tabs on entity workspace pages | `WorkspaceTab(key, label, permission?, meta[])` |
-| `SettingsRegistry` | Settings pages | `SettingsPage(key, title, href, permission?)` |
+| `SettingsRegistry` | Settings pages | `SettingsPage(key, title, href, permission?, group?, routeName?)` — `group` renders under a nav section; `routeName` is resolved lazily in `toArray()` (safe for plugin `boot()`) |
 | `NotificationRegistry` | Notification drivers by name | `NotificationDriverRegistration(name, channel, driverClass, label, config[])` |
 | `PaymentRegistry` | Payment gateways by key | class-string or instance of `PaymentGateway` |
 
 Conventions:
 
 - Item objects are `final readonly` value objects with promoted constructors.
-- Duplicate keys throw `InvalidArgumentException` — plugins fail loudly at boot, not silently overwrite each other.
+- Duplicate keys silently overwrite — `registerPage()` is idempotent so re-booting the provider (e.g. in tests) doesn't crash.
 - `icon` is a **lucide icon name string** (PHP can't ship React components); the frontend resolves it to a component.
 - `permission` is a Spatie permission string (e.g. `properties.view`), matching how the sidebar gates visibility today.
 
@@ -93,7 +93,20 @@ OpenKOS::settingsManager()->get('my_plugin.api_key');
 
 **Automated UI**: Registering settings with a `page` key enables a generic settings page at `/settings/{page}`. The `DynamicSettingsForm` React component renders form fields from the registered definitions. Plugins can either use this generic endpoint or build custom pages.
 
-**Storage**: All settings (core and plugin) live in a single key-value `settings` table. The `Setting` model provides `get(key)`, `set(key, value, type)`, and `only(keys)` helpers. Core controllers go through `UpdateSettings` action (which records audit logs and dispatches `SettingsUpdated`). Plugin settings go through `SettingsManager` (which validates against registered `SettingDefinition` rules).
+**Storage**: All settings (core and plugin) live in a single key-value `settings` table. The `Setting` model is a thin facade — `get(key)`, `set(key, value)`, and `some(keys)` delegate to `App\Services\Settings\SettingManager`. `SettingCaster` handles serialize/deserialize. `SettingRegistry` wraps `config('settings')` for default values and casts. Core controllers go through `UpdateSettings` action (which records audit logs and dispatches `SettingsUpdated`). Plugin settings go through `SettingsManager` (which validates against registered `SettingDefinition` rules).
+
+Defaults live in `config/settings.php` (merged from all enabled plugins via `mergeConfigFrom`):
+
+```php
+// config/settings.php
+return [
+    'site_name' => ['default' => 'OpenKOS', 'cast' => 'string'],
+    'reminder_enabled' => ['default' => true, 'cast' => 'boolean'],
+    'mail_config' => ['default' => [], 'cast' => 'encrypted:array'],
+];
+```
+
+Plugins add their own `config/settings.php` — the core never needs to know about plugin settings. `Setting::get('key')` returns the DB value when present, or falls back to the registered default.
 
 **Audit trail**: Settings updates are recorded to `audit_logs` via `UpdateSettings`. Every change also dispatches `App\Events\Settings\SettingsUpdated`, which `RecordActivitySubscriber` writes to `activity_logs`.
 
@@ -127,6 +140,7 @@ extensions. The `src/Plugins/Example/` plugin is a working reference for everyth
 use App\Events\Payment\PaymentRecorded;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
+use OpenKOS\Platform\Settings\SettingsPage;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginManifest;
 
@@ -160,7 +174,17 @@ class MyPlugin extends Plugin
     }
 
     // Optional — runs after ALL plugins have registered.
-    public function boot(OpenKOSManager $platform): void {}
+    // Register settings pages here (route() is available), not in register().
+    public function boot(OpenKOSManager $platform): void
+    {
+        $platform->settings()->registerPage(new SettingsPage(
+            key: 'my-plugin',
+            title: 'My Plugin',
+            href: '/settings/my-plugin',
+            group: 'Credentials',
+            routeName: 'settings.my-plugin.edit', // resolved lazily in toArray()
+        ));
+    }
 
     // Optional — subscribe to core domain events.
     public function listens(): array
