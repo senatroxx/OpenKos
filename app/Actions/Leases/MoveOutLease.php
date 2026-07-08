@@ -22,12 +22,15 @@ class MoveOutLease
         private GenerateInvoices $generateInvoices,
     ) {}
 
-    private function cancelFutureInvoices(Lease $lease, mixed $terminationDate): void
+    private function cancelFutureInvoices(Lease $lease): void
     {
+        // Cancel invoices whose period starts after the lease ends (actual
+        // move-out date, not the termination record date which is always
+        // today). The lease's end_date has already been updated by this point.
         $lease->invoices()
             ->where('status', InvoiceStatus::Pending->value)
             ->where('amount_paid', 0)
-            ->whereDate('period_start', '>', $terminationDate)
+            ->whereDate('period_start', '>', $lease->end_date)
             ->get()
             ->each->update(['status' => InvoiceStatus::Cancelled]);
     }
@@ -65,7 +68,7 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
-        $this->cancelFutureInvoices($lease, $data->terminationDate);
+        $this->cancelFutureInvoices($lease);
 
         if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
@@ -113,7 +116,7 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
-        $this->cancelFutureInvoices($lease, $data->terminationDate);
+        $this->cancelFutureInvoices($lease);
 
         $oldUnit->unsetRelation('leases');
 

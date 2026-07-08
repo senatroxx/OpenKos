@@ -32,17 +32,22 @@ class Invoice extends Model
 
         static::creating(function (Invoice $invoice) {
             if ($invoice->reference === null) {
+                // ponytail: lockForUpdate serializes sequence reads under
+                // concurrent invoice creation. If the prefix+year has no rows
+                // yet the gap is unguarded — the unique constraint on
+                // `reference` catches that single initial race.
                 $prefix = Setting::get('invoice_id_prefix') ?? 'INV';
                 $year = now()->format('Y');
                 $pattern = $prefix.$year.'%';
 
                 $max = static::where('reference', 'like', $pattern)
                     ->orderBy('reference', 'desc')
+                    ->lockForUpdate()
                     ->value('reference');
 
                 $seq = $max ? (int) substr($max, -4) + 1 : 1;
 
-                $invoice->reference = $prefix.$year.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+                $invoice->reference = $prefix.$year.str_pad((string) $seq, max(4, strlen((string) $seq)), '0', STR_PAD_LEFT);
             }
         });
     }

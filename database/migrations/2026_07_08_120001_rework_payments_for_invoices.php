@@ -43,7 +43,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Irreversible: the lease-polymorphic payment schema was dropped with
-        // its data. Recreating the old shape without data serves nothing.
+        throw new RuntimeException('Irreversible migration: payment data was restructured and cannot be restored.');
     }
 };

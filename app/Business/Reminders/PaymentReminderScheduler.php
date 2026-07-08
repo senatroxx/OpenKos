@@ -27,7 +27,7 @@ class PaymentReminderScheduler
 
             $status = $dueDate->lessThan($today)
                 ? 'overdue'
-                : ($invoice->period_start->isFuture() ? 'upcoming' : 'due');
+                : ($dueDate->greaterThan($today) ? 'upcoming' : 'due');
 
             match ($status) {
                 'upcoming' => $this->collectUpcoming($events, $lease, $periodStart, $periodEnd, $dueDateStr, $amount, $dueDate, $today, $settings),

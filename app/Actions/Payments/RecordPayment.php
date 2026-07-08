@@ -4,6 +4,7 @@ namespace App\Actions\Payments;
 
 use App\Data\Payment\RecordPaymentData;
 use App\Enums\PaymentStatus;
+use App\Exceptions\PaymentOverflowException;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Results\Payment\RecordPaymentResult;
@@ -18,7 +19,15 @@ class RecordPayment
         $canAutoVerify = $hasProof && $user->can('payments.verify');
 
         $payment = DB::transaction(function () use ($invoice, $data, $user, $hasProof, $canAutoVerify) {
-            $payment = $invoice->payments()->create([
+            // Ponytail: lock the invoice so concurrent payments see the
+            // correct outstanding balance and cannot overpay.
+            $locked = Invoice::lockForUpdate()->findOrFail($invoice->id);
+
+            if ($data->amount > (float) $locked->outstanding) {
+                throw new PaymentOverflowException;
+            }
+
+            $payment = $locked->payments()->create([
                 'amount' => $data->amount,
                 'payment_date' => $data->paymentDate,
                 'payment_method' => $data->paymentMethod,
@@ -46,7 +55,7 @@ class RecordPayment
                 ]);
             }
 
-            $invoice->recalculateStatus();
+            $locked->recalculateStatus();
 
             return $payment;
         });
@@ -54,5 +63,9 @@ class RecordPayment
         $payment->load('confirmedBy:id,name', 'recordedBy:id,name', 'proofs');
 
         return RecordPaymentResult::success($payment);
+
+        // ponytail: PaymentOverflowException is caught by PaymentController
+        // since it extends the base Handler's renderable exceptions path — no
+        // custom handler needed for one exception.
     }
 }

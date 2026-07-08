@@ -29,7 +29,9 @@ class LeaseRentScheduleController extends Controller
                 'outstanding' => $invoice->outstanding,
                 'status' => match ($invoice->status) {
                     InvoiceStatus::Paid => 'paid',
-                    InvoiceStatus::Partial => 'partial',
+                    InvoiceStatus::Partial => $invoice->isOverdue()
+                        ? 'overdue'
+                        : 'partial',
                     InvoiceStatus::Cancelled, InvoiceStatus::Void => 'cancelled',
                     InvoiceStatus::Pending => $invoice->isOverdue()
                         ? 'overdue'

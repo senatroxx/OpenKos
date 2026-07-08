@@ -29,15 +29,11 @@ class OverviewStatsCalculator
                 ->whereIn('lease_id', $leaseIds))
             ->sum('amount');
 
-        $paidIds = Invoice::where('status', InvoiceStatus::Paid->value)
+        $outstanding = (float) Invoice::whereIn('lease_id', $leaseIds)
             ->whereBetween('period_start', [$periodStart, $periodEnd])
-            ->whereIn('lease_id', $leaseIds)
-            ->distinct('lease_id')
-            ->pluck('lease_id');
-
-        $outstanding = (clone $activeLeasesQuery)
-            ->whereNotIn('id', $paidIds)
-            ->sum('rent_amount');
+            ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
+            ->selectRaw('COALESCE(SUM(total - amount_paid), 0) as total_outstanding')
+            ->value('total_outstanding');
 
         $collectionRate = $monthlyPotential > 0
             ? round(($revenueThisMonth / $monthlyPotential) * 100)
