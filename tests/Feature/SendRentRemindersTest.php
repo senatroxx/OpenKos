@@ -126,7 +126,7 @@ describe('PaymentReminderScheduler', function () {
 
 describe('SendRentRemindersAction', function () {
     beforeEach(function () {
-        Setting::get()->update(['reminder_channels' => ['whatsapp']]);
+        Setting::set('reminder_channels', ['whatsapp'], 'array');
     });
 
     it('sends reminder and creates log', function () {
@@ -165,7 +165,7 @@ describe('SendRentRemindersAction', function () {
     });
 
     it('does nothing when reminders disabled', function () {
-        Setting::get()->update(['reminder_enabled' => false]);
+        Setting::set('reminder_enabled', false, 'boolean');
 
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         Notification::fake();
@@ -214,7 +214,7 @@ describe('SendRentRemindersAction', function () {
 
 describe('Command', function () {
     beforeEach(function () {
-        Setting::get()->update(['reminder_channels' => ['whatsapp']]);
+        Setting::set('reminder_channels', ['whatsapp'], 'array');
     });
 
     it('sends reminders via artisan command', function () {
@@ -248,7 +248,7 @@ describe('Command', function () {
 
 describe('Manual Send via Controller', function () {
     beforeEach(function () {
-        Setting::get()->update(['reminder_channels' => ['whatsapp']]);
+        Setting::set('reminder_channels', ['whatsapp'], 'array');
     });
 
     it('allows user with reminders.send permission to send reminder', function () {

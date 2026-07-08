@@ -11,6 +11,9 @@ final readonly class SettingsPage implements Arrayable
         public string $title,
         public string $href,
         public ?string $permission = null,
+        public ?string $group = null,
+        public ?string $routeName = null,
+        public int $order = 500,
     ) {}
 
     public function toArray(): array
@@ -18,8 +21,9 @@ final readonly class SettingsPage implements Arrayable
         return [
             'key' => $this->key,
             'title' => $this->title,
-            'href' => $this->href,
+            'href' => $this->routeName ? route($this->routeName) : $this->href,
             'permission' => $this->permission,
+            'group' => $this->group,
         ];
     }
 }

@@ -27,7 +27,7 @@ class RentReminder extends Notification implements ShouldQueue
             'mail' => 'mail',
         ];
 
-        $channels = Setting::get()->reminder_channels ?? ['log'];
+        $channels = Setting::get('reminder_channels') ?? ['log'];
 
         return array_values(array_intersect_key($map, array_flip($channels)));
     }
@@ -64,7 +64,7 @@ class RentReminder extends Notification implements ShouldQueue
         $amount = number_format($this->event->amount / 100, 0);
         $date = Carbon::parse($this->event->dueDate)->format('d M Y');
 
-        $template = Setting::get()->reminder_message_template;
+        $template = Setting::get('reminder_message_template');
 
         if ($template) {
             return str_replace(

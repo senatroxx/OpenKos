@@ -50,7 +50,7 @@ class AuditLog extends Model
     }
 
     public static function record(
-        Model $auditable,
+        ?Model $auditable,
         string $operation,
         ?array $before = null,
         ?array $after = null,
@@ -59,8 +59,8 @@ class AuditLog extends Model
         ?array $metadata = null,
     ): self {
         return static::create([
-            'auditable_type' => $auditable->getMorphClass(),
-            'auditable_id' => $auditable->getKey(),
+            'auditable_type' => $auditable?->getMorphClass(),
+            'auditable_id' => $auditable?->getKey(),
             'operation' => $operation,
             'before' => $before,
             'after' => $after,

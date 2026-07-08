@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
@@ -11,15 +12,19 @@ use Inertia\Response;
 
 class ReminderController extends Controller
 {
+    public function __construct(
+        private UpdateSettings $updateSettings,
+    ) {}
+
     public function edit(): Response
     {
-        $settings = Setting::get()->only(
+        $settings = Setting::some([
             'reminder_enabled',
             'reminder_days_before',
             'reminder_overdue_intervals',
             'reminder_message_template',
             'reminder_channels',
-        );
+        ]);
 
         $settings['reminder_channels'] ??= ['log'];
 
@@ -44,8 +49,7 @@ class ReminderController extends Controller
             explode(',', $validated['reminder_overdue_intervals']),
         );
 
-        $setting = Setting::get();
-        $setting->update($validated);
+        $this->updateSettings->execute($validated, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Reminder settings updated.')]);
 
