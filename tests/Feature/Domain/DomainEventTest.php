@@ -9,6 +9,7 @@ use App\Events\Maintenance\MaintenanceResolved;
 use App\Events\Maintenance\MaintenanceTicketCreated;
 use App\Events\Payment\PaymentRecorded;
 use App\Events\Unit\UnitStatusChanged;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
@@ -83,12 +84,16 @@ describe('payment events', function () {
             'status' => LeaseStatus::Active,
         ]);
 
+        $invoice = Invoice::factory()->create([
+            'lease_id' => $lease->id,
+            'total' => 1_500_000,
+        ]);
+
         $this->actingAs($user)->post(route('leases.payments.store', $lease), [
+            'invoice_id' => $invoice->id,
             'amount' => 1_500_000,
             'payment_method' => 'cash',
             'paid_at' => now()->format('Y-m-d'),
-            'period_month' => now()->month,
-            'period_year' => now()->year,
         ]);
 
         Event::assertDispatched(PaymentRecorded::class);

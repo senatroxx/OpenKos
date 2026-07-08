@@ -32,9 +32,8 @@ const columns: TableColumn<Payment>[] = [
     {
         key: 'period_start',
         label: 'Period',
-        sortable: true,
         className: 'font-medium',
-        render: (p) => formatPeriod(p.period_start),
+        render: (p) => (p.invoice ? formatPeriod(p.invoice.period_start) : '—'),
     },
     {
         key: 'payment_date',
@@ -131,9 +130,14 @@ function RentSchedule({ lease }: { lease: WorkspaceLease }) {
 
     const badge: Record<string, { label: string; className: string }> = {
         paid: { label: 'Paid', className: 'bg-green-600 text-white' },
+        partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
         overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
         due: { label: 'Due', className: 'bg-yellow-500 text-white' },
         upcoming: { label: 'Upcoming', className: 'bg-gray-400 text-white' },
+        cancelled: {
+            label: 'Cancelled',
+            className: 'bg-gray-300 text-gray-700',
+        },
     };
 
     return (
@@ -174,7 +178,7 @@ function RentSchedule({ lease }: { lease: WorkspaceLease }) {
 export default function LeasePayments({
     lease,
     payments,
-    sort = '-period_start',
+    sort = '-payment_date',
     search = '',
     status = '',
     payment_method = '',
@@ -203,7 +207,7 @@ export default function LeasePayments({
                     search={search}
                     perPage={per_page}
                     filterValues={{ status, payment_method }}
-                    defaultSort="-period_start"
+                    defaultSort="-payment_date"
                     searchPlaceholder="Search by reference..."
                     emptyMessage="No payments recorded yet."
                 />

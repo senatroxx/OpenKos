@@ -2,7 +2,6 @@
 
 use App\Business\Payments\PaymentStatusValidator;
 use App\Enums\PaymentStatus;
-use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
@@ -40,11 +39,7 @@ it('rejects cancelled to any transition', function () {
 });
 
 it('transitions payment from pending to confirmed via verify', function () {
-    $lease = Lease::factory()->create();
-    $payment = Payment::factory()->pending()->create([
-        'paymentable_id' => $lease->id,
-        'paymentable_type' => Lease::class,
-    ]);
+    $payment = Payment::factory()->pending()->create();
     $user = User::factory()->owner()->create();
 
     $this->actingAs($user)
@@ -54,11 +49,7 @@ it('transitions payment from pending to confirmed via verify', function () {
 });
 
 it('transitions payment from pending to cancelled via reject', function () {
-    $lease = Lease::factory()->create();
-    $payment = Payment::factory()->pending()->create([
-        'paymentable_id' => $lease->id,
-        'paymentable_type' => Lease::class,
-    ]);
+    $payment = Payment::factory()->pending()->create();
     $user = User::factory()->owner()->create();
 
     $this->actingAs($user)
@@ -68,10 +59,7 @@ it('transitions payment from pending to cancelled via reject', function () {
 });
 
 it('rejects verify on already confirmed payment', function () {
-    $lease = Lease::factory()->create();
     $payment = Payment::factory()->create([
-        'paymentable_id' => $lease->id,
-        'paymentable_type' => Lease::class,
         'status' => PaymentStatus::Confirmed,
     ]);
     $user = User::factory()->owner()->create();

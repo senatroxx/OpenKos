@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\LeaseStatus;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Payment;
@@ -143,12 +144,13 @@ describe('Lease', function () {
         expect($lease->unit->id)->toBe($unit->id);
     });
 
-    it('has many payments', function () {
-        $lease = Lease::factory()
-            ->has(Payment::factory()->count(3))
-            ->create();
+    it('has many payments through invoices', function () {
+        $lease = Lease::factory()->create();
+        $invoice = Invoice::factory()->create(['lease_id' => $lease->id]);
+        Payment::factory()->count(3)->create(['invoice_id' => $invoice->id]);
 
         expect($lease->payments)->toHaveCount(3);
+        expect($lease->invoices)->toHaveCount(1);
     });
 
     it('has active status by default', function () {
@@ -181,15 +183,13 @@ describe('Lease', function () {
 });
 
 describe('Payment', function () {
-    it('belongs to a paymentable (lease)', function () {
+    it('belongs to an invoice', function () {
         $lease = Lease::factory()->create();
-        $payment = Payment::factory()->create([
-            'paymentable_id' => $lease->id,
-            'paymentable_type' => Lease::class,
-        ]);
+        $invoice = Invoice::factory()->create(['lease_id' => $lease->id]);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
 
-        expect($payment->paymentable)->toBeInstanceOf(Lease::class);
-        expect($payment->paymentable->id)->toBe($lease->id);
+        expect($payment->invoice)->toBeInstanceOf(Invoice::class);
+        expect($payment->invoice->lease->id)->toBe($lease->id);
     });
 
     it('can be confirmed by a user', function () {

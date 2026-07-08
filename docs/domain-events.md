@@ -32,6 +32,16 @@ public readonly array $tenantIds;   // IDs of attached tenants
 | `Payment\PaymentRecorded`      | `Payment $payment`                                         | `PaymentController::store`  |
 | `Payment\PaymentStatusChanged` | `Payment $payment, PaymentStatus $from, PaymentStatus $to` | `PaymentController::verify` |
 
+Since [ADR-007](architecture/adr/007-invoice-aggregate.md) payments settle invoices; listeners reach the billing context via `$payment->invoice` (and `->invoice->lease`).
+
+### Invoice
+
+| Event                      | Payload            | Dispatched from                     |
+| -------------------------- | ------------------ | ----------------------------------- |
+| `Invoice\InvoiceGenerated` | `Invoice $invoice` | `GenerateInvoices` (post-commit)    |
+
+`InvoiceGenerated` is the plugin hook for payment gateways, the tenant portal, and accounting — it fires once per invoice the generation engine creates, after the transaction commits, and never on reruns (generation is idempotent). Other invoice lifecycle events (status changed, cancelled) don't exist yet — add them when a consumer appears.
+
 ### Maintenance
 
 | Event                                  | Payload                     | Dispatched from                       |

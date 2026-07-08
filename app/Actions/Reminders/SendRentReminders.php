@@ -32,8 +32,8 @@ class SendRentReminders
         }
 
         $leases = $lease
-            ? [$lease->load(['primaryTenant', 'payments'])]
-            : Lease::active()->with(['primaryTenant', 'payments'])->get();
+            ? [$lease->load(['primaryTenant'])]
+            : Lease::active()->with(['primaryTenant'])->get();
 
         $sent = collect();
 

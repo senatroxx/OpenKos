@@ -2,8 +2,9 @@
 
 namespace App\Business\Dashboard;
 
+use App\Enums\InvoiceStatus;
+use App\Models\Invoice;
 use App\Models\Lease;
-use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -13,16 +14,15 @@ class RentStatsCalculator
     {
         $leaseIds = $leases->pluck('id')->all();
 
-        $paidLeaseIds = Payment::query()
-            ->where('paymentable_type', Lease::class)
-            ->whereNotIn('status', ['cancelled'])
+        $paidLeaseIds = Invoice::query()
+            ->where('status', InvoiceStatus::Paid->value)
             ->whereBetween('period_start', [
                 Carbon::create($currentYear, $currentMonth, 1)->startOfDay(),
                 Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay(),
             ])
-            ->whereIn('paymentable_id', $leaseIds)
+            ->whereIn('lease_id', $leaseIds)
             ->distinct()
-            ->pluck('paymentable_id')
+            ->pluck('lease_id')
             ->toArray();
 
         $paidSet = array_flip($paidLeaseIds);

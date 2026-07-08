@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests\Payment;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
-use App\Enums\PaymentStatus;
+use App\Models\Invoice;
 use App\Models\Lease;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -18,12 +19,17 @@ class StorePaymentRequest extends FormRequest
      */
     public function rules(): array
     {
+        $lease = $this->route('lease');
+
         return [
+            'invoice_id' => [
+                'required',
+                'integer',
+                Rule::exists('invoices', 'id')->where('lease_id', $lease instanceof Lease ? $lease->id : null),
+            ],
             'amount' => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', 'string', Rule::in(PaymentMethod::values())],
             'paid_at' => ['required', 'date'],
-            'period_month' => ['required', 'integer', 'between:1,12'],
-            'period_year' => ['required', 'integer', 'between:2000,2100'],
             'notes' => ['nullable', 'string', 'max:65535'],
             'proof' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
         ];
@@ -40,17 +46,19 @@ class StorePaymentRequest extends FormRequest
         }
     }
 
-    public function ensureNoDuplicatePayment(Lease $lease): void
+    public function ensureInvoiceIsPayable(Invoice $invoice): void
     {
-        $exists = $lease->payments()
-            ->whereYear('period_start', $this->period_year)
-            ->whereMonth('period_start', $this->period_month)
-            ->where('status', '!=', PaymentStatus::Cancelled->value)
-            ->exists();
-
-        if ($exists) {
+        if (! in_array($invoice->status, [InvoiceStatus::Pending, InvoiceStatus::Partial], true)) {
             throw ValidationException::withMessages([
-                'period' => __('A payment for this billing period already exists.'),
+                'invoice_id' => __('This invoice is not payable.'),
+            ]);
+        }
+
+        if ((float) $this->amount > (float) $invoice->outstanding) {
+            throw ValidationException::withMessages([
+                'amount' => __('Amount exceeds the invoice outstanding balance of :outstanding.', [
+                    'outstanding' => number_format((float) $invoice->outstanding, 0, ',', '.'),
+                ]),
             ]);
         }
     }
