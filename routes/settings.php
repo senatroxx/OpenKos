@@ -37,9 +37,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('settings/reminders', [ReminderController::class, 'edit'])->name('settings.reminders.edit');
     Route::patch('settings/reminders', [ReminderController::class, 'update'])->name('settings.reminders.update');
 
-    Route::post('settings/values', [SettingValuesController::class, 'upsert'])->name('settings.values.upsert');
-
     Route::middleware('role:owner')->group(function () {
+        Route::post('settings/values', [SettingValuesController::class, 'upsert'])->name('settings.values.upsert');
         Route::get('settings/mail', [MailController::class, 'edit'])->name('settings.mail.edit');
         Route::patch('settings/mail', [MailController::class, 'update'])->name('settings.mail.update');
         Route::post('settings/mail/test', [MailController::class, 'test'])->name('settings.mail.test');

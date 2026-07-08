@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use OpenKOS\Platform\Settings\SettingsManager;
@@ -31,7 +32,13 @@ class SettingValuesController extends Controller
             'value' => ['nullable'],
         ]);
 
-        $this->manager->set($data['key'], $data['value'], $request->user());
+        try {
+            $this->manager->set($data['key'], $data['value'], $request->user());
+        } catch (\InvalidArgumentException $e) {
+            throw ValidationException::withMessages([
+                'value' => $e->getMessage(),
+            ]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Setting updated.')]);
 

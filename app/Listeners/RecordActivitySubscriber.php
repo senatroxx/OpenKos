@@ -29,15 +29,7 @@ class RecordActivitySubscriber
         ];
     }
 
-    public function handleSettingsUpdated(SettingsUpdated $event): void
-    {
-        ActivityLog::record(
-            event: 'settings.updated',
-            subject: null,
-            metadata: ['group' => $event->group, 'keys' => $event->keys],
-            actorId: $event->actorId,
-        );
-    }
+    public function handleSettingsUpdated(SettingsUpdated $event): void {}
 
     public function handleLeaseCreated(LeaseCreated $event): void
     {

@@ -6,7 +6,9 @@ class SettingRegistry
 {
     public function get(string $key): ?array
     {
-        return config("settings.{$key}");
+        $all = config('settings');
+
+        return $all[$key] ?? null;
     }
 
     public function all(): array
