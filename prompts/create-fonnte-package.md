@@ -74,14 +74,6 @@ Route::get('/settings/fonnte', fn () => inertia('settings/fonnte', [
 
 Loads an Inertia page (shipped as in-repo frontend code in the consuming app, or via a simple Blade view if Inertia isn't available).
 
-### `src/config/settings.php`
-
-```php
-return [
-    'fonnte_config' => ['default' => [], 'cast' => 'encrypted:array'],
-];
-```
-
 ## Installation in the consuming app
 
 1. `composer require openkos/fonnte`
