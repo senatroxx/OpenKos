@@ -74,9 +74,9 @@ class PlatformServiceProvider extends ServiceProvider
     private function registerCoreSettingsPages(OpenKOSManager $manager): void
     {
         $manager->settings()
-            ->registerPage(new SettingsPage('general', 'General', '/settings/general', routeName: 'settings.general.edit'))
-            ->registerPage(new SettingsPage('reminders', 'Reminders', '/settings/reminders', routeName: 'settings.reminders.edit'))
-            ->registerPage(new SettingsPage('mail', 'Mail', '/settings/mail', group: 'Credentials', routeName: 'settings.mail.edit'));
+            ->registerPage(new SettingsPage('general', 'General', '/settings/general', order: 100, routeName: 'settings.general.edit'))
+            ->registerPage(new SettingsPage('reminders', 'Reminders', '/settings/reminders', order: 200, routeName: 'settings.reminders.edit'))
+            ->registerPage(new SettingsPage('mail', 'Mail', '/settings/mail', group: 'Credentials', order: 300, routeName: 'settings.mail.edit'));
     }
 
     /**

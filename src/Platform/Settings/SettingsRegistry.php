@@ -33,7 +33,10 @@ class SettingsRegistry implements Arrayable
     /** @return array<string, SettingsPage> */
     public function pages(): array
     {
-        return $this->pages;
+        $sorted = $this->pages;
+        uasort($sorted, fn (SettingsPage $a, SettingsPage $b) => $a->order <=> $b->order);
+
+        return $sorted;
     }
 
     /** @return array<string, SettingDefinition> */
@@ -54,7 +57,7 @@ class SettingsRegistry implements Arrayable
      */
     public function toArray(): array
     {
-        return array_values(array_map(fn (SettingsPage $page) => $page->toArray(), $this->pages));
+        return array_values(array_map(fn (SettingsPage $page) => $page->toArray(), $this->pages()));
     }
 
     public function definitionsToArray(): array
