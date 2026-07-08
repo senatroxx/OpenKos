@@ -14,9 +14,13 @@ type ProofRow = {
     created_at: string;
     payment: {
         id: number;
-        period_start: string;
+        invoice_id: number;
         amount: string;
         status: string;
+        invoice: {
+            id: number;
+            period_start: string;
+        } | null;
     } | null;
 };
 
@@ -50,8 +54,8 @@ const columns: TableColumn<ProofRow>[] = [
         label: 'Payment period',
         className: 'text-muted-foreground',
         render: (d) =>
-            d.payment?.period_start
-                ? formatPeriod(d.payment.period_start)
+            d.payment?.invoice?.period_start
+                ? formatPeriod(d.payment.invoice.period_start)
                 : '—',
     },
     {

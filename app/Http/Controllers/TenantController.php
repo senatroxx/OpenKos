@@ -170,6 +170,7 @@ class TenantController extends Controller
             rentAmount: $validated['rent_amount'] ?? null,
             billingInterval: $validated['billing_interval'] ?? null,
             billingUnit: $validated['billing_unit'] ?? null,
+            billingStrategy: $validated['billing_strategy'] ?? null,
             unitRateId: $validated['unit_rate_id'] ?? null,
             depositAmount: $validated['deposit_amount'] ?? null,
             depositPaidAt: $validated['deposit_paid_at'] ?? null,

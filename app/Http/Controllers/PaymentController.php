@@ -9,6 +9,7 @@ use App\Enums\PaymentStatus;
 use App\Events\Payment\PaymentRecorded;
 use App\Events\Payment\PaymentStatusChanged;
 use App\Http\Requests\Payment\StorePaymentRequest;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
 use Illuminate\Http\RedirectResponse;
@@ -23,19 +24,19 @@ class PaymentController extends Controller
         $this->authorize('create', [Payment::class, $lease]);
 
         $request->ensureLeaseIsActive();
-        $request->ensureNoDuplicatePayment($lease);
+
+        $invoice = Invoice::findOrFail($request->invoice_id);
+        $request->ensureInvoiceIsPayable($invoice);
 
         $data = new RecordPaymentData(
             amount: (int) $request->amount,
             paymentDate: $request->paid_at,
-            periodMonth: (int) $request->period_month,
-            periodYear: (int) $request->period_year,
             paymentMethod: $request->payment_method,
             notes: $request->notes,
             proof: $request->file('proof'),
         );
 
-        $result = $action->execute($lease, $data, $request->user());
+        $result = $action->execute($invoice, $data, $request->user());
 
         if ($result->failed()) {
             abort(422, $result->error);
@@ -45,13 +46,11 @@ class PaymentController extends Controller
 
         PaymentRecorded::dispatch($payment, actorId: Auth::id());
 
-        $periodStart = sprintf('%04d-%02d-01', $request->period_year, $request->period_month);
-
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Payment of :amount recorded for :period.', [
                 'amount' => number_format((float) $payment->amount, 0, ',', '.'),
-                'period' => date('F Y', strtotime($periodStart)),
+                'period' => $invoice->period_start->format('F Y'),
             ]),
         ]);
 
@@ -94,6 +93,8 @@ class PaymentController extends Controller
             'verified_by' => $request->user()->id,
             'verified_at' => now(),
         ]);
+
+        $payment->invoice->recalculateStatus();
 
         PaymentStatusChanged::dispatch($payment, $oldStatus, $newStatus, actorId: Auth::id());
 

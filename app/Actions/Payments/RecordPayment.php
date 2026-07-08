@@ -4,7 +4,7 @@ namespace App\Actions\Payments;
 
 use App\Data\Payment\RecordPaymentData;
 use App\Enums\PaymentStatus;
-use App\Models\Lease;
+use App\Models\Invoice;
 use App\Models\User;
 use App\Results\Payment\RecordPaymentResult;
 use Illuminate\Support\Facades\DB;
@@ -12,20 +12,15 @@ use Illuminate\Support\Str;
 
 class RecordPayment
 {
-    public function execute(Lease $lease, RecordPaymentData $data, User $user): RecordPaymentResult
+    public function execute(Invoice $invoice, RecordPaymentData $data, User $user): RecordPaymentResult
     {
-        $periodStart = sprintf('%04d-%02d-01', $data->periodYear, $data->periodMonth);
-        $periodEnd = date('Y-m-t', strtotime($periodStart));
-
         $hasProof = $data->proof !== null;
         $canAutoVerify = $hasProof && $user->can('payments.verify');
 
-        $payment = DB::transaction(function () use ($lease, $data, $periodStart, $periodEnd, $user, $hasProof, $canAutoVerify) {
-            $payment = $lease->payments()->create([
+        $payment = DB::transaction(function () use ($invoice, $data, $user, $hasProof, $canAutoVerify) {
+            $payment = $invoice->payments()->create([
                 'amount' => $data->amount,
                 'payment_date' => $data->paymentDate,
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
                 'payment_method' => $data->paymentMethod,
                 'notes' => $data->notes,
                 'status' => $hasProof && ! $canAutoVerify ? PaymentStatus::Pending : PaymentStatus::Confirmed,
@@ -50,6 +45,8 @@ class RecordPayment
                     'mime_type' => $file->getMimeType(),
                 ]);
             }
+
+            $invoice->recalculateStatus();
 
             return $payment;
         });

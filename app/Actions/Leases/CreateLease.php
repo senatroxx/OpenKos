@@ -2,6 +2,7 @@
 
 namespace App\Actions\Leases;
 
+use App\Actions\Invoices\GenerateInvoices;
 use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\OccupancyCalculator;
 use App\Data\Lease\CreateLeaseData;
@@ -16,6 +17,7 @@ class CreateLease
     public function __construct(
         private OccupancyCalculator $occupancy,
         private LeaseStatusValidator $leaseStatusValidator,
+        private GenerateInvoices $generateInvoices,
     ) {}
 
     public function execute(Unit $unit, CreateLeaseData $data): mixed
@@ -60,6 +62,7 @@ class CreateLease
                 'rent_amount' => $rentAmount,
                 'billing_interval' => $data->billingInterval ?? $unitRate?->billing_interval ?? 1,
                 'billing_unit' => $data->billingUnit ?? $unitRate?->billing_unit ?? 'month',
+                'billing_strategy' => $data->billingStrategy ?? 'advance',
                 'is_custom_price' => $isCustomPrice,
                 'unit_rate_id' => $data->unitRateId,
                 'deposit_amount' => $data->depositAmount ?? 0,
@@ -76,6 +79,8 @@ class CreateLease
             }
 
             $unit->update(['status' => UnitStatus::Occupied]);
+
+            $this->generateInvoices->execute($lease);
 
             return $lease;
         });

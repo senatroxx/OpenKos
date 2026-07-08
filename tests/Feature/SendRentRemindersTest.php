@@ -1,8 +1,10 @@
 <?php
 
+use App\Actions\Invoices\GenerateInvoices;
 use App\Actions\Reminders\SendRentReminders;
 use App\Business\Reminders\PaymentReminderScheduler;
 use App\Data\Reminder\ReminderSettings;
+use App\Enums\InvoiceStatus;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\ReminderLog;
@@ -24,7 +26,7 @@ function createLeaseWithTenant(array $overrides = []): Lease
     $unit = Unit::factory()->for($property)->create();
     $tenant = Tenant::factory()->create(['phone' => '628123456789']);
 
-    return Lease::factory()->create(array_merge([
+    $lease = Lease::factory()->create(array_merge([
         'unit_id' => $unit->id,
         'primary_tenant_id' => $tenant->id,
         'start_date' => now()->subMonths(3),
@@ -34,13 +36,16 @@ function createLeaseWithTenant(array $overrides = []): Lease
         'billing_unit' => 'month',
         'status' => 'active',
     ], $overrides));
+
+    app(GenerateInvoices::class)->execute($lease);
+
+    return $lease;
 }
 
 describe('PaymentReminderScheduler', function () {
     it('returns upcoming event when days match', function () {
         Carbon::setTestNow(Carbon::parse('2026-06-28'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
-        $lease->load('payments');
         $settings = new ReminderSettings(true, 3, []);
 
         $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
@@ -55,7 +60,6 @@ describe('PaymentReminderScheduler', function () {
     it('returns due today event', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
-        $lease->load('payments');
         $settings = new ReminderSettings(true, 3, []);
 
         $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
@@ -69,7 +73,6 @@ describe('PaymentReminderScheduler', function () {
     it('returns overdue event at configured interval', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-02'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->load('payments');
         $settings = new ReminderSettings(true, 3, [1, 3, 7]);
 
         $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
@@ -84,7 +87,6 @@ describe('PaymentReminderScheduler', function () {
     it('returns overdue for intervals well past the max', function () {
         Carbon::setTestNow(Carbon::parse('2026-08-10'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2024-01-01']);
-        $lease->load('payments');
         $settings = new ReminderSettings(true, 3, [7]);
 
         $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
@@ -101,19 +103,10 @@ describe('PaymentReminderScheduler', function () {
     it('returns no events when lease is paid', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
-        $lease->load('payments');
 
-        $lease->payments()->create([
-            'amount' => 1500000.00,
-            'payment_date' => '2026-07-01',
-            'period_start' => '2026-07-01',
-            'period_end' => '2026-07-31',
-            'payment_method' => 'transfer',
-            'status' => 'confirmed',
+        $lease->invoices()->get()->each->update([
+            'status' => InvoiceStatus::Paid,
         ]);
-
-        $lease->unsetRelation('payments');
-        $lease->load('payments');
 
         $settings = new ReminderSettings(true, 3, []);
         $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
@@ -134,7 +127,7 @@ describe('SendRentRemindersAction', function () {
         Notification::fake();
 
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
 
         $action = app(SendRentReminders::class);
         $action->execute($lease);
@@ -150,7 +143,7 @@ describe('SendRentRemindersAction', function () {
         Notification::fake();
 
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
 
         $action = app(SendRentReminders::class);
         $first = $action->execute($lease);
@@ -171,7 +164,7 @@ describe('SendRentRemindersAction', function () {
         Notification::fake();
 
         $lease = createLeaseWithTenant(['rent_due_day' => 1]);
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
 
         $action = app(SendRentReminders::class);
         $sent = $action->execute($lease);
@@ -200,7 +193,7 @@ describe('SendRentRemindersAction', function () {
             'billing_unit' => 'month',
             'status' => 'active',
         ]);
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
 
         $action = app(SendRentReminders::class);
         $sent = $action->execute($lease);
@@ -222,7 +215,7 @@ describe('Command', function () {
         Notification::fake();
 
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
 
         $this->artisan('rent:send-reminders')
             ->expectsOutputToContain('Sent')
@@ -236,7 +229,7 @@ describe('Command', function () {
         Notification::fake();
 
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
 
         $this->artisan('rent:send-reminders', ['lease' => $lease->id])
             ->expectsOutputToContain('Sent')
