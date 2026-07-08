@@ -13,9 +13,9 @@
 
 ### Lease
 
-| Event | Payload | Dispatched from |
-|---|---|---|
-| `Lease\LeaseCreated` | `Lease $lease, array $tenantIds` | `LeaseController::store` |
+| Event                      | Payload                                            | Dispatched from                                                                                           |
+| -------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds`                   | `LeaseController::store`                                                                                  |
 | `Lease\LeaseStatusChanged` | `Lease $lease, LeaseStatus $from, LeaseStatus $to` | `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::renew`, `LeaseController::destroy` |
 
 **Payload: `LeaseCreated`**
@@ -27,22 +27,22 @@ public readonly array $tenantIds;   // IDs of attached tenants
 
 ### Payment
 
-| Event | Payload | Dispatched from |
-|---|---|---|
-| `Payment\PaymentRecorded` | `Payment $payment` | `PaymentController::store` |
+| Event                          | Payload                                                    | Dispatched from             |
+| ------------------------------ | ---------------------------------------------------------- | --------------------------- |
+| `Payment\PaymentRecorded`      | `Payment $payment`                                         | `PaymentController::store`  |
 | `Payment\PaymentStatusChanged` | `Payment $payment, PaymentStatus $from, PaymentStatus $to` | `PaymentController::verify` |
 
 ### Maintenance
 
-| Event | Payload | Dispatched from |
-|---|---|---|
-| `Maintenance\MaintenanceTicketCreated` | `MaintenanceTicket $ticket` | `MaintenanceTicketController::store` |
-| `Maintenance\MaintenanceResolved` | `MaintenanceTicket $ticket` | `MaintenanceTicketController::update` |
+| Event                                  | Payload                     | Dispatched from                       |
+| -------------------------------------- | --------------------------- | ------------------------------------- |
+| `Maintenance\MaintenanceTicketCreated` | `MaintenanceTicket $ticket` | `MaintenanceTicketController::store`  |
+| `Maintenance\MaintenanceResolved`      | `MaintenanceTicket $ticket` | `MaintenanceTicketController::update` |
 
 ### Unit
 
-| Event | Payload | Dispatched from |
-|---|---|---|
+| Event                    | Payload                                        | Dispatched from                                                                                                                                                                        |
+| ------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Unit\UnitStatusChanged` | `Unit $unit, UnitStatus $from, UnitStatus $to` | `LeaseController::store`, `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::destroy`, `MaintenanceTicketController::store`, `MaintenanceTicketController::update` |
 
 **Payload: `UnitStatusChanged`**
@@ -55,8 +55,8 @@ public readonly UnitStatus $to;     // new status
 
 ### Settings
 
-| Event | Payload | Dispatched from |
-|---|---|---|
+| Event                      | Payload                      | Dispatched from                                   |
+| -------------------------- | ---------------------------- | ------------------------------------------------- |
 | `Settings\SettingsUpdated` | `string $group, array $keys` | `UpdateSettings` action, `SettingsManager::set()` |
 
 **Payload: `SettingsUpdated`**

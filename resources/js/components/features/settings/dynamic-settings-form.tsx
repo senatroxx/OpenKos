@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import type { DynamicSettingsFormProps } from '@/types/settings';
 
 export function DynamicSettingsForm({
-    page,
     definitions,
     values,
 }: DynamicSettingsFormProps) {
