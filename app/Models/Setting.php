@@ -2,64 +2,34 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
+use App\Services\Settings\SettingCaster;
+use App\Services\Settings\SettingManager;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable([
-    'site_name',
-    'country_code',
-    'locale',
-    'currency',
-    'timezone',
-    'lease_id_prefix',
-    'reminder_enabled',
-    'reminder_days_before',
-    'reminder_overdue_intervals',
-    'reminder_message_template',
-    'reminder_channels',
-    'mail_driver',
-    'mail_host',
-    'mail_port',
-    'mail_username',
-    'mail_password',
-    'mail_encryption',
-    'mail_from_address',
-    'mail_from_name',
-    'whatsapp_driver',
-    'whatsapp_config',
-])]
 class Setting extends Model
 {
     use HasFactory;
 
-    protected function casts(): array
+    protected $fillable = ['key', 'value', 'type'];
+
+    public static function get(?string $key = null): mixed
     {
-        return [
-            'reminder_enabled' => 'boolean',
-            'reminder_days_before' => 'integer',
-            'reminder_overdue_intervals' => 'array',
-            'reminder_channels' => 'array',
-            'mail_port' => 'integer',
-            'mail_password' => 'encrypted',
-            'whatsapp_config' => 'encrypted:array',
-        ];
+        return app(SettingManager::class)->get($key);
     }
 
-    public static function get(): self
+    public static function set(string $key, mixed $value, ?string $type = null): static
     {
-        return self::firstOrCreate([], [
-            'site_name' => 'OpenKOS',
-            'country_code' => 'ID',
-            'locale' => 'id',
-            'currency' => 'IDR',
-            'timezone' => 'Asia/Jakarta',
-            'lease_id_prefix' => 'LSX',
-            'reminder_enabled' => true,
-            'reminder_days_before' => 3,
-            'reminder_overdue_intervals' => [1, 3, 7],
-            'reminder_channels' => ['log'],
-            'mail_driver' => 'smtp',
-        ]);
+        return app(SettingManager::class)->set($key, $value, $type);
+    }
+
+    public static function some(array $keys): array
+    {
+        return app(SettingManager::class)->some($keys);
+    }
+
+    public function resolveValue(): mixed
+    {
+        return app(SettingCaster::class)->deserialize($this->value, $this->type);
     }
 }

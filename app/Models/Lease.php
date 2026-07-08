@@ -51,7 +51,7 @@ class Lease extends Model
 
         static::creating(function (Lease $lease) {
             if ($lease->reference === null) {
-                $prefix = Setting::get()->lease_id_prefix ?? 'LSX';
+                $prefix = Setting::get('lease_id_prefix') ?? 'LSX';
                 $year = now()->format('Y');
                 $pattern = $prefix.$year.'%';
 

@@ -52,7 +52,25 @@ export function platformPageNavItems(
     pages: PlatformPage[],
     auth: Auth,
 ): NavItem[] {
-    return pages
-        .filter((page) => canSee(page.permission, auth))
-        .map((page) => ({ title: page.title, href: page.href }));
+    const visible = pages.filter((page) => canSee(page.permission, auth));
+    const groups: Record<string, NavItem[]> = Object.create(null);
+    const ungrouped: NavItem[] = [];
+
+    for (const page of visible) {
+        const item: NavItem = { title: page.title, href: page.href };
+
+        if (page.group) {
+            (groups[page.group] ??= []).push(item);
+        } else {
+            ungrouped.push(item);
+        }
+    }
+
+    return [
+        ...ungrouped,
+        ...Object.entries(groups).map(([title, children]) => ({
+            title,
+            children,
+        })),
+    ];
 }

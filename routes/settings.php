@@ -6,6 +6,7 @@ use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\PropertyTypeController;
 use App\Http\Controllers\Settings\ReminderController;
 use App\Http\Controllers\Settings\SecurityController;
+use App\Http\Controllers\Settings\SettingValuesController;
 use App\Http\Controllers\Settings\WhatsAppController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('settings/reminders', [ReminderController::class, 'update'])->name('settings.reminders.update');
 
     Route::middleware('role:owner')->group(function () {
+        Route::post('settings/values', [SettingValuesController::class, 'upsert'])->name('settings.values.upsert');
         Route::get('settings/mail', [MailController::class, 'edit'])->name('settings.mail.edit');
         Route::patch('settings/mail', [MailController::class, 'update'])->name('settings.mail.update');
         Route::post('settings/mail/test', [MailController::class, 'test'])->name('settings.mail.test');
@@ -54,4 +56,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('settings/property-types/{propertyType}', [PropertyTypeController::class, 'update'])->name('settings.property-types.update');
         Route::delete('settings/property-types/{propertyType}', [PropertyTypeController::class, 'destroy'])->name('settings.property-types.destroy');
     });
+
+    // Catch-all for plugin-defined settings pages — must be last so explicit routes match first.
+    Route::get('settings/{page}', [SettingValuesController::class, 'edit'])->name('settings.dynamic.edit');
 });

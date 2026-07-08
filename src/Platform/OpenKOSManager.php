@@ -7,6 +7,7 @@ use OpenKOS\Platform\Navigation\NavigationRegistry;
 use OpenKOS\Platform\Notification\NotificationRegistry;
 use OpenKOS\Platform\Payment\PaymentRegistry;
 use OpenKOS\Platform\Permission\PermissionRegistry;
+use OpenKOS\Platform\Settings\SettingsManager;
 use OpenKOS\Platform\Settings\SettingsRegistry;
 use OpenKOS\Platform\Workspace\Workspace;
 use OpenKOS\Platform\Workspace\WorkspaceRegistry;
@@ -22,6 +23,7 @@ class OpenKOSManager
         private readonly NavigationRegistry $navigation,
         private readonly WorkspaceRegistry $workspaces,
         private readonly SettingsRegistry $settings,
+        private readonly SettingsManager $settingsManager,
         private readonly NotificationRegistry $notifications,
         private readonly PaymentRegistry $payments,
         private readonly PermissionRegistry $permissions,
@@ -65,6 +67,11 @@ class OpenKOSManager
     public function settings(): SettingsRegistry
     {
         return $this->settings;
+    }
+
+    public function settingsManager(): SettingsManager
+    {
+        return $this->settingsManager;
     }
 
     public function notifications(): NotificationRegistry
