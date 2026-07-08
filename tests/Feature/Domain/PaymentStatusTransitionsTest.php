@@ -2,6 +2,7 @@
 
 use App\Business\Payments\PaymentStatusValidator;
 use App\Enums\PaymentStatus;
+use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
@@ -39,7 +40,11 @@ it('rejects cancelled to any transition', function () {
 });
 
 it('transitions payment from pending to confirmed via verify', function () {
-    $payment = Payment::factory()->pending()->create();
+    $invoice = Invoice::factory()->create(['total' => 1_000_000]);
+    $payment = Payment::factory()->pending()->create([
+        'invoice_id' => $invoice->id,
+        'amount' => 500_000,
+    ]);
     $user = User::factory()->owner()->create();
 
     $this->actingAs($user)
