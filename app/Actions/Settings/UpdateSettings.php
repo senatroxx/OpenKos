@@ -45,11 +45,11 @@ class UpdateSettings
             if (in_array($key, $sensitive, true)) {
                 $data[$key] = '[REDACTED]';
             } elseif (in_array($key, ['mail_config', 'whatsapp_config'], true) && is_array($value)) {
-                foreach ($value as $subKey => $subValue) {
-                    if (in_array($subKey, ['password', 'mail_password'], true)) {
-                        $data[$key][$subKey] = '[REDACTED]';
+                array_walk_recursive($data[$key], function (&$v): void {
+                    if (is_string($v)) {
+                        $v = '[REDACTED]';
                     }
-                }
+                });
             }
         }
 
