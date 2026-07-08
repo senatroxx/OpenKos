@@ -82,10 +82,10 @@ Schema::create('lease_tenant', function (Blueprint $table) {
 
 #### Modified `leases` Table
 
-| Column | Change |
-|---|---|
+| Column                            | Change                                                |
+| --------------------------------- | ----------------------------------------------------- |
 | `tenant_id` → `primary_tenant_id` | Rename, make nullable (FK → tenants.id, nullOnDelete) |
-| | Add `@after('primary_tenant_id')` |
+|                                   | Add `@after('primary_tenant_id')`                     |
 
 Migration path:
 
@@ -148,43 +148,43 @@ This is the exhaustive checklist of every location that needs modification when 
 
 ### Backend
 
-| File | Change |
-|---|---|
-| `app/Models/Lease.php` | Replace `tenant(): BelongsTo` with `tenants(): BelongsToMany`, add `primaryTenant(): BelongsTo`. Remove `tenant_id` from `$fillable`, add `primary_tenant_id`. |
-| `app/Models/Tenant.php` | Change `leases(): HasMany` to `leases(): BelongsToMany`. |
-| `app/Http/Requests/StoreLeaseRequest.php` | Replace `tenant_id` validation with `tenant_ids` (array). Remove `ensureUnitAvailable()`. Add capacity validation (`count(tenant_ids) <= unit.capacity`). |
-| `app/Http/Requests/UpdateLeaseRequest.php` | Same tenant_id → tenant_ids changes. |
-| `app/Http/Controllers/LeaseController.php` | Store: accept `tenant_ids` array, create pivot records. Remove `ensureUnitAvailable()` call. Update `availableUnits` query to check capacity remaining. Move/moveOut: check capacity instead of "no active lease." |
-| `app/Http/Controllers/TenantController.php` | `assignUnit`: accept multiple tenant IDs, check capacity. Update flash messages to plural. |
-| `app/Http/Controllers/UnitController.php` | Update `occupied` status logic: check capacity vs active tenant count. |
-| All `$lease->tenant` references in controllers | Change to `$lease->tenants` or `$lease->primaryTenant`. |
+| File                                           | Change                                                                                                                                                                                                             |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/Models/Lease.php`                         | Replace `tenant(): BelongsTo` with `tenants(): BelongsToMany`, add `primaryTenant(): BelongsTo`. Remove `tenant_id` from `$fillable`, add `primary_tenant_id`.                                                     |
+| `app/Models/Tenant.php`                        | Change `leases(): HasMany` to `leases(): BelongsToMany`.                                                                                                                                                           |
+| `app/Http/Requests/StoreLeaseRequest.php`      | Replace `tenant_id` validation with `tenant_ids` (array). Remove `ensureUnitAvailable()`. Add capacity validation (`count(tenant_ids) <= unit.capacity`).                                                          |
+| `app/Http/Requests/UpdateLeaseRequest.php`     | Same tenant_id → tenant_ids changes.                                                                                                                                                                               |
+| `app/Http/Controllers/LeaseController.php`     | Store: accept `tenant_ids` array, create pivot records. Remove `ensureUnitAvailable()` call. Update `availableUnits` query to check capacity remaining. Move/moveOut: check capacity instead of "no active lease." |
+| `app/Http/Controllers/TenantController.php`    | `assignUnit`: accept multiple tenant IDs, check capacity. Update flash messages to plural.                                                                                                                         |
+| `app/Http/Controllers/UnitController.php`      | Update `occupied` status logic: check capacity vs active tenant count.                                                                                                                                             |
+| All `$lease->tenant` references in controllers | Change to `$lease->tenants` or `$lease->primaryTenant`.                                                                                                                                                            |
 
 ### Queries (Affected)
 
-| Query | Current | Future |
-|---|---|---|
-| Available units | `whereDoesntHave('leases', fn => status=active)` | `withCount(['tenants' => fn => active])` + having `tenants_count < capacity` |
+| Query                 | Current                                                      | Future                                                                                                             |
+| --------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Available units       | `whereDoesntHave('leases', fn => status=active)`             | `withCount(['tenants' => fn => active])` + having `tenants_count < capacity`                                       |
 | Unit has active lease | `where('unit_id', $id)->where('status', 'active')->exists()` | `where('unit_id', $id)->where('status', 'active')->withCount('tenants')->having('tenants_count', '<', 'capacity')` |
-| Unit display status | `occupied` if any active lease | `occupied` if `tenants_count >= capacity`, `partial` if `0 < tenants_count < capacity` |
+| Unit display status   | `occupied` if any active lease                               | `occupied` if `tenants_count >= capacity`, `partial` if `0 < tenants_count < capacity`                             |
 
 ### Frontend
 
 All changes assume the backend now returns `tenants: TenantInfo[]` instead of `tenant: TenantInfo | null`.
 
-| File | Change |
-|---|---|
-| `lease-form-sheet.tsx` | Replace single `SearchableSelect` for tenant with multi-select. Allow selecting up to `unit.capacity` tenants. Change button label to "Assign Tenants." Submit `tenant_ids[]` array. |
-| `lease-edit-sheet.tsx` | Show list of tenants instead of single tenant name. Allow adding/removing tenants. |
-| `lease-detail-sheet.tsx` | Display tenant list (primary tenant highlighted). Show "Primary" badge on primary tenant. |
-| `unit-detail-sheet.tsx` | Show all tenants currently on active lease, not just `leases[0].tenant`. Show capacity usage (e.g., "2/3 occupied"). |
-| `assign-unit-sheet.tsx` | Accept single or multiple tenants. |
-| `move-unit-sheet.tsx` | Handle partial move-out (moving one tenant out while others stay). |
-| `move-out-sheet.tsx` | Handle partial move-out. |
-| `properties/units/index.tsx` | Tenant column: show list of tenant names instead of single. Status column: show "Partial" for partially occupied units. |
-| `properties/units/leases/index.tsx` | Show multi-tenant occupancy on each lease row. |
-| `leases/index.tsx` | Update tenant display to show multiple names. Update filters. |
-| `tenants/index.tsx` | Update "Active Lease" column to show unit + co-tenants. |
-| `tenant-detail-sheet.tsx` | Show co-tenants on shared lease. |
+| File                                | Change                                                                                                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lease-form-sheet.tsx`              | Replace single `SearchableSelect` for tenant with multi-select. Allow selecting up to `unit.capacity` tenants. Change button label to "Assign Tenants." Submit `tenant_ids[]` array. |
+| `lease-edit-sheet.tsx`              | Show list of tenants instead of single tenant name. Allow adding/removing tenants.                                                                                                   |
+| `lease-detail-sheet.tsx`            | Display tenant list (primary tenant highlighted). Show "Primary" badge on primary tenant.                                                                                            |
+| `unit-detail-sheet.tsx`             | Show all tenants currently on active lease, not just `leases[0].tenant`. Show capacity usage (e.g., "2/3 occupied").                                                                 |
+| `assign-unit-sheet.tsx`             | Accept single or multiple tenants.                                                                                                                                                   |
+| `move-unit-sheet.tsx`               | Handle partial move-out (moving one tenant out while others stay).                                                                                                                   |
+| `move-out-sheet.tsx`                | Handle partial move-out.                                                                                                                                                             |
+| `properties/units/index.tsx`        | Tenant column: show list of tenant names instead of single. Status column: show "Partial" for partially occupied units.                                                              |
+| `properties/units/leases/index.tsx` | Show multi-tenant occupancy on each lease row.                                                                                                                                       |
+| `leases/index.tsx`                  | Update tenant display to show multiple names. Update filters.                                                                                                                        |
+| `tenants/index.tsx`                 | Update "Active Lease" column to show unit + co-tenants.                                                                                                                              |
+| `tenant-detail-sheet.tsx`           | Show co-tenants on shared lease.                                                                                                                                                     |
 
 ### TypeScript Types
 
@@ -198,7 +198,12 @@ type Lease = {
 
 // After
 type Lease = {
-    tenants: Array<{ id: number; name: string; phone: string | null; pivot: { is_primary: boolean } }>;
+    tenants: Array<{
+        id: number;
+        name: string;
+        phone: string | null;
+        pivot: { is_primary: boolean };
+    }>;
     primary_tenant: { id: number; name: string; phone: string | null } | null;
 };
 ```
@@ -266,8 +271,8 @@ type Lease = {
 ### Capacity Changes
 
 - Changing `unit.capacity` when tenants are currently assigned needs careful handling:
-  - Increasing capacity: always safe (just allows more tenants)
-  - Decreasing capacity below current tenant count: should be blocked or require move-out
+    - Increasing capacity: always safe (just allows more tenants)
+    - Decreasing capacity below current tenant count: should be blocked or require move-out
 
 ### Dashboard / Reporting
 

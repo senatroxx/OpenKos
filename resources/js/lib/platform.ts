@@ -58,6 +58,7 @@ export function platformPageNavItems(
 
     for (const page of visible) {
         const item: NavItem = { title: page.title, href: page.href };
+
         if (page.group) {
             (groups[page.group] ??= []).push(item);
         } else {
