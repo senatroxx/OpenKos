@@ -8,7 +8,6 @@ export type SettingDefinition = {
 };
 
 export type DynamicSettingsFormProps = {
-    page: string;
     definitions: SettingDefinition[];
     values: Record<string, unknown>;
 };

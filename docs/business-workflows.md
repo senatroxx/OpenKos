@@ -160,14 +160,14 @@ app/
 
 ## Current Workflows (refactored)
 
-| Workflow | Controller | Action | Data | Result | Business |
-|---|---|---|---|---|---|
-| Create Lease | `LeaseController::store()` | `CreateLease` | `CreateLeaseData` | — | `OccupancyCalculator` |
-| Renew Lease | `LeaseController::renew()` | `RenewLease` | `RenewLeaseData` | `RenewLeaseResult` | `RenewalEligibilityChecker`, `LeaseFinancialChecker` |
-| Move Out / Transfer | `LeaseController::moveOut()`, `LeaseController::move()` | `MoveOutLease` | `MoveOutLeaseData` | `MoveOutLeaseResult` | `OccupancyCalculator` |
-| Record Payment | `PaymentController::store()` | `RecordPayment` | `RecordPaymentData` | `RecordPaymentResult` | — |
-| Force Reminder | `LeaseController::sendReminder()` | `ForceSendReminder` | — | — | — |
-| Scheduled Reminders | Console Command | `SendRentReminders` | — | — | `PaymentReminderScheduler` |
+| Workflow            | Controller                                              | Action              | Data                | Result                | Business                                             |
+| ------------------- | ------------------------------------------------------- | ------------------- | ------------------- | --------------------- | ---------------------------------------------------- |
+| Create Lease        | `LeaseController::store()`                              | `CreateLease`       | `CreateLeaseData`   | —                     | `OccupancyCalculator`                                |
+| Renew Lease         | `LeaseController::renew()`                              | `RenewLease`        | `RenewLeaseData`    | `RenewLeaseResult`    | `RenewalEligibilityChecker`, `LeaseFinancialChecker` |
+| Move Out / Transfer | `LeaseController::moveOut()`, `LeaseController::move()` | `MoveOutLease`      | `MoveOutLeaseData`  | `MoveOutLeaseResult`  | `OccupancyCalculator`                                |
+| Record Payment      | `PaymentController::store()`                            | `RecordPayment`     | `RecordPaymentData` | `RecordPaymentResult` | —                                                    |
+| Force Reminder      | `LeaseController::sendReminder()`                       | `ForceSendReminder` | —                   | —                     | —                                                    |
+| Scheduled Reminders | Console Command                                         | `SendRentReminders` | —                   | —                     | `PaymentReminderScheduler`                           |
 
 ## Non-Examples (keep thin)
 

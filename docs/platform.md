@@ -40,14 +40,14 @@ Core also dispatches domain events plugins can subscribe to, e.g. `App\Events\Pa
 
 Six registries, each bound as a **container singleton** (no static state) in `PlatformServiceProvider::register()`. All implement `Arrayable`, so exposing any of them to the frontend later is `->toArray()` in a shared Inertia prop.
 
-| Registry | Registers | Item shape |
-|---|---|---|
-| `NavigationRegistry` | Sidebar nav items, grouped (`main`, `footer`, …) | `NavigationItem(title, href?, icon?, permission?, children[])` — mirrors the TS `NavItem` type |
-| `DashboardRegistry` | Dashboard pages | `DashboardPage(key, title, href, permission?)` |
-| `WorkspaceRegistry` | Tabs on entity workspace pages | `WorkspaceTab(key, label, permission?, meta[])` |
-| `SettingsRegistry` | Settings pages | `SettingsPage(key, title, href, permission?, group?, routeName?, order?)` — `group` renders under a nav section; `routeName` is resolved lazily in `toArray()` (safe for plugin `boot()`); pages sort by `order` (default 500) |
-| `NotificationRegistry` | Notification drivers by name | `NotificationDriverRegistration(name, channel, driverClass, label, config[])` |
-| `PaymentRegistry` | Payment gateways by key | class-string or instance of `PaymentGateway` |
+| Registry               | Registers                                        | Item shape                                                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NavigationRegistry`   | Sidebar nav items, grouped (`main`, `footer`, …) | `NavigationItem(title, href?, icon?, permission?, children[])` — mirrors the TS `NavItem` type                                                                                                                                 |
+| `DashboardRegistry`    | Dashboard pages                                  | `DashboardPage(key, title, href, permission?)`                                                                                                                                                                                 |
+| `WorkspaceRegistry`    | Tabs on entity workspace pages                   | `WorkspaceTab(key, label, permission?, meta[])`                                                                                                                                                                                |
+| `SettingsRegistry`     | Settings pages                                   | `SettingsPage(key, title, href, permission?, group?, routeName?, order?)` — `group` renders under a nav section; `routeName` is resolved lazily in `toArray()` (safe for plugin `boot()`); pages sort by `order` (default 500) |
+| `NotificationRegistry` | Notification drivers by name                     | `NotificationDriverRegistration(name, channel, driverClass, label, config[])`                                                                                                                                                  |
+| `PaymentRegistry`      | Payment gateways by key                          | class-string or instance of `PaymentGateway`                                                                                                                                                                                   |
 
 Conventions:
 
@@ -182,7 +182,7 @@ class MyPlugin extends Plugin
             title: 'My Plugin',
             href: '/settings/my-plugin',
             group: 'Credentials',
-            order: 450,                          // inserts between Mail (300) and WhatsApp (400)
+            order: 350,                          // inserts between Mail (300) and WhatsApp (400)
             routeName: 'settings.my-plugin.edit', // resolved lazily in toArray()
         ));
     }
@@ -261,7 +261,7 @@ that gates true external plugins.
 ### Security & permission boundaries
 
 Plugins run **in-process with full application access** — there is no sandbox. The trust
-boundary is therefore *installation*: only enable plugins you trust, exactly like any
+boundary is therefore _installation_: only enable plugins you trust, exactly like any
 Composer dependency. What the platform **does** enforce:
 
 - **Permissions** — a plugin declares its own permissions via
@@ -328,4 +328,4 @@ The backend and client halves are independent: registry entries + route + listen
 - `tests/Unit/Platform/` — registries (framework-free) and `PluginLoaderTest` (version/dependency/ordering logic).
 - `tests/Feature/Platform/` — container/facade resolution, workspace scoping, and the plugin boot lifecycle: register-before-boot ordering, event-listener wiring (`PluginEventTest`), and convention-based route/migration loading (`PluginResourcesTest`).
 
-Note: platform registries are container singletons; tests that enable a plugin assert *contains*, not exact counts.
+Note: platform registries are container singletons; tests that enable a plugin assert _contains_, not exact counts.
