@@ -55,6 +55,8 @@ npm run dev
 
 ## Architecture
 
+See [docs/architecture.md](docs/architecture.md) for patterns and conventions, and [docs/architecture/adr/](docs/architecture/adr/README.md) for Architecture Decision Records — PRs that make an architectural decision with lasting trade-offs should include an ADR.
+
 - **Owner**: Full access to all features
 - **Admin**: Operational access (properties, units, tenants, reports)
 - **Staff**: Limited access (tenants, dashboard)

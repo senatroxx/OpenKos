@@ -1,7 +1,7 @@
 # Architecture
 
 > **Status:** Living document
-> **Purpose:** Describe the application's architectural patterns, layer conventions, and data flow. Not an ADR — decisions with trade-offs belong in their own docs (see `docs/multi-tenant-occupancy.md`, `docs/rent-reminders.md`).
+> **Purpose:** Describe the application's architectural patterns, layer conventions, and data flow. Decisions with trade-offs are recorded as ADRs in [`docs/architecture/adr/`](architecture/adr/README.md); detailed feature designs live in their own docs (see `docs/multi-tenant-occupancy.md`, `docs/rent-reminders.md`).
 
 ## Stack
 
