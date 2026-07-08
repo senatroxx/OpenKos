@@ -49,6 +49,7 @@ class WhatsAppPlugin extends Plugin
             title: 'WhatsApp',
             href: '/settings/whatsapp',
             group: 'Credentials',
+            order: 400,
             routeName: 'settings.whatsapp.edit',
         ));
     }

@@ -13,6 +13,7 @@ final readonly class SettingsPage implements Arrayable
         public ?string $permission = null,
         public ?string $group = null,
         public ?string $routeName = null,
+        public int $order = 500,
     ) {}
 
     public function toArray(): array
