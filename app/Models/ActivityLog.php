@@ -38,11 +38,11 @@ class ActivityLog extends Model
 
     public static function record(
         string $event,
-        Model $subject,
+        ?Model $subject,
         ?array $metadata = null,
         ?int $actorId = null,
     ): ?self {
-        if ($subject->getKey() === null) {
+        if ($subject === null || $subject->getKey() === null) {
             return null;
         }
 

@@ -40,21 +40,75 @@ Core also dispatches domain events plugins can subscribe to, e.g. `App\Events\Pa
 
 Six registries, each bound as a **container singleton** (no static state) in `PlatformServiceProvider::register()`. All implement `Arrayable`, so exposing any of them to the frontend later is `->toArray()` in a shared Inertia prop.
 
-| Registry | Registers | Item shape |
-|---|---|---|
-| `NavigationRegistry` | Sidebar nav items, grouped (`main`, `footer`, …) | `NavigationItem(title, href?, icon?, permission?, children[])` — mirrors the TS `NavItem` type |
-| `DashboardRegistry` | Dashboard pages | `DashboardPage(key, title, href, permission?)` |
-| `WorkspaceRegistry` | Tabs on entity workspace pages | `WorkspaceTab(key, label, permission?, meta[])` |
-| `SettingsRegistry` | Settings pages | `SettingsPage(key, title, href, permission?)` |
-| `NotificationRegistry` | Notification drivers by name | `NotificationDriverRegistration(name, channel, driverClass, label, config[])` |
-| `PaymentRegistry` | Payment gateways by key | class-string or instance of `PaymentGateway` |
+| Registry               | Registers                                        | Item shape                                                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NavigationRegistry`   | Sidebar nav items, grouped (`main`, `footer`, …) | `NavigationItem(title, href?, icon?, permission?, children[])` — mirrors the TS `NavItem` type                                                                                                                                 |
+| `DashboardRegistry`    | Dashboard pages                                  | `DashboardPage(key, title, href, permission?)`                                                                                                                                                                                 |
+| `WorkspaceRegistry`    | Tabs on entity workspace pages                   | `WorkspaceTab(key, label, permission?, meta[])`                                                                                                                                                                                |
+| `SettingsRegistry`     | Settings pages                                   | `SettingsPage(key, title, href, permission?, group?, routeName?, order?)` — `group` renders under a nav section; `routeName` is resolved lazily in `toArray()` (safe for plugin `boot()`); pages sort by `order` (default 500) |
+| `NotificationRegistry` | Notification drivers by name                     | `NotificationDriverRegistration(name, channel, driverClass, label, config[])`                                                                                                                                                  |
+| `PaymentRegistry`      | Payment gateways by key                          | class-string or instance of `PaymentGateway`                                                                                                                                                                                   |
 
 Conventions:
 
 - Item objects are `final readonly` value objects with promoted constructors.
-- Duplicate keys throw `InvalidArgumentException` — plugins fail loudly at boot, not silently overwrite each other.
+- Duplicate page keys silently overwrite — `SettingsRegistry::registerPage()` is idempotent so re-booting the provider (e.g. in tests) doesn't crash. Other registries throw on duplicate keys.
 - `icon` is a **lucide icon name string** (PHP can't ship React components); the frontend resolves it to a component.
 - `permission` is a Spatie permission string (e.g. `properties.view`), matching how the sidebar gates visibility today.
+
+### Settings Storage (key-value via `Setting` model)
+
+In addition to sidebar pages, `SettingsRegistry` now manages **setting definitions** that plugins register to persist key-value configuration without schema migrations:
+
+```php
+$platform->settings()->registerSetting(new SettingDefinition(
+    key: 'my_plugin.api_key',
+    label: 'API Key',
+    type: 'encrypted',
+    default: null,
+    rules: ['nullable', 'string', 'max:255'],
+    page: 'my-plugin',          // groups settings under a settings page key
+));
+```
+
+Supported types: `string`, `boolean`, `integer`, `array`, `encrypted`, `encrypted:array`.
+
+**Reading and writing** goes through `SettingsManager`, accessible via the manager:
+
+```php
+// In a plugin's controller or Boot method:
+$manager = $platform->settingsManager();
+
+$value = $manager->get('my_plugin.api_key');
+$manager->set('my_plugin.api_key', 'new-value', auth()->user());
+```
+
+Alternatively, app code can inject `SettingsManager` or use the facade:
+
+```php
+OpenKOS::settingsManager()->get('my_plugin.api_key');
+```
+
+**Validation** is defined per key on the `SettingDefinition` and enforced at write time by the manager via Laravel's `Validator`. A plugin's controller can also use its own FormRequest for HTTP-level validation.
+
+**Automated UI**: Registering settings with a `page` key enables a generic settings page at `/settings/{page}`. The `DynamicSettingsForm` React component renders form fields from the registered definitions. Plugins can either use this generic endpoint or build custom pages.
+
+**Storage**: All settings (core and plugin) live in a single key-value `settings` table. The `Setting` model is a thin facade — `get(key)`, `set(key, value)`, and `some(keys)` delegate to `App\Services\Settings\SettingManager`. `SettingCaster` handles serialize/deserialize. `SettingRegistry` wraps `config('settings')` for default values and casts. Core controllers go through `UpdateSettings` action (which records audit logs and dispatches `SettingsUpdated`). Plugin settings go through `SettingsManager` (which validates against registered `SettingDefinition` rules).
+
+Defaults live in `config/settings.php` and define the core application settings:
+
+```php
+// config/settings.php
+return [
+    'site_name' => ['default' => 'OpenKOS', 'cast' => 'string'],
+    'reminder_enabled' => ['default' => true, 'cast' => 'boolean'],
+    'mail_config' => ['default' => [], 'cast' => 'encrypted:array'],
+];
+```
+
+Plugins register their own settings via the platform registry instead: `$platform->settings()->registerSetting(new SettingDefinition(...))` — the core never needs to know about plugin settings. `Setting::get('key')` returns the DB value when present, or falls back to the registered default.
+
+**Audit trail**: Settings updates are recorded to `audit_logs` via `UpdateSettings`. Every change also dispatches `App\Events\Settings\SettingsUpdated`, which `RecordActivitySubscriber` writes to `activity_logs`.
 
 ### Workspaces
 
@@ -86,6 +140,7 @@ extensions. The `src/Plugins/Example/` plugin is a working reference for everyth
 use App\Events\Payment\PaymentRecorded;
 use OpenKOS\Platform\Navigation\NavigationItem;
 use OpenKOS\Platform\OpenKOSManager;
+use OpenKOS\Platform\Settings\SettingsPage;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginManifest;
 
@@ -119,7 +174,18 @@ class MyPlugin extends Plugin
     }
 
     // Optional — runs after ALL plugins have registered.
-    public function boot(OpenKOSManager $platform): void {}
+    // Register settings pages here (route() is available), not in register().
+    public function boot(OpenKOSManager $platform): void
+    {
+        $platform->settings()->registerPage(new SettingsPage(
+            key: 'my-plugin',
+            title: 'My Plugin',
+            href: '/settings/my-plugin',
+            group: 'Credentials',
+            order: 350,                          // inserts between Mail (300) and WhatsApp (400)
+            routeName: 'settings.my-plugin.edit', // resolved lazily in toArray()
+        ));
+    }
 
     // Optional — subscribe to core domain events.
     public function listens(): array
@@ -195,7 +261,7 @@ that gates true external plugins.
 ### Security & permission boundaries
 
 Plugins run **in-process with full application access** — there is no sandbox. The trust
-boundary is therefore *installation*: only enable plugins you trust, exactly like any
+boundary is therefore _installation_: only enable plugins you trust, exactly like any
 Composer dependency. What the platform **does** enforce:
 
 - **Permissions** — a plugin declares its own permissions via
@@ -262,4 +328,4 @@ The backend and client halves are independent: registry entries + route + listen
 - `tests/Unit/Platform/` — registries (framework-free) and `PluginLoaderTest` (version/dependency/ordering logic).
 - `tests/Feature/Platform/` — container/facade resolution, workspace scoping, and the plugin boot lifecycle: register-before-boot ordering, event-listener wiring (`PluginEventTest`), and convention-based route/migration loading (`PluginResourcesTest`).
 
-Note: platform registries are container singletons; tests that enable a plugin assert *contains*, not exact counts.
+Note: platform registries are container singletons; tests that enable a plugin assert _contains_, not exact counts.

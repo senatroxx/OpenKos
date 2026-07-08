@@ -5,17 +5,17 @@
 
 ## Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | PHP 8.4, Laravel 13 |
-| Frontend | React 19, Inertia 3, TypeScript |
-| UI Kit | shadcn/ui, Tailwind CSS 4 |
-| Auth | Laravel Fortify (login, 2FA, passkeys, password reset) |
-| Authorization | Spatie Permission (RBAC) |
-| Routes (TS) | Laravel Wayfinder |
-| Database | PostgreSQL (dev: SQLite) |
-| Queue | Database driver |
-| Testing | Pest 4 |
+| Layer         | Technology                                             |
+| ------------- | ------------------------------------------------------ |
+| Backend       | PHP 8.4, Laravel 13                                    |
+| Frontend      | React 19, Inertia 3, TypeScript                        |
+| UI Kit        | shadcn/ui, Tailwind CSS 4                              |
+| Auth          | Laravel Fortify (login, 2FA, passkeys, password reset) |
+| Authorization | Spatie Permission (RBAC)                               |
+| Routes (TS)   | Laravel Wayfinder                                      |
+| Database      | PostgreSQL (dev: SQLite)                               |
+| Queue         | Database driver                                        |
+| Testing       | Pest 4                                                 |
 
 ## Layer Architecture
 
@@ -151,6 +151,7 @@ Reminders are scheduled by `SendRentRemindersCommand` (daily at 08:00), which ca
 ### Permission Convention
 
 Permissions are defined as PHP enums (`App\Enums\Permission`) with:
+
 - A `case` name (e.g., `RemindersSend`)
 - A `label()` method returning a human-readable name
 - A `description()` method for the admin UI
@@ -268,12 +269,12 @@ Occupied   ──→ Available       (all leases terminated)
 
 Every foreign key intentionally chooses one of four strategies:
 
-| Strategy | When to use |
-|---|---|
-| `restrictOnDelete` | Parent references a historical business record. Prevents hard-deleting the parent while children exist. |
-| `nullOnDelete` | The child can logically exist without the parent (nullable audit trails, optional associations). |
-| `cascadeOnDelete` | The child is meaningless without the parent (auth credentials, dependent files), or is a framework table (Spatie). |
-| `noActionOnDelete` | Reserved for transactional integrity (not currently used). |
+| Strategy           | When to use                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `restrictOnDelete` | Parent references a historical business record. Prevents hard-deleting the parent while children exist.            |
+| `nullOnDelete`     | The child can logically exist without the parent (nullable audit trails, optional associations).                   |
+| `cascadeOnDelete`  | The child is meaningless without the parent (auth credentials, dependent files), or is a framework table (Spatie). |
+| `noActionOnDelete` | Reserved for transactional integrity (not currently used).                                                         |
 
 **Historical business records** (leases, payments, maintenance tickets, reminders, documents, pricing history, audit trails) must use `restrictOnDelete` on their parent FK. This prevents hard-deleting a parent model while its business records still reference it. Soft-deletable parents (Property, Unit, Lease, Tenant) use `$model->delete()` which sets `deleted_at` — the FK constraint only fires on `forceDelete()` or raw SQL deletes. Child records themselves may be hard-deleted (e.g. MaintenanceTicket, TenantDocument) — the constraint protects the parent, not the child.
 
@@ -287,18 +288,19 @@ The full FK inventory with per-constraint rationale is enforced by `tests/Featur
 
 Composite indexes are added to support production query patterns (filtering and sorting across multiple columns). The rationale for each:
 
-| Table | Index | Columns | Query pattern |
-|-------|-------|---------|---------------|
-| `payments` | `idx_payments_type_id_status` | `paymentable_type, paymentable_id, status` | Dashboard rent stats (`whereNotIn status`), overview finance (`where status = confirmed`), lease overdue checks. The previous morphs-only index `(paymentable_type, paymentable_id)` was a prefix — this superset covers it and status filtering together. |
-| `leases` | `idx_leases_status_start_date` | `status, start_date` | Dashboard base query `where(status='active', start_date <= now)`, overdue lease calculation. |
-| `maintenance_tickets` | `idx_maintenance_tickets_property_status` | `property_id, status` | Property-scoped ticket filtering. |
-| `maintenance_tickets` | `idx_maintenance_tickets_unit_status` | `unit_id, status` | Unit-scoped maintenance history queries. |
-| `units` | `idx_units_property_status` | `property_id, status` | Unit availability listings (`scopeAvailableForAssignment`). |
-| `lease_unit_histories` | `idx_luh_from_reason_date` | `from_unit_id, reason, effective_date` | Maintenance transfer lookups — equality on first 2 columns + ORDER BY on third. |
-| `unit_rates` | `idx_unit_rates_unit_active_interval` | `unit_id, is_active, billing_interval` | `activeRates()` relation. |
-| `properties` | `idx_properties_active_name` | `is_active, name` | Admin property dropdowns sorted by name. |
+| Table                  | Index                                     | Columns                                    | Query pattern                                                                                                                                                                                                                                              |
+| ---------------------- | ----------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `payments`             | `idx_payments_type_id_status`             | `paymentable_type, paymentable_id, status` | Dashboard rent stats (`whereNotIn status`), overview finance (`where status = confirmed`), lease overdue checks. The previous morphs-only index `(paymentable_type, paymentable_id)` was a prefix — this superset covers it and status filtering together. |
+| `leases`               | `idx_leases_status_start_date`            | `status, start_date`                       | Dashboard base query `where(status='active', start_date <= now)`, overdue lease calculation.                                                                                                                                                               |
+| `maintenance_tickets`  | `idx_maintenance_tickets_property_status` | `property_id, status`                      | Property-scoped ticket filtering.                                                                                                                                                                                                                          |
+| `maintenance_tickets`  | `idx_maintenance_tickets_unit_status`     | `unit_id, status`                          | Unit-scoped maintenance history queries.                                                                                                                                                                                                                   |
+| `units`                | `idx_units_property_status`               | `property_id, status`                      | Unit availability listings (`scopeAvailableForAssignment`).                                                                                                                                                                                                |
+| `lease_unit_histories` | `idx_luh_from_reason_date`                | `from_unit_id, reason, effective_date`     | Maintenance transfer lookups — equality on first 2 columns + ORDER BY on third.                                                                                                                                                                            |
+| `unit_rates`           | `idx_unit_rates_unit_active_interval`     | `unit_id, is_active, billing_interval`     | `activeRates()` relation.                                                                                                                                                                                                                                  |
+| `properties`           | `idx_properties_active_name`              | `is_active, name`                          | Admin property dropdowns sorted by name.                                                                                                                                                                                                                   |
 
 **Design decisions:**
+
 - `period_start` was intentionally excluded from the payments index. The original queries used `whereMonth()`/`whereYear()`, which wrap the column in `EXTRACT()` — a B-tree index cannot accelerate function-wrapped predicates. Those queries were rewritten to range conditions (`whereBetween`) so the index is usable.
 - Existing single-column indexes (`status`, `priority`) are preserved — they serve queries that filter on those columns alone without additional columns (e.g., global status filter on maintenance tickets).
 - The set of composite indexes is enforced by `tests/Feature/Schema/CompositeIndexTest.php`.

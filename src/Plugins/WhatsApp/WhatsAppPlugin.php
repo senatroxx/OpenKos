@@ -7,6 +7,7 @@ use OpenKOS\Platform\Notification\NotificationDriverRegistration;
 use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginManifest;
+use OpenKOS\Platform\Settings\SettingsPage;
 
 /**
  * Core plugin that registers the built-in WhatsApp drivers into the platform
@@ -39,5 +40,17 @@ class WhatsAppPlugin extends Plugin
                 config: Arr::except($definition, ['class', 'label']),
             ));
         }
+    }
+
+    public function boot(OpenKOSManager $platform): void
+    {
+        $platform->settings()->registerPage(new SettingsPage(
+            key: 'whatsapp',
+            title: 'WhatsApp',
+            href: '/settings/whatsapp',
+            group: 'Credentials',
+            order: 400,
+            routeName: 'settings.whatsapp.edit',
+        ));
     }
 }

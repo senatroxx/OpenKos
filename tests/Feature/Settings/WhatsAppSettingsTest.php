@@ -65,7 +65,7 @@ describe('WhatsApp settings page', function () {
             ])
             ->assertRedirect();
 
-        expect(Setting::get()->whatsapp_driver)->toBe('fonnte');
+        expect(Setting::get('whatsapp_driver'))->toBe('fonnte');
     });
 
     it('updates whatsapp config', function () {
@@ -82,16 +82,15 @@ describe('WhatsApp settings page', function () {
             ])
             ->assertRedirect();
 
-        $config = Setting::get()->whatsapp_config;
+        $config = Setting::get('whatsapp_config');
 
         expect($config['fonnte']['token'])->toBe('test-token-123');
     });
 
     it('does not overwrite existing config on update', function () {
         $owner = User::factory()->owner()->create();
-        $setting = Setting::get();
-        $setting->whatsapp_config = ['fonnte' => ['token' => 'existing-token']];
-        $setting->save();
+        Setting::set('whatsapp_config', ['fonnte' => ['token' => 'existing-token']], 'encrypted:array');
+        Setting::set('whatsapp_driver', 'fonnte');
 
         $this->actingAs($owner)
             ->patch(route('settings.whatsapp.update'), [
@@ -102,7 +101,7 @@ describe('WhatsApp settings page', function () {
             ])
             ->assertRedirect();
 
-        $config = Setting::get()->whatsapp_config;
+        $config = Setting::get('whatsapp_config');
         expect($config['fonnte']['token'])->toBe('existing-token');
         expect($config['baileys']['url'])->toBe('http://localhost:3000');
     });
@@ -144,10 +143,8 @@ describe('WhatsApp settings page', function () {
 
     it('disconnects baileys driver', function () {
         $owner = User::factory()->owner()->create();
-        $setting = Setting::get();
-        $setting->whatsapp_driver = 'baileys';
-        $setting->whatsapp_config = ['baileys' => ['url' => 'http://localhost:3000', 'api_key' => 'secret']];
-        $setting->save();
+        Setting::set('whatsapp_driver', 'baileys');
+        Setting::set('whatsapp_config', ['baileys' => ['url' => 'http://localhost:3000', 'api_key' => 'secret']], 'encrypted:array');
 
         Http::fake([
             '*/api/sessions' => Http::response(['meta' => ['success' => true]]),
@@ -159,5 +156,4 @@ describe('WhatsApp settings page', function () {
 
         Http::assertSent(fn ($request) => $request->method() === 'DELETE');
     });
-
 });

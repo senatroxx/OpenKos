@@ -6,7 +6,6 @@ use App\Enums\Role;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Support\Env;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
@@ -56,13 +55,11 @@ class InstallCommand extends Command
             '--force' => true,
         ]);
 
-        $setting = Setting::get();
-        $setting->site_name = $siteName;
-        $setting->country_code = $country;
-        $setting->locale = $country === 'ID' ? 'id' : config('app.locale');
-        $setting->currency = $country === 'ID' ? 'IDR' : 'USD';
-        $setting->timezone = $country === 'ID' ? 'Asia/Jakarta' : config('app.timezone');
-        $setting->save();
+        Setting::set('site_name', $siteName);
+        Setting::set('country_code', $country);
+        Setting::set('locale', $country === 'ID' ? 'id' : config('app.locale'));
+        Setting::set('currency', $country === 'ID' ? 'IDR' : 'USD');
+        Setting::set('timezone', $country === 'ID' ? 'Asia/Jakarta' : config('app.timezone'));
 
         $this->updateAppNameInEnv($siteName);
 
@@ -153,10 +150,6 @@ class InstallCommand extends Command
         $this->info("Database configured for {$connection}.");
     }
 
-    /**
-     * Re-read the .env file and reconfigure the database connection
-     * so that migrate runs against the newly configured database.
-     */
     protected function reloadDatabaseConfig(string $envPath): void
     {
         $values = [];

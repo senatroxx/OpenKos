@@ -78,7 +78,7 @@ class PropertyController extends Controller
 
         $result = $table->paginate($query, $request, 'properties');
 
-        $countryCode = Setting::get()->country_code;
+        $countryCode = Setting::get('country_code');
         $regions = Region::where('country_code', $countryCode)
             ->with('cities')
             ->orderBy('name')
