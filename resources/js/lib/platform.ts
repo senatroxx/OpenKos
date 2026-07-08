@@ -53,7 +53,7 @@ export function platformPageNavItems(
     auth: Auth,
 ): NavItem[] {
     const visible = pages.filter((page) => canSee(page.permission, auth));
-    const groups: Record<string, NavItem[]> = {};
+    const groups: Record<string, NavItem[]> = Object.create(null);
     const ungrouped: NavItem[] = [];
 
     for (const page of visible) {

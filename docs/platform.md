@@ -52,7 +52,7 @@ Six registries, each bound as a **container singleton** (no static state) in `Pl
 Conventions:
 
 - Item objects are `final readonly` value objects with promoted constructors.
-- Duplicate keys silently overwrite — `registerPage()` is idempotent so re-booting the provider (e.g. in tests) doesn't crash.
+- Duplicate page keys silently overwrite — `SettingsRegistry::registerPage()` is idempotent so re-booting the provider (e.g. in tests) doesn't crash. Other registries throw on duplicate keys.
 - `icon` is a **lucide icon name string** (PHP can't ship React components); the frontend resolves it to a component.
 - `permission` is a Spatie permission string (e.g. `properties.view`), matching how the sidebar gates visibility today.
 
@@ -95,7 +95,7 @@ OpenKOS::settingsManager()->get('my_plugin.api_key');
 
 **Storage**: All settings (core and plugin) live in a single key-value `settings` table. The `Setting` model is a thin facade — `get(key)`, `set(key, value)`, and `some(keys)` delegate to `App\Services\Settings\SettingManager`. `SettingCaster` handles serialize/deserialize. `SettingRegistry` wraps `config('settings')` for default values and casts. Core controllers go through `UpdateSettings` action (which records audit logs and dispatches `SettingsUpdated`). Plugin settings go through `SettingsManager` (which validates against registered `SettingDefinition` rules).
 
-Defaults live in `config/settings.php` (merged from all enabled plugins via `mergeConfigFrom`):
+Defaults live in `config/settings.php` and define the core application settings:
 
 ```php
 // config/settings.php
@@ -106,7 +106,7 @@ return [
 ];
 ```
 
-Plugins add their own `config/settings.php` — the core never needs to know about plugin settings. `Setting::get('key')` returns the DB value when present, or falls back to the registered default.
+Plugins register their own settings via the platform registry instead: `$platform->settings()->registerSetting(new SettingDefinition(...))` — the core never needs to know about plugin settings. `Setting::get('key')` returns the DB value when present, or falls back to the registered default.
 
 **Audit trail**: Settings updates are recorded to `audit_logs` via `UpdateSettings`. Every change also dispatches `App\Events\Settings\SettingsUpdated`, which `RecordActivitySubscriber` writes to `activity_logs`.
 

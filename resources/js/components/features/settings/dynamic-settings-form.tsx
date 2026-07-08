@@ -1,4 +1,5 @@
 import { Form } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -11,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import type { DynamicSettingsFormProps } from '@/types/settings';
+import type { DynamicSettingsFormProps, SettingDefinition } from '@/types/settings';
 
 export function DynamicSettingsForm({
     definitions,
@@ -44,16 +45,7 @@ export function DynamicSettingsForm({
                                 <div className="space-y-4">
                                     <input type="hidden" name="key" value={def.key} />
                                     {def.type === 'bool' ? (
-                                        <div className="flex items-center gap-2">
-                                            <Switch
-                                                id={def.key}
-                                                name="value"
-                                                defaultChecked={!!values[def.key]}
-                                            />
-                                            <Label htmlFor={def.key}>
-                                                {def.label}
-                                            </Label>
-                                        </div>
+                                        <BoolField def={def} value={!!values[def.key]} />
                                     ) : def.type === 'json' ? (
                                         <div className="grid gap-2">
                                             <Label htmlFor={def.key}>
@@ -115,6 +107,18 @@ export function DynamicSettingsForm({
                     </CardContent>
                 </Card>
             ))}
+        </div>
+    );
+}
+
+function BoolField({ def, value }: { def: SettingDefinition; value: boolean }) {
+    const [checked, setChecked] = useState(value);
+
+    return (
+        <div className="flex items-center gap-2">
+            <input type="hidden" name="value" value={checked ? '1' : '0'} />
+            <Switch id={def.key} checked={checked} onCheckedChange={setChecked} />
+            <Label htmlFor={def.key}>{def.label}</Label>
         </div>
     );
 }
