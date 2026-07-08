@@ -2,6 +2,7 @@
 
 namespace App\Actions\Leases;
 
+use App\Actions\Invoices\GenerateInvoices;
 use App\Business\Leases\LeaseFinancialChecker;
 use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\RenewalEligibilityChecker;
@@ -19,6 +20,7 @@ class RenewLease
         private readonly RenewalEligibilityChecker $eligibility,
         private readonly LeaseFinancialChecker $financial,
         private readonly LeaseStatusValidator $leaseStatusValidator,
+        private readonly GenerateInvoices $generateInvoices,
     ) {}
 
     public function execute(Lease $lease, RenewLeaseData $data): RenewLeaseResult
@@ -69,6 +71,7 @@ class RenewLease
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'billing_interval' => $lease->billing_interval,
                 'billing_unit' => $lease->billing_unit,
+                'billing_strategy' => $lease->billing_strategy,
                 'rent_due_day' => $lease->rent_due_day,
                 'is_custom_price' => $lease->is_custom_price,
                 'unit_rate_id' => $lease->unit_rate_id,
@@ -82,6 +85,8 @@ class RenewLease
             }
 
             $newLease->load('tenants:id,name,phone', 'primaryTenant:id,name,phone');
+
+            $this->generateInvoices->execute($newLease);
 
             return RenewLeaseResult::success($newLease);
         });

@@ -11,13 +11,11 @@ class PaymentPolicy
 {
     public function view(User $user, Payment $payment): bool
     {
-        $paymentable = $payment->paymentable;
-
-        if ($paymentable instanceof Lease) {
-            return $user->properties->contains($paymentable->unit->property_id);
+        if ($user->isOwner()) {
+            return true;
         }
 
-        return $user->isOwner();
+        return $user->properties->contains($payment->invoice->lease->unit->property_id);
     }
 
     public function create(User $user, Lease $lease): bool

@@ -59,10 +59,7 @@ describe('lease events', function () {
 
 describe('payment events', function () {
     it('records payment.recorded', function () {
-        $lease = Lease::factory()->create();
         $payment = Payment::factory()->create([
-            'paymentable_type' => $lease->getMorphClass(),
-            'paymentable_id' => $lease->id,
             'amount' => 150000,
             'payment_method' => 'cash',
             'status' => PaymentStatus::Pending,
@@ -86,11 +83,7 @@ describe('payment events', function () {
     });
 
     it('records payment.status_changed', function () {
-        $lease = Lease::factory()->create();
-        $payment = Payment::factory()->create([
-            'paymentable_type' => $lease->getMorphClass(),
-            'paymentable_id' => $lease->id,
-        ]);
+        $payment = Payment::factory()->create();
         $actor = User::factory()->owner()->create();
 
         PaymentStatusChanged::dispatch($payment, PaymentStatus::Pending, PaymentStatus::Confirmed, actorId: $actor->id);

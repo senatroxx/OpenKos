@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\InvoiceStatus;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -21,15 +23,15 @@ function createLeaseWithPayment(array $leaseOverrides = [], ?array $paymentData 
     ], $leaseOverrides));
 
     if ($paymentData !== null) {
-        $lease->payments()->create(array_merge([
-            'paymentable_type' => Lease::class,
-            'amount' => 100000,
-            'payment_date' => now(),
+        Invoice::factory()->create([
+            'lease_id' => $lease->id,
             'period_start' => now()->startOfMonth(),
             'period_end' => now()->endOfMonth(),
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ], $paymentData));
+            'due_date' => now()->startOfMonth()->addDays(4),
+            'total' => 100000,
+            'amount_paid' => 100000,
+            'status' => InvoiceStatus::Paid,
+        ]);
     }
 
     return $lease;
