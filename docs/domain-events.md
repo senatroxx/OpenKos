@@ -62,7 +62,7 @@ public readonly UnitStatus $to;     // new status
 **Payload: `SettingsUpdated`**
 
 ```php
-public readonly string $group;  // 'core' for core settings, page key for plugin settings
+public readonly string $group;  // settings group (e.g. 'general', 'reminders') or plugin-defined page key
 public readonly array $keys;    // affected setting keys
 public readonly ?int $actorId;
 ```

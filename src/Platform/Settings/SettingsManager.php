@@ -28,9 +28,10 @@ class SettingsManager
         $definition = $this->findDefinition($key);
 
         if ($definition->rules) {
+            $safeKey = str_replace('.', '_', $key);
             $validator = Validator::make(
-                [$key => $value],
-                [$key => $definition->rules],
+                [$safeKey => $value],
+                [$safeKey => $definition->rules],
             );
 
             if ($validator->fails()) {

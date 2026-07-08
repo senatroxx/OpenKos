@@ -19,8 +19,13 @@ class MailController extends Controller
 
     public function edit(): Response
     {
+        $settings = Setting::some(['mail_config']);
+        if (isset($settings['mail_config'])) {
+            unset($settings['mail_config']['password']);
+        }
+
         return Inertia::render('settings/mail', [
-            'settings' => Setting::some(['mail_config']),
+            'settings' => $settings,
         ]);
     }
 

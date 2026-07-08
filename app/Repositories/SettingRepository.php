@@ -4,22 +4,25 @@ namespace App\Repositories;
 
 use App\Data\Settings\SettingUpdateData;
 use App\Models\Setting;
+use Illuminate\Support\Facades\DB;
 
 class SettingRepository
 {
     public function update(array $data): SettingUpdateData
     {
-        $original = [];
+        return DB::transaction(function () use ($data) {
+            $original = [];
 
-        foreach ($data as $key => $value) {
-            $original[$key] = Setting::get($key);
-            Setting::set($key, $value);
-        }
+            foreach ($data as $key => $value) {
+                $original[$key] = Setting::get($key);
+                Setting::set($key, $value);
+            }
 
-        return new SettingUpdateData(
-            values: $data,
-            original: $original,
-            group: 'core',
-        );
+            return new SettingUpdateData(
+                values: $data,
+                original: $original,
+                group: 'core',
+            );
+        });
     }
 }

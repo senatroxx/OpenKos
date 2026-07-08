@@ -22,7 +22,7 @@ class SettingsRegistry implements Arrayable
     public function registerSetting(SettingDefinition $definition): static
     {
         if (isset($this->settings[$definition->key])) {
-            throw new InvalidArgumentException("Setting [{$definition->key}] is already registered.");
+            throw new \InvalidArgumentException("Setting [{$definition->key}] is already registered.");
         }
 
         $this->settings[$definition->key] = $definition;

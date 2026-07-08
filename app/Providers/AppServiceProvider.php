@@ -67,7 +67,7 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        if (! $config) {
+        if (! ($config['host'] ?? null)) {
             return;
         }
 
@@ -75,7 +75,11 @@ class AppServiceProvider extends ServiceProvider
         config()->set('mail.mailers.smtp.port', $config['port'] ?? 587);
         config()->set('mail.mailers.smtp.username', $config['username'] ?? '');
         config()->set('mail.mailers.smtp.password', $config['password'] ?? '');
-        config()->set('mail.mailers.smtp.encryption', $config['encryption'] ?? 'tls');
+        $encryption = $config['encryption'] ?? null;
+        if ($encryption === 'null') {
+            $encryption = null;
+        }
+        config()->set('mail.mailers.smtp.encryption', $encryption);
 
         if ($fromAddress = $config['from_address'] ?? null) {
             config()->set('mail.from.address', $fromAddress);

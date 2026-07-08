@@ -7,7 +7,7 @@ class SettingCaster
     public function serialize(mixed $value, string $cast): string
     {
         return match ($cast) {
-            'array' => json_encode($value),
+            'array' => json_encode($value, JSON_THROW_ON_ERROR),
             'encrypted:array' => encrypt(json_encode($value)),
             'encrypted' => encrypt($value),
             'boolean' => $value ? 'true' : 'false',

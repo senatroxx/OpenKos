@@ -14,6 +14,10 @@ class SettingFactory extends Factory
 
     public function definition(): array
     {
-        return [];
+        return [
+            'key' => fake()->word(),
+            'value' => fake()->sentence(),
+            'type' => 'string',
+        ];
     }
 }
