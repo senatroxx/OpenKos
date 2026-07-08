@@ -16,9 +16,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('audit_logs', function (Blueprint $table) {
-            $table->string('auditable_type')->nullable(false)->change();
-            $table->unsignedBigInteger('auditable_id')->nullable(false)->change();
-        });
+        // Irreversible: settings audit rows intentionally have null
+        // auditable. Re-tightening to NOT NULL would fail on existing data.
     }
 };
