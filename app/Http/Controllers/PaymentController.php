@@ -95,17 +95,26 @@ class PaymentController extends Controller
 
         if ($newStatus === PaymentStatus::Confirmed) {
             DB::transaction(function () use ($payment, $request, $newStatus) {
+                // Lock both invoice and payment so concurrent verify requests
+                // see the correct state and cannot double-confirm.
+                $lockedPayment = Payment::lockForUpdate()->findOrFail($payment->id);
+
+                if ($lockedPayment->status !== PaymentStatus::Pending) {
+                    abort(422, __('Payment has already been verified.'));
+                }
+
                 $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
 
+                // confirmed_sum excludes the current payment since it's still Pending
                 $confirmedSum = (float) $invoice->payments()
                     ->where('status', PaymentStatus::Confirmed->value)
                     ->sum('amount');
 
-                if ($confirmedSum + (float) $payment->amount > (float) $invoice->total) {
+                if ($confirmedSum + (float) $lockedPayment->amount > (float) $invoice->total) {
                     abort(422, 'Confirming this payment would exceed the invoice total.');
                 }
 
-                $payment->update([
+                $lockedPayment->update([
                     'status' => $newStatus,
                     'confirmed_by' => $request->user()->id,
                     'verified_by' => $request->user()->id,
