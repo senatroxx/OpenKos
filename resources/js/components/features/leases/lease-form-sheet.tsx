@@ -294,7 +294,6 @@ export default function LeaseFormSheet({
                                         handleStartDateChange(e);
                                         setData('start_date', e.target.value);
                                     }}
-                                    required
                                 />
                                 <InputError
                                     message={errors.start_date}
