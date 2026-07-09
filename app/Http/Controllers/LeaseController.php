@@ -9,6 +9,7 @@ use App\Actions\Reminders\ForceSendReminder;
 use App\Business\Leases\LeaseStatusValidator;
 use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
+use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
@@ -21,6 +22,7 @@ use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\RenewLeaseRequest;
 use App\Http\Requests\Lease\StoreLeaseRequest;
 use App\Http\Requests\Lease\UpdateLeaseRequest;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\PaymentProof;
@@ -54,6 +56,7 @@ class LeaseController extends Controller
             'unit.property.city',
             'payments.confirmedBy:id,name',
             'payments.proofs',
+            'payments.invoice:id,period_start,period_end,reference,status',
             'unitHistories.transferredBy:id,name',
         ]);
 
@@ -68,7 +71,7 @@ class LeaseController extends Controller
 
         $table = Table::make()
             ->columns([
-                Column::make('period_start', 'Period')->sortable(),
+                Column::make('period_start', 'Period'),
                 Column::make('payment_date', 'Paid on')->sortable(),
                 Column::make('amount', 'Amount')->sortable(),
                 Column::make('payment_method', 'Method')->sortable(),
@@ -77,14 +80,14 @@ class LeaseController extends Controller
             ])
             ->filters([
                 Filter::select('status', 'Status', array_map(fn (PaymentStatus $s) => $s->value, PaymentStatus::cases()))
-                    ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+                    ->query(fn (Builder $q, string $value) => $q->where('payments.status', $value)),
                 Filter::select('payment_method', 'Method', array_map(fn (PaymentMethod $m) => $m->value, PaymentMethod::cases()))
                     ->query(fn (Builder $q, string $value) => $q->where('payment_method', $value)),
             ])
-            ->defaultSort('-period_start');
+            ->defaultSort('-payment_date');
 
         $result = $table->paginate(
-            $lease->payments()->with(['confirmedBy:id,name', 'proofs']),
+            $lease->payments()->with(['confirmedBy:id,name', 'proofs', 'invoice:id,reference,period_start,period_end,status']),
             $request,
             'payments',
         );
@@ -113,8 +116,8 @@ class LeaseController extends Controller
 
         $result = $table->paginate(
             PaymentProof::query()
-                ->whereHas('payment', fn (Builder $q) => $q->where('paymentable_type', $lease->getMorphClass())->where('paymentable_id', $lease->id))
-                ->with('payment:id,period_start,amount,status'),
+                ->whereHas('payment.invoice', fn (Builder $q) => $q->where('lease_id', $lease->id))
+                ->with('payment:id,invoice_id,amount,status', 'payment.invoice:id,period_start'),
             $request,
             'documents',
         );
@@ -132,7 +135,7 @@ class LeaseController extends Controller
         $unit->load('property.city');
 
         $leases = $unit->leases()
-            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs'])
+            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs', 'payments.invoice:id,period_start,period_end,reference,status'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -191,13 +194,11 @@ class LeaseController extends Controller
                         $periodEnd = Carbon::now()->endOfMonth()->endOfDay();
 
                         return $value === 'paid'
-                            ? $q->whereHas('payments', fn (Builder $q) => $q
-                                ->where('paymentable_type', Lease::class)
-                                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
+                            ? $q->whereHas('invoices', fn (Builder $q) => $q
+                                ->where('status', InvoiceStatus::Paid->value)
                                 ->whereBetween('period_start', [$periodStart, $periodEnd]))
-                            : $q->where('status', LeaseStatus::Active->value)->whereDoesntHave('payments', fn (Builder $q) => $q
-                                ->where('paymentable_type', Lease::class)
-                                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
+                            : $q->where('status', LeaseStatus::Active->value)->whereDoesntHave('invoices', fn (Builder $q) => $q
+                                ->where('status', InvoiceStatus::Paid->value)
                                 ->whereBetween('period_start', [$periodStart, $periodEnd]));
                     }),
                 Filter::select('properties', 'Property', $allProperties->map(fn (Property $p) => [
@@ -213,11 +214,10 @@ class LeaseController extends Controller
 
         $query = Lease::query()
             ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name'])
-            ->addSelect(['payment_status' => Payment::query()
+            ->addSelect(['payment_status' => Invoice::query()
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'paid' ELSE 'overdue' END")
-                ->whereColumn('paymentable_id', 'leases.id')
-                ->where('paymentable_type', Lease::class)
-                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
+                ->whereColumn('lease_id', 'leases.id')
+                ->where('status', InvoiceStatus::Paid->value)
                 ->whereBetween('period_start', [Carbon::now()->startOfMonth()->startOfDay(), Carbon::now()->endOfMonth()->endOfDay()]),
             ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -228,7 +228,7 @@ class LeaseController extends Controller
         $result = $table->paginate($query, $request, 'leases');
 
         $leases = $result['leases'];
-        $leases->loadMissing(['unit.property.city', 'payments.confirmedBy:id,name', 'payments.proofs']);
+        $leases->loadMissing(['unit.property.city', 'payments.confirmedBy:id,name', 'payments.proofs', 'payments.invoice:id,period_start,period_end,reference,status']);
 
         $availableUnits = Unit::query()
             ->with('property.city')
@@ -255,21 +255,16 @@ class LeaseController extends Controller
         $periodEnd = Carbon::now()->endOfMonth()->endOfDay();
 
         $collectedThisMonth = (float) Payment::query()
-            ->where('paymentable_type', Lease::class)
             ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-            ->whereBetween('period_start', [$periodStart, $periodEnd])
-            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
+            ->whereHas('invoice', fn (Builder $q) => $q
+                ->whereBetween('period_start', [$periodStart, $periodEnd])
+                ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery)))
             ->sum('amount');
 
-        $overdueAmount = (float) Lease::query()
-            ->where('status', LeaseStatus::Active->value)
-            ->where('start_date', '<=', now())
-            ->whereDoesntHave('payments', fn (Builder $q) => $q
-                ->where('paymentable_type', Lease::class)
-                ->whereNotIn('status', [PaymentStatus::Cancelled->value])
-                ->whereBetween('period_start', [$periodStart, $periodEnd]))
-            ->when($accessibleQuery)
-            ->sum('rent_amount');
+        $overdueAmount = (float) Invoice::query()
+            ->overdue()
+            ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
+            ->sum(DB::raw('total - amount_paid'));
 
         return Inertia::render('leases/index', [
             ...$result,
@@ -293,6 +288,7 @@ class LeaseController extends Controller
             rentAmount: $request->rent_amount,
             billingInterval: $request->billing_interval,
             billingUnit: $request->billing_unit,
+            billingStrategy: $request->billing_strategy,
             unitRateId: $request->unit_rate_id,
             depositAmount: $request->deposit_amount,
             depositPaidAt: $request->deposit_paid_at,

@@ -3,9 +3,10 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Business\Dashboard\RentStatsCalculator;
+use App\Enums\InvoiceStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Invoice;
 use App\Models\Lease;
-use App\Models\Payment;
 use App\Models\Property;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -64,14 +65,12 @@ class RentController extends Controller
                     ['value' => 'paid', 'label' => 'Paid'],
                 ])
                     ->query(function (Builder $q, string $value) use ($today, $periodStart, $periodEnd): void {
-                        $hasPayment = fn (Builder $q) => $q->whereHas('payments', fn (Builder $q) => $q
-                            ->where('paymentable_type', Lease::class)
-                            ->whereNotIn('status', ['cancelled'])
+                        $hasPayment = fn (Builder $q) => $q->whereHas('invoices', fn (Builder $q) => $q
+                            ->where('status', InvoiceStatus::Paid->value)
                             ->whereBetween('period_start', [$periodStart, $periodEnd]));
 
-                        $noPayment = fn (Builder $q) => $q->whereDoesntHave('payments', fn (Builder $q) => $q
-                            ->where('paymentable_type', Lease::class)
-                            ->whereNotIn('status', ['cancelled'])
+                        $noPayment = fn (Builder $q) => $q->whereDoesntHave('invoices', fn (Builder $q) => $q
+                            ->where('status', InvoiceStatus::Paid->value)
                             ->whereBetween('period_start', [$periodStart, $periodEnd]));
 
                         match ($value) {
@@ -101,11 +100,10 @@ class RentController extends Controller
 
         $query = (clone $baseQuery)
             ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,name,property_id', 'unit.property:id,name'])
-            ->addSelect(['has_payment_this_month' => Payment::query()
+            ->addSelect(['has_payment_this_month' => Invoice::query()
                 ->selectRaw('COUNT(*) > 0')
-                ->whereColumn('paymentable_id', 'leases.id')
-                ->where('paymentable_type', Lease::class)
-                ->whereNotIn('status', ['cancelled'])
+                ->whereColumn('lease_id', 'leases.id')
+                ->where('status', InvoiceStatus::Paid->value)
                 ->whereBetween('period_start', [$periodStart, $periodEnd]),
             ]);
 

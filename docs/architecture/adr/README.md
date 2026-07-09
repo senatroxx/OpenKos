@@ -12,6 +12,7 @@ Architectural decisions with real trade-offs are recorded here as ADRs, so futur
 | [004](004-rental-unit-abstraction.md)     | Rental Unit Abstraction | Accepted |
 | [005](005-plugin-philosophy.md)           | Plugin Philosophy       | Accepted |
 | [006](006-api-strategy.md)                | API Strategy            | Accepted |
+| [007](007-invoice-aggregate.md)           | Invoice Aggregate       | Accepted |
 
 Future ADR candidates: the Activity Log vs Audit Log split (`activity_logs` written by `RecordActivitySubscriber` from domain events; `audit_logs` written directly by actions like `UpdateSettings`) is a decision worth recording once it stabilizes.
 

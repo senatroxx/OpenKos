@@ -2,7 +2,8 @@
 
 namespace App\Business\Dashboard;
 
-use App\Models\Lease;
+use App\Enums\InvoiceStatus;
+use App\Models\Invoice;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,22 +23,17 @@ class OverviewStatsCalculator
         $periodStart = Carbon::create($currentYear, $currentMonth, 1)->startOfDay();
         $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay();
 
-        $revenueThisMonth = Payment::where('paymentable_type', Lease::class)
-            ->where('status', 'confirmed')
-            ->whereBetween('period_start', [$periodStart, $periodEnd])
-            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->whereIn('id', $leaseIds))
+        $revenueThisMonth = Payment::where('status', 'confirmed')
+            ->whereHas('invoice', fn (Builder $q) => $q
+                ->whereBetween('period_start', [$periodStart, $periodEnd])
+                ->whereIn('lease_id', $leaseIds))
             ->sum('amount');
 
-        $paidIds = Payment::where('paymentable_type', Lease::class)
-            ->where('status', 'confirmed')
+        $outstanding = (float) Invoice::whereIn('lease_id', $leaseIds)
             ->whereBetween('period_start', [$periodStart, $periodEnd])
-            ->whereHasMorph('paymentable', [Lease::class], fn (Builder $q) => $q->whereIn('id', $leaseIds))
-            ->distinct('paymentable_id')
-            ->pluck('paymentable_id');
-
-        $outstanding = (clone $activeLeasesQuery)
-            ->whereNotIn('id', $paidIds)
-            ->sum('rent_amount');
+            ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
+            ->selectRaw('COALESCE(SUM(total - amount_paid), 0) as total_outstanding')
+            ->value('total_outstanding');
 
         $collectionRate = $monthlyPotential > 0
             ? round(($revenueThisMonth / $monthlyPotential) * 100)

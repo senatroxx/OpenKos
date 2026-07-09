@@ -1,7 +1,8 @@
 <?php
 
+use App\Enums\InvoiceStatus;
+use App\Models\Invoice;
 use App\Models\Lease;
-use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -74,23 +75,46 @@ it('clamps due day to 29 in February on leap year', function () {
     expect($schedule[1]->due_date->format('Y-m-d'))->toBe('2024-02-29');
 });
 
-it('marks paid when non-cancelled payment exists', function () {
-    $lease = createScheduleLease(['start_date' => '2026-05-24', 'rent_due_day' => 1]);
+it('reports invoice statuses through the rent schedule endpoint', function () {
+    $user = User::factory()->owner()->create();
+    $lease = createScheduleLease();
 
     Carbon::setTestNow('2026-06-27');
 
-    Payment::factory()->create([
-        'paymentable_id' => $lease->id,
-        'paymentable_type' => Lease::class,
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
         'period_start' => '2026-06-01',
         'period_end' => '2026-06-30',
-        'status' => 'confirmed',
+        'due_date' => '2026-06-01',
+        'total' => 1_500_000,
+        'amount_paid' => 1_500_000,
+        'status' => InvoiceStatus::Paid,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'period_start' => '2026-07-01',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-01',
+        'total' => 1_500_000,
+        'amount_paid' => 500_000,
+        'status' => InvoiceStatus::Partial,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'period_start' => '2026-05-01',
+        'period_end' => '2026-05-31',
+        'due_date' => '2026-05-01',
+        'total' => 1_500_000,
+        'status' => InvoiceStatus::Pending,
     ]);
 
-    $schedule = $lease->schedule(months: 3);
+    $this->actingAs($user);
 
-    expect($schedule[0]->status)->toBe('paid');
-    expect($schedule[1]->status)->toBe('upcoming');
+    $schedule = $this->getJson("/leases/{$lease->id}/rent-schedule")->json('schedule');
+
+    expect(collect($schedule)->pluck('status')->all())->toBe(['overdue', 'paid', 'partial']);
+
+    Carbon::setTestNow();
 });
 
 it('marks overdue for past due dates with no payment', function () {
@@ -137,24 +161,6 @@ it('stops schedule at lease end date', function () {
     expect($schedule)->toHaveCount(3);
     expect($schedule[0]->period_start->format('Y-m'))->toBe('2026-01');
     expect($schedule[2]->period_start->format('Y-m'))->toBe('2026-03');
-});
-
-it('pending payment marks period as paid', function () {
-    $lease = createScheduleLease(['start_date' => '2026-05-24', 'rent_due_day' => 1]);
-
-    Carbon::setTestNow('2026-06-27');
-
-    Payment::factory()->create([
-        'paymentable_id' => $lease->id,
-        'paymentable_type' => Lease::class,
-        'period_start' => '2026-06-01',
-        'period_end' => '2026-06-30',
-        'status' => 'pending',
-    ]);
-
-    $schedule = $lease->schedule(months: 3);
-
-    expect($schedule[0]->status)->toBe('paid');
 });
 
 it('returns empty collection when rent_amount is missing', function () {
@@ -247,22 +253,4 @@ it('allows owner to view schedule without property assignment', function () {
     $this->actingAs($user);
 
     $this->getJson("/leases/{$lease->id}/rent-schedule")->assertOk();
-});
-
-it('shows paid badge with pending payment', function () {
-    $lease = createScheduleLease(['start_date' => '2026-05-24', 'rent_due_day' => 1]);
-
-    Carbon::setTestNow('2026-06-27');
-
-    Payment::factory()->create([
-        'paymentable_id' => $lease->id,
-        'paymentable_type' => Lease::class,
-        'period_start' => '2026-06-01',
-        'period_end' => '2026-06-30',
-        'status' => 'pending',
-    ]);
-
-    $schedule = $lease->schedule(months: 3);
-
-    expect($schedule[0]->status)->toBe('paid');
 });

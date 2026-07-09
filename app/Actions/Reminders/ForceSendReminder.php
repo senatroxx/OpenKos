@@ -18,7 +18,7 @@ class ForceSendReminder
 
     public function execute(Lease $lease): string
     {
-        $lease->load(['primaryTenant', 'payments']);
+        $lease->load(['primaryTenant']);
         $tenant = $lease->primaryTenant;
 
         $channels = Setting::get('reminder_channels') ?? ['log'];
@@ -28,29 +28,29 @@ class ForceSendReminder
             return 'no_contact';
         }
 
-        $period = $lease->scheduleForReminder()->first(fn ($p) => $p->status !== 'paid');
+        $invoice = $lease->invoices()->payable()->orderBy('period_start')->first();
 
-        if (! $period) {
+        if (! $invoice) {
             return 'all_paid';
         }
 
         $today = now()->startOfDay();
-        $dueDate = Carbon::parse($period->due_date)->startOfDay();
+        $dueDate = Carbon::parse($invoice->due_date)->startOfDay();
         $overdueDays = $dueDate->lessThan($today) ? (int) $dueDate->diffInDays($today) : null;
 
-        $type = match ($period->status) {
-            'upcoming' => ReminderType::Upcoming,
-            'due' => ReminderType::DueToday,
-            default => ReminderType::Overdue,
+        $type = match (true) {
+            $overdueDays !== null => ReminderType::Overdue,
+            $today->eq($dueDate) => ReminderType::DueToday,
+            default => ReminderType::Upcoming,
         };
 
         $event = new ReminderEvent(
             lease: $lease,
             type: $type,
-            periodStart: $period->period_start->toDateString(),
-            periodEnd: $period->period_end->toDateString(),
-            dueDate: $period->due_date->toDateString(),
-            amount: (int) ($lease->rent_amount * 100),
+            periodStart: $invoice->period_start->toDateString(),
+            periodEnd: $invoice->period_end->toDateString(),
+            dueDate: $invoice->due_date->toDateString(),
+            amount: (int) round((float) $invoice->outstanding * 100),
             overdueDays: $overdueDays,
         );
 
