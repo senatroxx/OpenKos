@@ -56,7 +56,14 @@ class GenerateInvoices
 
                         return $invoice;
                     });
-                } catch (QueryException) {
+                } catch (QueryException $e) {
+                    // ponytail: only unique-violation races during concurrent
+                    // generation are expected — rethrow everything else so
+                    // real persistence failures are not silently hidden.
+                    if (! str_starts_with((string) $e->getCode(), '23')) {
+                        throw $e;
+                    }
+
                     continue;
                 }
 
