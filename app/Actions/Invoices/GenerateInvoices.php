@@ -57,11 +57,13 @@ class GenerateInvoices
                         return $invoice;
                     });
                 } catch (QueryException $e) {
-                    // ponytail: only unique-violation races (PostgreSQL
-                    // SQLSTATE 23505) during concurrent generation are
-                    // expected — rethrow everything else so real persistence
-                    // failures are not silently hidden.
-                    if ((string) $e->getCode() !== '23505') {
+                    // ponytail: swallow only the expected period-idempotency
+                    // race (invoices_lease_id_period_start_unique). Any other
+                    // 23505 (e.g. reference collision) is a genuine bug and
+                    // must be rethrown so the operator sees the failure.
+                    if ((string) $e->getCode() !== '23505'
+                        || ! str_contains($e->getMessage(), 'invoices_lease_id_period_start_unique')
+                    ) {
                         throw $e;
                     }
 
