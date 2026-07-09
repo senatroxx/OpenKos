@@ -108,7 +108,7 @@ export default function AssignUnitSheet({
 }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         unit_id: null as number | null,
-        tenant_ids: [] as number[],
+        tenant_ids: [tenant?.id] as number[],
         start_date: new Date().toISOString().split('T')[0],
         unit_rate_id: null as number | null,
         rent_amount: '',
@@ -210,6 +210,7 @@ export default function AssignUnitSheet({
         const unit = availableUnits.find((r) => r.id === unitId) ?? null;
         const rate = unit?.active_rates?.[0] ?? null;
         setData({
+            ...data,
             unit_id: unitId,
             unit_rate_id: rate?.id ?? null,
             rent_amount: rate?.amount ?? '',
@@ -225,6 +226,7 @@ export default function AssignUnitSheet({
 
     function handleRateSelect(rate: UnitRate) {
         setData({
+            ...data,
             unit_rate_id: rate.id ?? null,
             rent_amount: rate.amount,
             billing_interval: String(rate.billing_interval),
