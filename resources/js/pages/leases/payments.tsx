@@ -4,7 +4,8 @@ import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
-import { formatDate, formatPrice } from '@/lib/formatters';
+import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
+import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import type {
     PaginatedData,
     Payment,
@@ -14,26 +15,12 @@ import type {
 import type { WorkspaceLease } from './layout';
 import { LeaseLayout } from './layout';
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-    cash: 'Cash',
-    transfer: 'Bank Transfer',
-    ewallet: 'E-Wallet',
-    other: 'Other',
-};
-
-function formatPeriod(periodStart: string): string {
-    return new Date(periodStart).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'long',
-    });
-}
-
 const columns: TableColumn<Payment>[] = [
     {
         key: 'period_start',
         label: 'Period',
         className: 'font-medium',
-        render: (p) => (p.invoice ? formatPeriod(p.invoice.period_start) : '—'),
+        render: (p) => (p.invoice ? formatPeriod(p.invoice.period_start, 'id-ID') : '—'),
     },
     {
         key: 'payment_date',
@@ -152,7 +139,7 @@ function RentSchedule({ lease }: { lease: WorkspaceLease }) {
                     >
                         <div>
                             <p className="font-medium">
-                                {formatPeriod(entry.period_start)}
+                                {formatPeriod(entry.period_start, 'id-ID')}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 Due {formatDate(entry.due_date)}

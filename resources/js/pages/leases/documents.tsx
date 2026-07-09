@@ -1,7 +1,7 @@
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, formatPeriod } from '@/lib/formatters';
 import type { PaginatedData, TableMeta } from '@/types';
 import type { WorkspaceLease } from './layout';
 import { LeaseLayout } from './layout';
@@ -23,13 +23,6 @@ type ProofRow = {
         } | null;
     } | null;
 };
-
-function formatPeriod(periodStart: string): string {
-    return new Date(periodStart).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'long',
-    });
-}
 
 const columns: TableColumn<ProofRow>[] = [
     {
@@ -55,7 +48,7 @@ const columns: TableColumn<ProofRow>[] = [
         className: 'text-muted-foreground',
         render: (d) =>
             d.payment?.invoice?.period_start
-                ? formatPeriod(d.payment.invoice.period_start)
+                ? formatPeriod(d.payment.invoice.period_start, 'id-ID')
                 : '—',
     },
     {

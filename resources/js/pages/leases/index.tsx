@@ -32,6 +32,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { DUE_DAY_LABELS } from '@/lib/constants';
+import { formatDate, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import units from '@/routes/properties/units';
 import type { Lease, PaginatedData, TableMeta } from '@/types';
@@ -66,47 +68,10 @@ type PageProps = {
     };
 };
 
-const DUE_DAY_LABELS: Record<number, string> = {
-    1: '1st',
-    5: '5th',
-    10: '10th',
-    15: '15th',
-    20: '20th',
-    25: '25th',
-    31: 'Last day',
-};
-
 const STATUS_COLORS: Record<string, string> = {
     active: 'bg-blue-600',
     terminated: 'bg-gray-400',
 };
-
-function formatPrice(cents: string | null): string {
-    if (!cents) {
-        return '\u2014';
-    }
-
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
-
-function formatDate(date: string | null): string {
-    if (!date) {
-        return '\u2014';
-    }
-
-    return new Date(date).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
 
 export default function Index({
     leases: data,

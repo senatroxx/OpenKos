@@ -17,23 +17,11 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { DUE_DAY_OPTIONS } from '@/lib/constants';
+import { BILLING_STRATEGIES } from '@/lib/constants/billing';
+import { formatDate } from '@/lib/formatters';
 import leases from '@/routes/properties/units/leases';
 import type { Lease } from '@/types';
-
-const BILLING_STRATEGIES = [
-    { value: 'advance', label: 'Advance (due within period)' },
-    { value: 'arrears', label: 'Arrears (due after period)' },
-];
-
-const DUE_DAY_OPTIONS = [
-    { value: '1', label: '1st' },
-    { value: '5', label: '5th' },
-    { value: '10', label: '10th' },
-    { value: '15', label: '15th' },
-    { value: '20', label: '20th' },
-    { value: '25', label: '25th' },
-    { value: '31', label: 'Last day of month' },
-];
 
 export default function LeaseEditSheet({
     lease,
@@ -61,18 +49,6 @@ export default function LeaseEditSheet({
 
     if (!lease || !lease.unit || !lease.unit.property) {
         return null;
-    }
-
-    function formatDate(date: string | null): string {
-        if (!date) {
-            return '—';
-        }
-
-        return new Date(date).toLocaleDateString('id-ID', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
     }
 
     return (

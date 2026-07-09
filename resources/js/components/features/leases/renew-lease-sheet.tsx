@@ -18,14 +18,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { DEPOSIT_HANDLING_OPTIONS } from '@/lib/constants/lease';
 import leases from '@/routes/leases';
 import type { Lease } from '@/types';
-
-const DEPOSIT_HANDLING = [
-    { value: 'carry_forward', label: 'Carry Forward' },
-    { value: 'refund_and_collect_new', label: 'Refund & Collect New' },
-    { value: 'forfeit', label: 'Forfeit' },
-];
 
 export default function RenewLeaseSheet({
     lease,
@@ -36,7 +31,7 @@ export default function RenewLeaseSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [depositHandling, setDepositHandling] = useState('carry_forward');
+    const [depositHandling, setDepositHandling] = useState('refund');
     const [confirmedOutstanding, setConfirmedOutstanding] = useState(false);
 
     if (!lease) {
@@ -161,7 +156,7 @@ export default function RenewLeaseSheet({
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {DEPOSIT_HANDLING.map((d) => (
+                                            {DEPOSIT_HANDLING_OPTIONS.map((d) => (
                                                 <SelectItem
                                                     key={d.value}
                                                     value={d.value}

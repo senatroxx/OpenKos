@@ -16,19 +16,11 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { formatDate, formatPrice } from '@/lib/formatters';
+import { DUE_DAY_LABELS } from '@/lib/constants';
+import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
+import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import type { Lease, Payment, RentScheduleEntry } from '@/types';
-
-const DUE_DAY_LABELS: Record<number, string> = {
-    1: '1st',
-    5: '5th',
-    10: '10th',
-    15: '15th',
-    20: '20th',
-    25: '25th',
-    31: 'Last day',
-};
 
 export default function LeaseDetailSheet({
     lease,
@@ -95,21 +87,6 @@ export default function LeaseDetailSheet({
         },
     };
 
-    const PAYMENT_METHOD_LABELS: Record<string, string> = {
-        cash: 'Cash',
-        transfer: 'Bank Transfer',
-        ewallet: 'E-Wallet',
-        other: 'Other',
-    };
-
-    function formatPeriod(periodStart: string): string {
-        const date = new Date(periodStart);
-
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-        });
-    }
     const unitLabel = lease?.unit?.name ?? '—';
     const propertyName = lease?.unit?.property?.name ?? '—';
     const city = lease?.unit?.property?.city;

@@ -19,10 +19,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { BILLING_UNITS } from '@/lib/constants/billing';
 import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
-
-const BILLING_UNITS = ['day', 'week', 'month', 'year'] as const;
 
 const emptyRate: UnitRate = {
     billing_interval: 1,

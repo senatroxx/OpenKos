@@ -38,6 +38,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { formatPrice } from '@/lib/formatters';
 import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
 import type {
@@ -84,17 +85,6 @@ const STATUS_COLORS: Record<string, string> = {
     maintenance: 'bg-amber-500',
     unavailable: 'bg-gray-400',
 };
-
-function formatPrice(cents: string): string {
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
 
 export default function Index({
     property,

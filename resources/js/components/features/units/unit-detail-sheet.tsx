@@ -8,6 +8,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { DUE_DAY_LABELS } from '@/lib/constants';
 import properties from '@/routes/properties';
 import type { Property, Unit } from '@/types';
 
@@ -36,15 +37,6 @@ const STATUS_COLORS: Record<string, string> = {
     unavailable: 'bg-gray-400',
 };
 
-const DUE_DAY_LABELS: Record<number, string> = {
-    1: '1st',
-    5: '5th',
-    10: '10th',
-    15: '15th',
-    20: '20th',
-    25: '25th',
-    31: 'Last day',
-};
 
 export default function UnitDetailSheet({
     unit,

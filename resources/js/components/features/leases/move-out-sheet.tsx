@@ -18,16 +18,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { MOVE_OUT_REASONS } from '@/lib/constants/lease';
 import leases from '@/routes/leases';
 import type { AvailableUnit, LeaseData } from '@/types';
-
-const REASONS = [
-    { value: 'contract_ended', label: 'Contract ended' },
-    { value: 'moved_unit', label: 'Moved unit' },
-    { value: 'left_early', label: 'Left early' },
-    { value: 'evicted', label: 'Evicted' },
-    { value: 'other', label: 'Other' },
-];
 
 export default function MoveOutSheet({
     lease,
@@ -200,7 +193,7 @@ export default function MoveOutSheet({
                                             <SelectValue placeholder="Select reason (optional)" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {REASONS.map((r) => (
+                                            {MOVE_OUT_REASONS.map((r) => (
                                                 <SelectItem
                                                     key={r.value}
                                                     value={r.value}
