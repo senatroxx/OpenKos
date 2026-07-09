@@ -20,6 +20,11 @@ import {
 import leases from '@/routes/properties/units/leases';
 import type { Lease } from '@/types';
 
+const BILLING_STRATEGIES = [
+    { value: 'advance', label: 'Advance (due within period)' },
+    { value: 'arrears', label: 'Arrears (due after period)' },
+];
+
 const DUE_DAY_OPTIONS = [
     { value: '1', label: '1st' },
     { value: '5', label: '5th' },
@@ -42,6 +47,15 @@ export default function LeaseEditSheet({
     const [dueDay, setDueDay] = useState(() =>
         lease ? String(lease.rent_due_day) : '1',
     );
+    const billingStrategy = lease?.billing_strategy ?? 'advance';
+
+    function handleOpenChange(open: boolean) {
+        if (!open) {
+            setDueDay(lease ? String(lease.rent_due_day) : '1');
+        }
+
+        onOpenChange(open);
+    }
 
     const noDeposit = Number.parseFloat(lease?.deposit_amount ?? '0') === 0;
 
@@ -62,7 +76,7 @@ export default function LeaseEditSheet({
     }
 
     return (
-        <Sheet key={lease.id} open={open} onOpenChange={onOpenChange}>
+            <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Edit Lease</SheetTitle>
@@ -172,6 +186,7 @@ export default function LeaseEditSheet({
                                                 }
                                                 placeholder="Rent amount"
                                             />
+                                            <div className="min-h-[1rem]" />
                                             <InputError
                                                 message={errors.rent_amount}
                                             />
@@ -208,10 +223,28 @@ export default function LeaseEditSheet({
                                                     )}
                                                 </SelectContent>
                                             </Select>
+                                            <div className="min-h-[1rem]" />
                                             <InputError
                                                 message={errors.rent_due_day}
                                             />
                                         </div>
+                                    </div>
+
+                                    <div className="mt-4 grid gap-2">
+                                        <Label>Billing Strategy</Label>
+                                        <input
+                                            type="hidden"
+                                            name="billing_strategy"
+                                            value={billingStrategy}
+                                        />
+                                        <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                                            {BILLING_STRATEGIES.find(
+                                                (s) => s.value === billingStrategy,
+                                            )?.label ?? billingStrategy}
+                                        </div>
+                                        <InputError
+                                            message={errors.billing_strategy}
+                                        />
                                     </div>
                                 </section>
 

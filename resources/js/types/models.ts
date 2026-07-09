@@ -130,6 +130,7 @@ export type LeaseInfo = {
     rent_amount: string;
     billing_interval: number;
     billing_unit: string;
+    billing_strategy?: string;
     monthly_equivalent: string;
     billing_label: string;
     deposit_amount: string;
@@ -153,6 +154,7 @@ export type Lease = {
     rent_amount: string | null;
     billing_interval: number;
     billing_unit: string;
+    billing_strategy?: string;
     monthly_equivalent: string;
     billing_label: string;
     deposit_amount: string;
