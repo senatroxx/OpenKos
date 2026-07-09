@@ -1,5 +1,5 @@
 import { TenantOverview } from '@/components/features';
-import type { WorkspaceTenant } from './layout';
+import type { WorkspaceTenant } from '@/types';
 import { TenantLayout } from './layout';
 
 export default function TenantWorkspace({

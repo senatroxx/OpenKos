@@ -4,7 +4,7 @@ import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { MaintenanceTicket, PaginatedData, TableMeta } from '@/types';
+import type { MaintenanceTicket, PaginatedData, TableMeta, WorkspaceUnit } from '@/types';
 import { UnitLayout } from './layout';
 
 const priorityColors: Record<string, string> = {
@@ -109,12 +109,7 @@ export default function MaintenanceHistory({
     table,
 }: {
     property: { id: number; slug: string; name: string };
-    unit: {
-        id: number;
-        slug: string;
-        name: string;
-        floor?: string | number | null;
-    };
+    unit: WorkspaceUnit;
     tickets: PaginatedData<MaintenanceTicket>;
     sort?: string;
     search?: string;

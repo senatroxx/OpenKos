@@ -2,27 +2,8 @@ import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { formatDate, formatPeriod } from '@/lib/formatters';
-import type { PaginatedData, TableMeta } from '@/types';
-import type { WorkspaceLease } from './layout';
+import type { PaginatedData, ProofRow, TableMeta, WorkspaceLease } from '@/types';
 import { LeaseLayout } from './layout';
-
-type ProofRow = {
-    id: number;
-    payment_id: number;
-    original_name: string;
-    mime_type: string;
-    created_at: string;
-    payment: {
-        id: number;
-        invoice_id: number;
-        amount: string;
-        status: string;
-        invoice: {
-            id: number;
-            period_start: string;
-        } | null;
-    } | null;
-};
 
 const columns: TableColumn<ProofRow>[] = [
     {

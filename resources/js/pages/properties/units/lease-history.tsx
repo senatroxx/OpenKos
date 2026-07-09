@@ -4,21 +4,10 @@ import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { PaginatedData, TableMeta, TenantInfo } from '@/types';
+import type { LeaseInfo, PaginatedData, TableMeta, WorkspaceUnit } from '@/types';
 import { UnitLayout } from './layout';
 
-type LeaseRow = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    status: string;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-const columns: TableColumn<LeaseRow>[] = [
+const columns: TableColumn<LeaseInfo>[] = [
     {
         key: 'reference',
         label: 'Reference',
@@ -92,13 +81,8 @@ export default function UnitLeaseHistory({
     table,
 }: {
     property: { id: number; slug: string; name: string };
-    unit: {
-        id: number;
-        slug: string;
-        name: string;
-        floor?: string | number | null;
-    };
-    leases: PaginatedData<LeaseRow>;
+    unit: WorkspaceUnit;
+    leases: PaginatedData<LeaseInfo>;
     sort?: string;
     search?: string;
     status?: string;

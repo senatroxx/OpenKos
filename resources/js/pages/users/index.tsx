@@ -47,17 +47,14 @@ import users, {
     store,
     update,
 } from '@/routes/users';
-import type { PaginatedData, RolePair, TableMeta } from '@/types';
-
-type Property = { id: number; name: string };
-type RoleOption = { value: string; label: string };
+import type { PaginatedData, PropertyRef, RoleOption, RolePair, TableMeta } from '@/types';
 type ManagedUser = {
     id: number;
     name: string;
     email: string;
     roles: RolePair[];
     role: string | null;
-    properties: Property[];
+    properties: PropertyRef[];
     is_active: boolean;
     status: 'active' | 'invited' | 'disabled';
     invited_at: string | null;
@@ -67,7 +64,7 @@ type ManagedUser = {
 
 type PageProps = {
     users: PaginatedData<ManagedUser>;
-    properties: Property[];
+    properties: PropertyRef[];
     roles: RoleOption[];
     search?: string;
     role?: string;
@@ -420,7 +417,7 @@ function UserFormSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     roles: RoleOption[];
-    properties: Property[];
+    properties: PropertyRef[];
 }) {
     const isEdit = Boolean(user);
     const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>(

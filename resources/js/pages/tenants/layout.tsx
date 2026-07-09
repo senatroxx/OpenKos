@@ -2,34 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
-import type { UnitWithProperty, TenantDocument, TenantInfo } from '@/types';
-
-type Lease = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    unit: UnitWithProperty | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-export type WorkspaceTenant = {
-    id: number;
-    name: string;
-    phone: string | null;
-    email: string | null;
-    id_card_number: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    notes: string | null;
-    is_active: boolean;
-    deleted_at: string | null;
-    active_leases_count?: number;
-    leases?: Lease[];
-    documents?: TenantDocument[];
-};
+import type { TenantDocument, WorkspaceTenant } from '@/types';
 
 export function TenantLayout({
     tenant,

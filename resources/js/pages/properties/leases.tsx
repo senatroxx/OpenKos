@@ -4,27 +4,15 @@ import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { PaginatedData, Property, TableMeta, TenantInfo } from '@/types';
+import type { Lease, PaginatedData, Property, TableMeta } from '@/types';
 import { PropertyLayout } from './layout';
-
-type LeaseRow = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    status: string;
-    unit: { id: number; name: string } | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
 
 const STATUS_COLORS: Record<string, string> = {
     active: 'bg-green-600',
     terminated: 'bg-gray-400',
 };
 
-const columns: TableColumn<LeaseRow>[] = [
+const columns: TableColumn<Lease>[] = [
     {
         key: 'reference',
         label: 'Reference',
@@ -104,7 +92,7 @@ export default function PropertyLeases({
     table,
 }: {
     property: Property;
-    leases: PaginatedData<LeaseRow>;
+    leases: PaginatedData<Lease>;
     sort?: string;
     search?: string;
     status?: string;

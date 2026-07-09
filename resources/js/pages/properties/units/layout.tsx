@@ -3,13 +3,7 @@ import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 
-type WorkspaceProperty = { id: number; slug: string; name: string };
-type WorkspaceUnit = {
-    id: number;
-    slug: string;
-    name: string;
-    floor?: string | number | null;
-};
+import type { WorkspaceProperty, WorkspaceUnit } from '@/types';
 
 export function UnitLayout({
     property,

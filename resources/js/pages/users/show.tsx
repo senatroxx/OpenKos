@@ -3,18 +3,7 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
 
-type WorkspaceUser = {
-    id: number;
-    name: string;
-    email: string;
-    roles: { name: string; label: string }[];
-    properties: { id: number; name: string }[];
-    is_active: boolean;
-    status: string;
-    invited_at: string | null;
-    email_verified_at: string | null;
-    last_login_at: string | null;
-};
+import type { WorkspaceUser } from '@/types';
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
     return (

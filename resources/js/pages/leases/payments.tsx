@@ -11,8 +11,8 @@ import type {
     Payment,
     RentScheduleEntry,
     TableMeta,
+    WorkspaceLease,
 } from '@/types';
-import type { WorkspaceLease } from './layout';
 import { LeaseLayout } from './layout';
 
 const columns: TableColumn<Payment>[] = [

@@ -279,3 +279,90 @@ export type MaintenanceTicket = {
     } | null;
     maintenance_transfer_to?: string | null;
 };
+
+export type ProofRow = {
+    id: number;
+    payment_id: number;
+    original_name: string;
+    mime_type: string;
+    created_at: string;
+    payment: {
+        id: number;
+        invoice_id: number;
+        amount: string;
+        status: string;
+        invoice: { id: number; period_start: string } | null;
+    } | null;
+};
+
+export type WorkspaceLease = {
+    id: number;
+    reference: string | null;
+    start_date: string;
+    end_date: string | null;
+    rent_amount: string | null;
+    status: string;
+};
+
+export type WorkspaceTenant = {
+    id: number;
+    name: string;
+    phone: string | null;
+    email: string | null;
+    id_card_number: string | null;
+    emergency_contact_name: string | null;
+    emergency_contact_phone: string | null;
+    notes: string | null;
+    is_active: boolean;
+    deleted_at?: string | null;
+    active_leases_count?: number;
+};
+
+export type WorkspaceUser = {
+    id: number;
+    name: string;
+    email: string;
+    roles: { name: string; label: string }[];
+    role: string | null;
+    properties: { id: number; name: string }[];
+    is_active: boolean;
+    status: 'active' | 'invited' | 'disabled';
+    invited_at: string | null;
+    email_verified_at: string | null;
+    last_login_at: string | null;
+};
+
+export type ManagedProperty = {
+    id: number;
+    name: string;
+    slug: string;
+    type?: string;
+    type_label?: string;
+    address: string | null;
+    region_id: number | null;
+    city_id: number | null;
+    postal_code: string | null;
+    phone: string | null;
+    is_active: boolean;
+    units_count: number;
+    occupied_units_count: number;
+    tenants_count: number;
+    city?: { id: number; name: string } | null;
+};
+
+export type WorkspaceProperty = { id: number; slug: string; name: string };
+
+export type WorkspaceUnit = {
+    id: number;
+    name: string;
+    slug: string;
+    floor: string | null;
+    status?: string;
+    capacity?: number;
+    occupied_count?: number;
+};
+
+export type PropertyRef = { id: number; name: string };
+
+export type RoleOption = { value: string; label: string };
+

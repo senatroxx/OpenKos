@@ -1,33 +1,8 @@
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { UnitWithProperty, TenantInfo } from '@/types';
+import type { Lease, WorkspaceTenant } from '@/types';
 
-type Lease = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    unit: UnitWithProperty | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-type Tenant = {
-    id: number;
-    name: string;
-    phone: string | null;
-    id_card_number: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    notes: string | null;
-    is_active: boolean;
-    deleted_at?: string | null;
-    active_leases_count?: number;
-    leases?: Lease[];
-};
-
-export default function TenantOverview({ tenant }: { tenant: Tenant }) {
+export default function TenantOverview({ tenant }: { tenant: WorkspaceTenant & { leases?: Lease[] } }) {
     const activeLease = tenant.leases?.[0];
     const isArchived = Boolean(tenant.deleted_at);
 

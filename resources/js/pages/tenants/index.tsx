@@ -38,42 +38,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type {
-    AvailableUnit,
-    PaginatedData,
-    UnitWithProperty,
-    TableMeta,
-    TenantInfo,
-} from '@/types';
-
-type Lease = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    unit: UnitWithProperty | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-type Tenant = {
-    id: number;
-    name: string;
-    phone: string | null;
-    email: string | null;
-    id_card_number: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    notes: string | null;
-    is_active: boolean;
-    deleted_at: string | null;
-    active_leases_count: number;
-    leases: Lease[];
-};
+import type { AvailableUnit, Lease, PaginatedData, TableMeta, WorkspaceTenant } from '@/types';
 
 type PageProps = {
-    tenants: PaginatedData<Tenant>;
+    tenants: PaginatedData<WorkspaceTenant>;
     availableUnits: AvailableUnit[];
     sort?: string;
     search?: string;
@@ -92,21 +60,21 @@ export default function Index({
     table: tableMeta,
 }: PageProps) {
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+    const [editingTenant, setEditingTenant] = useState<WorkspaceTenant | null>(null);
 
     const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingTenant, setViewingTenant] = useState<Tenant | null>(null);
+    const [viewingTenant, setViewingTenant] = useState<WorkspaceTenant | null>(null);
 
     const [assignUnitOpen, setAssignUnitOpen] = useState(false);
-    const [assignTenant, setAssignTenant] = useState<Tenant | null>(null);
+    const [assignTenant, setAssignTenant] = useState<WorkspaceTenant | null>(null);
 
     const [moveOutOpen, setMoveOutOpen] = useState(false);
-    const [moveOutTenant, setMoveOutTenant] = useState<Tenant | null>(null);
+    const [moveOutTenant, setMoveOutTenant] = useState<WorkspaceTenant | null>(null);
 
     const [documentsOpen, setDocumentsOpen] = useState(false);
-    const [documentsTenant, setDocumentsTenant] = useState<Tenant | null>(null);
+    const [documentsTenant, setDocumentsTenant] = useState<WorkspaceTenant | null>(null);
 
-    const [archiveConfirm, setArchiveConfirm] = useState<Tenant | null>(null);
+    const [archiveConfirm, setArchiveConfirm] = useState<WorkspaceTenant | null>(null);
 
     const table = useTable({
         routeFn: () => tenants.index(),
@@ -127,12 +95,12 @@ export default function Index({
         setDialogOpen(true);
     }
 
-    function openEdit(tenant: Tenant) {
+    function openEdit(tenant: WorkspaceTenant) {
         setEditingTenant(tenant);
         setDialogOpen(true);
     }
 
-    function openDetail(tenant: Tenant) {
+    function openDetail(tenant: WorkspaceTenant) {
         setViewingTenant(tenant);
         setDetailOpen(true);
     }
@@ -176,7 +144,7 @@ export default function Index({
         setDocumentsOpen(true);
     }
 
-    function archive(tenant: Tenant) {
+    function archive(tenant: WorkspaceTenant) {
         setArchiveConfirm(tenant);
     }
 
@@ -189,7 +157,7 @@ export default function Index({
         setArchiveConfirm(null);
     }
 
-    const columns: TableColumn<Tenant>[] = [
+    const columns: TableColumn<WorkspaceTenant>[] = [
         {
             key: 'name',
             label: 'Name',
@@ -207,7 +175,7 @@ export default function Index({
             key: '_lease',
             label: 'Lease',
             render: (t) =>
-                t.active_leases_count > 0 ? (
+                (t.active_leases_count ?? 0) > 0 ? (
                     <Badge className="bg-green-600">Active</Badge>
                 ) : (
                     <Badge variant="outline">None</Badge>
@@ -375,7 +343,7 @@ export default function Index({
                 lease={
                     moveOutTenant
                         ? {
-                              id: moveOutTenant.leases?.[0]?.id ?? 0,
+                              id: (moveOutTenant as WorkspaceTenant & { leases?: Lease[] }).leases?.[0]?.id ?? 0,
                               tenants: [
                                   {
                                       id: moveOutTenant.id,
@@ -389,7 +357,7 @@ export default function Index({
                                   name: moveOutTenant.name,
                                   phone: moveOutTenant.phone,
                               },
-                              unit: moveOutTenant.leases?.[0]?.unit ?? null,
+                              unit: (moveOutTenant as WorkspaceTenant & { leases?: Lease[] }).leases?.[0]?.unit ?? null,
                           }
                         : null
                 }
