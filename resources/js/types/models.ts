@@ -199,13 +199,28 @@ export type PaymentProof = {
     created_at: string;
 };
 
-export type Payment = {
+export type Invoice = {
     id: number;
     lease_id: number;
-    amount: string;
-    payment_date: string;
+    reference: string | null;
     period_start: string;
     period_end: string;
+    due_date: string;
+    status: string;
+    total: string;
+    amount_paid: string;
+    outstanding?: string;
+};
+
+export type Payment = {
+    id: number;
+    invoice_id: number;
+    invoice?: Pick<
+        Invoice,
+        'id' | 'reference' | 'period_start' | 'period_end' | 'status'
+    > | null;
+    amount: string;
+    payment_date: string;
     payment_method: string;
     reference: string | null;
     notes: string | null;
@@ -221,11 +236,14 @@ export type Payment = {
 };
 
 export type RentScheduleEntry = {
+    id: number;
     period_start: string;
     period_end: string;
     due_date: string;
     amount: string;
-    status: 'paid' | 'overdue' | 'due' | 'upcoming';
+    amount_paid: string;
+    outstanding: string;
+    status: 'paid' | 'partial' | 'overdue' | 'due' | 'upcoming' | 'cancelled';
 };
 
 export type MaintenanceTicket = {

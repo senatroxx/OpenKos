@@ -2,9 +2,11 @@
 
 namespace App\Actions\Leases;
 
+use App\Actions\Invoices\GenerateInvoices;
 use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\OccupancyCalculator;
 use App\Data\Lease\MoveOutLeaseData;
+use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
@@ -17,7 +19,21 @@ class MoveOutLease
     public function __construct(
         private OccupancyCalculator $occupancy,
         private LeaseStatusValidator $leaseStatusValidator,
+        private GenerateInvoices $generateInvoices,
     ) {}
+
+    private function cancelFutureInvoices(Lease $lease): void
+    {
+        // Cancel invoices whose period starts after the lease ends (actual
+        // move-out date, not the termination record date which is always
+        // today). The lease's end_date has already been updated by this point.
+        $lease->invoices()
+            ->where('status', InvoiceStatus::Pending->value)
+            ->where('amount_paid', 0)
+            ->whereDate('period_start', '>', $lease->end_date)
+            ->get()
+            ->each->update(['status' => InvoiceStatus::Cancelled]);
+    }
 
     public function execute(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
@@ -51,6 +67,8 @@ class MoveOutLease
             'deposit_refunded_at' => $data->depositReturned ? now() : null,
             'notes' => $data->notes ?? $lease->notes,
         ]);
+
+        $this->cancelFutureInvoices($lease);
 
         if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
@@ -98,6 +116,8 @@ class MoveOutLease
             'notes' => $data->notes ?? $lease->notes,
         ]);
 
+        $this->cancelFutureInvoices($lease);
+
         $oldUnit->unsetRelation('leases');
 
         if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
@@ -129,6 +149,7 @@ class MoveOutLease
                 'rent_amount' => $lease->rent_amount,
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
+                'billing_strategy' => $lease->billing_strategy,
                 'is_custom_price' => $lease->is_custom_price,
                 'unit_rate_id' => $matchingRate?->id,
                 'deposit_amount' => $lease->deposit_amount,
@@ -145,6 +166,8 @@ class MoveOutLease
                     'is_primary' => $tenant->id === $lease->primary_tenant_id,
                 ]);
             }
+
+            $this->generateInvoices->execute($newLease);
         }
 
         $targetUnit->update(['status' => UnitStatus::Occupied]);

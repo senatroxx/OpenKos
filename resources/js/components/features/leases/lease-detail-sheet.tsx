@@ -85,9 +85,14 @@ export default function LeaseDetailSheet({
 
     const STATUS_BADGE: Record<string, { label: string; className: string }> = {
         paid: { label: 'Paid', className: 'bg-green-600 text-white' },
+        partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
         overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
         due: { label: 'Due', className: 'bg-yellow-500 text-white' },
         upcoming: { label: 'Upcoming', className: 'bg-gray-400 text-white' },
+        cancelled: {
+            label: 'Cancelled',
+            className: 'bg-gray-300 text-gray-700',
+        },
     };
 
     const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -434,9 +439,13 @@ export default function LeaseDetailSheet({
                                                         <div className="flex items-center justify-between">
                                                             <div>
                                                                 <p className="font-medium">
-                                                                    {formatPeriod(
-                                                                        payment.period_start,
-                                                                    )}
+                                                                    {payment.invoice
+                                                                        ? formatPeriod(
+                                                                              payment
+                                                                                  .invoice
+                                                                                  .period_start,
+                                                                          )
+                                                                        : '—'}
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
                                                                     {PAYMENT_METHOD_LABELS[

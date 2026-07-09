@@ -2,21 +2,18 @@
 
 namespace App\Models;
 
+use App\Concerns\Auditable;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 #[Fillable([
-    'paymentable_id',
-    'paymentable_type',
+    'invoice_id',
     'amount',
     'payment_date',
-    'period_start',
-    'period_end',
     'payment_method',
     'reference_number',
     'notes',
@@ -27,23 +24,21 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 ])]
 class Payment extends Model
 {
-    use HasFactory;
+    use Auditable, HasFactory;
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
             'payment_date' => 'date',
-            'period_start' => 'date',
-            'period_end' => 'date',
             'status' => PaymentStatus::class,
             'verified_at' => 'datetime',
         ];
     }
 
-    public function paymentable(): MorphTo
+    public function invoice(): BelongsTo
     {
-        return $this->morphTo();
+        return $this->belongsTo(Invoice::class);
     }
 
     public function proofs(): HasMany

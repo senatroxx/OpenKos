@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Tenant;
 
+use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -23,6 +24,7 @@ class AssignUnitRequest extends FormRequest
             'rent_amount' => ['nullable', 'numeric', 'min:0'],
             'billing_interval' => ['nullable', 'integer', 'min:1', 'max:255'],
             'billing_unit' => ['nullable', 'string', Rule::in(BillingUnit::values())],
+            'billing_strategy' => ['nullable', 'string', Rule::in(BillingStrategy::values())],
             'unit_rate_id' => ['nullable', 'integer', 'exists:unit_rates,id'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'deposit_paid_at' => ['nullable', 'date'],
