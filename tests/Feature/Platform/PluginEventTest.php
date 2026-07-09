@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\Payment\PaymentRecorded;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Property;
@@ -55,12 +56,16 @@ it('dispatches PaymentRecorded when a payment is recorded', function () {
         'primary_tenant_id' => Tenant::factory()->create()->id,
     ]);
 
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'total' => 1_500_000,
+    ]);
+
     $this->actingAs($user)->post(route('leases.payments.store', $lease), [
+        'invoice_id' => $invoice->id,
         'amount' => 1_500_000,
         'payment_method' => 'cash',
         'paid_at' => now()->format('Y-m-d'),
-        'period_month' => now()->month,
-        'period_year' => now()->year,
     ]);
 
     Event::assertDispatched(PaymentRecorded::class);

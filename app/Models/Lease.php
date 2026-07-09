@@ -3,9 +3,9 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
 use App\Enums\LeaseStatus;
-use App\Enums\PaymentStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,8 +14,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
 
@@ -27,6 +27,7 @@ use Illuminate\Support\Collection;
     'rent_amount',
     'billing_interval',
     'billing_unit',
+    'billing_strategy',
     'is_custom_price',
     'unit_rate_id',
     'deposit_amount',
@@ -76,6 +77,7 @@ class Lease extends Model
             'rent_amount' => 'decimal:2',
             'billing_interval' => 'integer',
             'billing_unit' => BillingUnit::class,
+            'billing_strategy' => BillingStrategy::class,
             'status' => LeaseStatus::class,
             'is_custom_price' => 'boolean',
             'deposit_amount' => 'decimal:2',
@@ -109,9 +111,14 @@ class Lease extends Model
         return $this->belongsTo(UnitRate::class);
     }
 
-    public function payments(): MorphMany
+    public function invoices(): HasMany
     {
-        return $this->morphMany(Payment::class, 'paymentable');
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function payments(): HasManyThrough
+    {
+        return $this->hasManyThrough(Payment::class, Invoice::class);
     }
 
     public function previousLease(): BelongsTo
@@ -165,18 +172,12 @@ class Lease extends Model
         $query->where('status', LeaseStatus::Active->value);
     }
 
-    public function scheduleForReminder(): Collection
-    {
-        return $this->schedule(2);
-    }
-
     public function schedule(?int $months = 12): Collection
     {
         if (! $this->rent_amount || ! $this->rent_due_day || ! $this->start_date) {
             return collect();
         }
 
-        $payments = $this->payments;
         $dueDay = $this->rent_due_day;
         $start = Carbon::parse($this->start_date);
         $interval = $this->billing_interval ?? 1;
@@ -218,22 +219,25 @@ class Lease extends Model
                 }
             }
 
-            $paid = $advanceMonths
-                ? $payments->first(fn ($p) => $p->period_start
-                    && $p->period_start >= $periodStart
-                    && $p->period_start <= $periodEnd
-                    && $p->status !== PaymentStatus::Cancelled)
-                : $payments->first(fn ($p) => $p->period_start
-                    && $p->period_start->isSameDay($periodStart)
-                    && $p->status !== PaymentStatus::Cancelled);
+            // Arrears: rent is due one billing period after the advance due
+            // date, i.e. after the period has been consumed. Applied after
+            // the end-date clamp on purpose — the final arrears payment
+            // falls after the lease ends.
+            if ($this->billing_strategy === BillingStrategy::Arrears) {
+                $dueDate = $advanceMonths
+                    ? $dueDate->addMonthsNoOverflow($advanceMonths)
+                    : match ($this->billing_unit) {
+                        BillingUnit::Week => $dueDate->addWeeks($interval),
+                        BillingUnit::Day => $dueDate->addDays($interval),
+                        default => $dueDate->addMonthsNoOverflow(1),
+                    };
+            }
 
-            $status = $paid
-                ? 'paid'
-                : ($dueDate->copy()->endOfDay()->isPast()
-                    ? 'overdue'
-                    : ($periodStart->isFuture()
-                        ? 'upcoming'
-                        : 'due'));
+            $status = $dueDate->copy()->endOfDay()->isPast()
+                ? 'overdue'
+                : ($periodStart->isFuture()
+                    ? 'upcoming'
+                    : 'due');
 
             $schedule->push((object) [
                 'period_start' => $periodStart,

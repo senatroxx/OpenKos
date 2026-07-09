@@ -2,7 +2,9 @@
 
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\DepositHandling;
+use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -306,14 +308,20 @@ describe('renewal', function () {
 
     it('does not move payments from old lease', function () {
         [, , $lease] = createRenewableLease();
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
+        $invoice = Invoice::factory()->create([
+            'lease_id' => $lease->id,
             'period_start' => '2026-01-01',
             'period_end' => '2026-01-31',
+            'due_date' => '2026-01-05',
+            'total' => 1_000_000,
+        ]);
+        $invoice->payments()->create([
+            'amount' => 1_000_000,
+            'payment_date' => now(),
             'payment_method' => 'cash',
             'status' => 'confirmed',
         ]);
+        $invoice->recalculateStatus();
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)
@@ -354,13 +362,13 @@ describe('outstanding balance', function () {
 
     it('blocks renewal with outstanding balance without confirmation', function () {
         [, , $lease] = createRenewableLease();
-        $lease->payments()->create([
-            'amount' => 500_000,
-            'payment_date' => now(),
+        Invoice::factory()->create([
+            'lease_id' => $lease->id,
             'period_start' => '2026-01-01',
             'period_end' => '2026-01-31',
-            'payment_method' => 'cash',
-            'status' => 'pending',
+            'due_date' => '2026-01-05',
+            'total' => 1_000_000,
+            'status' => InvoiceStatus::Pending,
         ]);
         $user = User::factory()->owner()->create();
 
@@ -381,54 +389,18 @@ describe('outstanding balance', function () {
 
     it('allows renewal with paid lease without confirmation', function () {
         [, , $lease] = createRenewableLease();
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
-            'period_start' => '2026-01-01',
-            'period_end' => '2026-01-31',
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ]);
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
-            'period_start' => '2026-02-01',
-            'period_end' => '2026-02-28',
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ]);
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
-            'period_start' => '2026-03-01',
-            'period_end' => '2026-03-31',
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ]);
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
-            'period_start' => '2026-04-01',
-            'period_end' => '2026-04-30',
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ]);
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
-            'period_start' => '2026-05-01',
-            'period_end' => '2026-05-31',
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ]);
-        $lease->payments()->create([
-            'amount' => 1_000_000,
-            'payment_date' => now(),
-            'period_start' => '2026-06-01',
-            'period_end' => '2026-06-30',
-            'payment_method' => 'cash',
-            'status' => 'confirmed',
-        ]);
+        foreach (range(1, 6) as $month) {
+            $start = Carbon::create(2026, $month, 1);
+            Invoice::factory()->create([
+                'lease_id' => $lease->id,
+                'period_start' => $start,
+                'period_end' => $start->copy()->endOfMonth(),
+                'due_date' => $start->copy()->setDay(5),
+                'total' => 1_000_000,
+                'amount_paid' => 1_000_000,
+                'status' => InvoiceStatus::Paid,
+            ]);
+        }
         $user = User::factory()->owner()->create();
 
         $this->actingAs($user)
@@ -447,13 +419,13 @@ describe('outstanding balance', function () {
 
     it('allows renewal with outstanding balance when confirmed', function () {
         [, , $lease] = createRenewableLease();
-        $lease->payments()->create([
-            'amount' => 500_000,
-            'payment_date' => now(),
+        Invoice::factory()->create([
+            'lease_id' => $lease->id,
             'period_start' => '2026-01-01',
             'period_end' => '2026-01-31',
-            'payment_method' => 'cash',
-            'status' => 'pending',
+            'due_date' => '2026-01-05',
+            'total' => 1_000_000,
+            'status' => InvoiceStatus::Pending,
         ]);
         $user = User::factory()->owner()->create();
 

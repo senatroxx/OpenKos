@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\PaymentStatus;
-use App\Models\Lease;
+use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,15 +16,10 @@ class PaymentFactory extends Factory
 
     public function definition(): array
     {
-        $lease = Lease::factory()->create();
-
         return [
-            'paymentable_id' => $lease->id,
-            'paymentable_type' => Lease::class,
+            'invoice_id' => Invoice::factory(),
             'amount' => fake()->numberBetween(500_000, 3_000_000),
             'payment_date' => fake()->dateTimeBetween('-6 months', 'now'),
-            'period_start' => fake()->dateTimeBetween('-6 months', 'now'),
-            'period_end' => fake()->dateTimeBetween('-6 months', 'now'),
             'payment_method' => 'cash',
             'reference_number' => null,
             'notes' => null,

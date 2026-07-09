@@ -11,6 +11,7 @@ final readonly class CreateLeaseData
         public mixed $rentAmount,
         public ?int $billingInterval,
         public ?string $billingUnit,
+        public ?string $billingStrategy,
         public ?int $unitRateId,
         public mixed $depositAmount,
         public ?string $depositPaidAt,

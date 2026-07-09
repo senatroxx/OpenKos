@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\DB;
  * If a migration changes an index without updating this test, it will fail.
  */
 $expected = [
-    'payments' => [
-        'idx_payments_type_id_status' => ['paymentable_type', 'paymentable_id', 'status'],
+    'invoices' => [
+        'invoices_status_due_date_index' => ['status', 'due_date'],
     ],
     'leases' => [
         'idx_leases_status_start_date' => ['status', 'start_date'],

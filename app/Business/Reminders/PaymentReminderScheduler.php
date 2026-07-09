@@ -14,22 +14,25 @@ class PaymentReminderScheduler
     /** @return array<ReminderEvent> */
     public function pendingFor(Lease $lease, ReminderSettings $settings): array
     {
-        $schedule = $lease->scheduleForReminder();
+        $invoices = $lease->invoices()->payable()->orderBy('period_start')->get();
         $today = now()->startOfDay();
         $events = [];
 
-        foreach ($schedule as $period) {
-            $dueDate = Carbon::parse($period->due_date)->startOfDay();
-            $amount = $period->amount !== null ? (int) ((float) $period->amount * 100) : 0;
-            $periodStart = $period->period_start->toDateString();
-            $periodEnd = $period->period_end->toDateString();
+        foreach ($invoices as $invoice) {
+            $dueDate = Carbon::parse($invoice->due_date)->startOfDay();
+            $amount = (int) ((float) $invoice->outstanding * 100);
+            $periodStart = $invoice->period_start->toDateString();
+            $periodEnd = $invoice->period_end->toDateString();
             $dueDateStr = $dueDate->toDateString();
 
-            match ($period->status) {
+            $status = $dueDate->lessThan($today)
+                ? 'overdue'
+                : ($dueDate->greaterThan($today) ? 'upcoming' : 'due');
+
+            match ($status) {
                 'upcoming' => $this->collectUpcoming($events, $lease, $periodStart, $periodEnd, $dueDateStr, $amount, $dueDate, $today, $settings),
                 'due' => $this->collectDueToday($events, $lease, $periodStart, $periodEnd, $dueDateStr, $amount, $dueDate, $today),
                 'overdue' => $this->collectOverdue($events, $lease, $periodStart, $periodEnd, $dueDateStr, $amount, $dueDate, $today, $settings),
-                default => null,
             };
         }
 

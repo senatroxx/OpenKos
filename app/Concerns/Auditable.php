@@ -4,6 +4,7 @@ namespace App\Concerns;
 
 use App\Models\AuditLog;
 use App\Models\User;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 trait Auditable
@@ -15,12 +16,16 @@ trait Auditable
         static::created(fn (self $model) => $model->recordAudit('create'));
         static::updated(fn (self $model) => $model->recordAudit('update'));
         static::deleted(fn (self $model) => $model->recordAudit('delete'));
-        static::restoring(function (self $model) {
-            $model->auditRestoring = true;
-        });
-        static::restored(function (self $model) {
-            $model->recordAudit('restore');
-        });
+
+        // restoring/restored only exist on soft-deleting models.
+        if (in_array(SoftDeletes::class, class_uses_recursive(static::class), true)) {
+            static::restoring(function (self $model) {
+                $model->auditRestoring = true;
+            });
+            static::restored(function (self $model) {
+                $model->recordAudit('restore');
+            });
+        }
     }
 
     public function recordAudit(string $operation): void

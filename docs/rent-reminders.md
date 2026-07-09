@@ -4,6 +4,8 @@
 > **Issue:** [OPE-23](https://linear.app/openkos/issue/OPE-23)
 > **Decision:** Layer-first architecture with scheduler → repository → notification pipeline, WhatsApp-only for MVP.
 
+> **Update (OPE-70, [ADR-007](architecture/adr/007-invoice-aggregate.md)):** reminders now read from **payable invoices** instead of the computed `Lease::schedule()`. `PaymentReminderScheduler::pendingFor()` iterates `$lease->invoices()->payable()`, reminder amounts are the invoice **outstanding** (partial-aware), and `ForceSendReminder` picks the first payable invoice. The invoice generator (`invoices:generate`, daily 01:00, 2-month horizon ≥ reminder lookahead) guarantees invoices exist before the 08:00 reminder run. References to `scheduleForReminder()` below are historical.
+
 ## Context
 
 The kos management system needs automated rent reminders via WhatsApp to reduce late payments. Requirements:

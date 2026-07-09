@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Invoices\GenerateInvoices;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
@@ -187,18 +188,28 @@ class LeaseSeeder extends Seeder
             $activeLeases->get(1)->update(['rent_due_day' => min($today + 3, 28)]); // Due Soon
         }
 
-        // Create payments for ~half the active leases (makes them "Paid"), skip the first 2
+        // Generate invoices, then pay this month's invoice for ~half the
+        // active leases (makes them "Paid"), skip the first 2
+        $generateInvoices = app(GenerateInvoices::class);
+
         foreach ($activeLeases as $i => $lease) {
+            $generateInvoices->execute($lease);
+
             if ($i > 1 && $i % 2 !== 0) {
-                $lease->payments()->create([
-                    'paymentable_type' => Lease::class,
-                    'amount' => $lease->rent_amount,
-                    'payment_date' => $now->copy()->setDay(min((int) $lease->rent_due_day, $now->daysInMonth)),
-                    'period_start' => $now->copy()->startOfMonth(),
-                    'period_end' => $now->copy()->endOfMonth(),
-                    'payment_method' => 'cash',
-                    'status' => PaymentStatus::Confirmed,
-                ]);
+                $invoice = $lease->invoices()
+                    ->whereBetween('period_start', [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()])
+                    ->first();
+
+                if ($invoice) {
+                    $invoice->payments()->create([
+                        'amount' => $invoice->total,
+                        'payment_date' => $now->copy()->setDay(min((int) $lease->rent_due_day, $now->daysInMonth)),
+                        'payment_method' => 'cash',
+                        'status' => PaymentStatus::Confirmed,
+                    ]);
+
+                    $invoice->recalculateStatus();
+                }
             }
         }
 

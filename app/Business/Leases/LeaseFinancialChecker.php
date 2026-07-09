@@ -11,9 +11,9 @@ class LeaseFinancialChecker
      */
     public function outstandingBalance(Lease $lease): int
     {
-        $periods = $lease->schedule();
-
-        return $periods->sum(fn ($p) => $p->status === 'overdue' ? (int) $p->amount : 0);
+        return (int) $lease->invoices()->overdue()->get()->sum(
+            fn ($invoice) => (int) round((float) $invoice->outstanding * 100)
+        );
     }
 
     /**
