@@ -57,10 +57,11 @@ class GenerateInvoices
                         return $invoice;
                     });
                 } catch (QueryException $e) {
-                    // ponytail: only unique-violation races during concurrent
-                    // generation are expected — rethrow everything else so
-                    // real persistence failures are not silently hidden.
-                    if (! str_starts_with((string) $e->getCode(), '23')) {
+                    // ponytail: only unique-violation races (PostgreSQL
+                    // SQLSTATE 23505) during concurrent generation are
+                    // expected — rethrow everything else so real persistence
+                    // failures are not silently hidden.
+                    if ((string) $e->getCode() !== '23505') {
                         throw $e;
                     }
 

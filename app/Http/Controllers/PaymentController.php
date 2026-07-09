@@ -93,19 +93,18 @@ class PaymentController extends Controller
 
         $this->paymentStatusValidator->validate($oldStatus, $newStatus);
 
-        if ($newStatus === PaymentStatus::Confirmed) {
-            DB::transaction(function () use ($payment, $request, $newStatus) {
-                // Lock both invoice and payment so concurrent verify requests
-                // see the correct state and cannot double-confirm.
-                $lockedPayment = Payment::lockForUpdate()->findOrFail($payment->id);
+        // Both paths run under lock so a concurrent confirm cannot be silently
+        // overwritten by a reject (or vice versa).
+        DB::transaction(function () use ($payment, $request, $newStatus) {
+            $lockedPayment = Payment::lockForUpdate()->findOrFail($payment->id);
 
-                if ($lockedPayment->status !== PaymentStatus::Pending) {
-                    abort(422, __('Payment has already been verified.'));
-                }
+            if ($lockedPayment->status !== PaymentStatus::Pending) {
+                abort(422, __('Payment has already been verified.'));
+            }
 
+            if ($newStatus === PaymentStatus::Confirmed) {
                 $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
 
-                // confirmed_sum excludes the current payment since it's still Pending
                 $confirmedSum = (float) $invoice->payments()
                     ->where('status', PaymentStatus::Confirmed->value)
                     ->sum('amount');
@@ -122,19 +121,21 @@ class PaymentController extends Controller
                 ]);
 
                 $invoice->recalculateStatus();
-            });
+            } else {
+                $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
 
-            $payment->refresh();
-        } else {
-            $payment->update([
-                'status' => $newStatus,
-                'confirmed_by' => $request->user()->id,
-                'verified_by' => $request->user()->id,
-                'verified_at' => now(),
-            ]);
+                $lockedPayment->update([
+                    'status' => $newStatus,
+                    'confirmed_by' => $request->user()->id,
+                    'verified_by' => $request->user()->id,
+                    'verified_at' => now(),
+                ]);
 
-            $payment->invoice->recalculateStatus();
-        }
+                $invoice->recalculateStatus();
+            }
+        });
+
+        $payment->refresh();
 
         PaymentStatusChanged::dispatch($payment, $oldStatus, $newStatus, actorId: Auth::id());
 
