@@ -7,6 +7,16 @@ export type SettingDefinition = {
     page: string | null;
 };
 
+export interface MailConfig {
+    driver?: string;
+    host?: string;
+    port?: number;
+    username?: string;
+    encryption?: string;
+    from_address?: string;
+    from_name?: string;
+}
+
 export type DynamicSettingsFormProps = {
     definitions: SettingDefinition[];
     values: Record<string, unknown>;

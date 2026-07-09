@@ -23,15 +23,7 @@ import {
     test as testMail,
 } from '@/routes/settings/mail';
 
-interface MailConfig {
-    driver?: string;
-    host?: string;
-    port?: number;
-    username?: string;
-    encryption?: string;
-    from_address?: string;
-    from_name?: string;
-}
+import type { MailConfig } from '@/types/settings';
 
 export default function Mail({
     settings,

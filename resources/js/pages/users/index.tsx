@@ -47,16 +47,15 @@ import users, {
     store,
     update,
 } from '@/routes/users';
-import type { PaginatedData, TableMeta } from '@/types';
+import type { PaginatedData, RolePair, TableMeta } from '@/types';
 
 type Property = { id: number; name: string };
 type RoleOption = { value: string; label: string };
-type UserRole = { name: string; label: string };
 type ManagedUser = {
     id: number;
     name: string;
     email: string;
-    roles: UserRole[];
+    roles: RolePair[];
     role: string | null;
     properties: Property[];
     is_active: boolean;

@@ -36,20 +36,7 @@ import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import units from '@/routes/properties/units';
-import type { Lease, PaginatedData, TableMeta } from '@/types';
-
-type AvailableUnit = {
-    id: number;
-    name: string;
-    property_id: number;
-    capacity: number;
-    occupied_count: number;
-    property: {
-        id: number;
-        name: string;
-        city: { name: string } | null;
-    } | null;
-};
+import type { AvailableUnit, Lease, PaginatedData, TableMeta } from '@/types';
 
 type PageProps = {
     leases: PaginatedData<Lease>;

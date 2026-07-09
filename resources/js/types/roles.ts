@@ -21,6 +21,11 @@ export type RoleData = {
     created_at: string | null;
 };
 
+export type RolePair = {
+    name: string;
+    label: string;
+};
+
 export type RoleFormData = {
     id: number;
     name: string;
