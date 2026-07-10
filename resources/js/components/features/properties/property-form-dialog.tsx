@@ -228,10 +228,8 @@ export default function PropertyFormSheet({
                             <div className="grid gap-2">
                                 <Label htmlFor="phone">Phone</Label>
                                 <PhoneInput
-                                    value={data.phone}
-                                    onChange={(v: string) =>
-                                        setData('phone', v)
-                                    }
+                                    name="phone"
+                                    defaultValue={data.phone}
                                     placeholder="e.g. 81234567890"
                                 />
                                 <InputError message={errors.phone} />

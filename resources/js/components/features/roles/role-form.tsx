@@ -88,7 +88,14 @@ export default function RoleForm({
         setSelectedPermissions(rec.permissions);
     }
 
-    const form = useForm({});
+    const form = useForm({
+        name: role?.name ?? '',
+        label: role?.label ?? '',
+        description: role?.description ?? '',
+        color: role?.color ?? '',
+        is_active: role?.is_active ?? true,
+        permissions: role?.permissions ?? [],
+    });
 
     const { processing, errors } = form;
 
@@ -102,16 +109,15 @@ export default function RoleForm({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        form
-            .transform(() => ({
-                name: isEdit ? role?.name : nameValue,
-                label: labelValue,
-                description: descriptionValue,
-                color: colorValue,
-                is_active: isActiveValue,
-                permissions: selectedPermissions,
-            }))
-            .submit(isEdit ? updateRole(role!.id) : createRole(), { onSuccess: () => {} });
+        form.transform(() => ({
+            name: isEdit ? role?.name : nameValue,
+            label: labelValue,
+            description: descriptionValue,
+            color: colorValue,
+            is_active: isActiveValue,
+            permissions: selectedPermissions,
+        }));
+        form.submit(isEdit ? updateRole(role!.id) : createRole(), { onSuccess: () => {} });
     }
 
     return (

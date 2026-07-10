@@ -32,7 +32,13 @@ export default function Mail({
 }) {
     const config = settings.mail_config ?? {};
 
-    const { data, setData, processing, errors, submit } = useForm({
+    const {
+        data,
+        setData: setDataRaw,
+        processing,
+        errors,
+        submit,
+    } = useForm({
         'mail_config.host': config.host ?? '',
         'mail_config.port': config.port ?? '',
         'mail_config.username': config.username ?? '',
@@ -41,6 +47,7 @@ export default function Mail({
         'mail_config.from_address': config.from_address ?? '',
         'mail_config.from_name': config.from_name ?? '',
     });
+    const setData = setDataRaw as (key: string, value: string) => void;
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();

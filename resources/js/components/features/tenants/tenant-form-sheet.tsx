@@ -80,10 +80,8 @@ export default function TenantFormSheet({
                             <div className="grid gap-2">
                                 <Label htmlFor="phone">Phone</Label>
                                 <PhoneInput
-                                    value={data.phone}
-                                    onChange={(v: string) =>
-                                        setData('phone', v)
-                                    }
+                                    name="phone"
+                                    defaultValue={data.phone}
                                     placeholder="e.g. 81234567890"
                                 />
                                 <InputError message={errors.phone} />
@@ -128,13 +126,8 @@ export default function TenantFormSheet({
                                     Emergency Contact Phone
                                 </Label>
                                 <PhoneInput
-                                    value={data.emergency_contact_phone}
-                                    onChange={(v: string) =>
-                                        setData(
-                                            'emergency_contact_phone',
-                                            v,
-                                        )
-                                    }
+                                    name="emergency_contact_phone"
+                                    defaultValue={data.emergency_contact_phone}
                                     placeholder="e.g. 81234567890"
                                 />
                                 <InputError

@@ -1,10 +1,10 @@
 import { router } from '@inertiajs/react';
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import { StatusBadge } from '@/components/shared/status-badge';
 import type { MaintenanceTicket, PaginatedData, TableMeta, WorkspaceUnit } from '@/types';
 import { UnitLayout } from './layout';
 

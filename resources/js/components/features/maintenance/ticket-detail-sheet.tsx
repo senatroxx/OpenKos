@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { Check, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { useState } from 'react';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -19,7 +20,6 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
-import { StatusBadge } from '@/components/shared/status-badge';
 import type { MaintenanceTicket } from '@/types';
 
 const priorityLabel: Record<string, string> = {

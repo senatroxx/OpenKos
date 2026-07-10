@@ -80,6 +80,9 @@ export default function TicketFormSheet({
     const [moveToUnitId, setMoveToUnitId] = useState('');
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
+    const ticketFormAction = isEdit && ticket ? update(ticket.id).url : store().url;
+    const ticketFormMethod = isEdit && ticket ? update(ticket.id).method : store().method;
+
     const { data, setData, processing, errors, submit } = useForm({
         title: ticket?.title ?? '',
         description: ticket?.description ?? '',
@@ -550,8 +553,8 @@ export default function TicketFormSheet({
                                     data.move_tenant_to_unit_id = moveToUnitId;
                                 }
 
-                                router.visit(formAction, {
-                                    method: formMethod,
+                                router.visit(ticketFormAction, {
+                                    method: ticketFormMethod,
                                     data,
                                     onSuccess: () => onOpenChange(false),
                                 });
@@ -593,8 +596,8 @@ export default function TicketFormSheet({
                                         data[k] = String(v);
                                     },
                                 );
-                                router.visit(formAction, {
-                                    method: formMethod,
+                                router.visit(ticketFormAction, {
+                                    method: ticketFormMethod,
                                     data,
                                     onSuccess: () => onOpenChange(false),
                                 });
@@ -619,8 +622,8 @@ export default function TicketFormSheet({
                                     },
                                 );
                                 data.move_back = '1';
-                                router.visit(formAction, {
-                                    method: formMethod,
+                                router.visit(ticketFormAction, {
+                                    method: ticketFormMethod,
                                     data,
                                     onSuccess: () => onOpenChange(false),
                                 });

@@ -31,7 +31,7 @@ export default function RenewLeaseSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const { data, setData, processing, errors, submit } = useForm({
-        rent_amount: lease.rent_amount ? String(Number.parseInt(lease.rent_amount)) : '',
+        rent_amount: lease?.rent_amount ? String(Number.parseInt(lease.rent_amount)) : '',
         extension_value: '',
         extension_unit: 'months',
         deposit_handling: 'refund',
@@ -47,7 +47,7 @@ export default function RenewLeaseSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(renew(lease.id), {
+        submit(renew(lease!.id), {
             onSuccess: handleClose,
         });
     }

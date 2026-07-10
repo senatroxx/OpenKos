@@ -36,15 +36,15 @@ export default function LeaseEditSheet({
         rent_due_day: lease ? String(lease.rent_due_day) : '1',
         deposit_refunded_at: lease?.deposit_refunded_at?.split('T')[0] ?? '',
         notes: lease?.notes ?? '',
+        billing_strategy: lease?.billing_strategy ?? 'advance',
     });
-    const billingStrategy = lease?.billing_strategy ?? 'advance';
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         submit(update({
-            property: lease.unit.property!.slug,
-            unit: lease.unit.slug,
-            lease: lease.id,
+            property: lease!.unit!.property!.slug,
+            unit: lease!.unit!.slug,
+            lease: lease!.id,
         }), {
             onSuccess: () => onOpenChange(false),
         });
@@ -209,12 +209,12 @@ export default function LeaseEditSheet({
                                         <input
                                             type="hidden"
                                             name="billing_strategy"
-                                            value={billingStrategy}
+                                            value={data.billing_strategy}
                                         />
                                         <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                                             {BILLING_STRATEGIES.find(
-                                                (s) => s.value === billingStrategy,
-                                            )?.label ?? billingStrategy}
+                                                (s) => s.value === data.billing_strategy,
+                                            )?.label ?? data.billing_strategy}
                                         </div>
                                         <InputError
                                             message={errors.billing_strategy}

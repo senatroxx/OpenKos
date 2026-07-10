@@ -30,8 +30,6 @@ export default function Edit({
                 <RoleForm
                     role={role}
                     permissionGroups={permissionGroups}
-                    action={roles.update.url(role)}
-                    method="put"
                 />
             </div>
         </>

@@ -30,8 +30,6 @@ export default function Create({
                 <RoleForm
                     permissionGroups={permissionGroups}
                     recommendations={recommendations}
-                    action={roles.store.url()}
-                    method="post"
                 />
             </div>
         </>

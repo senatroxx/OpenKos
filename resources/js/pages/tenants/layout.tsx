@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
-import type { TenantDocument, WorkspaceTenant } from '@/types';
+import type { WorkspaceTenant } from '@/types';
 
 export function TenantLayout({
     tenant,
