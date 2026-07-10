@@ -46,7 +46,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     },
     tenant: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },
-        inactive: { label: 'Inactive', className: 'border-amber-300 text-amber-600', variant: 'outline' },
+        inactive: { label: 'Inactive', className: 'bg-gray-400 text-white' },
         archived: { label: 'Archived', variant: 'secondary' },
     },
     property: {
