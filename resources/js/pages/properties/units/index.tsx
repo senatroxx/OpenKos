@@ -20,7 +20,7 @@ import {
     UnitDetailSheet,
     UnitFormSheet,
 } from '@/components/features';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -70,20 +70,6 @@ type PageProps = {
     status?: string;
     per_page?: number;
     table: TableMeta;
-};
-
-const STATUS_LABELS: Record<string, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-    unavailable: 'Unavailable',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    available: 'bg-green-600',
-    occupied: 'bg-blue-600',
-    maintenance: 'bg-amber-500',
-    unavailable: 'bg-gray-400',
 };
 
 export default function Index({
@@ -280,11 +266,7 @@ export default function Index({
             label: 'Status',
             sortable: true,
             render: (r) => (
-                <Badge
-                    className={`${STATUS_COLORS[r.status] ?? 'bg-gray-400'} text-white`}
-                >
-                    {STATUS_LABELS[r.status] ?? r.status}
-                </Badge>
+                <StatusBadge domain="unit" value={r.status} />
             ),
         },
         {

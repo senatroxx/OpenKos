@@ -13,6 +13,7 @@ import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { Heading, InputError } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -73,18 +74,6 @@ type PageProps = {
     per_page?: number;
     table: TableMeta;
 };
-
-function StatusBadge({ user }: { user: ManagedUser }) {
-    if (user.status === 'invited') {
-        return <Badge variant="outline">Invited</Badge>;
-    }
-
-    if (user.status === 'active') {
-        return <Badge className="bg-green-600">Active</Badge>;
-    }
-
-    return <Badge variant="secondary">Disabled</Badge>;
-}
 
 function formatDate(value: string | null) {
     if (!value) {
@@ -232,7 +221,7 @@ export default function Index({
         {
             key: '_status',
             label: 'Status',
-            render: (u) => <StatusBadge user={u} />,
+            render: (u) => <StatusBadge domain="user" value={u.status} />,
         },
         {
             key: '_actions',
@@ -641,7 +630,7 @@ function UserDetailSheet({
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
-                                <StatusBadge user={user} />
+                                <StatusBadge domain="user" value={user.status} />
                             </section>
 
                             <section>

@@ -3,6 +3,7 @@ import { Banknote, ChevronDown, FileText, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { RecordPaymentSheet } from '@/components/features';
 import { DocumentPreview } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -75,18 +76,6 @@ export default function LeaseDetailSheet({
         }
     }, [open, lease]);
 
-    const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-        paid: { label: 'Paid', className: 'bg-green-600 text-white' },
-        partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
-        overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
-        due: { label: 'Due', className: 'bg-yellow-500 text-white' },
-        upcoming: { label: 'Upcoming', className: 'bg-gray-400 text-white' },
-        cancelled: {
-            label: 'Cancelled',
-            className: 'bg-gray-300 text-gray-700',
-        },
-    };
-
     const unitLabel = lease?.unit?.name ?? '—';
     const propertyName = lease?.unit?.property?.name ?? '—';
     const city = lease?.unit?.property?.city;
@@ -113,15 +102,10 @@ export default function LeaseDetailSheet({
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
-                                <Badge
-                                    className={
-                                        isActive
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-400 text-white'
-                                    }
-                                >
-                                    {isActive ? 'Active' : 'Terminated'}
-                                </Badge>
+                                <StatusBadge
+                                    domain="lease"
+                                    value={lease.status}
+                                />
                             </section>
 
                             {/* Occupancy */}
@@ -440,24 +424,7 @@ export default function LeaseDetailSheet({
                                                                         payment.amount,
                                                                     )}
                                                                 </p>
-                                                                {payment.status ===
-                                                                'confirmed' ? (
-                                                                    <Badge className="bg-green-600 px-1.5 py-0 text-[10px] text-white">
-                                                                        {payment.verified_at
-                                                                            ? 'Verified'
-                                                                            : 'Paid'}
-                                                                    </Badge>
-                                                                ) : payment.status ===
-                                                                  'pending' ? (
-                                                                    <Badge className="bg-amber-500 px-1.5 py-0 text-[10px] text-white">
-                                                                        Pending
-                                                                        Review
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge className="bg-gray-400 px-1.5 py-0 text-[10px] text-white">
-                                                                        Cancelled
-                                                                    </Badge>
-                                                                )}
+<StatusBadge domain="payment" value={payment.status} />
                                                             </div>
                                                         </div>
                                                         {payment.proofs
@@ -569,13 +536,7 @@ export default function LeaseDetailSheet({
                                                 <div className="space-y-2">
                                                     {schedule.map(
                                                         (entry, i) => {
-                                                            const badge =
-                                                                STATUS_BADGE[
-                                                                    entry.status
-                                                                ] ??
-                                                                STATUS_BADGE.upcoming;
-
-                                                            return (
+                                                                return (
                                                                 <div
                                                                     key={i}
                                                                     className="flex items-center justify-between rounded-lg border p-3 text-sm"
@@ -599,13 +560,12 @@ export default function LeaseDetailSheet({
                                                                                 entry.amount,
                                                                             )}
                                                                         </p>
-                                                                        <Badge
-                                                                            className={`px-1.5 py-0 text-[10px] ${badge.className}`}
-                                                                        >
-                                                                            {
-                                                                                badge.label
+                                                                        <StatusBadge
+                                                                            domain="rent"
+                                                                            value={
+                                                                                entry.status
                                                                             }
-                                                                        </Badge>
+                                                                        />
                                                                     </div>
                                                                 </div>
                                                             );

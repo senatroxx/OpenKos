@@ -22,6 +22,7 @@ import {
     RenewLeaseSheet,
 } from '@/components/features';
 import { Heading } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -53,11 +54,6 @@ type PageProps = {
         collected_this_month: number;
         overdue_amount: number;
     };
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    active: 'bg-blue-600',
-    terminated: 'bg-gray-400',
 };
 
 export default function Index({
@@ -204,11 +200,7 @@ export default function Index({
             label: 'Status',
             sortable: true,
             render: (lease) => (
-                <Badge
-                    className={`${STATUS_COLORS[lease.status] ?? 'bg-gray-400'} text-white`}
-                >
-                    {lease.status === 'active' ? 'Active' : 'Terminated'}
-                </Badge>
+                <StatusBadge domain="lease" value={lease.status} />
             ),
         },
         {

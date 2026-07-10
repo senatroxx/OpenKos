@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -78,20 +78,11 @@ export default function TenantDetailSheet({
                         <div className="space-y-5">
                             <div className="flex items-center gap-2">
                                 <span>Status:</span>
-                                {isArchived ? (
-                                    <Badge variant="secondary">Archived</Badge>
-                                ) : tenant.is_active ? (
-                                    <Badge className="bg-green-600">
-                                        Active
-                                    </Badge>
-                                ) : (
-                                    <Badge
-                                        variant="outline"
-                                        className="border-amber-300 text-amber-600"
-                                    >
-                                        Inactive
-                                    </Badge>
-                                )}
+                                {(() => {
+                                    const status = isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive';
+
+                                    return <StatusBadge domain="tenant" value={status} />;
+                                })()}
                             </div>
 
                             <div className="rounded-lg border bg-muted/30 p-4">

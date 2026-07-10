@@ -13,6 +13,7 @@ import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { Heading } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -152,11 +153,10 @@ export default function Index({
             key: '_status',
             label: 'Status',
             render: (role) =>
-                role.is_active ? (
-                    <Badge className="bg-green-600">Active</Badge>
-                ) : (
-                    <Badge variant="secondary">Disabled</Badge>
-                ),
+                <StatusBadge
+                    domain="role"
+                    value={role.is_active ? 'active' : 'disabled'}
+                />,
         },
         {
             key: '_actions',

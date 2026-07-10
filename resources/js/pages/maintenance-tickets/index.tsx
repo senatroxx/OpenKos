@@ -16,6 +16,7 @@ import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { TicketDetailSheet, TicketFormSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,25 +54,11 @@ const priorityColors: Record<string, string> = {
     urgent: 'bg-red-100 text-red-700',
 };
 
-const statusColors: Record<string, string> = {
-    reported: 'bg-blue-100 text-blue-700',
-    in_progress: 'bg-purple-100 text-purple-700',
-    resolved: 'bg-green-100 text-green-700',
-    cancelled: 'bg-gray-100 text-gray-500',
-};
-
 const priorityLabel: Record<string, string> = {
     low: 'Low',
     medium: 'Medium',
     high: 'High',
     urgent: 'Urgent',
-};
-
-const statusLabel: Record<string, string> = {
-    reported: 'Reported',
-    in_progress: 'In Progress',
-    resolved: 'Resolved',
-    cancelled: 'Cancelled',
 };
 
 export default function Index({
@@ -200,9 +187,7 @@ export default function Index({
             label: 'Status',
             sortable: true,
             render: (ticket) => (
-                <Badge className={statusColors[ticket.status] ?? ''}>
-                    {statusLabel[ticket.status] ?? ticket.status}
-                </Badge>
+                <StatusBadge domain="maintenance" value={ticket.status} />
             ),
         },
         {

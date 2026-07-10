@@ -19,14 +19,8 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
+import { StatusBadge } from '@/components/shared/status-badge';
 import type { MaintenanceTicket } from '@/types';
-
-const statusLabel: Record<string, string> = {
-    reported: 'Reported',
-    in_progress: 'In Progress',
-    resolved: 'Resolved',
-    cancelled: 'Cancelled',
-};
 
 const priorityLabel: Record<string, string> = {
     low: 'Low',
@@ -106,7 +100,7 @@ export default function TicketDetailSheet({
                     <SheetTitle>{ticket.title}</SheetTitle>
                     <SheetDescription>
                         {ticket.reference ?? `#${ticket.id}`} &middot;{' '}
-                        {statusLabel[ticket.status] ?? ticket.status}
+                        <StatusBadge domain="maintenance" value={ticket.status} />
                     </SheetDescription>
                 </SheetHeader>
 

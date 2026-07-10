@@ -1,16 +1,11 @@
 import { router } from '@inertiajs/react';
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
-import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease, PaginatedData, Property, TableMeta } from '@/types';
 import { PropertyLayout } from './layout';
-
-const STATUS_COLORS: Record<string, string> = {
-    active: 'bg-green-600',
-    terminated: 'bg-gray-400',
-};
 
 const columns: TableColumn<Lease>[] = [
     {
@@ -73,11 +68,7 @@ const columns: TableColumn<Lease>[] = [
         label: 'Status',
         sortable: true,
         render: (l) => (
-            <Badge
-                className={`${STATUS_COLORS[l.status] ?? 'bg-gray-400'} text-white`}
-            >
-                {l.status}
-            </Badge>
+            <StatusBadge domain="lease" value={l.status} />
         ),
     },
 ];

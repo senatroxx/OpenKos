@@ -1,3 +1,4 @@
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import type { Property } from '@/types';
 
@@ -18,13 +19,10 @@ export default function PropertyOverview({ property }: { property: Property }) {
         <div className="space-y-6">
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                {property.is_active ? (
-                    <Badge variant="default" className="bg-green-600">
-                        Active
-                    </Badge>
-                ) : (
-                    <Badge variant="secondary">Archived</Badge>
-                )}
+                <StatusBadge
+                    domain="property"
+                    value={property.is_active ? 'active' : 'archived'}
+                />
                 {property.type && (
                     <Badge variant="outline">
                         {property.type_label ?? property.type}

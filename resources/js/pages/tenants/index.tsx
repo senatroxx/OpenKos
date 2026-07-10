@@ -20,6 +20,7 @@ import {
     TenantFormSheet,
 } from '@/components/features';
 import { Heading } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -184,21 +185,11 @@ export default function Index({
         {
             key: '_status',
             label: 'Status',
-            render: (t) =>
-                t.deleted_at ? (
-                    <Badge variant="secondary">Archived</Badge>
-                ) : t.is_active ? (
-                    <Badge variant="default" className="bg-green-600">
-                        Active
-                    </Badge>
-                ) : (
-                    <Badge
-                        variant="outline"
-                        className="border-amber-300 text-amber-600"
-                    >
-                        Inactive
-                    </Badge>
-                ),
+            render: (t) => {
+                const status = t.deleted_at ? 'archived' : t.is_active ? 'active' : 'inactive';
+
+                return <StatusBadge domain="tenant" value={status} />;
+            },
         },
         {
             key: '_actions',
