@@ -1,5 +1,4 @@
-import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm } from '@inertiajs/react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,8 +30,13 @@ export default function RenewLeaseSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [depositHandling, setDepositHandling] = useState('refund');
-    const [confirmedOutstanding, setConfirmedOutstanding] = useState(false);
+    const { data, setData, processing, errors, post } = useForm({
+        rent_amount: lease.rent_amount ? String(Number.parseInt(lease.rent_amount)) : '',
+        extension_value: '',
+        extension_unit: 'months',
+        deposit_handling: 'refund',
+        confirmed_outstanding: false,
+    });
 
     if (!lease) {
         return null;
@@ -40,6 +44,13 @@ export default function RenewLeaseSheet({
 
     const isOverdue =
         lease.status === 'active' && lease.payment_status === 'overdue';
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        post(leases.renew.post({ lease: lease.id }).url, {
+            onSuccess: handleClose,
+        });
+    }
 
     function handleClose() {
         onOpenChange(false);
@@ -57,12 +68,7 @@ export default function RenewLeaseSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form
-                        action={leases.renew.post({ lease: lease.id }).url}
-                        method="post"
-                        onSuccess={handleClose}
-                    >
-                        {({ processing, errors }) => (
+                    <form onSubmit={handleSubmit}>
                             <div className="space-y-6 pt-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="rent_amount">
@@ -73,15 +79,8 @@ export default function RenewLeaseSheet({
                                         name="rent_amount"
                                         type="number"
                                         min={1}
-                                        defaultValue={
-                                            lease.rent_amount
-                                                ? String(
-                                                      Number.parseInt(
-                                                          lease.rent_amount,
-                                                      ),
-                                                  )
-                                                : ''
-                                        }
+                                        value={data.rent_amount}
+                                        onChange={(e) => setData('rent_amount', e.target.value)}
                                         required
                                     />
                                     {errors.rent_amount && (
@@ -102,6 +101,8 @@ export default function RenewLeaseSheet({
                                             type="number"
                                             min={1}
                                             max={120}
+                                            value={data.extension_value}
+                                            onChange={(e) => setData('extension_value', e.target.value)}
                                             placeholder="e.g. 12"
                                             required
                                         />
@@ -117,7 +118,8 @@ export default function RenewLeaseSheet({
                                         </Label>
                                         <Select
                                             name="extension_unit"
-                                            defaultValue="months"
+                                            value={data.extension_unit}
+                                            onValueChange={(v) => setData('extension_unit', v)}
                                         >
                                             <SelectTrigger>
                                                 <SelectValue />
@@ -143,14 +145,9 @@ export default function RenewLeaseSheet({
                                     <Label htmlFor="deposit_handling">
                                         Security Deposit
                                     </Label>
-                                    <input
-                                        type="hidden"
-                                        name="deposit_handling"
-                                        value={depositHandling}
-                                    />
                                     <Select
-                                        value={depositHandling}
-                                        onValueChange={setDepositHandling}
+                                        value={data.deposit_handling}
+                                        onValueChange={(v) => setData('deposit_handling', v)}
                                     >
                                         <SelectTrigger>
                                             <SelectValue />
@@ -188,23 +185,12 @@ export default function RenewLeaseSheet({
                                                 <input
                                                     type="checkbox"
                                                     checked={
-                                                        confirmedOutstanding
+                                                        data.confirmed_outstanding
                                                     }
                                                     onChange={(e) => {
-                                                        setConfirmedOutstanding(
-                                                            e.target.checked,
-                                                        );
+                                                        setData('confirmed_outstanding', e.target.checked);
                                                     }}
                                                     className="mt-0.5 size-4"
-                                                />
-                                                <input
-                                                    type="hidden"
-                                                    name="confirmed_outstanding"
-                                                    value={
-                                                        confirmedOutstanding
-                                                            ? '1'
-                                                            : '0'
-                                                    }
                                                 />
                                                 <span>
                                                     I confirm I want to renew
@@ -230,8 +216,7 @@ export default function RenewLeaseSheet({
                                     </Button>
                                 </div>
                             </div>
-                        )}
-                    </Form>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

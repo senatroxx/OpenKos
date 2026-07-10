@@ -1,5 +1,4 @@
-import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -14,6 +13,57 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { DynamicSettingsFormProps, SettingDefinition } from '@/types/settings';
 
+function SettingField({ def, value }: { def: SettingDefinition; value: unknown }) {
+    const { data, setData, processing, errors, post } = useForm({
+        key: def.key,
+        value: def.type === 'bool' ? (value ? '1' : '0') : value ?? def.default ?? '',
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        post('/settings/values');
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            {def.type === 'bool' ? (
+                <div className="flex items-center gap-2">
+                    <Switch id={def.key} checked={data.value === '1'} onCheckedChange={(v) => setData('value', v ? '1' : '0')} />
+                    <Label htmlFor={def.key}>{def.label}</Label>
+                </div>
+            ) : def.type === 'json' ? (
+                <div className="grid gap-2">
+                    <Label htmlFor={def.key}>{def.label}</Label>
+                    <Textarea
+                        id={def.key}
+                        value={data.value as string}
+                        onChange={e => setData('value', e.target.value)}
+                        rows={4}
+                    />
+                    {errors.value && (
+                        <p className="text-sm text-red-600">{errors.value}</p>
+                    )}
+                </div>
+            ) : (
+                <div className="grid gap-2">
+                    <Label htmlFor={def.key}>{def.label}</Label>
+                    <Input
+                        id={def.key}
+                        type={def.type === 'encrypted' ? 'password' : def.type === 'int' ? 'number' : 'text'}
+                        value={data.value as string | number}
+                        onChange={e => setData('value', e.target.value)}
+                        placeholder={String(def.default ?? '')}
+                    />
+                    {errors.value && (
+                        <p className="text-sm text-red-600">{errors.value}</p>
+                    )}
+                </div>
+            )}
+            <Button disabled={processing}>Save</Button>
+        </form>
+    );
+}
+
 export function DynamicSettingsForm({
     definitions,
     values,
@@ -21,6 +71,7 @@ export function DynamicSettingsForm({
     return (
         <div className="space-y-6">
             {definitions.map((def) => (
+                /* ponytail: replace with Wayfinder import after `php artisan wayfinder:generate` */
                 <Card key={def.key}>
                     <CardHeader>
                         <CardTitle>{def.label}</CardTitle>
@@ -36,89 +87,10 @@ export function DynamicSettingsForm({
                         )}
                     </CardHeader>
                     <CardContent>
-                        {/* ponytail: replace with Wayfinder import after `php artisan wayfinder:generate` */}
-                        <Form
-                            action={'/settings/values'}
-                            method="post"
-                        >
-                            {({ processing, errors }) => (
-                                <div className="space-y-4">
-                                    <input type="hidden" name="key" value={def.key} />
-                                    {def.type === 'bool' ? (
-                                        <BoolField def={def} value={!!values[def.key]} />
-                                    ) : def.type === 'json' ? (
-                                        <div className="grid gap-2">
-                                            <Label htmlFor={def.key}>
-                                                {def.label}
-                                            </Label>
-                                            <Textarea
-                                                id={def.key}
-                                                name="value"
-                                                defaultValue={
-                                                    values[def.key] != null
-                                                        ? JSON.stringify(
-                                                              values[def.key],
-                                                              null,
-                                                              2,
-                                                          )
-                                                        : ''
-                                                }
-                                                rows={4}
-                                            />
-                                            {errors.value && (
-                                                <p className="text-sm text-red-600">
-                                                    {errors.value}
-                                                </p>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="grid gap-2">
-                                            <Label htmlFor={def.key}>
-                                                {def.label}
-                                            </Label>
-                                            <Input
-                                                id={def.key}
-                                                name="value"
-                                                type={
-                                                    def.type === 'encrypted'
-                                                        ? 'password'
-                                                        : def.type === 'int'
-                                                          ? 'number'
-                                                          : 'text'
-                                                }
-                                                defaultValue={
-                                                    values[def.key] as string | number | undefined
-                                                }
-                                                placeholder={String(def.default ?? '')}
-                                            />
-                                            {errors.value && (
-                                                <p className="text-sm text-red-600">
-                                                    {errors.value}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                    <Button disabled={processing}>
-                                        Save
-                                    </Button>
-                                </div>
-                            )}
-                        </Form>
+                        <SettingField def={def} value={values[def.key]} />
                     </CardContent>
                 </Card>
             ))}
-        </div>
-    );
-}
-
-function BoolField({ def, value }: { def: SettingDefinition; value: boolean }) {
-    const [checked, setChecked] = useState(value);
-
-    return (
-        <div className="flex items-center gap-2">
-            <input type="hidden" name="value" value={checked ? '1' : '0'} />
-            <Switch id={def.key} checked={checked} onCheckedChange={setChecked} />
-            <Label htmlFor={def.key}>{def.label}</Label>
         </div>
     );
 }

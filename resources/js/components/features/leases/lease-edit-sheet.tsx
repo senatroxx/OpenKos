@@ -1,5 +1,4 @@
-import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm } from '@inertiajs/react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,14 +31,28 @@ export default function LeaseEditSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [dueDay, setDueDay] = useState(() =>
-        lease ? String(lease.rent_due_day) : '1',
-    );
+    const { data, setData, processing, errors, put } = useForm({
+        rent_amount: lease?.rent_amount ?? '',
+        rent_due_day: lease ? String(lease.rent_due_day) : '1',
+        deposit_refunded_at: lease?.deposit_refunded_at?.split('T')[0] ?? '',
+        notes: lease?.notes ?? '',
+    });
     const billingStrategy = lease?.billing_strategy ?? 'advance';
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        put(leases.update.url({
+            property: lease.unit.property!.slug,
+            unit: lease.unit.slug,
+            lease: lease.id,
+        }), {
+            onSuccess: () => onOpenChange(false),
+        });
+    }
 
     function handleOpenChange(open: boolean) {
         if (!open) {
-            setDueDay(lease ? String(lease.rent_due_day) : '1');
+            setData('rent_due_day', lease ? String(lease.rent_due_day) : '1');
         }
 
         onOpenChange(open);
@@ -59,16 +72,7 @@ export default function LeaseEditSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form
-                        action={leases.update.url({
-                            property: lease.unit.property!.slug,
-                            unit: lease.unit.slug,
-                            lease: lease.id,
-                        })}
-                        method="put"
-                        onSuccess={() => onOpenChange(false)}
-                    >
-                        {({ processing, errors }) => (
+                    <form onSubmit={handleSubmit}>
                             <div className="space-y-6 pt-4">
                                 <section>
                                     <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -157,9 +161,8 @@ export default function LeaseEditSheet({
                                                 name="rent_amount"
                                                 type="number"
                                                 min={0}
-                                                defaultValue={
-                                                    lease.rent_amount ?? ''
-                                                }
+                                                value={data.rent_amount}
+                                                onChange={(e) => setData('rent_amount', e.target.value)}
                                                 placeholder="Rent amount"
                                             />
                                             <div className="min-h-[1rem]" />
@@ -172,14 +175,9 @@ export default function LeaseEditSheet({
                                             <Label htmlFor="rent_due_day">
                                                 Rent Due Every Month
                                             </Label>
-                                            <input
-                                                type="hidden"
-                                                name="rent_due_day"
-                                                value={dueDay}
-                                            />
                                             <Select
-                                                value={dueDay}
-                                                onValueChange={setDueDay}
+                                                value={data.rent_due_day}
+                                                onValueChange={(v) => setData('rent_due_day', v)}
                                             >
                                                 <SelectTrigger>
                                                     <SelectValue />
@@ -266,11 +264,8 @@ export default function LeaseEditSheet({
                                             id="deposit_refunded_at"
                                             name="deposit_refunded_at"
                                             type="date"
-                                            defaultValue={
-                                                lease.deposit_refunded_at?.split(
-                                                    'T',
-                                                )[0] ?? ''
-                                            }
+                                            value={data.deposit_refunded_at}
+                                            onChange={(e) => setData('deposit_refunded_at', e.target.value)}
                                             disabled={noDeposit}
                                         />
                                         {noDeposit && (
@@ -293,7 +288,8 @@ export default function LeaseEditSheet({
                                         <textarea
                                             id="notes"
                                             name="notes"
-                                            defaultValue={lease.notes ?? ''}
+                                            value={data.notes}
+                                            onChange={(e) => setData('notes', e.target.value)}
                                             placeholder="Additional notes"
                                             className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                         />
@@ -313,8 +309,7 @@ export default function LeaseEditSheet({
                                     <Button disabled={processing}>Save</Button>
                                 </div>
                             </div>
-                        )}
-                    </Form>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

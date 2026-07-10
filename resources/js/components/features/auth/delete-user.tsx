@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/shared/heading';
@@ -18,6 +18,23 @@ import { Label } from '@/components/ui/label';
 
 export default function DeleteUser() {
     const passwordInput = useRef<HTMLInputElement>(null);
+
+    const { data, setData, processing, errors, submit, reset } = useForm({
+        password: '',
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        submit(
+            ProfileController.destroy.form().method,
+            ProfileController.destroy.form().action,
+            {
+                preserveScroll: true,
+                onError: () => passwordInput.current?.focus(),
+                onSuccess: () => reset(),
+            },
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -54,64 +71,56 @@ export default function DeleteUser() {
                             permanently delete your account.
                         </DialogDescription>
 
-                        <Form
-                            {...ProfileController.destroy.form()}
-                            options={{
-                                preserveScroll: true,
-                            }}
-                            onError={() => passwordInput.current?.focus()}
-                            resetOnSuccess
+                        <form
+                            onSubmit={handleSubmit}
                             className="space-y-6"
                         >
-                            {({ resetAndClearErrors, processing, errors }) => (
-                                <>
-                                    <div className="grid gap-2">
-                                        <Label
-                                            htmlFor="password"
-                                            className="sr-only"
-                                        >
-                                            Password
-                                        </Label>
+                            <div className="grid gap-2">
+                                <Label
+                                    htmlFor="password"
+                                    className="sr-only"
+                                >
+                                    Password
+                                </Label>
 
-                                        <PasswordInput
-                                            id="password"
-                                            name="password"
-                                            ref={passwordInput}
-                                            placeholder="Password"
-                                            autoComplete="current-password"
-                                        />
+                                <PasswordInput
+                                    id="password"
+                                    ref={passwordInput}
+                                    value={data.password}
+                                    onChange={(e) =>
+                                        setData('password', e.target.value)
+                                    }
+                                    placeholder="Password"
+                                    autoComplete="current-password"
+                                />
 
-                                        <InputError message={errors.password} />
-                                    </div>
+                                <InputError message={errors.password} />
+                            </div>
 
-                                    <DialogFooter className="gap-2">
-                                        <DialogClose asChild>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    resetAndClearErrors()
-                                                }
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </DialogClose>
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => reset()}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </DialogClose>
 
-                                        <Button
-                                            variant="destructive"
-                                            disabled={processing}
-                                            asChild
-                                        >
-                                            <button
-                                                type="submit"
-                                                data-test="confirm-delete-user-button"
-                                            >
-                                                Delete account
-                                            </button>
-                                        </Button>
-                                    </DialogFooter>
-                                </>
-                            )}
-                        </Form>
+                                <Button
+                                    variant="destructive"
+                                    disabled={processing}
+                                    asChild
+                                >
+                                    <button
+                                        type="submit"
+                                        data-test="confirm-delete-user-button"
+                                    >
+                                        Delete account
+                                    </button>
+                                </Button>
+                            </DialogFooter>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>

@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -91,6 +91,10 @@ export default function RoleForm({
         setSelectedPermissions(rec.permissions);
     }
 
+    const form = useForm({});
+
+    const { processing, errors } = form;
+
     function togglePermission(permission: string, checked: boolean) {
         setSelectedPermissions((current) =>
             checked
@@ -99,10 +103,23 @@ export default function RoleForm({
         );
     }
 
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        form
+            .transform(() => ({
+                name: isEdit ? role?.name : nameValue,
+                label: labelValue,
+                description: descriptionValue,
+                color: colorValue,
+                is_active: isActiveValue,
+                permissions: selectedPermissions,
+            }))
+            .submit(method, action, { onSuccess: () => {} });
+    }
+
     return (
-        <Form action={action} method={method} onSuccess={() => {}}>
-            {({ processing, errors }) => (
-                <div className="space-y-8">
+        <form onSubmit={handleSubmit}>
+            <div className="space-y-8">
                     {!isEdit &&
                         recommendations &&
                         recommendations.length > 0 && (
@@ -226,11 +243,6 @@ export default function RoleForm({
                                     />
                                 ))}
                             </div>
-                            <input
-                                type="hidden"
-                                name="color"
-                                value={colorValue}
-                            />
                             <InputError message={errors.color} />
                         </div>
 
@@ -240,17 +252,12 @@ export default function RoleForm({
                                     checked={isActiveValue}
                                     onCheckedChange={setIsActiveValue}
                                 />
-                                <input
-                                    type="hidden"
-                                    name="is_active"
-                                    value={isActiveValue ? '1' : '0'}
-                                />
                                 <Label className="cursor-pointer">Active</Label>
                             </div>
                         )}
 
                         {isEdit && isSystem && (
-                            <input type="hidden" name="is_active" value="1" />
+                            <input type="hidden" value="1" />
                         )}
                     </section>
 
@@ -313,18 +320,9 @@ export default function RoleForm({
                                 ),
                             )}
                         </div>
-                        {selectedPermissions.map((perm) => (
-                            <input
-                                key={perm}
-                                type="hidden"
-                                name="permissions[]"
-                                value={perm}
-                            />
-                        ))}
                         <InputError message={errors.permissions} />
                     </section>
                 </div>
-            )}
-        </Form>
+            </form>
     );
 }

@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { InputError, PasswordInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,59 +17,72 @@ export default function AcceptInvitation({
     email,
     passwordRules,
 }: Props) {
+    const { data, setData, post, processing, errors } = useForm({
+        email,
+        password: '',
+        password_confirmation: '',
+        token,
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        post(complete.url(), {
+            onSuccess: () => {
+                setData('password', '');
+                setData('password_confirmation', '');
+            },
+        });
+    }
+
     return (
         <>
             <Head title="Accept invitation" />
 
-            <Form
-                {...complete.form()}
-                transform={(data) => ({ ...data, token, email })}
-                resetOnSuccess={['password', 'password_confirmation']}
-            >
-                {({ processing, errors }) => (
-                    <div className="grid gap-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" value={email} readOnly />
-                            <InputError message={errors.email} />
-                        </div>
+            <form onSubmit={handleSubmit} className="grid gap-6">
+                <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" value={data.email} readOnly />
+                    <InputError message={errors.email} />
+                </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <PasswordInput
-                                id="password"
-                                name="password"
-                                autoComplete="new-password"
-                                autoFocus
-                                placeholder="Password"
-                                passwordrules={passwordRules}
-                            />
-                            <InputError message={errors.password} />
-                        </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="password">Password</Label>
+                    <PasswordInput
+                        id="password"
+                        name="password"
+                        autoComplete="new-password"
+                        autoFocus
+                        placeholder="Password"
+                        passwordrules={passwordRules}
+                        value={data.password}
+                        onChange={e => setData('password', e.target.value)}
+                    />
+                    <InputError message={errors.password} />
+                </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="password_confirmation">
-                                Confirm password
-                            </Label>
-                            <PasswordInput
-                                id="password_confirmation"
-                                name="password_confirmation"
-                                autoComplete="new-password"
-                                placeholder="Confirm password"
-                                passwordrules={passwordRules}
-                            />
-                            <InputError
-                                message={errors.password_confirmation}
-                            />
-                        </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="password_confirmation">
+                        Confirm password
+                    </Label>
+                    <PasswordInput
+                        id="password_confirmation"
+                        name="password_confirmation"
+                        autoComplete="new-password"
+                        placeholder="Confirm password"
+                        passwordrules={passwordRules}
+                        value={data.password_confirmation}
+                        onChange={e => setData('password_confirmation', e.target.value)}
+                    />
+                    <InputError
+                        message={errors.password_confirmation}
+                    />
+                </div>
 
-                        <Button className="mt-4 w-full" disabled={processing}>
-                            {processing && <Spinner />}
-                            Accept invitation
-                        </Button>
-                    </div>
-                )}
-            </Form>
+                <Button className="mt-4 w-full" disabled={processing}>
+                    {processing && <Spinner />}
+                    Accept invitation
+                </Button>
+            </form>
         </>
     );
 }

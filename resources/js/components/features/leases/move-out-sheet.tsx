@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -35,9 +35,15 @@ export default function MoveOutSheet({
     onOpenChange: (open: boolean) => void;
     onClose?: () => void;
 }) {
-    const [reason, setReason] = useState('');
-    const [depositReturned, setDepositReturned] = useState<string | null>(null);
-    const [moveToAnotherUnit, setMoveToAnotherUnit] = useState(false);
+    const { data, setData, processing, errors, post } = useForm({
+        move_out_date: new Date().toISOString().split('T')[0],
+        reason: '',
+        deposit_returned: '0',
+        deposit_refund_amount: '',
+        notes: '',
+        move_to_another_unit: '0',
+        target_unit_id: '',
+    });
     const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
         null,
     );
@@ -94,6 +100,13 @@ export default function MoveOutSheet({
         setSelectedTargetUnitId(null);
     }
 
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        post(leases.moveOut.post({ lease: lease!.id }).url, {
+            onSuccess: handleClose,
+        });
+    }
+
     function handleClose() {
         onOpenChange(false);
         onClose?.();
@@ -120,12 +133,7 @@ export default function MoveOutSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form
-                        action={leases.moveOut.post({ lease: lease!.id }).url}
-                        method="post"
-                        onSuccess={handleClose}
-                    >
-                        {({ processing, errors }) => (
+                    <form onSubmit={handleSubmit}>
                             <div className="space-y-6 pt-4">
                                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
                                     <div className="space-y-1">
@@ -166,11 +174,8 @@ export default function MoveOutSheet({
                                         id="move_out_date"
                                         name="move_out_date"
                                         type="date"
-                                        defaultValue={
-                                            new Date()
-                                                .toISOString()
-                                                .split('T')[0]
-                                        }
+                                        value={data.move_out_date}
+                                        onChange={(e) => setData('move_out_date', e.target.value)}
                                         required
                                     />
                                     <InputError
@@ -180,14 +185,9 @@ export default function MoveOutSheet({
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="reason">Reason</Label>
-                                    <input
-                                        type="hidden"
-                                        name="reason"
-                                        value={reason}
-                                    />
                                     <Select
-                                        value={reason}
-                                        onValueChange={setReason}
+                                        value={data.reason}
+                                        onValueChange={(v) => setData('reason', v)}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select reason (optional)" />
@@ -208,25 +208,16 @@ export default function MoveOutSheet({
 
                                 <div className="grid gap-2">
                                     <Label>Deposit Returned?</Label>
-                                    <input
-                                        type="hidden"
-                                        name="deposit_returned"
-                                        value={
-                                            depositReturned === 'yes'
-                                                ? '1'
-                                                : '0'
-                                        }
-                                    />
                                     <div className="flex items-center gap-4">
                                         <label className="flex items-center gap-2 text-sm">
                                             <input
                                                 type="radio"
-                                                name="deposit_returned_radio"
+                                                name="deposit_returned"
                                                 checked={
-                                                    depositReturned === 'yes'
+                                                    data.deposit_returned === '1'
                                                 }
                                                 onChange={() =>
-                                                    setDepositReturned('yes')
+                                                    setData('deposit_returned', '1')
                                                 }
                                                 className="size-4"
                                             />
@@ -235,12 +226,12 @@ export default function MoveOutSheet({
                                         <label className="flex items-center gap-2 text-sm">
                                             <input
                                                 type="radio"
-                                                name="deposit_returned_radio"
+                                                name="deposit_returned"
                                                 checked={
-                                                    depositReturned === 'no'
+                                                    data.deposit_returned === '0'
                                                 }
                                                 onChange={() =>
-                                                    setDepositReturned('no')
+                                                    setData('deposit_returned', '0')
                                                 }
                                                 className="size-4"
                                             />
@@ -252,7 +243,7 @@ export default function MoveOutSheet({
                                     />
                                 </div>
 
-                                {depositReturned === 'yes' && (
+                                {data.deposit_returned === '1' && (
                                     <div className="grid gap-2">
                                         <Label htmlFor="deposit_refund_amount">
                                             Refund Amount (IDR)
@@ -262,6 +253,8 @@ export default function MoveOutSheet({
                                             name="deposit_refund_amount"
                                             type="number"
                                             min={0}
+                                            value={data.deposit_refund_amount}
+                                            onChange={(e) => setData('deposit_refund_amount', e.target.value)}
                                             placeholder="Leave empty for full deposit"
                                         />
                                         <InputError
@@ -275,15 +268,14 @@ export default function MoveOutSheet({
                                 <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
                                     <input
                                         type="checkbox"
-                                        checked={moveToAnotherUnit}
+                                        checked={data.move_to_another_unit === '1'}
                                         onChange={(e) => {
-                                            setMoveToAnotherUnit(
-                                                e.target.checked,
-                                            );
+                                            setData('move_to_another_unit', e.target.checked ? '1' : '0');
 
                                             if (!e.target.checked) {
                                                 setSelectedPropertyId(null);
                                                 setSelectedTargetUnitId(null);
+                                                setData('target_unit_id', '');
                                             }
                                         }}
                                         className="mt-0.5 size-4"
@@ -300,13 +292,7 @@ export default function MoveOutSheet({
                                     </div>
                                 </label>
 
-                                <input
-                                    type="hidden"
-                                    name="move_to_another_unit"
-                                    value={moveToAnotherUnit ? '1' : '0'}
-                                />
-
-                                {moveToAnotherUnit && (
+                                {data.move_to_another_unit === '1' && (
                                     <div className="space-y-3 rounded-md border p-3">
                                         <div className="grid gap-2">
                                             <Label>Property</Label>
@@ -327,24 +313,18 @@ export default function MoveOutSheet({
 
                                         <div className="grid gap-2">
                                             <Label>Target Unit</Label>
-                                            <input
-                                                type="hidden"
-                                                name="target_unit_id"
-                                                value={
-                                                    selectedTargetUnitId ?? ''
-                                                }
-                                            />
                                             <SearchableSelect
                                                 key={
                                                     selectedPropertyId ?? 'none'
                                                 }
                                                 options={targetUnitOptions}
                                                 value={selectedTargetUnitId}
-                                                onChange={(val) =>
+                                                onChange={(val) => {
                                                     setSelectedTargetUnitId(
                                                         val as number | null,
-                                                    )
-                                                }
+                                                    );
+                                                    setData('target_unit_id', String(val ?? ''));
+                                                }}
                                                 placeholder={
                                                     selectedPropertyId
                                                         ? 'Select unit...'
@@ -366,6 +346,8 @@ export default function MoveOutSheet({
                                     <textarea
                                         id="notes"
                                         name="notes"
+                                        value={data.notes}
+                                        onChange={(e) => setData('notes', e.target.value)}
                                         placeholder="Additional notes"
                                         className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                     />
@@ -386,8 +368,7 @@ export default function MoveOutSheet({
                                     </Button>
                                 </div>
                             </div>
-                        )}
-                    </Form>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

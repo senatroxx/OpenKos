@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -19,6 +19,15 @@ export default function General({
 }: {
     settings: { lease_id_prefix: string };
 }) {
+    const { data, setData, processing, errors, patch } = useForm({
+        lease_id_prefix: settings.lease_id_prefix,
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        patch(updateGeneral.url());
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -40,32 +49,28 @@ export default function General({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form action={updateGeneral()}>
-                        {({ processing, errors }) => (
-                            <div className="space-y-4">
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="lease_id_prefix">
-                                        Prefix
-                                    </Label>
-                                    <Input
-                                        id="lease_id_prefix"
-                                        name="lease_id_prefix"
-                                        defaultValue={settings.lease_id_prefix}
-                                        maxLength={10}
-                                        className="font-mono uppercase"
-                                        placeholder="LSX"
-                                        required
-                                    />
-                                    {errors.lease_id_prefix && (
-                                        <p className="text-sm text-red-600">
-                                            {errors.lease_id_prefix}
-                                        </p>
-                                    )}
-                                </div>
-                                <Button disabled={processing}>Save</Button>
-                            </div>
-                        )}
-                    </Form>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="lease_id_prefix">
+                                Prefix
+                            </Label>
+                            <Input
+                                id="lease_id_prefix"
+                                value={data.lease_id_prefix}
+                                onChange={e => setData('lease_id_prefix', e.target.value)}
+                                maxLength={10}
+                                className="font-mono uppercase"
+                                placeholder="LSX"
+                                required
+                            />
+                            {errors.lease_id_prefix && (
+                                <p className="text-sm text-red-600">
+                                    {errors.lease_id_prefix}
+                                </p>
+                            )}
+                        </div>
+                        <Button disabled={processing}>Save</Button>
+                    </form>
                 </CardContent>
             </Card>
         </div>

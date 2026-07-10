@@ -1,4 +1,4 @@
-import { Form, router } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
@@ -31,6 +31,56 @@ import { Switch } from '@/components/ui/switch';
 import type { PropertyTypeOption } from '@/types';
 
 const BASE = '/settings/property-types';
+
+function SheetForm({ editing, closeSheet }: { editing: PropertyTypeOption | null; closeSheet: () => void }) {
+    const { data, setData, processing, errors, post, patch } = useForm({
+        label: editing?.label ?? '',
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        const url = editing ? `${BASE}/${editing.slug}` : BASE;
+        (editing ? patch : post)(url, { onSuccess: closeSheet });
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
+            <div className="grid gap-2">
+                <Label htmlFor="label">Name</Label>
+                <Input
+                    id="label"
+                    value={data.label}
+                    onChange={e => setData('label', e.target.value)}
+                    placeholder="e.g. Guesthouse"
+                    required
+                />
+                <InputError message={errors.label} />
+            </div>
+
+            {editing && (
+                <input
+                    type="hidden"
+                    name="is_active"
+                    value={editing.is_active ? 1 : 0}
+                />
+            )}
+
+            <div className="flex items-center justify-end gap-4">
+                <Button
+                    variant="outline"
+                    type="button"
+                    onClick={closeSheet}
+                    disabled={processing}
+                >
+                    Cancel
+                </Button>
+                <Button disabled={processing}>
+                    {editing ? 'Save' : 'Add'}
+                </Button>
+            </div>
+        </form>
+    );
+}
 
 export default function PropertyTypes({
     propertyTypes,
@@ -190,49 +240,7 @@ export default function PropertyTypes({
                     </SheetHeader>
 
                     <div className="px-4">
-                        <Form
-                            action={editing ? `${BASE}/${editing.slug}` : BASE}
-                            method={editing ? 'patch' : 'post'}
-                            onSuccess={() => setSheetOpen(false)}
-                        >
-                            {({ processing, errors }) => (
-                                <div className="space-y-6 pt-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="label">Name</Label>
-                                        <Input
-                                            id="label"
-                                            name="label"
-                                            defaultValue={editing?.label ?? ''}
-                                            placeholder="e.g. Guesthouse"
-                                            required
-                                        />
-                                        <InputError message={errors.label} />
-                                    </div>
-
-                                    {editing && (
-                                        <input
-                                            type="hidden"
-                                            name="is_active"
-                                            value={editing.is_active ? 1 : 0}
-                                        />
-                                    )}
-
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            onClick={() => setSheetOpen(false)}
-                                            disabled={processing}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button disabled={processing}>
-                                            {editing ? 'Save' : 'Add'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </Form>
+                        <SheetForm editing={editing} closeSheet={() => setSheetOpen(false)} />
                     </div>
                 </SheetContent>
             </Sheet>

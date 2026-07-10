@@ -1,4 +1,4 @@
-import { Form, Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     EllipsisVertical,
     Eye,
@@ -409,21 +409,21 @@ function UserFormSheet({
     properties: PropertyRef[];
 }) {
     const isEdit = Boolean(user);
-    const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>(
-        () => user?.properties.map((property) => property.id) ?? [],
-    );
-    const [selectedRoles, setSelectedRoles] = useState<string[]>(
-        () => user?.roles.map((r) => r.name) ?? [],
-    );
+
+    const { data, setData, processing, errors, submit } = useForm({
+        name: user?.name ?? '',
+        email: user?.email ?? '',
+        roles: user?.roles.map((r) => r.name) ?? [],
+        is_active: user?.is_active !== false,
+        property_ids: user?.properties.map((p) => p.id) ?? [],
+    });
 
     const previousUserIdRef = useRef(user?.id);
 
     if (previousUserIdRef.current !== user?.id) {
         previousUserIdRef.current = user?.id;
-        setSelectedPropertyIds(
-            user?.properties.map((property) => property.id) ?? [],
-        );
-        setSelectedRoles(user?.roles.map((r) => r.name) ?? []);
+        setData('property_ids', user?.properties.map((p) => p.id) ?? []);
+        setData('roles', user?.roles.map((r) => r.name) ?? []);
     }
 
     const canEditRole = user?.role !== 'owner';
@@ -432,19 +432,28 @@ function UserFormSheet({
         : { action: store.url(), method: 'post' as const };
 
     function toggleProperty(propertyId: number, checked: boolean) {
-        setSelectedPropertyIds((current) =>
+        setData(
+            'property_ids',
             checked
-                ? [...current, propertyId]
-                : current.filter((id) => id !== propertyId),
+                ? [...data.property_ids, propertyId]
+                : data.property_ids.filter((id) => id !== propertyId),
         );
     }
 
     function toggleRole(roleName: string, checked: boolean) {
-        setSelectedRoles((current) =>
+        setData(
+            'roles',
             checked
-                ? [...current, roleName]
-                : current.filter((r) => r !== roleName),
+                ? [...data.roles, roleName]
+                : data.roles.filter((r) => r !== roleName),
         );
+    }
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        submit(formProps.method, formProps.action, {
+            onSuccess: () => onOpenChange(false),
+        });
     }
 
     return (
@@ -462,136 +471,112 @@ function UserFormSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form {...formProps} onSuccess={() => onOpenChange(false)}>
-                        {({ processing, errors }) => (
-                            <div className="space-y-6 pt-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        defaultValue={user?.name ?? ''}
-                                        required
-                                    />
-                                    <InputError message={errors.name} />
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        name="email"
-                                        type="email"
-                                        defaultValue={user?.email ?? ''}
-                                        required
-                                    />
-                                    <InputError message={errors.email} />
-                                </div>
-
-                                <div className="grid gap-3">
-                                    <Label>Roles</Label>
-                                    <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
-                                        {canEditRole ? (
-                                            roles.map((role) => (
-                                                <label
-                                                    key={role.value}
-                                                    className="flex items-center gap-2 text-sm"
-                                                >
-                                                    <Checkbox
-                                                        checked={selectedRoles.includes(
-                                                            role.value,
-                                                        )}
-                                                        onCheckedChange={(
-                                                            checked,
-                                                        ) =>
-                                                            toggleRole(
-                                                                role.value,
-                                                                checked ===
-                                                                    true,
-                                                            )
-                                                        }
-                                                    />
-                                                    {role.label}
-                                                </label>
-                                            ))
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">
-                                                Owner
-                                            </p>
-                                        )}
-                                    </div>
-                                    {canEditRole &&
-                                        selectedRoles.map((roleName) => (
-                                            <input
-                                                key={roleName}
-                                                type="hidden"
-                                                name="roles[]"
-                                                value={roleName}
-                                            />
-                                        ))}
-                                    <InputError message={errors.roles} />
-                                </div>
-
-                                <input
-                                    type="hidden"
-                                    name="is_active"
-                                    value={
-                                        user?.is_active === false ? '0' : '1'
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-6 pt-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    id="name"
+                                    value={data.name}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
                                     }
+                                    required
                                 />
-                                {selectedPropertyIds.map((propertyId) => (
-                                    <input
-                                        key={propertyId}
-                                        type="hidden"
-                                        name="property_ids[]"
-                                        value={propertyId}
-                                    />
-                                ))}
+                                <InputError message={errors.name} />
+                            </div>
 
-                                <div className="grid gap-3">
-                                    <Label>Assigned Properties</Label>
-                                    <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-3">
-                                        {properties.map((property) => (
+                            <div className="grid gap-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    value={data.email}
+                                    onChange={(e) =>
+                                        setData('email', e.target.value)
+                                    }
+                                    required
+                                />
+                                <InputError message={errors.email} />
+                            </div>
+
+                            <div className="grid gap-3">
+                                <Label>Roles</Label>
+                                <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
+                                    {canEditRole ? (
+                                        roles.map((role) => (
                                             <label
-                                                key={property.id}
+                                                key={role.value}
                                                 className="flex items-center gap-2 text-sm"
                                             >
                                                 <Checkbox
-                                                    checked={selectedPropertyIds.includes(
-                                                        property.id,
+                                                    checked={data.roles.includes(
+                                                        role.value,
                                                     )}
                                                     onCheckedChange={(
                                                         checked,
                                                     ) =>
-                                                        toggleProperty(
-                                                            property.id,
+                                                        toggleRole(
+                                                            role.value,
                                                             checked === true,
                                                         )
                                                     }
                                                 />
-                                                {property.name}
+                                                {role.label}
                                             </label>
-                                        ))}
-                                    </div>
-                                    <InputError message={errors.property_ids} />
+                                        ))
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">
+                                            Owner
+                                        </p>
+                                    )}
                                 </div>
-
-                                <div className="flex items-center justify-end gap-4 pt-2">
-                                    <Button
-                                        variant="outline"
-                                        type="button"
-                                        onClick={() => onOpenChange(false)}
-                                        disabled={processing}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button disabled={processing}>
-                                        {isEdit ? 'Save' : 'Send Invite'}
-                                    </Button>
-                                </div>
+                                <InputError message={errors.roles} />
                             </div>
-                        )}
-                    </Form>
+
+                            <div className="grid gap-3">
+                                <Label>Assigned Properties</Label>
+                                <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-3">
+                                    {properties.map((property) => (
+                                        <label
+                                            key={property.id}
+                                            className="flex items-center gap-2 text-sm"
+                                        >
+                                            <Checkbox
+                                                checked={data.property_ids.includes(
+                                                    property.id,
+                                                )}
+                                                onCheckedChange={(
+                                                    checked,
+                                                ) =>
+                                                    toggleProperty(
+                                                        property.id,
+                                                        checked === true,
+                                                    )
+                                                }
+                                            />
+                                            {property.name}
+                                        </label>
+                                    ))}
+                                </div>
+                                <InputError message={errors.property_ids} />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-4 pt-2">
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() => onOpenChange(false)}
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button disabled={processing}>
+                                    {isEdit ? 'Save' : 'Send Invite'}
+                                </Button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

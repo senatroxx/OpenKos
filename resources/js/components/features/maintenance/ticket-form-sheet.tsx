@@ -1,4 +1,4 @@
-import { Form, router } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -80,57 +80,67 @@ export default function TicketFormSheet({
     const [locationType, setLocationType] = useState(
         ticket?.unit_id ? 'unit' : ticket?.location ? 'area' : 'unit',
     );
-    const [selectedProperty, setSelectedProperty] = useState(
-        ticket?.property_id ? String(ticket.property_id) : '',
-    );
-    const [priority, setPriority] = useState(ticket?.priority ?? 'medium');
-    const [selectedUnitId, setSelectedUnitId] = useState(
-        ticket?.unit_id ? String(ticket.unit_id) : '',
-    );
-    const [blockUnit, setBlockUnit] = useState(false);
     const [showOccupiedDialog, setShowOccupiedDialog] = useState(false);
     const [moveToUnitId, setMoveToUnitId] = useState('');
-    const [restoreUnit, setRestoreUnit] = useState(false);
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
-    const filteredUnits = selectedProperty
-        ? units.filter((r) => r.property_id === Number(selectedProperty))
+    const { data, setData, processing, errors, submit } = useForm({
+        title: ticket?.title ?? '',
+        description: ticket?.description ?? '',
+        priority: ticket?.priority ?? 'medium',
+        property_id: ticket?.property_id ? String(ticket.property_id) : '',
+        unit_id: ticket?.unit_id ? String(ticket.unit_id) : '',
+        location: ticket?.location ?? '',
+        block_unit: false,
+        resolution_notes: ticket?.resolution_notes ?? '',
+        cost: ticket?.cost ?? '',
+        restore_unit: false,
+    });
+
+    const filteredUnits = data.property_id
+        ? units.filter((r) => r.property_id === Number(data.property_id))
         : [];
 
-    const selectedUnitData = selectedUnitId
-        ? units.find((r) => r.id === Number(selectedUnitId))
+    const selectedUnitData = data.unit_id
+        ? units.find((r) => r.id === Number(data.unit_id))
         : undefined;
 
     const selectedUnitOccupied =
         (selectedUnitData?.active_lease_count ?? 0) > 0;
 
-    const availableMoveUnits = selectedProperty
+    const availableMoveUnits = data.property_id
         ? units.filter(
               (r) =>
-                  r.property_id === Number(selectedProperty) &&
-                  r.id !== Number(selectedUnitId) &&
+                  r.property_id === Number(data.property_id) &&
+                  r.id !== Number(data.unit_id) &&
                   r.status !== 'maintenance' &&
                   r.active_lease_count === 0,
           )
         : [];
 
-    const handleCreateClick = (e: React.MouseEvent) => {
-        if (isEdit && restoreUnit && ticket?.unit_id) {
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+
+        if (isEdit && data.restore_unit && ticket?.unit_id) {
             const unit = units.find((r) => r.id === ticket.unit_id);
 
             if (unit?.has_maintenance_transfer) {
-                e.preventDefault();
                 setShowMoveBackDialog(true);
+
+                return;
             }
+        }
+
+        if (!isEdit && data.block_unit && selectedUnitOccupied) {
+            setShowOccupiedDialog(true);
 
             return;
         }
 
-        if (!isEdit && blockUnit && selectedUnitOccupied) {
-            e.preventDefault();
-            setShowOccupiedDialog(true);
-        }
-    };
+        submit(formMethod, formAction, {
+            onSuccess: () => onOpenChange(false),
+        });
+    }
 
     return (
         <>
@@ -148,298 +158,302 @@ export default function TicketFormSheet({
                     </SheetHeader>
 
                     <div className="flex-1 overflow-y-auto px-4">
-                        <Form
+                        <form
                             id="ticket-form"
-                            action={formAction}
-                            method={formMethod}
-                            onSuccess={() => onOpenChange(false)}
+                            onSubmit={handleSubmit}
                         >
-                            {({ processing, errors }) => (
-                                <div className="space-y-6 pt-4">
-                                    {!isEdit && (
-                                        <div className="grid gap-2">
-                                            <Label>Property</Label>
-                                            <Select
-                                                name="property_id"
-                                                value={selectedProperty}
-                                                onValueChange={(v) => {
-                                                    setSelectedProperty(v);
-                                                    setSelectedUnitId('');
-                                                    setBlockUnit(false);
-                                                }}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select property" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {properties.map((p) => (
-                                                        <SelectItem
-                                                            key={p.id}
-                                                            value={String(p.id)}
-                                                        >
-                                                            {p.name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <InputError
-                                                message={errors.property_id}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {!isEdit && (
-                                        <div className="grid gap-2">
-                                            <Label>Location</Label>
-                                            <div className="flex gap-2">
-                                                <Select
-                                                    value={locationType}
-                                                    onValueChange={
-                                                        setLocationType
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-36 shrink-0">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="unit">
-                                                            Unit
-                                                        </SelectItem>
-                                                        <SelectItem value="area">
-                                                            Common Area
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                {locationType === 'unit' ? (
-                                                    <Select
-                                                        name="unit_id"
-                                                        value={selectedUnitId}
-                                                        onValueChange={(v) => {
-                                                            setSelectedUnitId(
-                                                                v,
-                                                            );
-                                                            setBlockUnit(false);
-                                                        }}
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder="Select a unit (optional)" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {filteredUnits.map(
-                                                                (r) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            r.id
-                                                                        }
-                                                                        value={String(
-                                                                            r.id,
-                                                                        )}
-                                                                    >
-                                                                        {formatUnitOption(
-                                                                            r,
-                                                                        )}
-                                                                    </SelectItem>
-                                                                ),
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-                                                ) : (
-                                                    <Input
-                                                        name="location"
-                                                        defaultValue={
-                                                            ticket?.location ??
-                                                            ''
-                                                        }
-                                                        placeholder="e.g. Lobby, 3rd Floor Hallway"
-                                                    />
-                                                )}
-                                            </div>
-                                            <InputError
-                                                message={
-                                                    errors.unit_id ??
-                                                    errors.location
-                                                }
-                                            />
-                                        </div>
-                                    )}
-
-                                    {!isEdit && selectedUnitId && (
-                                        <div className="flex items-center gap-2">
-                                            <Checkbox
-                                                id="block_unit"
-                                                name="block_unit"
-                                                checked={blockUnit}
-                                                onCheckedChange={(checked) =>
-                                                    setBlockUnit(
-                                                        Boolean(checked),
-                                                    )
-                                                }
-                                                value="1"
-                                            />
-                                            <Label
-                                                htmlFor="block_unit"
-                                                className="cursor-pointer text-sm font-normal"
-                                            >
-                                                Block unit for maintenance
-                                            </Label>
-                                        </div>
-                                    )}
-
+                            <div className="space-y-6 pt-4">
+                                {!isEdit && (
                                     <div className="grid gap-2">
-                                        <Label>Title</Label>
-                                        <Input
-                                            name="title"
-                                            required={!isEdit}
-                                            defaultValue={ticket?.title ?? ''}
-                                            placeholder="e.g. Leaking faucet"
-                                        />
-                                        <InputError message={errors.title} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="description">
-                                            Description
-                                        </Label>
-                                        <Textarea
-                                            id="description"
-                                            name="description"
-                                            defaultValue={
-                                                ticket?.description ?? ''
-                                            }
-                                            placeholder="Describe the issue in detail"
-                                        />
-                                        <InputError
-                                            message={errors.description}
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label>Priority</Label>
+                                        <Label>Property</Label>
                                         <Select
-                                            name="priority"
-                                            value={priority}
-                                            onValueChange={setPriority}
+                                            value={data.property_id}
+                                            onValueChange={(v) => {
+                                                setData('property_id', v);
+                                                setData('unit_id', '');
+                                                setData('block_unit', false);
+                                            }}
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue />
+                                                <SelectValue placeholder="Select property" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="low">
-                                                    Low
-                                                </SelectItem>
-                                                <SelectItem value="medium">
-                                                    Medium
-                                                </SelectItem>
-                                                <SelectItem value="high">
-                                                    High
-                                                </SelectItem>
-                                                <SelectItem value="urgent">
-                                                    Urgent
-                                                </SelectItem>
+                                                {properties.map((p) => (
+                                                    <SelectItem
+                                                        key={p.id}
+                                                        value={String(p.id)}
+                                                    >
+                                                        {p.name}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
-                                        <InputError message={errors.priority} />
+                                        <InputError
+                                            message={errors.property_id}
+                                        />
                                     </div>
+                                )}
 
-                                    {isEdit &&
-                                        ticket?.status === 'resolved' && (
-                                            <>
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor="resolution_notes">
-                                                        Resolution Notes
-                                                    </Label>
-                                                    <Textarea
-                                                        id="resolution_notes"
-                                                        name="resolution_notes"
-                                                        defaultValue={
-                                                            ticket?.resolution_notes ??
-                                                            ''
-                                                        }
-                                                    />
-                                                    <InputError
-                                                        message={
-                                                            errors.resolution_notes
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor="cost">
-                                                        Cost
-                                                    </Label>
-                                                    <Input
-                                                        id="cost"
-                                                        name="cost"
-                                                        type="number"
-                                                        defaultValue={
-                                                            ticket?.cost ?? ''
-                                                        }
-                                                    />
-                                                    <InputError
-                                                        message={errors.cost}
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
-
-                                    {isEdit &&
-                                        ticket?.status !== 'resolved' &&
-                                        ticket?.unit_id &&
-                                        (() => {
-                                            const unit = units.find(
-                                                (r) => r.id === ticket!.unit_id,
-                                            );
-                                            const isBlocked =
-                                                unit?.status === 'maintenance';
-
-                                            if (!isBlocked) {
-                                                return null;
+                                {!isEdit && (
+                                    <div className="grid gap-2">
+                                        <Label>Location</Label>
+                                        <div className="flex gap-2">
+                                            <Select
+                                                value={locationType}
+                                                onValueChange={
+                                                    setLocationType
+                                                }
+                                            >
+                                                <SelectTrigger className="w-36 shrink-0">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="unit">
+                                                        Unit
+                                                    </SelectItem>
+                                                    <SelectItem value="area">
+                                                        Common Area
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {locationType === 'unit' ? (
+                                                <Select
+                                                    value={data.unit_id}
+                                                    onValueChange={(v) => {
+                                                        setData('unit_id', v);
+                                                        setData('block_unit', false);
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Select a unit (optional)" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {filteredUnits.map(
+                                                            (r) => (
+                                                                <SelectItem
+                                                                    key={r.id}
+                                                                    value={String(
+                                                                        r.id,
+                                                                    )}
+                                                                >
+                                                                    {formatUnitOption(
+                                                                        r,
+                                                                    )}
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            ) : (
+                                                <Input
+                                                    value={data.location}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'location',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="e.g. Lobby, 3rd Floor Hallway"
+                                                />
+                                            )}
+                                        </div>
+                                        <InputError
+                                            message={
+                                                errors.unit_id ??
+                                                errors.location
                                             }
-
-                                            return (
-                                                <div className="flex items-center gap-2">
-                                                    <Checkbox
-                                                        id="restore_unit"
-                                                        name="restore_unit"
-                                                        value="1"
-                                                        checked={restoreUnit}
-                                                        onCheckedChange={(v) =>
-                                                            setRestoreUnit(
-                                                                Boolean(v),
-                                                            )
-                                                        }
-                                                    />
-                                                    <Label
-                                                        htmlFor="restore_unit"
-                                                        className="cursor-pointer text-sm font-normal"
-                                                    >
-                                                        Restore unit
-                                                        availability
-                                                    </Label>
-                                                </div>
-                                            );
-                                        })()}
-
-                                    <div className="flex items-center justify-end gap-4 pt-2">
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            onClick={() => onOpenChange(false)}
-                                            disabled={processing}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            disabled={processing}
-                                            type="submit"
-                                            onClick={handleCreateClick}
-                                        >
-                                            {isEdit ? 'Save' : 'Create'}
-                                        </Button>
+                                        />
                                     </div>
+                                )}
+
+                                {!isEdit && data.unit_id && (
+                                    <div className="flex items-center gap-2">
+                                        <Checkbox
+                                            id="block_unit"
+                                            checked={data.block_unit}
+                                            onCheckedChange={(checked) =>
+                                                setData(
+                                                    'block_unit',
+                                                    Boolean(checked),
+                                                )
+                                            }
+                                        />
+                                        <Label
+                                            htmlFor="block_unit"
+                                            className="cursor-pointer text-sm font-normal"
+                                        >
+                                            Block unit for maintenance
+                                        </Label>
+                                    </div>
+                                )}
+
+                                <div className="grid gap-2">
+                                    <Label>Title</Label>
+                                    <Input
+                                        required={!isEdit}
+                                        value={data.title}
+                                        onChange={(e) =>
+                                            setData('title', e.target.value)
+                                        }
+                                        placeholder="e.g. Leaking faucet"
+                                    />
+                                    <InputError message={errors.title} />
                                 </div>
-                            )}
-                        </Form>
+
+                                <div className="grid gap-2">
+                                    <Label htmlFor="description">
+                                        Description
+                                    </Label>
+                                    <Textarea
+                                        id="description"
+                                        value={data.description}
+                                        onChange={(e) =>
+                                            setData(
+                                                'description',
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="Describe the issue in detail"
+                                    />
+                                    <InputError
+                                        message={errors.description}
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label>Priority</Label>
+                                    <Select
+                                        value={data.priority}
+                                        onValueChange={(v) =>
+                                            setData('priority', v)
+                                        }
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="low">
+                                                Low
+                                            </SelectItem>
+                                            <SelectItem value="medium">
+                                                Medium
+                                            </SelectItem>
+                                            <SelectItem value="high">
+                                                High
+                                            </SelectItem>
+                                            <SelectItem value="urgent">
+                                                Urgent
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={errors.priority} />
+                                </div>
+
+                                {isEdit &&
+                                    ticket?.status === 'resolved' && (
+                                        <>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="resolution_notes">
+                                                    Resolution Notes
+                                                </Label>
+                                                <Textarea
+                                                    id="resolution_notes"
+                                                    value={
+                                                        data.resolution_notes
+                                                    }
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'resolution_notes',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={
+                                                        errors.resolution_notes
+                                                    }
+                                                />
+                                            </div>
+
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="cost">
+                                                    Cost
+                                                </Label>
+                                                <Input
+                                                    id="cost"
+                                                    type="number"
+                                                    value={data.cost}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'cost',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={errors.cost}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                {isEdit &&
+                                    ticket?.status !== 'resolved' &&
+                                    ticket?.unit_id &&
+                                    (() => {
+                                        const unit = units.find(
+                                            (r) => r.id === ticket!.unit_id,
+                                        );
+                                        const isBlocked =
+                                            unit?.status === 'maintenance';
+
+                                        if (!isBlocked) {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id="restore_unit"
+                                                    checked={
+                                                        data.restore_unit
+                                                    }
+                                                    onCheckedChange={(v) =>
+                                                        setData(
+                                                            'restore_unit',
+                                                            Boolean(v),
+                                                        )
+                                                    }
+                                                />
+                                                <Label
+                                                    htmlFor="restore_unit"
+                                                    className="cursor-pointer text-sm font-normal"
+                                                >
+                                                    Restore unit
+                                                    availability
+                                                </Label>
+                                            </div>
+                                        );
+                                    })()}
+
+                                <div className="flex items-center justify-end gap-4 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        type="button"
+                                        onClick={() => onOpenChange(false)}
+                                        disabled={processing}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        disabled={processing}
+                                        type="submit"
+                                    >
+                                        {isEdit ? 'Save' : 'Create'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </SheetContent>
             </Sheet>

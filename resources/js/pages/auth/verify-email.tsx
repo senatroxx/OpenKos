@@ -1,5 +1,5 @@
 // Components
-import { Form, Head } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import { TextLink } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -7,6 +7,13 @@ import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 
 export default function VerifyEmail({ status }: { status?: string }) {
+    const { post, processing } = useForm({});
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        post(send.url());
+    }
+
     return (
         <>
             <Head title="Email verification" />
@@ -18,23 +25,19 @@ export default function VerifyEmail({ status }: { status?: string }) {
                 </div>
             )}
 
-            <Form {...send.form()} className="space-y-6 text-center">
-                {({ processing }) => (
-                    <>
-                        <Button disabled={processing} variant="secondary">
-                            {processing && <Spinner />}
-                            Resend verification email
-                        </Button>
+            <form onSubmit={handleSubmit} className="space-y-6 text-center">
+                <Button disabled={processing} variant="secondary">
+                    {processing && <Spinner />}
+                    Resend verification email
+                </Button>
 
-                        <TextLink
-                            href={logout()}
-                            className="mx-auto block text-sm"
-                        >
-                            Log out
-                        </TextLink>
-                    </>
-                )}
-            </Form>
+                <TextLink
+                    href={logout()}
+                    className="mx-auto block text-sm"
+                >
+                    Log out
+                </TextLink>
+            </form>
         </>
     );
 }

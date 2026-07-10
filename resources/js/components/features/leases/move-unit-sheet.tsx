@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,9 @@ export default function MoveUnitSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { setData, processing, errors, post } = useForm({
+        target_unit_id: '',
+    });
     const [targetUnitId, setTargetUnitId] = useState<number | null>(null);
 
     const unitOptions = availableUnits.map((r) => {
@@ -49,6 +52,17 @@ export default function MoveUnitSheet({
         };
     });
 
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        post(properties.units.leases.move.url({
+            property: property.slug,
+            unit: currentUnit.slug,
+            lease: lease.id,
+        }), {
+            onSuccess: () => onOpenChange(false),
+        });
+    }
+
     return (
         <Sheet key="move-unit" open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
@@ -60,33 +74,19 @@ export default function MoveUnitSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form
-                        action={properties.units.leases.move.url({
-                            property: property.slug,
-                            unit: currentUnit.slug,
-                            lease: lease.id,
-                        })}
-                        method="post"
-                        onSuccess={() => onOpenChange(false)}
-                    >
-                        {({ processing, errors }) => (
+                    <form onSubmit={handleSubmit}>
                             <div className="space-y-6 pt-4">
-                                <input
-                                    type="hidden"
-                                    name="target_unit_id"
-                                    value={targetUnitId ?? ''}
-                                />
-
                                 <div className="grid gap-2">
                                     <Label>Target Unit</Label>
                                     <SearchableSelect
                                         options={unitOptions}
                                         value={targetUnitId}
-                                        onChange={(val) =>
+                                        onChange={(val) => {
                                             setTargetUnitId(
                                                 val as number | null,
-                                            )
-                                        }
+                                            );
+                                            setData('target_unit_id', String(val ?? ''));
+                                        }}
                                         placeholder="Select target unit..."
                                         searchPlaceholder="Search unit..."
                                         emptyText="No available units."
@@ -116,8 +116,7 @@ export default function MoveUnitSheet({
                                     </Button>
                                 </div>
                             </div>
-                        )}
-                    </Form>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

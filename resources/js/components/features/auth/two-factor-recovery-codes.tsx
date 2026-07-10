@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import AlertError from '@/components/shared/alert-error';
@@ -17,6 +17,36 @@ type Props = {
     fetchRecoveryCodes: () => Promise<void>;
     errors: string[];
 };
+
+function RegenerateCodesForm({
+    fetchRecoveryCodes,
+}: {
+    fetchRecoveryCodes: () => Promise<void>;
+}) {
+    const { processing, submit } = useForm({});
+
+    return (
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                submit(
+                    regenerateRecoveryCodes.form().method,
+                    regenerateRecoveryCodes.form().action,
+                    { preserveScroll: true, onSuccess: fetchRecoveryCodes },
+                );
+            }}
+        >
+            <Button
+                variant="secondary"
+                type="submit"
+                disabled={processing}
+                aria-describedby="regenerate-warning"
+            >
+                <RefreshCw /> Regenerate codes
+            </Button>
+        </form>
+    );
+}
 
 export default function TwoFactorRecoveryCodes({
     recoveryCodesList,
@@ -80,22 +110,9 @@ export default function TwoFactorRecoveryCodes({
                     </Button>
 
                     {canRegenerateCodes && (
-                        <Form
-                            {...regenerateRecoveryCodes.form()}
-                            options={{ preserveScroll: true }}
-                            onSuccess={fetchRecoveryCodes}
-                        >
-                            {({ processing }) => (
-                                <Button
-                                    variant="secondary"
-                                    type="submit"
-                                    disabled={processing}
-                                    aria-describedby="regenerate-warning"
-                                >
-                                    <RefreshCw /> Regenerate codes
-                                </Button>
-                            )}
-                        </Form>
+                        <RegenerateCodesForm
+                            fetchRecoveryCodes={fetchRecoveryCodes}
+                        />
                     )}
                 </div>
                 <div

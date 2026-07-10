@@ -1,5 +1,4 @@
-import { usePage } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { usePage, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { InputError, PhoneInput, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -41,10 +40,6 @@ export default function PropertyFormSheet({
         ? { action: update.url(property!), method: 'put' as const }
         : { action: store.url(), method: 'post' as const };
 
-    const [type, setType] = useState<string>(
-        property?.type ?? propertyTypes[0]?.slug ?? '',
-    );
-
     const [selectedRegionId, setSelectedRegionId] = useState<number | null>(
         property?.region_id ?? property?.region?.id ?? null,
     );
@@ -55,6 +50,16 @@ export default function PropertyFormSheet({
     const [selectedCityId, setSelectedCityId] = useState<number | null>(
         property?.city_id ?? city?.id ?? null,
     );
+
+    const { data, setData, processing, errors, submit } = useForm({
+        name: property?.name ?? '',
+        type: property?.type ?? propertyTypes[0]?.slug ?? '',
+        address: property?.address ?? '',
+        region_id: property?.region_id ?? property?.region?.id ?? null,
+        city_id: property?.city_id ?? city?.id ?? null,
+        postal_code: property?.postal_code ?? '',
+        phone: property?.phone ?? '',
+    });
 
     const regionOptions = regions.map((r) => ({
         value: r.id,
@@ -67,6 +72,13 @@ export default function PropertyFormSheet({
         value: c.id,
         label: c.name,
     }));
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        submit(formProps.method, formProps.action, {
+            onSuccess: () => onOpenChange(false),
+        });
+    }
 
     return (
         <Sheet
@@ -87,76 +99,65 @@ export default function PropertyFormSheet({
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    <Form {...formProps} onSuccess={() => onOpenChange(false)}>
-                        {({ processing, errors }) => (
-                            <div className="space-y-6 pt-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="name">Name</Label>
-                                    <Input
-                                        id="name"
-                                        name="name"
-                                        required
-                                        defaultValue={property?.name ?? ''}
-                                        placeholder="e.g. Kos Melati"
-                                    />
-                                    <InputError message={errors.name} />
-                                </div>
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-6 pt-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Name</Label>
+                                <Input
+                                    id="name"
+                                    required
+                                    value={data.name}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
+                                    placeholder="e.g. Kos Melati"
+                                />
+                                <InputError message={errors.name} />
+                            </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="type">Type</Label>
-                                    <input
-                                        type="hidden"
-                                        name="type"
-                                        value={type}
-                                    />
-                                    <Select
-                                        value={type}
-                                        onValueChange={setType}
+                            <div className="grid gap-2">
+                                <Label htmlFor="type">Type</Label>
+                                <Select
+                                    value={data.type}
+                                    onValueChange={(v) =>
+                                        setData('type', v)
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="type"
+                                        className="w-full"
                                     >
-                                        <SelectTrigger
-                                            id="type"
-                                            className="w-full"
-                                        >
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {propertyTypes.map((opt) => (
-                                                <SelectItem
-                                                    key={opt.slug}
-                                                    value={opt.slug}
-                                                >
-                                                    {opt.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError message={errors.type} />
-                                </div>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {propertyTypes.map((opt) => (
+                                            <SelectItem
+                                                key={opt.slug}
+                                                value={opt.slug}
+                                            >
+                                                {opt.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.type} />
+                            </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="address">Address</Label>
-                                    <textarea
-                                        id="address"
-                                        name="address"
-                                        defaultValue={property?.address ?? ''}
-                                        placeholder="Property address"
-                                        className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                                    />
-                                    <InputError message={errors.address} />
-                                </div>
-
-                                <input
-                                    type="hidden"
-                                    name="region_id"
-                                    value={selectedRegionId ?? ''}
+                            <div className="grid gap-2">
+                                <Label htmlFor="address">Address</Label>
+                                <textarea
+                                    id="address"
+                                    value={data.address}
+                                    onChange={(e) =>
+                                        setData('address', e.target.value)
+                                    }
+                                    placeholder="Property address"
+                                    className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                                 />
-                                <input
-                                    type="hidden"
-                                    name="city_id"
-                                    value={selectedCityId ?? ''}
-                                />
+                                <InputError message={errors.address} />
+                            </div>
 
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label>Province</Label>
                                         <SearchableSelect
@@ -167,6 +168,11 @@ export default function PropertyFormSheet({
                                                     val as number | null,
                                                 );
                                                 setSelectedCityId(null);
+                                                setData(
+                                                    'region_id',
+                                                    val as number | null,
+                                                );
+                                                setData('city_id', null);
                                             }}
                                             placeholder="Select province..."
                                             searchPlaceholder="Search province..."
@@ -183,6 +189,10 @@ export default function PropertyFormSheet({
                                             value={selectedCityId}
                                             onChange={(val) => {
                                                 setSelectedCityId(
+                                                    val as number | null,
+                                                );
+                                                setData(
+                                                    'city_id',
                                                     val as number | null,
                                                 );
                                             }}
@@ -203,9 +213,12 @@ export default function PropertyFormSheet({
                                         </Label>
                                         <Input
                                             id="postal_code"
-                                            name="postal_code"
-                                            defaultValue={
-                                                property?.postal_code ?? ''
+                                            value={data.postal_code}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'postal_code',
+                                                    e.target.value,
+                                                )
                                             }
                                             placeholder="Postal code"
                                         />
@@ -215,32 +228,33 @@ export default function PropertyFormSheet({
                                     </div>
                                 </div>
 
-                                <div className="grid gap-2">
-                                    <Label htmlFor="phone">Phone</Label>
-                                    <PhoneInput
-                                        name="phone"
-                                        defaultValue={property?.phone ?? ''}
-                                        placeholder="e.g. 81234567890"
-                                    />
-                                    <InputError message={errors.phone} />
-                                </div>
-
-                                <div className="flex items-center justify-end gap-4 pt-2">
-                                    <Button
-                                        variant="outline"
-                                        type="button"
-                                        onClick={() => onOpenChange(false)}
-                                        disabled={processing}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button disabled={processing}>
-                                        {isEdit ? 'Save' : 'Create'}
-                                    </Button>
-                                </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="phone">Phone</Label>
+                                <PhoneInput
+                                    value={data.phone}
+                                    onChange={(v: string) =>
+                                        setData('phone', v)
+                                    }
+                                    placeholder="e.g. 81234567890"
+                                />
+                                <InputError message={errors.phone} />
                             </div>
-                        )}
-                    </Form>
+
+                            <div className="flex items-center justify-end gap-4 pt-2">
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() => onOpenChange(false)}
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button disabled={processing}>
+                                    {isEdit ? 'Save' : 'Create'}
+                                </Button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

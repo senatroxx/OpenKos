@@ -1,4 +1,4 @@
-import { Form } from '@inertiajs/react';
+import { useForm } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import TwoFactorRecoveryCodes from '@/components/features/auth/two-factor-recovery-codes';
@@ -13,6 +13,54 @@ export type Props = {
     requiresConfirmation?: boolean;
     twoFactorEnabled?: boolean;
 };
+
+function DisableTwoFactorForm() {
+    const { processing, submit } = useForm({});
+
+    return (
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                submit(
+                    disable.form().method,
+                    disable.form().action,
+                );
+            }}
+        >
+            <Button
+                variant="destructive"
+                type="submit"
+                disabled={processing}
+            >
+                Disable 2FA
+            </Button>
+        </form>
+    );
+}
+
+function EnableTwoFactorForm({ onSuccess }: { onSuccess: () => void }) {
+    const { processing, submit } = useForm({});
+
+    return (
+        <form
+            onSubmit={(e) => {
+                e.preventDefault();
+                submit(
+                    enable.form().method,
+                    enable.form().action,
+                    { onSuccess },
+                );
+            }}
+        >
+            <Button
+                type="submit"
+                disabled={processing}
+            >
+                Enable 2FA
+            </Button>
+        </form>
+    );
+}
 
 export default function ManageTwoFactor(props: Props) {
     const requiresConfirmation = props.requiresConfirmation ?? false;
@@ -60,17 +108,7 @@ export default function ManageTwoFactor(props: Props) {
                     </p>
 
                     <div className="relative inline">
-                        <Form {...disable.form()}>
-                            {({ processing }) => (
-                                <Button
-                                    variant="destructive"
-                                    type="submit"
-                                    disabled={processing}
-                                >
-                                    Disable 2FA
-                                </Button>
-                            )}
-                        </Form>
+                        <DisableTwoFactorForm />
                     </div>
 
                     <TwoFactorRecoveryCodes
@@ -95,16 +133,9 @@ export default function ManageTwoFactor(props: Props) {
                                 Continue setup
                             </Button>
                         ) : (
-                            <Form
-                                {...enable.form()}
+                            <EnableTwoFactorForm
                                 onSuccess={() => setShowSetupModal(true)}
-                            >
-                                {({ processing }) => (
-                                    <Button type="submit" disabled={processing}>
-                                        Enable 2FA
-                                    </Button>
-                                )}
-                            </Form>
+                            />
                         )}
                     </div>
                 </div>
