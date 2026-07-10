@@ -34,7 +34,7 @@ export default function LeaseEditSheet({
     const { data, setData, processing, errors, submit } = useForm({
         rent_amount: lease?.rent_amount ?? '',
         rent_due_day: lease ? String(lease.rent_due_day) : '1',
-        deposit_refunded_at: lease?.deposit_refunded_at?.split('T')[0] ?? '',
+        deposit_refunded_at: (lease?.deposit_refunded_at ?? '').split('T')[0],
         notes: lease?.notes ?? '',
         billing_strategy: lease?.billing_strategy ?? 'advance',
     });
