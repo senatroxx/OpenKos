@@ -139,7 +139,12 @@ export default function AssignUnitSheet({
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        submit(assignUnit(tenant!.id), {
+
+        if (!tenant) {
+return;
+}
+
+        submit(assignUnit(tenant.id), {
             onSuccess: () => onOpenChange(false),
         });
     }

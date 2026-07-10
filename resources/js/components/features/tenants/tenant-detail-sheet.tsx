@@ -33,10 +33,10 @@ export default function TenantDetailSheet({
     tenant?: (WorkspaceTenant & { leases?: Lease[]; documents?: TenantDocument[] }) | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    onEdit: (tenant: WorkspaceTenant) => void;
-    onDocuments: (tenant: WorkspaceTenant) => void;
-    onAssignToUnit?: (tenant: WorkspaceTenant) => void;
-    onMoveOut?: (tenant: WorkspaceTenant) => void;
+    onEdit: () => void;
+    onDocuments: () => void;
+    onAssignToUnit?: () => void;
+    onMoveOut?: () => void;
 }) {
     const [archiveConfirm, setArchiveConfirm] = useState(false);
 
@@ -250,7 +250,7 @@ export default function TenantDetailSheet({
                             {!isArchived && tenant && (
                                 <Button
                                     variant="outline"
-                                    onClick={() => onDocuments(tenant)}
+                                    onClick={onDocuments}
                                     className="w-full"
                                 >
                                     Documents
@@ -268,14 +268,14 @@ export default function TenantDetailSheet({
                             {!isArchived && tenant && (
                                 <>
                                     {!activeLease && onAssignToUnit && (
-                                        <Button onClick={() => onAssignToUnit(tenant)}>
+                                        <Button onClick={onAssignToUnit}>
                                             Assign to Unit
                                         </Button>
                                     )}
                                     {activeLease && onMoveOut && (
                                         <Button
                                             variant="destructive"
-                                            onClick={() => onMoveOut(tenant)}
+                                            onClick={onMoveOut}
                                         >
                                             Move Out
                                         </Button>
@@ -286,7 +286,7 @@ export default function TenantDetailSheet({
                                     <Button
                                         onClick={() => {
                                             onOpenChange(false);
-                                            onEdit(tenant!);
+                                            onEdit();
                                         }}
                                     >
                                         Edit

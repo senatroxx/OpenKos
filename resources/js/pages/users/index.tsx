@@ -423,8 +423,13 @@ function UserFormSheet({
 
     if (previousUserIdRef.current !== user?.id) {
         previousUserIdRef.current = user?.id;
-        setData('property_ids', user?.properties.map((p) => p.id) ?? []);
-        setData('roles', user?.roles.map((r) => r.name) ?? []);
+        setData({
+            name: user?.name ?? '',
+            email: user?.email ?? '',
+            roles: user?.roles.map((r) => r.name) ?? [],
+            is_active: user?.is_active !== false,
+            property_ids: user?.properties.map((p) => p.id) ?? [],
+        });
     }
 
     const canEditRole = user?.role !== 'owner';
