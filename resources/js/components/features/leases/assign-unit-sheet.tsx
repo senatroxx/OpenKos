@@ -160,7 +160,14 @@ export default function AssignUnitSheet({
 
     function handlePropertyChange(val: number | string | null) {
         setSelectedPropertyId(val as number | null);
-        setData('unit_id', null);
+        setData({
+            ...data,
+            unit_id: null,
+            unit_rate_id: null,
+            rent_amount: '',
+            billing_interval: '1',
+            billing_unit: 'month',
+        });
     }
 
     function handleRateSelect(rate: UnitRate) {
@@ -196,7 +203,7 @@ export default function AssignUnitSheet({
     }
 
     return (
-        <Sheet open={open} onOpenChange={handleOpenChange}>
+        <Sheet key={tenant?.id ?? 'closed'} open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Assign to Unit</SheetTitle>

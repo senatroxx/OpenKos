@@ -35,8 +35,8 @@ export type WorkspaceRole = {
     is_system: boolean;
     is_active: boolean;
     users_count: number;
-    permissions_count: number;
     permissions: string[];
+    created_at: string | null;
 };
 
 export type RoleFormData = {

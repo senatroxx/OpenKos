@@ -32,22 +32,21 @@ export default function Mail({
 }) {
     const config = settings.mail_config ?? {};
 
-    const {
-        data,
-        setData: setDataRaw,
-        processing,
-        errors,
-        submit,
-    } = useForm({
-        'mail_config.host': config.host ?? '',
-        'mail_config.port': config.port ?? '',
-        'mail_config.username': config.username ?? '',
-        'mail_config.password': '',
-        'mail_config.encryption': config.encryption ?? 'null',
-        'mail_config.from_address': config.from_address ?? '',
-        'mail_config.from_name': config.from_name ?? '',
+    const { data, setData, processing, errors, submit } = useForm({
+        mail_config: {
+            host: config.host ?? '',
+            port: config.port ?? '',
+            username: config.username ?? '',
+            password: '',
+            encryption: config.encryption ?? 'null',
+            from_address: config.from_address ?? '',
+            from_name: config.from_name ?? '',
+        },
     });
-    const setData = setDataRaw as (key: string, value: string) => void;
+
+    function setMailConfig(field: string, value: string) {
+        setData('mail_config', { ...data.mail_config, [field]: value });
+    }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -80,8 +79,8 @@ export default function Mail({
                             <Input
                                 id="mail_config[host]"
                                 type="text"
-                                value={data['mail_config.host']}
-                                onChange={e => setData('mail_config.host', e.target.value)}
+                                value={data.mail_config.host}
+                                onChange={e => setMailConfig('host', e.target.value)}
                                 placeholder="smtp.example.com"
                             />
                             {errors['mail_config.host'] && (
@@ -98,8 +97,8 @@ export default function Mail({
                             <Input
                                 id="mail_config[port]"
                                 type="number"
-                                value={data['mail_config.port']}
-                                onChange={e => setData('mail_config.port', e.target.value)}
+                                value={data.mail_config.port}
+                                onChange={e => setMailConfig('port', e.target.value)}
                                 placeholder="587"
                             />
                             {errors['mail_config.port'] && (
@@ -116,8 +115,8 @@ export default function Mail({
                             <Input
                                 id="mail_config[username]"
                                 type="text"
-                                value={data['mail_config.username']}
-                                onChange={e => setData('mail_config.username', e.target.value)}
+                                value={data.mail_config.username}
+                                onChange={e => setMailConfig('username', e.target.value)}
                                 placeholder="user@example.com"
                             />
                             {errors['mail_config.username'] && (
@@ -134,8 +133,8 @@ export default function Mail({
                             <Input
                                 id="mail_config[password]"
                                 type="password"
-                                value={data['mail_config.password']}
-                                onChange={e => setData('mail_config.password', e.target.value)}
+                                value={data.mail_config.password}
+                                onChange={e => setMailConfig('password', e.target.value)}
                                 placeholder="Enter SMTP password"
                             />
                             {errors['mail_config.password'] && (
@@ -150,8 +149,8 @@ export default function Mail({
                                 Encryption
                             </Label>
                             <Select
-                                value={data['mail_config.encryption']}
-                                onValueChange={v => setData('mail_config.encryption', v)}
+                                value={data.mail_config.encryption}
+                                onValueChange={v => setMailConfig('encryption', v)}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="None" />
@@ -182,8 +181,8 @@ export default function Mail({
                             <Input
                                 id="mail_config[from_address]"
                                 type="email"
-                                value={data['mail_config.from_address']}
-                                onChange={e => setData('mail_config.from_address', e.target.value)}
+                                value={data.mail_config.from_address}
+                                onChange={e => setMailConfig('from_address', e.target.value)}
                                 placeholder="noreply@openkos.app"
                             />
                             {errors['mail_config.from_address'] && (
@@ -200,8 +199,8 @@ export default function Mail({
                             <Input
                                 id="mail_config[from_name]"
                                 type="text"
-                                value={data['mail_config.from_name']}
-                                onChange={e => setData('mail_config.from_name', e.target.value)}
+                                value={data.mail_config.from_name}
+                                onChange={e => setMailConfig('from_name', e.target.value)}
                                 placeholder="OpenKOS"
                             />
                             {errors['mail_config.from_name'] && (

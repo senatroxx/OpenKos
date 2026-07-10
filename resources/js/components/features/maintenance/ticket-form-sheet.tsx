@@ -94,6 +94,8 @@ export default function TicketFormSheet({
         resolution_notes: ticket?.resolution_notes ?? '',
         cost: ticket?.cost ?? '',
         restore_unit: false,
+        move_tenant_to_unit_id: null as number | null,
+        move_back: undefined,
     });
 
     const filteredUnits = data.property_id
@@ -199,9 +201,15 @@ export default function TicketFormSheet({
                                         <div className="flex gap-2">
                                             <Select
                                                 value={locationType}
-                                                onValueChange={
-                                                    setLocationType
-                                                }
+                                                onValueChange={(v) => {
+                                                    setLocationType(v);
+
+                                                    if (v === 'unit') {
+                                                        setData('location', '');
+                                                    } else {
+                                                        setData('unit_id', '');
+                                                    }
+                                                }}
                                             >
                                                 <SelectTrigger className="w-36 shrink-0">
                                                     <SelectValue />
@@ -535,27 +543,15 @@ export default function TicketFormSheet({
                         <Button
                             onClick={() => {
                                 setShowOccupiedDialog(false);
-                                const formEl =
-                                    document.getElementById('ticket-form');
-
-                                if (!formEl) {
-                                    return;
-                                }
-
-                                const data: Record<string, string> = {};
-                                new FormData(formEl as HTMLFormElement).forEach(
-                                    (v, k) => {
-                                        data[k] = String(v);
-                                    },
-                                );
+                                const payload = { ...data };
 
                                 if (moveToUnitId) {
-                                    data.move_tenant_to_unit_id = moveToUnitId;
+                                    payload.move_tenant_to_unit_id = Number(moveToUnitId);
                                 }
 
                                 router.visit(ticketFormAction, {
                                     method: ticketFormMethod,
-                                    data,
+                                    data: payload,
                                     onSuccess: () => onOpenChange(false),
                                 });
                             }}
@@ -583,22 +579,9 @@ export default function TicketFormSheet({
                             variant="outline"
                             onClick={() => {
                                 setShowMoveBackDialog(false);
-                                const formEl =
-                                    document.getElementById('ticket-form');
-
-                                if (!formEl) {
-                                    return;
-                                }
-
-                                const data: Record<string, string> = {};
-                                new FormData(formEl as HTMLFormElement).forEach(
-                                    (v, k) => {
-                                        data[k] = String(v);
-                                    },
-                                );
                                 router.visit(ticketFormAction, {
                                     method: ticketFormMethod,
-                                    data,
+                                    data: data,
                                     onSuccess: () => onOpenChange(false),
                                 });
                             }}
@@ -608,23 +591,10 @@ export default function TicketFormSheet({
                         <Button
                             onClick={() => {
                                 setShowMoveBackDialog(false);
-                                const formEl =
-                                    document.getElementById('ticket-form');
-
-                                if (!formEl) {
-                                    return;
-                                }
-
-                                const data: Record<string, string> = {};
-                                new FormData(formEl as HTMLFormElement).forEach(
-                                    (v, k) => {
-                                        data[k] = String(v);
-                                    },
-                                );
-                                data.move_back = '1';
+                                const payload = { ...data, move_back: '1' };
                                 router.visit(ticketFormAction, {
                                     method: ticketFormMethod,
-                                    data,
+                                    data: payload,
                                     onSuccess: () => onOpenChange(false),
                                 });
                             }}

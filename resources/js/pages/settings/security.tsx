@@ -29,7 +29,15 @@ export default function Security(props: Props) {
         submit(update(), {
             preserveScroll: true,
             onSuccess: () => reset(),
-            onError: () => reset('password', 'password_confirmation', 'current_password'),
+            onError: () => {
+                reset('password', 'password_confirmation', 'current_password');
+
+                if (errors.current_password) {
+                    currentPasswordInput.current?.focus();
+                } else if (errors.password) {
+                    passwordInput.current?.focus();
+                }
+            },
         });
     }
 

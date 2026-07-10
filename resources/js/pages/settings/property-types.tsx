@@ -57,13 +57,7 @@ function SheetForm({ editing, closeSheet }: { editing: PropertyTypeOption | null
                 <InputError message={errors.label} />
             </div>
 
-            {editing && (
-                <input
-                    type="hidden"
-                    name="is_active"
-                    value={editing.is_active ? 1 : 0}
-                />
-            )}
+            {editing && null}
 
             <div className="flex items-center justify-end gap-4">
                 <Button

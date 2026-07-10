@@ -44,9 +44,14 @@ export default function TwoFactorChallenge() {
     });
 
     const toggleRecoveryMode = (): void => {
+        const switchingToCode = showRecoveryInput;
         setShowRecoveryInput(!showRecoveryInput);
         clearErrors();
         setData('code', '');
+
+        if (switchingToCode) {
+            setData('recovery_code', '');
+        }
     };
 
     function handleSubmit(e: React.FormEvent) {

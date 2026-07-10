@@ -15,6 +15,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     },
     lease: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },
+        expired: { label: 'Expired', className: 'bg-gray-500 text-white' },
         terminated: { label: 'Terminated', className: 'bg-gray-400 text-white' },
         renewed: { label: 'Renewed', className: 'bg-blue-600 text-white' },
     },
@@ -32,6 +33,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         confirmed: { label: 'Confirmed', className: 'bg-green-600 text-white' },
         pending: { label: 'Pending', className: 'bg-amber-500 text-white' },
         cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
+        verified: { label: 'Verified', className: 'bg-green-600 text-white' },
     },
     maintenance: {
         reported: { label: 'Reported', className: 'bg-blue-100 text-blue-700' },
@@ -65,7 +67,7 @@ export function StatusBadge({
     domain,
     value,
 }: {
-    domain: string;
+    domain: keyof typeof STATUS_CONFIGS;
     value: string;
 }) {
     const config = STATUS_CONFIGS[domain]?.[value];

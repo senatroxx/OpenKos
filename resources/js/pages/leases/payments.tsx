@@ -55,7 +55,7 @@ const columns: TableColumn<Payment>[] = [
         key: 'status',
         label: 'Status',
         sortable: true,
-        render: (p) => <StatusBadge domain="payment" value={p.status} />,
+        render: (p) => <StatusBadge domain="payment" value={p.verified_at ? 'verified' : p.status} />,
     },
     {
         key: '_proofs',

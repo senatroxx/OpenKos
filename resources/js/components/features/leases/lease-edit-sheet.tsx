@@ -22,233 +22,6 @@ import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { formatDate } from '@/lib/formatters';
 import type { Lease } from '@/types';
 
-function LeaseEditForm({
-    lease,
-    onOpenChange,
-}: {
-    lease: Lease;
-    onOpenChange: (open: boolean) => void;
-}) {
-    const { data, setData, processing, errors, submit } = useForm({
-        rent_amount: lease.rent_amount ?? '',
-        rent_due_day: String(lease.rent_due_day),
-        deposit_refunded_at: (lease.deposit_refunded_at ?? '').split('T')[0],
-        notes: lease.notes ?? '',
-        billing_strategy: lease.billing_strategy ?? 'advance',
-    });
-
-    const noDeposit = Number.parseFloat(lease.deposit_amount ?? '0') === 0;
-
-    function handleSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        submit(update({
-            property: lease.unit!.property!.slug,
-            unit: lease.unit!.slug,
-            lease: lease.id,
-        }), {
-            onSuccess: () => onOpenChange(false),
-        });
-    }
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-6 pt-4">
-            <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Occupancy
-                </h3>
-                <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
-                    <div>
-                        <p className="mb-1 text-xs text-muted-foreground">
-                            Tenants
-                        </p>
-                        <div className="space-y-1">
-                            {(lease.tenants ?? []).length > 0
-                                ? lease.tenants.map((t) => (
-                                    <div
-                                        key={t.id}
-                                        className="flex items-center justify-between text-sm"
-                                    >
-                                        <span className="font-medium">
-                                            {t.name}
-                                        </span>
-                                        {t.pivot?.is_primary && (
-                                            <span className="text-[10px] font-medium text-blue-600 uppercase">
-                                                Primary
-                                            </span>
-                                        )}
-                                    </div>
-                                ))
-                                : lease.primary_tenant && (
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="font-medium">
-                                            {lease.primary_tenant.name}
-                                        </span>
-                                        <span className="text-[10px] font-medium text-blue-600 uppercase">
-                                            Primary
-                                        </span>
-                                    </div>
-                                )}
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Unit</span>
-                        <span className="font-medium">{lease.unit?.name}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Property</span>
-                        <span className="font-medium">
-                            {lease.unit?.property?.name ?? '—'}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Start date</span>
-                        <span className="tabular-nums">
-                            {formatDate(lease.start_date)}
-                        </span>
-                    </div>
-                </div>
-            </section>
-
-            <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Rent & Terms
-                </h3>
-
-                <div className="flex items-start gap-4">
-                    <div className="min-w-0 flex-1">
-                        <Label htmlFor="rent_amount">Rent Amount (IDR)</Label>
-                        <Input
-                            id="rent_amount"
-                            name="rent_amount"
-                            type="number"
-                            min={0}
-                            defaultValue={lease.rent_amount ?? ''}
-                            placeholder="Rent amount"
-                        />
-                        <InputError message={errors.rent_amount} />
-                    </div>
-
-                    <div className="shrink-0">
-                        <Label htmlFor="rent_due_day">Rent Due Every Month</Label>
-                        <input
-                            type="hidden"
-                            name="rent_due_day"
-                            value={data.rent_due_day}
-                        />
-                        <Select
-                            value={data.rent_due_day}
-                            onValueChange={(v) => setData('rent_due_day', v)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {DUE_DAY_OPTIONS.map((opt) => (
-                                    <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.rent_due_day} />
-                    </div>
-                </div>
-
-                <div className="mt-4 grid gap-2">
-                    <Label>Billing Strategy</Label>
-                    <input
-                        type="hidden"
-                        name="billing_strategy"
-                        value={data.billing_strategy}
-                    />
-                    <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-                        {BILLING_STRATEGIES.find(
-                            (s) => s.value === data.billing_strategy,
-                        )?.label ?? data.billing_strategy}
-                    </div>
-                </div>
-            </section>
-
-            <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Deposit
-                </h3>
-                <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Amount</span>
-                        <span className="font-medium tabular-nums">
-                            {Number.parseFloat(lease.deposit_amount).toLocaleString(
-                                'id-ID',
-                                {
-                                    style: 'currency',
-                                    currency: 'IDR',
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 0,
-                                },
-                            )}
-                        </span>
-                    </div>
-                    {lease.deposit_paid_at && (
-                        <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Paid at</span>
-                            <span className="tabular-nums">
-                                {formatDate(lease.deposit_paid_at)}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                <div className="mt-4 grid gap-2">
-                    <Label htmlFor="deposit_refunded_at">Deposit Refunded At</Label>
-                    <Input
-                        id="deposit_refunded_at"
-                        name="deposit_refunded_at"
-                        type="date"
-                        value={data.deposit_refunded_at}
-                        onChange={(e) => setData('deposit_refunded_at', e.target.value)}
-                        disabled={noDeposit}
-                    />
-                    {noDeposit && (
-                        <p className="text-xs text-muted-foreground">
-                            No deposit was collected for this lease.
-                        </p>
-                    )}
-                    <InputError message={errors.deposit_refunded_at} />
-                </div>
-            </section>
-
-            <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Notes
-                </h3>
-                <div className="grid gap-2">
-                    <textarea
-                        id="notes"
-                        name="notes"
-                        value={data.notes}
-                        onChange={(e) => setData('notes', e.target.value)}
-                        placeholder="Additional notes"
-                        className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                    />
-                    <InputError message={errors.notes} />
-                </div>
-            </section>
-
-            <div className="flex items-center justify-end gap-4 pt-2">
-                <Button
-                    variant="outline"
-                    type="button"
-                    onClick={() => onOpenChange(false)}
-                    disabled={processing}
-                >
-                    Cancel
-                </Button>
-                <Button disabled={processing}>Save</Button>
-            </div>
-        </form>
-    );
-}
-
 export default function LeaseEditSheet({
     lease,
     open,
@@ -258,21 +31,305 @@ export default function LeaseEditSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { data, setData, processing, errors, submit } = useForm({
+        rent_amount: lease?.rent_amount ?? '',
+        rent_due_day: lease ? String(lease.rent_due_day) : '1',
+        deposit_refunded_at: (lease?.deposit_refunded_at ?? '').split('T')[0],
+        notes: lease?.notes ?? '',
+        billing_strategy: lease?.billing_strategy ?? 'advance',
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+
+        if (!lease || !lease.unit || !lease.unit.property) {
+            console.error('Lease, unit, or property information is missing.');
+
+            return;
+        }
+
+        submit(
+            update({
+                property: lease.unit.property!.slug,
+                unit: lease.unit.slug,
+                lease: lease.id,
+            }),
+            {
+                onSuccess: () => onOpenChange(false),
+            },
+        );
+    }
+
+    function handleOpenChange(open: boolean) {
+        if (!open) {
+            setData('rent_due_day', lease ? String(lease.rent_due_day) : '1');
+        }
+
+        onOpenChange(open);
+    }
+
+    const noDeposit = Number.parseFloat(lease?.deposit_amount ?? '0') === 0;
+
+    if (!lease || !lease.unit || !lease.unit.property) {
+        return null;
+    }
+
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Edit Lease</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
-                    {lease && lease.unit && lease.unit.property ? (
-                        <LeaseEditForm
-                            key={lease.id}
-                            lease={lease}
-                            onOpenChange={onOpenChange}
-                        />
-                    ) : null}
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-6 pt-4">
+                            <section>
+                                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Occupancy
+                                </h3>
+                                <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+                                    <div>
+                                        <p className="mb-1 text-xs text-muted-foreground">
+                                            Tenants
+                                        </p>
+                                        <div className="space-y-1">
+                                            {(lease.tenants ?? []).length > 0
+                                                ? lease.tenants.map((t) => (
+                                                      <div
+                                                          key={t.id}
+                                                          className="flex items-center justify-between text-sm"
+                                                      >
+                                                          <span className="font-medium">
+                                                              {t.name}
+                                                          </span>
+                                                          {t.pivot
+                                                              ?.is_primary && (
+                                                              <span className="text-[10px] font-medium text-blue-600 uppercase">
+                                                                  Primary
+                                                              </span>
+                                                          )}
+                                                      </div>
+                                                  ))
+                                                : lease.primary_tenant && (
+                                                      <div className="flex items-center justify-between text-sm">
+                                                          <span className="font-medium">
+                                                              {
+                                                                  lease
+                                                                      .primary_tenant
+                                                                      .name
+                                                              }
+                                                          </span>
+                                                          <span className="text-[10px] font-medium text-blue-600 uppercase">
+                                                              Primary
+                                                          </span>
+                                                      </div>
+                                                  )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            Unit
+                                        </span>
+                                        <span className="font-medium">
+                                            {lease.unit?.name}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            Property
+                                        </span>
+                                        <span className="font-medium">
+                                            {lease.unit?.property?.name ?? '—'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            Start date
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {formatDate(lease.start_date)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Rent & Terms
+                                </h3>
+
+                                <div className="flex items-start gap-4">
+                                    <div className="min-w-0 flex-1">
+                                        <Label htmlFor="rent_amount">
+                                            Rent Amount (IDR)
+                                        </Label>
+                                        <Input
+                                            id="rent_amount"
+                                            name="rent_amount"
+                                            type="number"
+                                            min={0}
+                                            value={data.rent_amount}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'rent_amount',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Rent amount"
+                                        />
+                                        <div className="min-h-[1rem]" />
+                                        <InputError
+                                            message={errors.rent_amount}
+                                        />
+                                    </div>
+
+                                    <div className="shrink-0">
+                                        <Label htmlFor="rent_due_day">
+                                            Rent Due Every Month
+                                        </Label>
+                                        <Select
+                                            value={data.rent_due_day}
+                                            onValueChange={(v) =>
+                                                setData('rent_due_day', v)
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {DUE_DAY_OPTIONS.map((opt) => (
+                                                    <SelectItem
+                                                        key={opt.value}
+                                                        value={opt.value}
+                                                    >
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <div className="min-h-[1rem]" />
+                                        <InputError
+                                            message={errors.rent_due_day}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 grid gap-2">
+                                    <Label>Billing Strategy</Label>
+                                    <input
+                                        type="hidden"
+                                        name="billing_strategy"
+                                        value={data.billing_strategy}
+                                    />
+                                    <div className="rounded-md border border-input bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                                        {BILLING_STRATEGIES.find(
+                                            (s) =>
+                                                s.value ===
+                                                data.billing_strategy,
+                                        )?.label ?? data.billing_strategy}
+                                    </div>
+                                    <InputError
+                                        message={errors.billing_strategy}
+                                    />
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Deposit
+                                </h3>
+                                <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            Amount
+                                        </span>
+                                        <span className="font-medium tabular-nums">
+                                            {Number.parseFloat(
+                                                lease.deposit_amount,
+                                            ).toLocaleString('id-ID', {
+                                                style: 'currency',
+                                                currency: 'IDR',
+                                                minimumFractionDigits: 0,
+                                                maximumFractionDigits: 0,
+                                            })}
+                                        </span>
+                                    </div>
+                                    {lease.deposit_paid_at && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                Paid at
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {formatDate(
+                                                    lease.deposit_paid_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 grid gap-2">
+                                    <Label htmlFor="deposit_refunded_at">
+                                        Deposit Refunded At
+                                    </Label>
+                                    <Input
+                                        id="deposit_refunded_at"
+                                        name="deposit_refunded_at"
+                                        type="date"
+                                        value={data.deposit_refunded_at}
+                                        onChange={(e) =>
+                                            setData(
+                                                'deposit_refunded_at',
+                                                e.target.value,
+                                            )
+                                        }
+                                        disabled={noDeposit}
+                                    />
+                                    {noDeposit && (
+                                        <p className="text-xs text-muted-foreground">
+                                            No deposit was collected for this
+                                            lease.
+                                        </p>
+                                    )}
+                                    <InputError
+                                        message={errors.deposit_refunded_at}
+                                    />
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Notes
+                                </h3>
+                                <div className="grid gap-2">
+                                    <textarea
+                                        id="notes"
+                                        name="notes"
+                                        value={data.notes}
+                                        onChange={(e) =>
+                                            setData('notes', e.target.value)
+                                        }
+                                        placeholder="Additional notes"
+                                        className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                                    />
+                                    <InputError message={errors.notes} />
+                                </div>
+                            </section>
+
+                            <div className="flex items-center justify-end gap-4 pt-2">
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() => onOpenChange(false)}
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button disabled={processing}>Save</Button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </SheetContent>
         </Sheet>

@@ -70,11 +70,14 @@ export default function Reminders({
     const renderedUpcoming = renderTemplate(data.reminder_message_template, {
         name: preview.name,
         unit: preview.unit,
+        days: String(data.reminder_days_before ?? settings.reminder_days_before),
+        amount: preview.amount,
+        date: preview.date,
     });
     const renderedOverdue = renderTemplate(data.reminder_message_template, {
         name: preview.name,
         unit: preview.unit,
-        days: preview.overdueDays,
+        days: String(preview.overdueDays),
         amount: preview.amount,
         date: preview.date,
     });
@@ -133,7 +136,10 @@ export default function Reminders({
                                 min={0}
                                 max={30}
                                 value={data.reminder_days_before}
-                                onChange={e => setData('reminder_days_before', Number(e.target.value))}
+                                 onChange={e => {
+                                    const val = e.target.value;
+                                    setData('reminder_days_before', val === '' ? 0 : Number(val));
+                                }}
                             />
                             {errors.reminder_days_before && (
                                 <p className="text-sm text-red-600">

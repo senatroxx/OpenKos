@@ -46,7 +46,7 @@ export function formatRupiah(value: number): string {
     }).format(value);
 }
 
-export function formatPeriod(periodStart: string, locale = 'en-US'): string {
+export function formatPeriod(periodStart: string, locale = 'id-ID'): string {
     const [y, m] = periodStart.split('-');
     const date = new Date(Date.UTC(Number(y), Number(m) - 1, 1));
 
@@ -72,7 +72,7 @@ export function computeMonthlyEquivalent(
         return '';
     }
 
-    const int = interval || 1;
+    const int = interval;
     let monthly: number;
 
     switch (unit) {

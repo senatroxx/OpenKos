@@ -8,13 +8,13 @@ export type SettingDefinition = {
 };
 
 export interface MailConfig {
-    driver?: string;
-    host?: string;
-    port?: number;
-    username?: string;
-    encryption?: string;
-    from_address?: string;
-    from_name?: string;
+    driver?: string | null;
+    host?: string | null;
+    port?: number | null;
+    username?: string | null;
+    encryption?: string | null;
+    from_address?: string | null;
+    from_name?: string | null;
 }
 
 export type Driver = {

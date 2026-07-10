@@ -10,11 +10,10 @@ export default function TenantOverview({ tenant }: { tenant: WorkspaceTenant & {
         <div className="space-y-6">
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                {(() => {
-                    const status = isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive';
-
-                    return <StatusBadge domain="tenant" value={status} />;
-                })()}
+                {<StatusBadge
+                    domain="tenant"
+                    value={isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive'}
+                />}
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-4">

@@ -304,17 +304,7 @@ export type WorkspaceLease = {
     status: string;
 };
 
-export type WorkspaceTenant = {
-    id: number;
-    name: string;
-    phone: string | null;
-    email: string | null;
-    id_card_number: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    notes: string | null;
-    is_active: boolean;
-    deleted_at?: string | null;
+export type WorkspaceTenant = Omit<Tenant, 'documents'> & {
     active_leases_count?: number;
 };
 
@@ -336,7 +326,7 @@ export type ManagedProperty = {
     id: number;
     name: string;
     slug: string;
-    type?: string;
+    type: string;
     type_label?: string;
     address: string | null;
     region_id: number | null;

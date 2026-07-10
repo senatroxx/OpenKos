@@ -162,6 +162,7 @@ function TwoFactorVerificationStep({
         submit(store(), {
             onSuccess: () => onClose(),
             preserveScroll: true,
+            errorBag: 'confirmTwoFactorAuthentication',
         });
     }
 

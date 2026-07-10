@@ -82,6 +82,7 @@ export default function TenantFormSheet({
                                 <PhoneInput
                                     name="phone"
                                     defaultValue={data.phone}
+                                    onChange={(v) => setData('phone', v)}
                                     placeholder="e.g. 81234567890"
                                 />
                                 <InputError message={errors.phone} />
@@ -128,6 +129,7 @@ export default function TenantFormSheet({
                                 <PhoneInput
                                     name="emergency_contact_phone"
                                     defaultValue={data.emergency_contact_phone}
+                                    onChange={(v) => setData('emergency_contact_phone', v)}
                                     placeholder="e.g. 81234567890"
                                 />
                                 <InputError

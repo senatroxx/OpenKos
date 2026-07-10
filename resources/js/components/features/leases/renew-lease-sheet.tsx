@@ -34,7 +34,7 @@ export default function RenewLeaseSheet({
         rent_amount: lease?.rent_amount ? String(Number.parseInt(lease.rent_amount)) : '',
         extension_value: '',
         extension_unit: 'months',
-        deposit_handling: 'refund',
+        deposit_handling: 'carry_forward',
         confirmed_outstanding: false,
     });
 

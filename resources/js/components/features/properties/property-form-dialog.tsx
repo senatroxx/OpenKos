@@ -1,6 +1,9 @@
 import { usePage, useForm } from '@inertiajs/react';
 import { useState } from 'react';
-import { store, update } from '@/actions/App/Http/Controllers/PropertyController';
+import {
+    store,
+    update,
+} from '@/actions/App/Http/Controllers/PropertyController';
 import { InputError, PhoneInput, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,14 +119,9 @@ export default function PropertyFormSheet({
                                 <Label htmlFor="type">Type</Label>
                                 <Select
                                     value={data.type}
-                                    onValueChange={(v) =>
-                                        setData('type', v)
-                                    }
+                                    onValueChange={(v) => setData('type', v)}
                                 >
-                                    <SelectTrigger
-                                        id="type"
-                                        className="w-full"
-                                    >
+                                    <SelectTrigger id="type" className="w-full">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -154,76 +152,68 @@ export default function PropertyFormSheet({
                                 <InputError message={errors.address} />
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                                    <div className="grid gap-2">
-                                        <Label>Province</Label>
-                                        <SearchableSelect
-                                            options={regionOptions}
-                                            value={selectedRegionId}
-                                            onChange={(val) => {
-                                                setSelectedRegionId(
-                                                    val as number | null,
-                                                );
-                                                setSelectedCityId(null);
-                                                setData(
-                                                    'region_id',
-                                                    val as number | null,
-                                                );
-                                                setData('city_id', null);
-                                            }}
-                                            placeholder="Select province..."
-                                            searchPlaceholder="Search province..."
-                                            emptyText="No province found."
-                                        />
-                                        <InputError
-                                            message={errors.region_id}
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label>City / Kabupaten</Label>
-                                        <SearchableSelect
-                                            options={cityOptions}
-                                            value={selectedCityId}
-                                            onChange={(val) => {
-                                                setSelectedCityId(
-                                                    val as number | null,
-                                                );
-                                                setData(
-                                                    'city_id',
-                                                    val as number | null,
-                                                );
-                                            }}
-                                            placeholder={
-                                                selectedRegionId
-                                                    ? 'Select city...'
-                                                    : 'Select province first'
-                                            }
-                                            searchPlaceholder="Search city..."
-                                            emptyText="No city found."
-                                            disabled={!selectedRegionId}
-                                        />
-                                        <InputError message={errors.city_id} />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="postal_code">
-                                            Postal Code
-                                        </Label>
-                                        <Input
-                                            id="postal_code"
-                                            value={data.postal_code}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'postal_code',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="Postal code"
-                                        />
-                                        <InputError
-                                            message={errors.postal_code}
-                                        />
-                                    </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label>Province</Label>
+                                    <SearchableSelect
+                                        options={regionOptions}
+                                        value={selectedRegionId}
+                                        onChange={(val) => {
+                                            setSelectedRegionId(
+                                                val as number | null,
+                                            );
+                                            setSelectedCityId(null);
+                                            setData(
+                                                'region_id',
+                                                val as number | null,
+                                            );
+                                            setData('city_id', null);
+                                        }}
+                                        placeholder="Select province..."
+                                        searchPlaceholder="Search province..."
+                                        emptyText="No province found."
+                                    />
+                                    <InputError message={errors.region_id} />
                                 </div>
+                                <div className="grid gap-2">
+                                    <Label>City / Kabupaten</Label>
+                                    <SearchableSelect
+                                        options={cityOptions}
+                                        value={selectedCityId}
+                                        onChange={(val) => {
+                                            setSelectedCityId(
+                                                val as number | null,
+                                            );
+                                            setData(
+                                                'city_id',
+                                                val as number | null,
+                                            );
+                                        }}
+                                        placeholder={
+                                            selectedRegionId
+                                                ? 'Select city...'
+                                                : 'Select province first'
+                                        }
+                                        searchPlaceholder="Search city..."
+                                        emptyText="No city found."
+                                        disabled={!selectedRegionId}
+                                    />
+                                    <InputError message={errors.city_id} />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="postal_code">Postal Code</Label>
+                                <Input
+                                    id="postal_code"
+                                    value={data.postal_code}
+                                    onChange={(e) =>
+                                        setData('postal_code', e.target.value)
+                                    }
+                                    placeholder="Postal code"
+                                />
+                                <InputError message={errors.postal_code} />
+                            </div>
 
                             <div className="grid gap-2">
                                 <Label htmlFor="phone">Phone</Label>

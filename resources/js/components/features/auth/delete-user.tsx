@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 export default function DeleteUser() {
     const passwordInput = useRef<HTMLInputElement>(null);
 
-    const { data, setData, processing, errors, submit, reset } = useForm({
+    const { data, setData, processing, errors, submit, reset, clearErrors } = useForm({
         password: '',
     });
 
@@ -47,7 +47,12 @@ export default function DeleteUser() {
                     </p>
                 </div>
 
-                <Dialog>
+                <Dialog onOpenChange={(open) => {
+                    if (!open) {
+                        reset();
+                        clearErrors();
+                    }
+                }}>
                     <DialogTrigger asChild>
                         <Button
                             variant="destructive"

@@ -15,9 +15,15 @@ import { Textarea } from '@/components/ui/textarea';
 import type { DynamicSettingsFormProps, SettingDefinition } from '@/types/settings';
 
 function SettingField({ def, value }: { def: SettingDefinition; value: unknown }) {
+    const normalizedValue = def.type === 'bool'
+        ? (value === '1' || value === true ? '1' : '0')
+        : def.type === 'json' && typeof value === 'object' && value !== null
+            ? JSON.stringify(value)
+            : value ?? def.default ?? '';
+
     const { data, setData, processing, errors, submit } = useForm({
         key: def.key,
-        value: def.type === 'bool' ? (value ? '1' : '0') : value ?? def.default ?? '',
+        value: normalizedValue,
     });
 
     function handleSubmit(e: React.FormEvent) {
@@ -72,7 +78,6 @@ export function DynamicSettingsForm({
     return (
         <div className="space-y-6">
             {definitions.map((def) => (
-                /* ponytail: replace with Wayfinder import after `php artisan wayfinder:generate` */
                 <Card key={def.key}>
                     <CardHeader>
                         <CardTitle>{def.label}</CardTitle>

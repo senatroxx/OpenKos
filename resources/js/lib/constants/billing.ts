@@ -14,7 +14,7 @@ export const PAYMENT_METHODS = [
     { value: 'other', label: 'Other' },
 ];
 
-export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+export const PAYMENT_METHOD_LABELS: Partial<Record<string, string>> = {
     cash: 'Cash',
     transfer: 'Bank Transfer',
     ewallet: 'E-Wallet',

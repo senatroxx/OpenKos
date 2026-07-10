@@ -259,9 +259,7 @@ export default function RoleForm({
                             </div>
                         )}
 
-                        {isEdit && isSystem && (
-                            <input type="hidden" value="1" />
-                        )}
+                        {isEdit && isSystem && null}
                     </section>
 
                     <div className="flex items-center justify-end">

@@ -21,10 +21,12 @@ export default function PhoneInput({
     name,
     defaultValue,
     placeholder,
+    onChange,
 }: {
     name: string;
     defaultValue?: string | null;
     placeholder?: string;
+    onChange?: (value: string) => void;
 }) {
     const parsed = parseE164(defaultValue);
     const [open, setOpen] = useState(false);
@@ -34,6 +36,10 @@ export default function PhoneInput({
     const [openKey, setOpenKey] = useState(0);
 
     const full = number ? selected.dialCode + number : '';
+
+    useEffect(() => {
+        onChange?.(full);
+    }, [full, onChange]);
 
     const filtered = search
         ? countryCodes.filter(

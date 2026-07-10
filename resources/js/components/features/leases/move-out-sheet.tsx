@@ -98,6 +98,7 @@ export default function MoveOutSheet({
     function handlePropertyChange(val: number | string | null) {
         setSelectedPropertyId(val as number | null);
         setSelectedTargetUnitId(null);
+        setData('target_unit_id', '');
     }
 
     function handleSubmit(e: React.FormEvent) {
