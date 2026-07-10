@@ -1,10 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/NewPasswordController';
 import { InputError, PasswordInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { update } from '@/routes/password';
 
 type Props = {
     token: string;
@@ -13,7 +13,7 @@ type Props = {
 };
 
 export default function ResetPassword({ token, email, passwordRules }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, submit, processing, errors } = useForm({
         email,
         password: '',
         password_confirmation: '',
@@ -22,7 +22,7 @@ export default function ResetPassword({ token, email, passwordRules }: Props) {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(update.url(), {
+        submit(store(), {
             onSuccess: () => {
                 setData('password', '');
                 setData('password_confirmation', '');

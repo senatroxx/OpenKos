@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { renew } from '@/actions/App/Http/Controllers/LeaseController';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,6 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { DEPOSIT_HANDLING_OPTIONS } from '@/lib/constants/lease';
-import leases from '@/routes/leases';
 import type { Lease } from '@/types';
 
 export default function RenewLeaseSheet({
@@ -30,7 +30,7 @@ export default function RenewLeaseSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { data, setData, processing, errors, post } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         rent_amount: lease.rent_amount ? String(Number.parseInt(lease.rent_amount)) : '',
         extension_value: '',
         extension_unit: 'months',
@@ -47,7 +47,7 @@ export default function RenewLeaseSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(leases.renew.post({ lease: lease.id }).url, {
+        submit(renew(lease.id), {
             onSuccess: handleClose,
         });
     }

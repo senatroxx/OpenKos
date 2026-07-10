@@ -1,5 +1,6 @@
 import { usePage, useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { store, update } from '@/actions/App/Http/Controllers/PropertyController';
 import { InputError, PhoneInput, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { store, update } from '@/routes/properties';
 import type { Property, PropertyTypeOption, Region } from '@/types';
 
 export default function PropertyFormSheet({
@@ -36,9 +36,6 @@ export default function PropertyFormSheet({
     }>().props;
 
     const isEdit = Boolean(property);
-    const formProps = isEdit
-        ? { action: update.url(property!), method: 'put' as const }
-        : { action: store.url(), method: 'post' as const };
 
     const [selectedRegionId, setSelectedRegionId] = useState<number | null>(
         property?.region_id ?? property?.region?.id ?? null,
@@ -75,7 +72,7 @@ export default function PropertyFormSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(formProps.method, formProps.action, {
+        submit(isEdit ? update(property!) : store(), {
             onSuccess: () => onOpenChange(false),
         });
     }

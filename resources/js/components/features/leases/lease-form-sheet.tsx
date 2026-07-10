@@ -1,7 +1,8 @@
-import { router, useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { store } from '@/actions/App/Http/Controllers/LeaseController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,7 +29,6 @@ import {
 import { DUE_DAY_OPTIONS } from '@/lib/constants';
 import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { computeMonthlyEquivalent, formatPrice } from '@/lib/formatters';
-import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
 
 export default function LeaseFormSheet({
@@ -46,7 +46,7 @@ export default function LeaseFormSheet({
         tenants: { id: number; name: string; phone: string }[];
     }>().props;
     const defaultRate = unit?.active_rates?.[0] ?? null;
-    const { data, setData, processing, errors, reset } = useForm({
+    const { data, setData, processing, errors, submit, reset } = useForm({
         tenant_ids: [] as number[],
         start_date: new Date().toISOString().split('T')[0],
         unit_rate_id: (defaultRate?.id ?? null) as number | null,
@@ -88,10 +88,7 @@ export default function LeaseFormSheet({
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        router.post(properties.units.leases.store.url({
-            property: property.slug,
-            unit: unit!.slug,
-        }), data, {
+        submit(store({ property: property.slug, unit: unit!.slug }), {
             onSuccess: () => onOpenChange(false),
         });
     }

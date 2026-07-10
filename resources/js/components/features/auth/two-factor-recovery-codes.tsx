@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
 import { Eye, EyeOff, LockKeyhole, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/RecoveryCodeController';
 import AlertError from '@/components/shared/alert-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +11,6 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
-import { regenerateRecoveryCodes } from '@/routes/two-factor';
 
 type Props = {
     recoveryCodesList: string[];
@@ -29,11 +29,7 @@ function RegenerateCodesForm({
         <form
             onSubmit={(e) => {
                 e.preventDefault();
-                submit(
-                    regenerateRecoveryCodes.form().method,
-                    regenerateRecoveryCodes.form().action,
-                    { preserveScroll: true, onSuccess: fetchRecoveryCodes },
-                );
+                submit(store(), { preserveScroll: true, onSuccess: fetchRecoveryCodes });
             }}
         >
             <Button

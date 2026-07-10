@@ -1,6 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import { useRef } from 'react';
-import SecurityController from '@/actions/App/Http/Controllers/Settings/SecurityController';
+import { update } from '@/actions/App/Http/Controllers/Settings/SecurityController';
 import { ManagePasskeys, ManageTwoFactor } from '@/components/features';
 import type { Props as ManagePasskeysProps } from '@/components/features/auth/manage-passkeys';
 import type { Props as ManageTwoFactorProps } from '@/components/features/auth/manage-two-factor';
@@ -18,7 +18,7 @@ export default function Security(props: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
 
-    const { data, setData, processing, errors, reset, put } = useForm({
+    const { data, setData, processing, errors, reset, submit } = useForm({
         current_password: '',
         password: '',
         password_confirmation: '',
@@ -26,7 +26,7 @@ export default function Security(props: Props) {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        put(SecurityController.update.url(), {
+        submit(update(), {
             preserveScroll: true,
             onSuccess: () => reset(),
             onError: () => reset('password', 'password_confirmation', 'current_password'),

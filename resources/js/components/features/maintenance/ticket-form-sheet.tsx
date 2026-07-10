@@ -1,5 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { store, update } from '@/actions/App/Http/Controllers/MaintenanceTicketController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,7 +29,6 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
-import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
 type UnitOption = {
@@ -72,10 +72,6 @@ export default function TicketFormSheet({
     units: UnitOption[];
 }) {
     const isEdit = Boolean(ticket);
-    const formAction = isEdit
-        ? maintenanceTickets.update.url(ticket!.id)
-        : maintenanceTickets.store.url();
-    const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
     const [locationType, setLocationType] = useState(
         ticket?.unit_id ? 'unit' : ticket?.location ? 'area' : 'unit',
@@ -137,7 +133,7 @@ export default function TicketFormSheet({
             return;
         }
 
-        submit(formMethod, formAction, {
+        submit(isEdit ? update(ticket!.id) : store(), {
             onSuccess: () => onOpenChange(false),
         });
     }

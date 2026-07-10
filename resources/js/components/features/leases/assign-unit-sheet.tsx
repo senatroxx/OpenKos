@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { assignUnit } from '@/actions/App/Http/Controllers/TenantController';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +30,6 @@ import {
 import { DUE_DAY_OPTIONS } from '@/lib/constants';
 import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { computeMonthlyEquivalent, formatPrice } from '@/lib/formatters';
-import tenants from '@/routes/tenants';
 import type { AvailableUnit, UnitRate, Tenant } from '@/types';
 
 type AvailableUnits = AvailableUnit[];
@@ -45,7 +45,7 @@ export default function AssignUnitSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, submit, processing, errors, reset } = useForm({
         unit_id: null as number | null,
         tenant_ids: [tenant?.id] as number[],
         start_date: new Date().toISOString().split('T')[0],
@@ -139,7 +139,7 @@ export default function AssignUnitSheet({
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
-        post(tenants.assignUnit.post({ tenant: tenant!.id }).url, {
+        submit(assignUnit(tenant!.id), {
             onSuccess: () => onOpenChange(false),
         });
     }

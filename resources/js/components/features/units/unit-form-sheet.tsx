@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
+import { store, update } from '@/actions/App/Http/Controllers/UnitController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,6 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { BILLING_UNITS } from '@/lib/constants/billing';
-import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
 
 const emptyRate: UnitRate = {
@@ -40,13 +40,6 @@ export default function UnitFormSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const isEdit = Boolean(unit);
-    const formAction = isEdit
-        ? properties.units.update.url({
-              property: property.slug,
-              unit: unit!.slug,
-          })
-        : properties.units.store.url(property.slug);
-    const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
     const { data, setData, processing, errors, submit } = useForm({
         name: unit?.name ?? '',
@@ -85,7 +78,9 @@ export default function UnitFormSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(formMethod, formAction, {
+        submit(isEdit
+            ? update({ property: property.slug, unit: unit!.slug })
+            : store({ property: property.slug }), {
             onSuccess: () => onOpenChange(false),
         });
     }

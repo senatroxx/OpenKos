@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { store as createRole, update as updateRole } from '@/actions/App/Http/Controllers/RoleController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,16 +52,12 @@ type RoleFormProps = {
         color: string;
         permissions: string[];
     }[];
-    action: string;
-    method: 'post' | 'put';
 };
 
 export default function RoleForm({
     role,
     permissionGroups,
     recommendations,
-    action,
-    method,
 }: RoleFormProps) {
     const isEdit = Boolean(role);
     const isSystem = role?.is_system ?? false;
@@ -114,7 +111,7 @@ export default function RoleForm({
                 is_active: isActiveValue,
                 permissions: selectedPermissions,
             }))
-            .submit(method, action, { onSuccess: () => {} });
+            .submit(isEdit ? updateRole(role!.id) : createRole(), { onSuccess: () => {} });
     }
 
     return (

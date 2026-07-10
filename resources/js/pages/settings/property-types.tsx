@@ -1,6 +1,7 @@
 import { router, useForm } from '@inertiajs/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { store, update } from '@/actions/App/Http/Controllers/Settings/PropertyTypeController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,14 +34,13 @@ import type { PropertyTypeOption } from '@/types';
 const BASE = '/settings/property-types';
 
 function SheetForm({ editing, closeSheet }: { editing: PropertyTypeOption | null; closeSheet: () => void }) {
-    const { data, setData, processing, errors, post, patch } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         label: editing?.label ?? '',
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        const url = editing ? `${BASE}/${editing.slug}` : BASE;
-        (editing ? patch : post)(url, { onSuccess: closeSheet });
+        submit(editing ? update(editing.slug) : store(), { onSuccess: closeSheet });
     }
 
     return (

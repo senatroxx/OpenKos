@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import { destroy } from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/shared/heading';
 import InputError from '@/components/shared/input-error';
 import PasswordInput from '@/components/shared/password-input';
@@ -25,15 +25,11 @@ export default function DeleteUser() {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(
-            ProfileController.destroy.form().method,
-            ProfileController.destroy.form().action,
-            {
-                preserveScroll: true,
-                onError: () => passwordInput.current?.focus(),
-                onSuccess: () => reset(),
-            },
-        );
+        submit(destroy(), {
+            preserveScroll: true,
+            onError: () => passwordInput.current?.focus(),
+            onSuccess: () => reset(),
+        });
     }
 
     return (

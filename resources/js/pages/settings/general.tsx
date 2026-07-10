@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { update } from '@/actions/App/Http/Controllers/Settings/GeneralController';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -9,23 +10,20 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    edit as editGeneral,
-    update as updateGeneral,
-} from '@/routes/settings/general';
+import { edit as editGeneral } from '@/routes/settings/general';
 
 export default function General({
     settings,
 }: {
     settings: { lease_id_prefix: string };
 }) {
-    const { data, setData, processing, errors, patch } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         lease_id_prefix: settings.lease_id_prefix,
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        patch(updateGeneral.url());
+        submit(update());
     }
 
     return (

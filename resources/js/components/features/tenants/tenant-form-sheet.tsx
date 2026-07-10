@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { store, update } from '@/actions/App/Http/Controllers/TenantController';
 import { InputError, PhoneInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import tenants from '@/routes/tenants';
 import type { Tenant } from '@/types';
 
 export default function TenantFormSheet({
@@ -23,10 +23,6 @@ export default function TenantFormSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const isEdit = Boolean(tenant);
-    const formAction = isEdit
-        ? tenants.update.url(tenant!.id)
-        : tenants.store.url();
-    const formMethod = isEdit ? ('put' as const) : ('post' as const);
 
     const { data, setData, processing, errors, submit } = useForm({
         name: tenant?.name ?? '',
@@ -41,7 +37,7 @@ export default function TenantFormSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(formMethod, formAction, {
+        submit(isEdit ? update(tenant!.id) : store(), {
             onSuccess: () => onOpenChange(false),
         });
     }

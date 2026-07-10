@@ -1,10 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
+import { completeInvitation } from '@/actions/App/Http/Controllers/UserController';
 import { InputError, PasswordInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { complete } from '@/routes/users/invitations';
 
 type Props = {
     token: string;
@@ -17,7 +17,7 @@ export default function AcceptInvitation({
     email,
     passwordRules,
 }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, submit, processing, errors } = useForm({
         email,
         password: '',
         password_confirmation: '',
@@ -26,7 +26,7 @@ export default function AcceptInvitation({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(complete.url(), {
+        submit(completeInvitation(), {
             onSuccess: () => {
                 setData('password', '');
                 setData('password_confirmation', '');

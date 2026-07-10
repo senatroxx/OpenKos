@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/AuthenticatedSessionController';
 import { PasskeyVerify } from '@/components/features';
 import { InputError, PasswordInput, TextLink } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
 type Props = {
@@ -15,11 +15,11 @@ type Props = {
 };
 
 export default function Login({ status, canResetPassword }: Props) {
-    const { data, setData, post, processing, errors } = useForm({ email: '', password: '', remember: false });
+    const { data, setData, submit, processing, errors } = useForm({ email: '', password: '', remember: false });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(store.url(), { onSuccess: () => setData('password', '') });
+        submit(store(), { onSuccess: () => setData('password', '') });
     }
 
     return (

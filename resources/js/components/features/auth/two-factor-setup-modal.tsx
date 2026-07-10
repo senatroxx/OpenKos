@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { Check, Copy, ScanLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/ConfirmedTwoFactorAuthenticationController';
 import AlertError from '@/components/shared/alert-error';
 import InputError from '@/components/shared/input-error';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { useAppearance } from '@/hooks/use-appearance';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
-import { confirm } from '@/routes/two-factor';
 
 function GridScanIcon() {
     return (
@@ -159,14 +159,10 @@ function TwoFactorVerificationStep({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(
-            confirm.form().method,
-            confirm.form().action,
-            {
-                onSuccess: () => onClose(),
-                preserveScroll: true,
-            },
-        );
+        submit(store(), {
+            onSuccess: () => onClose(),
+            preserveScroll: true,
+        });
     }
 
     return (

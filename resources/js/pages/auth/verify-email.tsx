@@ -1,17 +1,17 @@
 // Components
 import { Head, useForm } from '@inertiajs/react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/EmailVerificationNotificationController';
 import { TextLink } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { logout } from '@/routes';
-import { send } from '@/routes/verification';
 
 export default function VerifyEmail({ status }: { status?: string }) {
-    const { post, processing } = useForm({});
+    const { submit, processing } = useForm({});
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(send.url());
+        submit(store());
     }
 
     return (

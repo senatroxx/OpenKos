@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { update } from '@/actions/App/Http/Controllers/Settings/ReminderController';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -11,10 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-    edit as editReminders,
-    update as updateReminders,
-} from '@/routes/settings/reminders';
+import { edit as editReminders } from '@/routes/settings/reminders';
 
 const channelOptions = [
     { value: 'log', label: 'Log only' },
@@ -47,7 +45,7 @@ export default function Reminders({
         reminder_channels: string[];
     };
 }) {
-    const { data, setData, processing, errors, patch } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         reminder_enabled: settings.reminder_enabled,
         reminder_days_before: settings.reminder_days_before,
         reminder_overdue_intervals: settings.reminder_overdue_intervals.join(', '),
@@ -57,7 +55,7 @@ export default function Reminders({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        patch(updateReminders.url());
+        submit(update());
     }
 
     const preview = {

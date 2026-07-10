@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { upsert } from '@/actions/App/Http/Controllers/Settings/SettingValuesController';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -14,14 +15,14 @@ import { Textarea } from '@/components/ui/textarea';
 import type { DynamicSettingsFormProps, SettingDefinition } from '@/types/settings';
 
 function SettingField({ def, value }: { def: SettingDefinition; value: unknown }) {
-    const { data, setData, processing, errors, post } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         key: def.key,
         value: def.type === 'bool' ? (value ? '1' : '0') : value ?? def.default ?? '',
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post('/settings/values');
+        submit(upsert());
     }
 
     return (

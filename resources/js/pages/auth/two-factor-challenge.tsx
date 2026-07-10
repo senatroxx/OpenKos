@@ -1,6 +1,7 @@
 import { Head, setLayoutProps, useForm } from '@inertiajs/react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { useMemo, useState } from 'react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/TwoFactorAuthenticatedSessionController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,11 +11,10 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
-import { store } from '@/routes/two-factor/login';
 
 export default function TwoFactorChallenge() {
     const [showRecoveryInput, setShowRecoveryInput] = useState<boolean>(false);
-    const { data, setData, post, processing, errors, clearErrors } = useForm({ code: '', recovery_code: '' });
+    const { data, setData, submit, processing, errors, clearErrors } = useForm({ code: '', recovery_code: '' });
 
     const authConfigContent = useMemo<{
         title: string;
@@ -51,7 +51,7 @@ export default function TwoFactorChallenge() {
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(store.url(), { onSuccess: () => setData('code', '') });
+        submit(store(), { onSuccess: () => setData('code', '') });
     }
 
     return (

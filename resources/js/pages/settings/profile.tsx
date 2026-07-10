@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import { update } from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { DeleteUser } from '@/components/features';
 import { Heading, InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -22,14 +22,14 @@ export default function Profile({
 }) {
     const { auth } = usePage<PageProps>().props;
 
-    const { data, setData, processing, errors, patch } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         name: auth.user.name,
         email: auth.user.email,
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        patch(ProfileController.update.url(), { preserveScroll: true });
+        submit(update(), { preserveScroll: true });
     }
 
     return (

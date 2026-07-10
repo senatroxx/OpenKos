@@ -1,4 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
+import { store as confirmPassword } from '@/actions/Laravel/Fortify/Http/Controllers/ConfirmablePasswordController';
 import {
     index as confirmOptions,
     store as confirmStore,
@@ -8,14 +9,13 @@ import { InputError, PasswordInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {
-    const { data, setData, post, processing, errors } = useForm({ password: '' });
+    const { data, setData, submit, processing, errors } = useForm({ password: '' });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(store.url(), { onSuccess: () => setData('password', '') });
+        submit(confirmPassword(), { onSuccess: () => setData('password', '') });
     }
 
     return (

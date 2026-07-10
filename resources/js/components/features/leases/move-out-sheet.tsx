@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
+import { moveOut } from '@/actions/App/Http/Controllers/LeaseController';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,6 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { MOVE_OUT_REASONS } from '@/lib/constants/lease';
-import leases from '@/routes/leases';
 import type { AvailableUnit, LeaseData } from '@/types';
 
 export default function MoveOutSheet({
@@ -35,7 +35,7 @@ export default function MoveOutSheet({
     onOpenChange: (open: boolean) => void;
     onClose?: () => void;
 }) {
-    const { data, setData, processing, errors, post } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         move_out_date: new Date().toISOString().split('T')[0],
         reason: '',
         deposit_returned: '0',
@@ -102,7 +102,7 @@ export default function MoveOutSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(leases.moveOut.post({ lease: lease!.id }).url, {
+        submit(moveOut(lease!.id), {
             onSuccess: handleClose,
         });
     }

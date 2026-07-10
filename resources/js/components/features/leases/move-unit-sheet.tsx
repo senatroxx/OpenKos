@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { move } from '@/actions/App/Http/Controllers/LeaseController';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import properties from '@/routes/properties';
 export default function MoveUnitSheet({
     property,
     currentUnit,
@@ -31,7 +31,7 @@ export default function MoveUnitSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { setData, processing, errors, post } = useForm({
+    const { setData, processing, errors, submit } = useForm({
         target_unit_id: '',
     });
     const [targetUnitId, setTargetUnitId] = useState<number | null>(null);
@@ -54,7 +54,7 @@ export default function MoveUnitSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(properties.units.leases.move.url({
+        submit(move({
             property: property.slug,
             unit: currentUnit.slug,
             lease: lease.id,

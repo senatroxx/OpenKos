@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { update } from '@/actions/App/Http/Controllers/LeaseController';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,6 @@ import {
 import { DUE_DAY_OPTIONS } from '@/lib/constants';
 import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { formatDate } from '@/lib/formatters';
-import leases from '@/routes/properties/units/leases';
 import type { Lease } from '@/types';
 
 export default function LeaseEditSheet({
@@ -31,7 +31,7 @@ export default function LeaseEditSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { data, setData, processing, errors, put } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         rent_amount: lease?.rent_amount ?? '',
         rent_due_day: lease ? String(lease.rent_due_day) : '1',
         deposit_refunded_at: lease?.deposit_refunded_at?.split('T')[0] ?? '',
@@ -41,7 +41,7 @@ export default function LeaseEditSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        put(leases.update.url({
+        submit(update({
             property: lease.unit.property!.slug,
             unit: lease.unit.slug,
             lease: lease.id,

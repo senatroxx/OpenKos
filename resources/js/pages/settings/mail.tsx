@@ -1,4 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
+import { update } from '@/actions/App/Http/Controllers/Settings/MailController';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -19,7 +20,6 @@ import {
 } from '@/components/ui/select';
 import {
     edit as editMail,
-    update as updateMail,
     test as testMail,
 } from '@/routes/settings/mail';
 
@@ -32,7 +32,7 @@ export default function Mail({
 }) {
     const config = settings.mail_config ?? {};
 
-    const { data, setData, processing, errors, patch } = useForm({
+    const { data, setData, processing, errors, submit } = useForm({
         'mail_config.host': config.host ?? '',
         'mail_config.port': config.port ?? '',
         'mail_config.username': config.username ?? '',
@@ -44,7 +44,7 @@ export default function Mail({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        patch(updateMail.url());
+        submit(update());
     }
 
     return (

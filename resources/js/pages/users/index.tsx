@@ -8,6 +8,13 @@ import {
     UserPlus,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import {
+    destroy,
+    resendInvitation,
+    resetPassword,
+    store,
+    update,
+} from '@/actions/App/Http/Controllers/UserController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -41,13 +48,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { useTable } from '@/hooks/use-table';
-import users, {
-    destroy,
-    resendInvitation,
-    resetPassword,
-    store,
-    update,
-} from '@/routes/users';
+import users from '@/routes/users';
 import type { PaginatedData, PropertyRef, RoleOption, RolePair, TableMeta } from '@/types';
 type ManagedUser = {
     id: number;
@@ -427,9 +428,6 @@ function UserFormSheet({
     }
 
     const canEditRole = user?.role !== 'owner';
-    const formProps = isEdit
-        ? { action: update.url(user!), method: 'put' as const }
-        : { action: store.url(), method: 'post' as const };
 
     function toggleProperty(propertyId: number, checked: boolean) {
         setData(
@@ -451,7 +449,7 @@ function UserFormSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(formProps.method, formProps.action, {
+        submit(isEdit ? update(user!) : store(), {
             onSuccess: () => onOpenChange(false),
         });
     }

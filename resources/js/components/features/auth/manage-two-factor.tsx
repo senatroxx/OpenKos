@@ -1,12 +1,12 @@
 import { useForm } from '@inertiajs/react';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { store as enableTwoFactor, destroy as disableTwoFactor } from '@/actions/Laravel/Fortify/Http/Controllers/TwoFactorAuthenticationController';
 import TwoFactorRecoveryCodes from '@/components/features/auth/two-factor-recovery-codes';
 import TwoFactorSetupModal from '@/components/features/auth/two-factor-setup-modal';
 import Heading from '@/components/shared/heading';
 import { Button } from '@/components/ui/button';
 import { useTwoFactorAuth } from '@/hooks/use-two-factor-auth';
-import { disable, enable } from '@/routes/two-factor';
 
 export type Props = {
     canManageTwoFactor?: boolean;
@@ -21,10 +21,7 @@ function DisableTwoFactorForm() {
         <form
             onSubmit={(e) => {
                 e.preventDefault();
-                submit(
-                    disable.form().method,
-                    disable.form().action,
-                );
+                submit(disableTwoFactor());
             }}
         >
             <Button
@@ -45,11 +42,7 @@ function EnableTwoFactorForm({ onSuccess }: { onSuccess: () => void }) {
         <form
             onSubmit={(e) => {
                 e.preventDefault();
-                submit(
-                    enable.form().method,
-                    enable.form().action,
-                    { onSuccess },
-                );
+                submit(enableTwoFactor(), { onSuccess });
             }}
         >
             <Button

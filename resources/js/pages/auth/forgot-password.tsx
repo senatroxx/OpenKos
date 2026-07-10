@@ -1,19 +1,19 @@
 // Components
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
+import { store } from '@/actions/Laravel/Fortify/Http/Controllers/PasswordResetLinkController';
 import { InputError, TextLink } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { login } from '@/routes';
-import { email } from '@/routes/password';
 
 export default function ForgotPassword({ status }: { status?: string }) {
-    const { data, setData, post, processing, errors } = useForm({ email: '' });
+    const { data, setData, submit, processing, errors } = useForm({ email: '' });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post(email.url());
+        submit(store());
     }
 
     return (
