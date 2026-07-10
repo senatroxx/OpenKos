@@ -123,7 +123,7 @@ export default function MoveOutSheet({
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet key={lease?.id ?? 'closed'} open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Move Out Tenant</SheetTitle>

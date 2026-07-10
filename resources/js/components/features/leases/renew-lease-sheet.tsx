@@ -57,7 +57,7 @@ export default function RenewLeaseSheet({
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet key={lease?.id ?? 'closed'} open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Renew Lease</SheetTitle>

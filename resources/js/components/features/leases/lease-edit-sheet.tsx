@@ -65,7 +65,7 @@ export default function LeaseEditSheet({
     }
 
     return (
-            <Sheet open={open} onOpenChange={handleOpenChange}>
+            <Sheet key={lease?.id ?? 'closed'} open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Edit Lease</SheetTitle>
