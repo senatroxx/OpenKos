@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                         Route::get('/', [UnitController::class, 'show'])->name('show')->middleware('permission:units.view');
                         Route::put('/', [UnitController::class, 'update'])->name('update')->middleware('permission:units.update');
                         Route::delete('/', [UnitController::class, 'destroy'])->name('destroy')->middleware('permission:units.delete');
+                        Route::post('restore', [UnitController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:units.update');
                         Route::get('maintenance-history', [UnitController::class, 'maintenanceHistory'])
                             ->name('maintenance-history')
                             ->middleware('permission:maintenance-tickets.view');
@@ -78,6 +79,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::get('/', [TenantController::class, 'show'])->name('show')->middleware('permission:tenants.view');
             Route::put('/', [TenantController::class, 'update'])->name('update')->middleware('permission:tenants.update');
             Route::delete('/', [TenantController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.delete');
+            Route::post('restore', [TenantController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:tenants.update');
             Route::get('leases', [TenantController::class, 'leases'])->name('workspace.leases')->middleware('permission:tenants.view');
             Route::get('documents', [TenantController::class, 'documents'])->name('workspace.documents')->middleware('permission:tenants.view');
             Route::post('assign-unit', [TenantController::class, 'assignUnit'])->name('assign-unit')->middleware('permission:tenants.update');
