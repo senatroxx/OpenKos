@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
+use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -191,7 +193,23 @@ class UnitController extends Controller
     {
         $this->authorize('delete', $unit);
 
-        $unit->delete();
+        $deleted = DB::transaction(function () use ($unit, $property) {
+            $locked = Unit::lockForUpdate()->findOrFail($unit->id);
+
+            if (Lease::where('unit_id', $locked->id)->where('status', LeaseStatus::Active)->exists()) {
+                return false;
+            }
+
+            $locked->delete();
+
+            return true;
+        });
+
+        if (! $deleted) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot delete a unit with active leases.')]);
+
+            return back();
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit deleted.')]);
 
