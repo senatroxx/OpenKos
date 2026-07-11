@@ -19,29 +19,10 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { formatPrice } from '@/lib/formatters';
+import { PAYABLE_STATUSES, PAYMENT_METHODS } from '@/lib/constants/billing';
+import { formatPeriod, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import type { Lease, RentScheduleEntry } from '@/types';
-
-const PAYABLE_STATUSES = ['partial', 'overdue', 'due', 'upcoming'];
-
-function formatPeriod(periodStart: string): string {
-    const [y, m] = periodStart.split('-');
-    const date = new Date(Date.UTC(Number(y), Number(m) - 1, 1));
-
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        timeZone: 'UTC',
-    });
-}
-
-const PAYMENT_METHODS = [
-    { value: 'cash', label: 'Cash' },
-    { value: 'transfer', label: 'Bank Transfer' },
-    { value: 'ewallet', label: 'E-Wallet' },
-    { value: 'other', label: 'Other' },
-];
 
 function RecordPaymentForm({
     lease,

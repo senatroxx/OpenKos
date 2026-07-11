@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -83,16 +84,10 @@ export default function PropertyDetailSheet({
                         <div className="space-y-5">
                             <div className="flex items-center gap-2">
                                 <span>Status:</span>
-                                {property.is_active ? (
-                                    <Badge
-                                        variant="default"
-                                        className="bg-green-600"
-                                    >
-                                        Active
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="secondary">Archived</Badge>
-                                )}
+                                <StatusBadge
+                                    domain="property"
+                                    value={property.is_active ? 'active' : 'archived'}
+                                />
                                 {property.type && (
                                     <Badge variant="outline">
                                         {property.type_label ?? property.type}
