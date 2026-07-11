@@ -31,3 +31,4 @@ yarn-error.log
 testing
 /database/database.sqlite
 testing_test_*
+/.ai-work
