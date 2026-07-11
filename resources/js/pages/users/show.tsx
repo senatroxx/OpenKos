@@ -1,20 +1,10 @@
 import { Head } from '@inertiajs/react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
 
-type WorkspaceUser = {
-    id: number;
-    name: string;
-    email: string;
-    roles: { name: string; label: string }[];
-    properties: { id: number; name: string }[];
-    is_active: boolean;
-    status: string;
-    invited_at: string | null;
-    email_verified_at: string | null;
-    last_login_at: string | null;
-};
+import type { WorkspaceUser } from '@/types';
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
     return (
@@ -50,7 +40,7 @@ export default function UserWorkspace({ user }: { user: WorkspaceUser }) {
 
             <div className="space-y-6">
                 <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">{user.status}</Badge>
+                    <StatusBadge domain="user" value={user.status} />
                     {user.roles.map((role) => (
                         <Badge key={role.name} variant="secondary">
                             {role.label}

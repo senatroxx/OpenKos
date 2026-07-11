@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import { Check, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { useState } from 'react';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -20,13 +21,6 @@ import {
 import { formatDate } from '@/lib/formatters';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
-
-const statusLabel: Record<string, string> = {
-    reported: 'Reported',
-    in_progress: 'In Progress',
-    resolved: 'Resolved',
-    cancelled: 'Cancelled',
-};
 
 const priorityLabel: Record<string, string> = {
     low: 'Low',
@@ -106,7 +100,7 @@ export default function TicketDetailSheet({
                     <SheetTitle>{ticket.title}</SheetTitle>
                     <SheetDescription>
                         {ticket.reference ?? `#${ticket.id}`} &middot;{' '}
-                        {statusLabel[ticket.status] ?? ticket.status}
+                        <StatusBadge domain="maintenance" value={ticket.status} />
                     </SheetDescription>
                 </SheetHeader>
 

@@ -2,7 +2,8 @@ import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { LeaseDetailSheet, MoveOutSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
+import { formatDate, formatPrice } from '@/lib/formatters';
 import properties from '@/routes/properties';
 import type { AvailableUnit, Lease, Property, Unit } from '@/types';
 
@@ -11,43 +12,6 @@ type PageProps = {
     unit: Unit;
     leases: Lease[];
     availableUnits: AvailableUnit[];
-};
-
-function formatPrice(cents: string | null): string {
-    if (!cents) {
-        return '—';
-    }
-
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
-
-function formatDate(date: string | null): string {
-    if (!date) {
-        return '—';
-    }
-
-    return new Date(date).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
-const STATUS_COLORS: Record<string, string> = {
-    active: 'bg-blue-600',
-    terminated: 'bg-gray-400',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-    active: 'Active',
-    terminated: 'Terminated',
 };
 
 export default function Index({
@@ -222,12 +186,7 @@ export default function Index({
                                             {lease.rent_due_day}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <Badge
-                                                className={`${STATUS_COLORS[lease.status] ?? 'bg-gray-400'} text-white`}
-                                            >
-                                                {STATUS_LABELS[lease.status] ??
-                                                    lease.status}
-                                            </Badge>
+                                        <StatusBadge domain="lease" value={lease.status} />
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             {lease.termination_date ? (

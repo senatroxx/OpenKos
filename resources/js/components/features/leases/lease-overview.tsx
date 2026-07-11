@@ -5,18 +5,9 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease } from '@/types';
-
-const DUE_DAY_LABELS: Record<number, string> = {
-    1: '1st',
-    5: '5th',
-    10: '10th',
-    15: '15th',
-    20: '20th',
-    25: '25th',
-    31: 'Last day',
-};
 
 export default function LeaseOverview({ lease }: { lease: Lease }) {
     const isActive = lease.status === 'active';

@@ -20,7 +20,7 @@ import {
     UnitDetailSheet,
     UnitFormSheet,
 } from '@/components/features';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -38,6 +38,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { formatPrice } from '@/lib/formatters';
 import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
 import type {
@@ -70,31 +71,6 @@ type PageProps = {
     per_page?: number;
     table: TableMeta;
 };
-
-const STATUS_LABELS: Record<string, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-    unavailable: 'Unavailable',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    available: 'bg-green-600',
-    occupied: 'bg-blue-600',
-    maintenance: 'bg-amber-500',
-    unavailable: 'bg-gray-400',
-};
-
-function formatPrice(cents: string): string {
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
 
 export default function Index({
     property,
@@ -290,11 +266,7 @@ export default function Index({
             label: 'Status',
             sortable: true,
             render: (r) => (
-                <Badge
-                    className={`${STATUS_COLORS[r.status] ?? 'bg-gray-400'} text-white`}
-                >
-                    {STATUS_LABELS[r.status] ?? r.status}
-                </Badge>
+                <StatusBadge domain="unit" value={r.status} />
             ),
         },
         {
