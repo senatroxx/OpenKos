@@ -3,7 +3,6 @@ import { ChevronLeft } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import type { Invoice, WorkspaceLease } from '@/types';
-import { LeaseLayout } from './layout';
 
 export default function InvoiceDetail({
     lease,
@@ -13,18 +12,18 @@ export default function InvoiceDetail({
     invoice: Invoice;
 }) {
     return (
-        <LeaseLayout lease={lease} activeTab="invoices">
+        <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
             <Head title={`Invoice ${invoice.reference} — Lease #${lease.id}`} />
 
             <Link
                 href={`/leases/${lease.id}/invoices`}
-                className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+                className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
-                <ChevronLeft className="size-4" />
+                <ChevronLeft className="size-3" />
                 Back to invoices
             </Link>
 
-            <div className="space-y-6">
+            <div className="flex-1 space-y-6">
 
             {/* Summary card */}
             <div className="rounded-lg border p-6">
@@ -131,6 +130,6 @@ export default function InvoiceDetail({
                 Activity timeline, reminders, and PDF download coming soon.
             </div>
             </div>
-        </LeaseLayout>
+        </div>
     );
 }
