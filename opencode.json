@@ -4,11 +4,12 @@
         "laravel-boost": {
             "type": "local",
             "enabled": true,
-            "command": [
-                "php",
-                "artisan",
-                "boost:mcp"
-            ]
+            "command": ["php", "artisan", "boost:mcp"]
+        },
+        "linear-project": {
+            "type": "remote",
+            "url": "https://mcp.linear.app/mcp",
+            "enabled": true
         }
     }
 }
