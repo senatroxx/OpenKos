@@ -41,6 +41,11 @@ class Payment extends Model
         return $this->belongsTo(Invoice::class);
     }
 
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
+
     public function proofs(): HasMany
     {
         return $this->hasMany(PaymentProof::class);
