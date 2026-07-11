@@ -21,6 +21,9 @@ class AllocatePayment
     public function execute(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
+            // Lock payment row so concurrent execute() calls serialize
+            $payment = Payment::lockForUpdate()->findOrFail($payment->id);
+
             // Track invoices previously affected so we can reset their
             // amount_paid before re-computing from new allocations.
             $previousIds = $payment->allocations()->pluck('invoice_id');
@@ -63,6 +66,10 @@ class AllocatePayment
                 $remaining -= $allocated;
                 $affected->push($invoice);
             }
+
+            // ponytail: if $remaining > 0 after allocating all payable
+            // invoices, the excess is unallocated overpayment. Credit
+            // balance/refund handling is a future enhancement.
 
             // Update invoice balances from allocations (not from payments
             // by invoice_id, which would miss cross-invoice allocations).
