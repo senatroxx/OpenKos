@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Database\PostgresConnection;
 use App\Events\Reminder\InvoiceReminderDispatched;
 use App\Models\Setting;
+use App\Notifications\RentReminder;
 use App\Services\Settings\SettingManager;
 use App\Services\WhatsAppManager;
 use Carbon\CarbonImmutable;
@@ -16,7 +17,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
-use OpenKOS\Notification\Listeners\InvoiceReminderListener;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -33,7 +33,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureAuthEvents();
         $this->configureMail();
-        $this->configureReminderEvents();
+        $this->configureDomainEvents();
     }
 
     protected function configureDefaults(): void
@@ -92,11 +92,21 @@ class AppServiceProvider extends ServiceProvider
         config()->set('mail.default', 'smtp');
     }
 
-    protected function configureReminderEvents(): void
+    protected function configureDomainEvents(): void
     {
-        Event::listen(
-            InvoiceReminderDispatched::class,
-            InvoiceReminderListener::class,
-        );
+        Event::listen(InvoiceReminderDispatched::class, function (InvoiceReminderDispatched $event): void {
+            $lease = $event->event->lease;
+            $lease->loadMissing('primaryTenant');
+            $tenant = $lease->primaryTenant;
+
+            $channels = Setting::get('reminder_channels') ?? ['log'];
+            $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
+
+            if (! $hasContact) {
+                return;
+            }
+
+            $tenant->notify(new RentReminder($event->event));
+        });
     }
 }
