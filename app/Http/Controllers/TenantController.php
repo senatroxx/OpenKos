@@ -208,6 +208,17 @@ class TenantController extends Controller
         return to_route('tenants.index');
     }
 
+    public function restore(Tenant $tenant): RedirectResponse
+    {
+        $this->authorize('restore', $tenant);
+
+        $tenant->restore();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant restored.')]);
+
+        return back();
+    }
+
     public function destroy(Tenant $tenant): RedirectResponse
     {
         $this->authorize('delete', $tenant);

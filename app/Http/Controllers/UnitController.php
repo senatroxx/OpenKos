@@ -81,6 +81,8 @@ class UnitController extends Controller
 
         $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
+        $archived = $request->query('status') === 'archived';
+
         $table = Table::make()
             ->columns([
                 Column::make('name', 'Name')->sortable()->searchable(),
@@ -90,16 +92,21 @@ class UnitController extends Controller
                 Column::make('capacity', 'Capacity')->sortable(),
             ])
             ->filters([
-                Filter::select('status', 'Status', ['available', 'occupied', 'maintenance', 'unavailable'])
-                    ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
+                Filter::select('status', 'Status', ['available', 'occupied', 'maintenance', 'unavailable', 'archived'])
+                    ->query(fn (Builder $q, string $value) => match ($value) {
+                        'archived' => null,
+                        default => $q->where('status', $value),
+                    }),
             ])
             ->defaultSort('name');
 
-        $query = $property->units()
-            ->withCount([
-                'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
-            ])
-            ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']), 'activeRates']);
+        $query = $archived
+            ? $property->units()->onlyTrashed()
+            : $property->units()
+                ->withCount([
+                    'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
+                ])
+                ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']), 'activeRates']);
 
         $result = $table->paginate($query, $request, 'units');
 
@@ -189,11 +196,22 @@ class UnitController extends Controller
         return to_route('properties.units.index', $property);
     }
 
+    public function restore(Property $property, Unit $unit): RedirectResponse
+    {
+        $this->authorize('restore', $unit);
+
+        $unit->restore();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit restored.')]);
+
+        return back();
+    }
+
     public function destroy(Property $property, Unit $unit): RedirectResponse
     {
         $this->authorize('delete', $unit);
 
-        $deleted = DB::transaction(function () use ($unit, $property) {
+        $deleted = DB::transaction(function () use ($unit) {
             $locked = Unit::lockForUpdate()->findOrFail($unit->id);
 
             if (Lease::where('unit_id', $locked->id)->where('status', LeaseStatus::Active)->exists()) {
