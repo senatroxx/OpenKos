@@ -117,7 +117,7 @@ class PropertyController extends Controller
     {
         $this->authorize('delete', $property);
 
-        if (Lease::whereHas('unit', fn ($q) => $q->where('property_id', $property->id))
+        if (Lease::whereHas('unit', fn ($q) => $q->withTrashed()->where('property_id', $property->id))
             ->where('status', LeaseStatus::Active)
             ->exists()
         ) {

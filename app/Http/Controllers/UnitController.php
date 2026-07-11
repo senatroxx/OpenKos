@@ -193,13 +193,23 @@ class UnitController extends Controller
     {
         $this->authorize('delete', $unit);
 
-        if (Lease::where('unit_id', $unit->id)->where('status', LeaseStatus::Active)->exists()) {
+        $deleted = DB::transaction(function () use ($unit, $property) {
+            $locked = Unit::lockForUpdate()->findOrFail($unit->id);
+
+            if (Lease::where('unit_id', $locked->id)->where('status', LeaseStatus::Active)->exists()) {
+                return false;
+            }
+
+            $locked->delete();
+
+            return true;
+        });
+
+        if (! $deleted) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot delete a unit with active leases.')]);
 
             return back();
         }
-
-        $unit->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit deleted.')]);
 
