@@ -1,10 +1,11 @@
 import { router } from '@inertiajs/react';
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { MaintenanceTicket, PaginatedData, TableMeta } from '@/types';
+import type { MaintenanceTicket, PaginatedData, TableMeta, WorkspaceUnit } from '@/types';
 import { UnitLayout } from './layout';
 
 const priorityColors: Record<string, string> = {
@@ -14,25 +15,11 @@ const priorityColors: Record<string, string> = {
     urgent: 'bg-red-100 text-red-700',
 };
 
-const statusColors: Record<string, string> = {
-    reported: 'bg-blue-100 text-blue-700',
-    in_progress: 'bg-purple-100 text-purple-700',
-    resolved: 'bg-green-100 text-green-700',
-    cancelled: 'bg-gray-100 text-gray-500',
-};
-
 const priorityLabel: Record<string, string> = {
     low: 'Low',
     medium: 'Medium',
     high: 'High',
     urgent: 'Urgent',
-};
-
-const statusLabel: Record<string, string> = {
-    reported: 'Reported',
-    in_progress: 'In Progress',
-    resolved: 'Resolved',
-    cancelled: 'Cancelled',
 };
 
 const columns: TableColumn<MaintenanceTicket>[] = [
@@ -63,9 +50,7 @@ const columns: TableColumn<MaintenanceTicket>[] = [
         label: 'Status',
         sortable: true,
         render: (t) => (
-            <Badge className={statusColors[t.status] ?? ''}>
-                {statusLabel[t.status] ?? t.status}
-            </Badge>
+            <StatusBadge domain="maintenance" value={t.status} />
         ),
     },
     {
@@ -109,12 +94,7 @@ export default function MaintenanceHistory({
     table,
 }: {
     property: { id: number; slug: string; name: string };
-    unit: {
-        id: number;
-        slug: string;
-        name: string;
-        floor?: string | number | null;
-    };
+    unit: WorkspaceUnit;
     tickets: PaginatedData<MaintenanceTicket>;
     sort?: string;
     search?: string;

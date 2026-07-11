@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
 import type { MaintenanceTicket } from '@/types';
@@ -42,7 +43,7 @@ export default function MaintenanceTicketWorkspace({
 
             <div className="space-y-6">
                 <div className="flex gap-2">
-                    <Badge variant="outline">{ticket.status}</Badge>
+                    <StatusBadge domain="maintenance" value={ticket.status} />
                     <Badge variant="outline">{ticket.priority}</Badge>
                 </div>
 
