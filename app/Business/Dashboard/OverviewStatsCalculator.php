@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class OverviewStatsCalculator
 {
@@ -32,8 +33,7 @@ class OverviewStatsCalculator
         $outstanding = (float) Invoice::whereIn('lease_id', $leaseIds)
             ->whereBetween('period_start', [$periodStart, $periodEnd])
             ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
-            ->selectRaw('COALESCE(SUM(total - amount_paid), 0) as total_outstanding')
-            ->value('total_outstanding');
+            ->sum(DB::raw('total - amount_paid'));
 
         $collectionRate = $monthlyPotential > 0
             ? round(($revenueThisMonth / $monthlyPotential) * 100)

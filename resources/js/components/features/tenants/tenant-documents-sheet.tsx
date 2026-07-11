@@ -26,28 +26,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { formatDate, formatSize } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
 import type { Tenant, TenantDocument } from '@/types';
-
-function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-}
-
-function formatSize(bytes: number): string {
-    if (bytes < 1024) {
-        return bytes + ' B';
-    }
-
-    if (bytes < 1024 * 1024) {
-        return (bytes / 1024).toFixed(0) + ' KB';
-    }
-
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
 
 const TYPE_LABELS: Record<string, string> = {
     ktp: 'KTP',

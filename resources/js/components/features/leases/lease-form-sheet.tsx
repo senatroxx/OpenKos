@@ -24,67 +24,10 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { DUE_DAY_OPTIONS } from '@/lib/constants';
+import { computeMonthlyEquivalent, formatPrice } from '@/lib/formatters';
 import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
-
-const DUE_DAY_OPTIONS = [
-    { value: '1', label: '1st' },
-    { value: '5', label: '5th' },
-    { value: '10', label: '10th' },
-    { value: '15', label: '15th' },
-    { value: '20', label: '20th' },
-    { value: '25', label: '25th' },
-    { value: '31', label: 'Last day of month' },
-];
-
-function formatCurrency(value: string | number): string {
-    const num = typeof value === 'string' ? Number.parseFloat(value) : value;
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
-
-function computeMonthlyEquivalent(
-    amount: string | null,
-    interval: number | null,
-    unit: string | null,
-): string {
-    if (!amount || !interval || !unit) {
-        return '';
-    }
-
-    const num = Number.parseFloat(amount);
-
-    if (isNaN(num)) {
-        return '';
-    }
-
-    const int = interval || 1;
-    let monthly: number;
-
-    switch (unit) {
-        case 'day':
-            monthly = (num * 365) / 12 / int;
-            break;
-        case 'week':
-            monthly = (num * 52) / 12 / int;
-            break;
-        case 'month':
-            monthly = num / int;
-            break;
-        case 'year':
-            monthly = num / 12 / int;
-            break;
-        default:
-            return '';
-    }
-
-    return `≈ ${formatCurrency(Math.round(monthly))}/month`;
-}
 
 export default function LeaseFormSheet({
     unit,
@@ -353,7 +296,7 @@ export default function LeaseFormSheet({
                                                                         : ''}
                                                                 </span>
                                                                 <span className="font-medium tabular-nums">
-                                                                    {formatCurrency(
+                                                                    {formatPrice(
                                                                         rate.amount,
                                                                     )}
                                                                 </span>

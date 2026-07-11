@@ -4,18 +4,7 @@ import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
-type WorkspaceRole = {
-    id: number;
-    name: string;
-    label: string;
-    description: string | null;
-    color: string | null;
-    is_system: boolean;
-    is_active: boolean;
-    users_count: number;
-    permissions: string[];
-    created_at: string | null;
-};
+import type { WorkspaceRole } from '@/types/roles';
 
 export default function RoleWorkspace({ role }: { role: WorkspaceRole }) {
     return (

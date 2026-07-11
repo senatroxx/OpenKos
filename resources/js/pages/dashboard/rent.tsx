@@ -4,9 +4,11 @@ import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTable } from '@/hooks/use-table';
+import { DUE_DAY_LABELS } from '@/lib/constants';
+import { formatPrice } from '@/lib/formatters';
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
 import type { PaginatedData, RentDashboardEntry, TableMeta } from '@/types';
@@ -27,34 +29,6 @@ type PageProps = {
         paid: number;
     };
 };
-
-const DUE_DAY_LABELS: Record<number, string> = {
-    1: '1st',
-    5: '5th',
-    10: '10th',
-    15: '15th',
-    20: '20th',
-    25: '25th',
-    31: 'Last day',
-};
-
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-    paid: { label: 'Paid', className: 'bg-green-600 text-white' },
-    overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
-    due_today: { label: 'Due Today', className: 'bg-amber-600 text-white' },
-    due_soon: { label: 'Due Soon', className: 'bg-blue-600 text-white' },
-};
-
-function formatPrice(cents: string): string {
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
 
 export default function Rent({
     entries: data,
@@ -125,11 +99,9 @@ export default function Rent({
         {
             key: 'rent_status',
             label: 'Status',
-            render: (entry) => {
-                const badge = STATUS_BADGE[entry.rent_status];
-
-                return <Badge className={badge.className}>{badge.label}</Badge>;
-            },
+            render: (entry) => (
+                <StatusBadge domain="rent" value={entry.rent_status} />
+            ),
         },
     ];
 
