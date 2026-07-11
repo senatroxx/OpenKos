@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use App\Enums\LeaseStatus;
 
 class TenantPolicy
 {

@@ -227,7 +227,26 @@ describe('cross-property access', function () {
             ->delete(route('tenants.destroy', $tenant))
             ->assertForbidden();
     });
+});
 
+describe('archive lifecycle', function () {
+    it('blocks archiving a tenant with active leases', function () {
+        $owner = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $unit = Unit::factory()->create();
+        Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $unit->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->from(route('tenants.index'))
+            ->delete(route('tenants.destroy', $tenant))
+            ->assertRedirect(route('tenants.index'));
+    });
+});
+
+describe('unit assignment authorization', function () {
     it('denies admin assigning a tenant to a unit in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
         $propertyA = Property::factory()->create();
