@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
@@ -19,12 +20,28 @@ describe('authorization', function () {
     it('returns 403 for users without units.view permission', function () {
         $user = User::factory()->create();
         $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
 
         $this->actingAs($user)
-            ->get(route('properties.units.index', $property))
+            ->delete(route('properties.units.destroy', [$property, $unit]))
             ->assertForbidden();
     });
+});
 
+describe('archive lifecycle', function () {
+    it('blocks deleting a unit with active leases', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        Lease::factory()->create(['unit_id' => $unit->id]);
+
+        $this->actingAs($user)
+            ->delete(route('properties.units.destroy', [$property, $unit]))
+            ->assertRedirect();
+    });
+});
+
+describe('authorization', function () {
     it('allows admin to access units', function () {
         $user = User::factory()->admin()->create();
         $property = Property::factory()->create();

@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\City;
+use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Region;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -225,5 +227,35 @@ describe('workspace tabs', function () {
         $this->actingAs($user)
             ->get(route('properties.workspace.leases', $property))
             ->assertForbidden();
+    });
+});
+
+describe('archive lifecycle', function () {
+    it('blocks archiving a property with active leases', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        Lease::factory()->create(['unit_id' => $unit->id]);
+
+        $this->actingAs($user)
+            ->delete(route('properties.destroy', $property))
+            ->assertRedirect();
+
+        $property->refresh();
+
+        expect($property->is_active)->toBeTrue();
+    });
+
+    it('restores an archived property', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create(['is_active' => false]);
+
+        $this->actingAs($user)
+            ->post(route('properties.restore', $property))
+            ->assertRedirect();
+
+        $property->refresh();
+
+        expect($property->is_active)->toBeTrue();
     });
 });
