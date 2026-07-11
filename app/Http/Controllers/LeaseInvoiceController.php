@@ -35,7 +35,7 @@ class LeaseInvoiceController extends Controller
             ->defaultSort('-period_start');
 
         $result = $table->paginate(
-            $lease->invoices(),
+            $lease->invoices()->select('invoices.*')->selectRaw('(COALESCE(total, 0) - COALESCE(amount_paid, 0)) as outstanding'),
             $request,
             'invoices',
         );
@@ -52,7 +52,8 @@ class LeaseInvoiceController extends Controller
 
         $this->authorize('view', $lease);
 
-        $invoice->load(['lineItems', 'payments.confirmedBy:id,name', 'payments.proofs', 'allocations']);
+        $invoice->load(['lineItems', 'payments']);
+        $invoice->append('outstanding');
 
         return Inertia::render('leases/invoice-detail', [
             'lease' => $lease->only('id', 'reference', 'status'),
