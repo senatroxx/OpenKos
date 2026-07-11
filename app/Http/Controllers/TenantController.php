@@ -212,13 +212,23 @@ class TenantController extends Controller
     {
         $this->authorize('delete', $tenant);
 
-        if ($tenant->leases()->where('status', LeaseStatus::Active)->exists()) {
+        $deleted = DB::transaction(function () use ($tenant) {
+            $locked = Tenant::lockForUpdate()->findOrFail($tenant->id);
+
+            if ($locked->leases()->where('status', LeaseStatus::Active)->exists()) {
+                return false;
+            }
+
+            $locked->delete();
+
+            return true;
+        });
+
+        if (! $deleted) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a tenant with an active lease.')]);
 
             return back();
         }
-
-        $tenant->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant archived.')]);
 
