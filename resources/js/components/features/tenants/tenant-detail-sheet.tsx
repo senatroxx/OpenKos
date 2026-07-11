@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -19,58 +19,24 @@ import {
 } from '@/components/ui/sheet';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
-import type { UnitWithProperty, TenantInfo } from '@/types';
-
-type Lease = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    unit: UnitWithProperty | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-type Tenant = {
-    id: number;
-    name: string;
-    phone: string | null;
-    id_card_number: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    notes: string | null;
-    is_active: boolean;
-    deleted_at: string | null;
-    active_leases_count: number;
-    leases?: Lease[];
-    documents?: {
-        id: number;
-        type: string;
-        original_name: string;
-        size: number;
-        mime_type: string;
-        created_at: string;
-        download_url: string;
-    }[];
-};
+import type { Lease, TenantDocument, WorkspaceTenant } from '@/types';
 
 export default function TenantDetailSheet({
     tenant,
     open,
     onOpenChange,
     onEdit,
+    onDocuments,
     onAssignToUnit,
     onMoveOut,
-    onDocuments,
 }: {
-    tenant?: Tenant | null;
+    tenant?: (WorkspaceTenant & { leases?: Lease[]; documents?: TenantDocument[] }) | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
+    onDocuments: () => void;
     onAssignToUnit?: () => void;
     onMoveOut?: () => void;
-    onDocuments?: () => void;
 }) {
     const [archiveConfirm, setArchiveConfirm] = useState(false);
 
@@ -112,20 +78,11 @@ export default function TenantDetailSheet({
                         <div className="space-y-5">
                             <div className="flex items-center gap-2">
                                 <span>Status:</span>
-                                {isArchived ? (
-                                    <Badge variant="secondary">Archived</Badge>
-                                ) : tenant.is_active ? (
-                                    <Badge className="bg-green-600">
-                                        Active
-                                    </Badge>
-                                ) : (
-                                    <Badge
-                                        variant="outline"
-                                        className="border-amber-300 text-amber-600"
-                                    >
-                                        Inactive
-                                    </Badge>
-                                )}
+                                {(() => {
+                                    const status = isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive';
+
+                                    return <StatusBadge domain="tenant" value={status} />;
+                                })()}
                             </div>
 
                             <div className="rounded-lg border bg-muted/30 p-4">
@@ -290,7 +247,7 @@ export default function TenantDetailSheet({
                                 </div>
                             )}
 
-                            {!isArchived && (
+                            {!isArchived && tenant && (
                                 <Button
                                     variant="outline"
                                     onClick={onDocuments}
@@ -308,7 +265,7 @@ export default function TenantDetailSheet({
                             >
                                 Close
                             </Button>
-                            {!isArchived && (
+                            {!isArchived && tenant && (
                                 <>
                                     {!activeLease && onAssignToUnit && (
                                         <Button onClick={onAssignToUnit}>

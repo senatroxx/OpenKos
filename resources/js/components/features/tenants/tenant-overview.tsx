@@ -1,33 +1,8 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { UnitWithProperty, TenantInfo } from '@/types';
+import type { Lease, WorkspaceTenant } from '@/types';
 
-type Lease = {
-    id: number;
-    reference: string | null;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    unit: UnitWithProperty | null;
-    tenants: TenantInfo[];
-    primary_tenant: TenantInfo | null;
-};
-
-type Tenant = {
-    id: number;
-    name: string;
-    phone: string | null;
-    id_card_number: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    notes: string | null;
-    is_active: boolean;
-    deleted_at?: string | null;
-    active_leases_count?: number;
-    leases?: Lease[];
-};
-
-export default function TenantOverview({ tenant }: { tenant: Tenant }) {
+export default function TenantOverview({ tenant }: { tenant: WorkspaceTenant & { leases?: Lease[] } }) {
     const activeLease = tenant.leases?.[0];
     const isArchived = Boolean(tenant.deleted_at);
 
@@ -35,18 +10,10 @@ export default function TenantOverview({ tenant }: { tenant: Tenant }) {
         <div className="space-y-6">
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                {isArchived ? (
-                    <Badge variant="secondary">Archived</Badge>
-                ) : tenant.is_active ? (
-                    <Badge className="bg-green-600">Active</Badge>
-                ) : (
-                    <Badge
-                        variant="outline"
-                        className="border-amber-300 text-amber-600"
-                    >
-                        Inactive
-                    </Badge>
-                )}
+                {<StatusBadge
+                    domain="tenant"
+                    value={isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive'}
+                />}
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-4">

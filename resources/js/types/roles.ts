@@ -21,6 +21,24 @@ export type RoleData = {
     created_at: string | null;
 };
 
+export type RolePair = {
+    name: string;
+    label: string;
+};
+
+export type WorkspaceRole = {
+    id: number;
+    name: string;
+    label: string;
+    description: string | null;
+    color: string | null;
+    is_system: boolean;
+    is_active: boolean;
+    users_count: number;
+    permissions: string[];
+    created_at: string | null;
+};
+
 export type RoleFormData = {
     id: number;
     name: string;
