@@ -4,10 +4,10 @@ namespace App\Actions\Reminders;
 
 use App\Business\Reminders\PaymentReminderScheduler;
 use App\Data\Reminder\ReminderSettings;
+use App\Events\Reminder\InvoiceReminderDispatched;
 use App\Models\Lease;
 use App\Models\ReminderLog;
 use App\Models\Setting;
-use App\Notifications\RentReminder;
 use App\Repositories\ReminderRepository;
 use Illuminate\Support\Collection;
 
@@ -46,6 +46,12 @@ class SendRentReminders
                 continue;
             }
 
+            // Index payable invoices by period_start for O(1) lookup.
+            $invoices = $lease->invoices()
+                ->payable()
+                ->get()
+                ->keyBy(fn ($i) => $i->period_start->toDateString());
+
             foreach ($this->scheduler->pendingFor($lease, $settings) as $event) {
                 $log = $this->repository->recordIfAbsent($event, $channels);
 
@@ -53,7 +59,9 @@ class SendRentReminders
                     continue;
                 }
 
-                $tenant->notify(new RentReminder($event));
+                $invoice = $invoices->get($event->periodStart);
+
+                InvoiceReminderDispatched::dispatch($event, $invoice);
                 $sent->push($log);
             }
         }
