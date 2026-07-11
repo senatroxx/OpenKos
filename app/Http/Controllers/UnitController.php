@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
+use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -190,6 +192,12 @@ class UnitController extends Controller
     public function destroy(Property $property, Unit $unit): RedirectResponse
     {
         $this->authorize('delete', $unit);
+
+        if (Lease::where('unit_id', $unit->id)->where('status', LeaseStatus::Active)->exists()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot delete a unit with active leases.')]);
+
+            return back();
+        }
 
         $unit->delete();
 
