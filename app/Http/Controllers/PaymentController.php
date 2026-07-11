@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Invoices\AllocatePayment;
 use App\Actions\Payments\RecordPayment;
 use App\Business\Payments\PaymentStatusValidator;
 use App\Data\Payment\RecordPaymentData;
@@ -78,6 +79,7 @@ class PaymentController extends Controller
 
     public function __construct(
         private PaymentStatusValidator $paymentStatusValidator,
+        private AllocatePayment $allocatePayment,
     ) {}
 
     public function verify(Request $request, Payment $payment): RedirectResponse
@@ -122,7 +124,7 @@ class PaymentController extends Controller
                     'verified_at' => now(),
                 ]);
 
-                $invoice->recalculateStatus();
+                $this->allocatePayment->execute($lockedPayment);
             } else {
                 $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
 

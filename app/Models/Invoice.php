@@ -79,6 +79,11 @@ class Invoice extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
+
     public function getOutstandingAttribute(): string
     {
         return number_format((float) $this->total - (float) $this->amount_paid, 2, '.', '');
