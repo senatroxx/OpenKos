@@ -3,6 +3,7 @@
 namespace App\Actions\Invoices;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
 use App\Events\Invoice\InvoiceFullyPaid;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -20,6 +21,9 @@ class AllocatePayment
     public function execute(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
+            // Clear any prior allocations for idempotency
+            $payment->allocations()->delete();
+
             $remaining = (float) $payment->amount;
             $affected = collect();
 
@@ -51,12 +55,28 @@ class AllocatePayment
                 $affected->push($invoice);
             }
 
-            // Recalculate status on every invoice that received an allocation
+            // Update invoice balances from allocations (not from payments
+            // by invoice_id, which would miss cross-invoice allocations).
             foreach ($affected as $invoice) {
-                $invoice->recalculateStatus();
+                $paid = (float) $invoice->allocations()
+                    ->whereHas('payment', fn ($q) => $q->where('status', PaymentStatus::Confirmed->value))
+                    ->sum('amount');
 
-                if ($invoice->status === InvoiceStatus::Paid) {
-                    InvoiceFullyPaid::dispatch($invoice);
+                $status = match (true) {
+                    $paid >= (float) $invoice->total => InvoiceStatus::Paid,
+                    $paid > 0 => InvoiceStatus::Partial,
+                    default => InvoiceStatus::Pending,
+                };
+
+                $invoice->update([
+                    'amount_paid' => $paid,
+                    'status' => $status,
+                ]);
+
+                if ($status === InvoiceStatus::Paid) {
+                    // ponytail: dispatched via afterCommit so listeners
+                    // never see uncommitted data.
+                    DB::afterCommit(fn () => InvoiceFullyPaid::dispatch($invoice));
                 }
             }
         });
