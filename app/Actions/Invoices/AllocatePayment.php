@@ -24,7 +24,10 @@ class AllocatePayment
             // Track invoices previously affected so we can reset their
             // amount_paid before re-computing from new allocations.
             $previousIds = $payment->allocations()->pluck('invoice_id');
-            Invoice::whereIn('id', $previousIds)->update(['amount_paid' => 0]);
+            Invoice::whereIn('id', $previousIds)->update([
+                'amount_paid' => 0,
+                'status' => InvoiceStatus::Pending,
+            ]);
 
             $payment->allocations()->delete();
 
