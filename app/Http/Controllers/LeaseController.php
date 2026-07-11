@@ -25,6 +25,7 @@ use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
+use Illuminate\Database\Eloquent\Builder;
 use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\Unit;
@@ -32,11 +33,10 @@ use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -71,11 +71,15 @@ class LeaseController extends Controller
 
         $table = Table::make()
             ->columns([
-                Column::make('period_start', 'Period'),
+                Column::make('invoice.period_start', 'Period')->sortable(),
                 Column::make('payment_date', 'Paid on')->sortable(),
                 Column::make('amount', 'Amount')->sortable(),
                 Column::make('payment_method', 'Method')->sortable(),
-                Column::make('reference', 'Reference')->sortable()->searchable(),
+                Column::make('invoice.reference', 'Reference')
+                    ->sortable()
+                    ->searchable(function (Builder $q, string $search) {
+                        $q->whereHas('invoice', fn (Builder $q) => $q->where(DB::raw('lower(reference)'), 'like', '%'.mb_strtolower($search).'%'));
+                    }),
                 Column::make('status', 'Status')->sortable(),
             ])
             ->filters([
@@ -116,7 +120,7 @@ class LeaseController extends Controller
 
         $result = $table->paginate(
             PaymentProof::query()
-                ->whereHas('payment.invoice', fn (Builder $q) => $q->where('lease_id', $lease->id))
+                ->whereHas('payment.invoice', fn ($q) => $q->where('lease_id', $lease->id))
                 ->with('payment:id,invoice_id,amount,status', 'payment.invoice:id,period_start'),
             $request,
             'documents',

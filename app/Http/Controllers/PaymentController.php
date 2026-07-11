@@ -96,6 +96,9 @@ class PaymentController extends Controller
         // Both paths run under lock so a concurrent confirm cannot be silently
         // overwritten by a reject (or vice versa).
         DB::transaction(function () use ($payment, $request, $newStatus) {
+            // Lock Invoice first (consistent with RecordPayment order) to
+            // prevent deadlocks when both paths run concurrently.
+            $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
             $lockedPayment = Payment::lockForUpdate()->findOrFail($payment->id);
 
             if ($lockedPayment->status !== PaymentStatus::Pending) {
@@ -103,7 +106,6 @@ class PaymentController extends Controller
             }
 
             if ($newStatus === PaymentStatus::Confirmed) {
-                $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
 
                 $confirmedSum = (float) $invoice->payments()
                     ->where('status', PaymentStatus::Confirmed->value)
