@@ -21,7 +21,11 @@ class AllocatePayment
     public function execute(Payment $payment): void
     {
         DB::transaction(function () use ($payment) {
-            // Clear any prior allocations for idempotency
+            // Track invoices previously affected so we can reset their
+            // amount_paid before re-computing from new allocations.
+            $previousIds = $payment->allocations()->pluck('invoice_id');
+            Invoice::whereIn('id', $previousIds)->update(['amount_paid' => 0]);
+
             $payment->allocations()->delete();
 
             $remaining = (float) $payment->amount;
