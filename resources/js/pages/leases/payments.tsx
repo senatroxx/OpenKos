@@ -1,5 +1,4 @@
 import { FileText } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -9,7 +8,6 @@ import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import type {
     PaginatedData,
     Payment,
-    RentScheduleEntry,
     TableMeta,
     WorkspaceLease,
 } from '@/types';
@@ -72,70 +70,6 @@ const columns: TableColumn<Payment>[] = [
     },
 ];
 
-function RentSchedule({ lease }: { lease: WorkspaceLease }) {
-    const [schedule, setSchedule] = useState<RentScheduleEntry[] | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-        fetch(`/leases/${lease.id}/rent-schedule`)
-            .then((r) => r.json())
-            .then((d) => {
-                if (!cancelled) {
-                    setSchedule(d.schedule);
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [lease.id]);
-
-    if (schedule === null) {
-        return (
-            <p className="text-sm text-muted-foreground">Loading schedule...</p>
-        );
-    }
-
-    if (schedule.length === 0) {
-        return (
-            <p className="text-sm text-muted-foreground">
-                No schedule data available.
-            </p>
-        );
-    }
-
-    return (
-        <div className="space-y-2">
-            {schedule.map((entry, i) => {
-                return (
-                    <div
-                        key={i}
-                        className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                    >
-                        <div>
-                            <p className="font-medium">
-                                {formatPeriod(entry.period_start, 'id-ID')}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                Due {formatDate(entry.due_date)}
-                            </p>
-                        </div>
-                        <div className="text-right">
-                            <p className="font-medium tabular-nums">
-                                {formatPrice(entry.amount)}
-                            </p>
-                            <StatusBadge
-                                domain="rent"
-                                value={entry.status}
-                            />
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
 export default function LeasePayments({
     lease,
     payments,
@@ -172,15 +106,6 @@ export default function LeasePayments({
                     searchPlaceholder="Search by reference..."
                     emptyMessage="No payments recorded yet."
                 />
-
-                {lease.status === 'active' && (
-                    <div className="mt-6">
-                        <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                            Rent Schedule
-                        </h3>
-                        <RentSchedule lease={lease} />
-                    </div>
-                )}
             </PluginRegion>
         </LeaseLayout>
     );

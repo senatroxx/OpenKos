@@ -43,6 +43,7 @@ describe('lease workspace', function () {
                 ->where('lease.id', $lease->id));
     })->with([
         ['leases.show', 'leases/show'],
+        ['leases.workspace.invoices', 'leases/invoices'],
         ['leases.workspace.payments', 'leases/payments'],
         ['leases.workspace.documents', 'leases/documents'],
     ]);
