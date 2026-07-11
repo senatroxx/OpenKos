@@ -2,6 +2,7 @@
 
 namespace App\Actions\Payments;
 
+use App\Actions\Invoices\AllocatePayment;
 use App\Data\Payment\RecordPaymentData;
 use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentOverflowException;
@@ -13,6 +14,10 @@ use Illuminate\Support\Str;
 
 class RecordPayment
 {
+    public function __construct(
+        private AllocatePayment $allocatePayment,
+    ) {}
+
     public function execute(Invoice $invoice, RecordPaymentData $data, User $user): RecordPaymentResult
     {
         $hasProof = $data->proof !== null;
@@ -55,7 +60,9 @@ class RecordPayment
                 ]);
             }
 
-            $locked->recalculateStatus();
+            if ($payment->status === PaymentStatus::Confirmed) {
+                $this->allocatePayment->execute($payment);
+            }
 
             return $payment;
         });
