@@ -45,7 +45,7 @@ class Invoice extends Model
                     ->lockForUpdate()
                     ->value('reference');
 
-                $seq = $max ? (int) substr($max, -4) + 1 : 1;
+                $seq = $max ? (int) substr($max, strlen($prefix.$year)) + 1 : 1;
 
                 $invoice->reference = $prefix.$year.str_pad((string) $seq, max(4, strlen((string) $seq)), '0', STR_PAD_LEFT);
             }
