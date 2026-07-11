@@ -201,20 +201,13 @@ class LeaseController extends Controller
                 Filter::select('status', 'Status', [LeaseStatus::Active->value, LeaseStatus::Terminated->value])
                     ->query(fn (Builder $q, string $value) => $q->where('status', $value)),
                 Filter::select('payment_status', 'Payment', [
-                    ['value' => 'paid', 'label' => 'Paid'],
+                    ['value' => 'paid', 'label' => 'Current'],
                     ['value' => 'overdue', 'label' => 'Overdue'],
                 ])
                     ->query(function (Builder $q, string $value) {
-                        $periodStart = Carbon::now()->startOfMonth()->startOfDay();
-                        $periodEnd = Carbon::now()->endOfMonth()->endOfDay();
-
-                        return $value === 'paid'
-                            ? $q->whereHas('invoices', fn (Builder $q) => $q
-                                ->where('status', InvoiceStatus::Paid->value)
-                                ->whereBetween('period_start', [$periodStart, $periodEnd]))
-                            : $q->where('status', LeaseStatus::Active->value)->whereDoesntHave('invoices', fn (Builder $q) => $q
-                                ->where('status', InvoiceStatus::Paid->value)
-                                ->whereBetween('period_start', [$periodStart, $periodEnd]));
+                        return $value === 'overdue'
+                            ? $q->whereHas('invoices', fn (Builder $q) => $q->overdue())
+                            : $q->whereDoesntHave('invoices', fn (Builder $q) => $q->overdue());
                     }),
                 Filter::select('properties', 'Property', $allProperties->map(fn (Property $p) => [
                     'value' => (string) $p->id,
@@ -230,10 +223,10 @@ class LeaseController extends Controller
         $query = Lease::query()
             ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name'])
             ->addSelect(['payment_status' => Invoice::query()
-                ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'paid' ELSE 'overdue' END")
+                ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'overdue' ELSE 'paid' END")
                 ->whereColumn('lease_id', 'leases.id')
-                ->where('status', InvoiceStatus::Paid->value)
-                ->whereBetween('period_start', [Carbon::now()->startOfMonth()->startOfDay(), Carbon::now()->endOfMonth()->endOfDay()]),
+                ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
+                ->whereDate('due_date', '<', now()),
             ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'unit.property.users',
