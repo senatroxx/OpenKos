@@ -202,6 +202,21 @@ export type PaymentProof = {
     created_at: string;
 };
 
+export type InvoiceLineItem = {
+    id: number;
+    invoice_id: number;
+    type: string;
+    description: string;
+    amount: string;
+};
+
+export type PaymentAllocation = {
+    id: number;
+    payment_id: number;
+    invoice_id: number;
+    amount: string;
+};
+
 export type Invoice = {
     id: number;
     lease_id: number;
@@ -213,6 +228,9 @@ export type Invoice = {
     total: string;
     amount_paid: string;
     outstanding?: string;
+    line_items?: InvoiceLineItem[];
+    payments?: Payment[];
+    allocations?: PaymentAllocation[];
 };
 
 export type Payment = {

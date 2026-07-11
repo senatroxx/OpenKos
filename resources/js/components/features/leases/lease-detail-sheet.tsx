@@ -1,6 +1,6 @@
 import { router, usePage } from '@inertiajs/react';
-import { Banknote, ChevronDown, FileText, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Banknote, ChevronDown, FileText } from 'lucide-react';
+import { useState } from 'react';
 import { RecordPaymentSheet } from '@/components/features';
 import { DocumentPreview } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -21,7 +21,7 @@ import { DUE_DAY_LABELS } from '@/lib/constants';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
-import type { Lease, Payment, RentScheduleEntry } from '@/types';
+import type { Lease, Payment } from '@/types';
 
 export default function LeaseDetailSheet({
     lease,
@@ -40,8 +40,6 @@ export default function LeaseDetailSheet({
 }) {
     const { auth } = usePage<{ auth: { permissions: string[] } }>().props;
     const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
-    const [schedule, setSchedule] = useState<RentScheduleEntry[] | null>(null);
-    const [loadingSchedule, setLoadingSchedule] = useState(false);
     const [verifyingId, setVerifyingId] = useState<number | null>(null);
     const [previewProof, setPreviewProof] = useState<{
         src: string;
@@ -65,16 +63,6 @@ export default function LeaseDetailSheet({
             },
         );
     }
-
-    useEffect(() => {
-        if (open && lease) {
-            Promise.resolve().then(() => setLoadingSchedule(true));
-            fetch(`/leases/${lease.id}/rent-schedule`)
-                .then((r) => r.json())
-                .then((d) => setSchedule(d.schedule))
-                .finally(() => setLoadingSchedule(false));
-        }
-    }, [open, lease]);
 
     const unitLabel = lease?.unit?.name ?? '—';
     const propertyName = lease?.unit?.property?.name ?? '—';
@@ -514,73 +502,6 @@ export default function LeaseDetailSheet({
                                     </CollapsibleContent>
                                 </section>
                             </Collapsible>
-
-                            {/* Rent Schedule */}
-                            {isActive && (
-                                <Collapsible defaultOpen>
-                                    <section>
-                                        <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
-                                            <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                                Rent Schedule
-                                            </h3>
-                                            <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
-                                        </CollapsibleTrigger>
-                                        <CollapsibleContent className="mt-3">
-                                            {loadingSchedule ? (
-                                                <div className="flex items-center justify-center gap-2 rounded-lg border p-6 text-sm text-muted-foreground">
-                                                    <Loader2 className="size-4 animate-spin" />
-                                                    Loading schedule...
-                                                </div>
-                                            ) : schedule &&
-                                              schedule.length > 0 ? (
-                                                <div className="space-y-2">
-                                                    {schedule.map(
-                                                        (entry, i) => {
-                                                                return (
-                                                                <div
-                                                                    key={i}
-                                                                    className="flex items-center justify-between rounded-lg border p-3 text-sm"
-                                                                >
-                                                                    <div>
-                                                                        <p className="font-medium">
-                                                                            {formatPeriod(
-                                                                                entry.period_start,
-                                                                            )}
-                                                                        </p>
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                            Due{' '}
-                                                                            {formatDate(
-                                                                                entry.due_date,
-                                                                            )}
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="text-right">
-                                                                        <p className="font-medium tabular-nums">
-                                                                            {formatPrice(
-                                                                                entry.amount,
-                                                                            )}
-                                                                        </p>
-                                                                        <StatusBadge
-                                                                            domain="rent"
-                                                                            value={
-                                                                                entry.status
-                                                                            }
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        },
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                                                    No schedule data available.
-                                                </p>
-                                            )}
-                                        </CollapsibleContent>
-                                    </section>
-                                </Collapsible>
-                            )}
 
                             {/* Notes */}
                             {lease.notes && (
