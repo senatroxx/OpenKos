@@ -12,6 +12,8 @@ use App\Models\Setting;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use App\Enums\LeaseStatus;
+use App\Models\Lease;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -115,10 +117,30 @@ class PropertyController extends Controller
     {
         $this->authorize('delete', $property);
 
+        if (Lease::whereHas('unit', fn ($q) => $q->where('property_id', $property->id))
+            ->where('status', LeaseStatus::Active)
+            ->exists()
+        ) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a property with active leases.')]);
+
+            return back();
+        }
+
         Property::query()->whereKey($property->id)->update(['is_active' => false]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
 
         return to_route('properties.index');
+    }
+
+    public function restore(Property $property): RedirectResponse
+    {
+        $this->authorize('update', $property);
+
+        Property::query()->whereKey($property->id)->update(['is_active' => true]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Property restored.')]);
+
+        return back();
     }
 }
