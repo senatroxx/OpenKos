@@ -46,12 +46,6 @@ class SendRentReminders
                 continue;
             }
 
-            // Index payable invoices by period_start for O(1) lookup.
-            $invoices = $lease->invoices()
-                ->payable()
-                ->get()
-                ->keyBy(fn ($i) => $i->period_start->toDateString());
-
             foreach ($this->scheduler->pendingFor($lease, $settings) as $event) {
                 $log = $this->repository->recordIfAbsent($event, $channels);
 
@@ -59,7 +53,7 @@ class SendRentReminders
                     continue;
                 }
 
-                InvoiceReminderDispatched::dispatch($event, $invoices->get($event->periodStart));
+                InvoiceReminderDispatched::dispatch($event);
                 $sent->push($log);
             }
         }
