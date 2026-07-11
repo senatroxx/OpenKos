@@ -3,8 +3,7 @@ import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { formatDate } from '@/lib/formatters';
-import type { PaginatedData, TableMeta, TenantDocument } from '@/types';
-import type { WorkspaceTenant } from './layout';
+import type { PaginatedData, TableMeta, TenantDocument, WorkspaceTenant } from '@/types';
 import { TenantLayout } from './layout';
 
 const columns: TableColumn<TenantDocument>[] = [

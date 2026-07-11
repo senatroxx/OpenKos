@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
     Sheet,
@@ -8,6 +8,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { DUE_DAY_LABELS } from '@/lib/constants';
 import properties from '@/routes/properties';
 import type { Property, Unit } from '@/types';
 
@@ -21,30 +22,6 @@ function formatPrice(cents: string): string {
         maximumFractionDigits: 0,
     }).format(num);
 }
-
-const STATUS_LABELS: Record<string, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-    unavailable: 'Unavailable',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    available: 'bg-green-600',
-    occupied: 'bg-blue-600',
-    maintenance: 'bg-amber-500',
-    unavailable: 'bg-gray-400',
-};
-
-const DUE_DAY_LABELS: Record<number, string> = {
-    1: '1st',
-    5: '5th',
-    10: '10th',
-    15: '15th',
-    20: '20th',
-    25: '25th',
-    31: 'Last day',
-};
 
 export default function UnitDetailSheet({
     unit,
@@ -104,11 +81,7 @@ export default function UnitDetailSheet({
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
-                                <Badge
-                                    className={`${STATUS_COLORS[unit.status] ?? 'bg-gray-400'} text-white`}
-                                >
-                                    {STATUS_LABELS[unit.status] ?? unit.status}
-                                </Badge>
+                                <StatusBadge domain="unit" value={unit.status} />
                             </section>
 
                             {/* Unit Details */}

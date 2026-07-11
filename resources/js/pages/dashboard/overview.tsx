@@ -1,15 +1,7 @@
 import { Head } from '@inertiajs/react';
+import { formatRupiah } from '@/lib/formatters';
 import { dashboard } from '@/routes';
 import type { Finance, PropertyStats, Stats } from '@/types';
-
-function formatRupiah(n: number): string {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(n);
-}
 
 export default function Overview({
     finance,

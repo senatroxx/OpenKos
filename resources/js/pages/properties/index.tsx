@@ -31,25 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import properties from '@/routes/properties';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type ManagedProperty = {
-    id: number;
-    name: string;
-    slug: string;
-    type: string;
-    type_label?: string;
-    address: string | null;
-    region_id: number | null;
-    city_id: number | null;
-    postal_code: string | null;
-    phone: string | null;
-    is_active: boolean;
-    units_count: number;
-    occupied_units_count: number;
-    tenants_count: number;
-    city?: { id: number; name: string } | null;
-};
+import type { ManagedProperty, PaginatedData, TableMeta } from '@/types';
 
 type PageProps = {
     properties: PaginatedData<ManagedProperty>;

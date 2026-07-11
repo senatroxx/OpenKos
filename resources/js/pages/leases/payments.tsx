@@ -2,38 +2,25 @@ import { FileText } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
-import { Badge } from '@/components/ui/badge';
-import { formatDate, formatPrice } from '@/lib/formatters';
+import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
+import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import type {
     PaginatedData,
     Payment,
     RentScheduleEntry,
     TableMeta,
+    WorkspaceLease,
 } from '@/types';
-import type { WorkspaceLease } from './layout';
 import { LeaseLayout } from './layout';
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-    cash: 'Cash',
-    transfer: 'Bank Transfer',
-    ewallet: 'E-Wallet',
-    other: 'Other',
-};
-
-function formatPeriod(periodStart: string): string {
-    return new Date(periodStart).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'long',
-    });
-}
 
 const columns: TableColumn<Payment>[] = [
     {
         key: 'period_start',
         label: 'Period',
         className: 'font-medium',
-        render: (p) => (p.invoice ? formatPeriod(p.invoice.period_start) : '—'),
+        render: (p) => (p.invoice ? formatPeriod(p.invoice.period_start, 'id-ID') : '—'),
     },
     {
         key: 'payment_date',
@@ -68,18 +55,7 @@ const columns: TableColumn<Payment>[] = [
         key: 'status',
         label: 'Status',
         sortable: true,
-        render: (p) =>
-            p.status === 'confirmed' ? (
-                <Badge className="bg-green-600 text-white">
-                    {p.verified_at ? 'Verified' : 'Paid'}
-                </Badge>
-            ) : p.status === 'pending' ? (
-                <Badge className="bg-amber-500 text-white">
-                    Pending Review
-                </Badge>
-            ) : (
-                <Badge className="bg-gray-400 text-white">Cancelled</Badge>
-            ),
+        render: (p) => <StatusBadge domain="payment" value={p.verified_at && p.status === 'confirmed' ? 'verified' : p.status} />,
     },
     {
         key: '_proofs',
@@ -128,23 +104,9 @@ function RentSchedule({ lease }: { lease: WorkspaceLease }) {
         );
     }
 
-    const badge: Record<string, { label: string; className: string }> = {
-        paid: { label: 'Paid', className: 'bg-green-600 text-white' },
-        partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
-        overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
-        due: { label: 'Due', className: 'bg-yellow-500 text-white' },
-        upcoming: { label: 'Upcoming', className: 'bg-gray-400 text-white' },
-        cancelled: {
-            label: 'Cancelled',
-            className: 'bg-gray-300 text-gray-700',
-        },
-    };
-
     return (
         <div className="space-y-2">
             {schedule.map((entry, i) => {
-                const s = badge[entry.status] ?? badge.upcoming;
-
                 return (
                     <div
                         key={i}
@@ -152,7 +114,7 @@ function RentSchedule({ lease }: { lease: WorkspaceLease }) {
                     >
                         <div>
                             <p className="font-medium">
-                                {formatPeriod(entry.period_start)}
+                                {formatPeriod(entry.period_start, 'id-ID')}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 Due {formatDate(entry.due_date)}
@@ -162,11 +124,10 @@ function RentSchedule({ lease }: { lease: WorkspaceLease }) {
                             <p className="font-medium tabular-nums">
                                 {formatPrice(entry.amount)}
                             </p>
-                            <Badge
-                                className={`px-1.5 py-0 text-[10px] ${s.className}`}
-                            >
-                                {s.label}
-                            </Badge>
+                            <StatusBadge
+                                domain="rent"
+                                value={entry.status}
+                            />
                         </div>
                     </div>
                 );

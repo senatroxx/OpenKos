@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/shared/status-badge';
 import type { Unit } from '@/types';
 
 function formatPrice(cents: string): string {
@@ -11,20 +11,6 @@ function formatPrice(cents: string): string {
         maximumFractionDigits: 0,
     }).format(num);
 }
-
-const STATUS_LABELS: Record<string, string> = {
-    available: 'Available',
-    occupied: 'Occupied',
-    maintenance: 'Maintenance',
-    unavailable: 'Unavailable',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-    available: 'bg-green-600',
-    occupied: 'bg-blue-600',
-    maintenance: 'bg-amber-500',
-    unavailable: 'bg-gray-400',
-};
 
 export default function UnitOverview({ unit }: { unit: Unit }) {
     const isOccupied = (unit.active_leases ?? 0) > 0;
@@ -42,11 +28,7 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
                 <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                     Status
                 </p>
-                <Badge
-                    className={`${STATUS_COLORS[unit.status] ?? 'bg-gray-400'} text-white`}
-                >
-                    {STATUS_LABELS[unit.status] ?? unit.status}
-                </Badge>
+                <StatusBadge domain="unit" value={unit.status} />
             </div>
 
             <div>
