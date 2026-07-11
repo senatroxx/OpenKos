@@ -4,10 +4,10 @@ namespace App\Actions\Reminders;
 
 use App\Business\Reminders\PaymentReminderScheduler;
 use App\Data\Reminder\ReminderSettings;
+use App\Events\Reminder\InvoiceReminderDispatched;
 use App\Models\Lease;
 use App\Models\ReminderLog;
 use App\Models\Setting;
-use App\Notifications\RentReminder;
 use App\Repositories\ReminderRepository;
 use Illuminate\Support\Collection;
 
@@ -53,7 +53,7 @@ class SendRentReminders
                     continue;
                 }
 
-                $tenant->notify(new RentReminder($event));
+                InvoiceReminderDispatched::dispatch($event);
                 $sent->push($log);
             }
         }

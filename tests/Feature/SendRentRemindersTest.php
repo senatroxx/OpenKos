@@ -122,7 +122,7 @@ describe('SendRentRemindersAction', function () {
         Setting::set('reminder_channels', ['whatsapp'], 'array');
     });
 
-    it('sends reminder and creates log', function () {
+    it('dispatches event and creates log', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         Notification::fake();
 
@@ -152,6 +152,7 @@ describe('SendRentRemindersAction', function () {
         expect($first)->toHaveCount(1);
         expect($second)->toBeEmpty();
         expect(ReminderLog::count())->toBe(1);
+
         Notification::assertSentToTimes($lease->primaryTenant, RentReminder::class, 1);
 
         Carbon::setTestNow();
