@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Leases\CreateLease;
 use App\Data\Lease\CreateLeaseData;
+use App\Enums\LeaseStatus;
 use App\Enums\TenantDocumentType;
 use App\Http\Requests\Tenant\AssignUnitRequest;
 use App\Http\Requests\Tenant\StoreTenantRequest;
@@ -210,6 +211,12 @@ class TenantController extends Controller
     public function destroy(Tenant $tenant): RedirectResponse
     {
         $this->authorize('delete', $tenant);
+
+        if ($tenant->leases()->where('status', LeaseStatus::Active)->exists()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a tenant with an active lease.')]);
+
+            return back();
+        }
 
         $tenant->delete();
 
