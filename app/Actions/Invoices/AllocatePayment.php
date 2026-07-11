@@ -21,6 +21,7 @@ class AllocatePayment
     {
         DB::transaction(function () use ($payment) {
             $remaining = (float) $payment->amount;
+            $affected = collect();
 
             $invoices = Invoice::where('lease_id', $payment->invoice->lease_id)
                 ->payable()
@@ -47,14 +48,16 @@ class AllocatePayment
                 ]);
 
                 $remaining -= $allocated;
+                $affected->push($invoice);
             }
 
-            // Recalculate status for the payment's primary invoice
-            $payment->invoice->recalculateStatus();
+            // Recalculate status on every invoice that received an allocation
+            foreach ($affected as $invoice) {
+                $invoice->recalculateStatus();
 
-            // If fully paid, fire domain event
-            if ($payment->invoice->status === InvoiceStatus::Paid) {
-                InvoiceFullyPaid::dispatch($payment->invoice);
+                if ($invoice->status === InvoiceStatus::Paid) {
+                    InvoiceFullyPaid::dispatch($invoice);
+                }
             }
         });
     }
