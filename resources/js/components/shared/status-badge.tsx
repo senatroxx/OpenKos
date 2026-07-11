@@ -62,6 +62,13 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         system: { label: 'System', variant: 'secondary' },
         custom: { label: 'Custom', variant: 'outline' },
     },
+    invoice: {
+        pending: { label: 'Pending', className: 'bg-yellow-500 text-white' },
+        partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
+        paid: { label: 'Paid', className: 'bg-green-600 text-white' },
+        cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
+        void: { label: 'Void', className: 'bg-gray-300 text-gray-700' },
+    },
 };
 
 export function StatusBadge({

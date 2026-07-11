@@ -3,6 +3,7 @@
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
 use App\Http\Controllers\LeaseController;
+use App\Http\Controllers\LeaseInvoiceController;
 use App\Http\Controllers\LeaseRentScheduleController;
 use App\Http\Controllers\MaintenanceTicketController;
 use App\Http\Controllers\PaymentController;
@@ -98,6 +99,8 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::prefix('{lease}')->whereNumber('lease')->group(function () {
             Route::get('/', [LeaseController::class, 'show'])->name('show')->middleware('permission:leases.view');
             Route::get('documents', [LeaseController::class, 'documents'])->name('workspace.documents')->middleware('permission:leases.view');
+            Route::get('invoices', [LeaseInvoiceController::class, 'index'])->name('workspace.invoices')->middleware('permission:leases.view');
+            Route::get('invoices/{invoice}', [LeaseInvoiceController::class, 'show'])->name('workspace.invoices.show')->middleware('permission:leases.view');
             Route::get('rent-schedule', LeaseRentScheduleController::class)->name('rent-schedule')->middleware('permission:leases.view');
             Route::post('move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
             Route::post('renew', [LeaseController::class, 'renew'])->name('renew')->middleware('permission:leases.renew');

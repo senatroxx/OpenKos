@@ -33,6 +33,11 @@ export function LeaseLayout({
                         href: `/leases/${lease.id}`,
                     },
                     {
+                        key: 'invoices',
+                        label: 'Invoices',
+                        href: `/leases/${lease.id}/invoices`,
+                    },
+                    {
                         key: 'payments',
                         label: 'Payments',
                         href: `/leases/${lease.id}/payments`,
