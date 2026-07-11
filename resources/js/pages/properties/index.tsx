@@ -4,6 +4,7 @@ import {
     ExternalLink,
     Eye,
     Pencil,
+    RotateCcw,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -13,6 +14,7 @@ import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { PropertyDetailSheet, PropertyFormSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -115,6 +117,10 @@ export default function Index({
         setArchiveConfirm(null);
     }
 
+    function restore(property: ManagedProperty) {
+        router.post(properties.restore.url(property));
+    }
+
     const columns: TableColumn<ManagedProperty>[] = [
         {
             key: 'name',
@@ -158,14 +164,7 @@ export default function Index({
         {
             key: '_status',
             label: 'Status',
-            render: (p) =>
-                p.is_active ? (
-                    <Badge variant="default" className="bg-green-600">
-                        Active
-                    </Badge>
-                ) : (
-                    <Badge variant="secondary">Archived</Badge>
-                ),
+            render: (p) => <StatusBadge domain="property" value={p.is_active ? 'active' : 'archived'} />,
         },
         {
             key: '_actions',
@@ -198,13 +197,20 @@ export default function Index({
                             <Pencil className="size-4" />
                             Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => archive(p)}
-                        >
-                            <Trash2 className="size-4" />
-                            Archive
-                        </DropdownMenuItem>
+                        {p.is_active ? (
+                            <DropdownMenuItem
+                                variant="destructive"
+                                onClick={() => archive(p)}
+                            >
+                                <Trash2 className="size-4" />
+                                Archive
+                            </DropdownMenuItem>
+                        ) : (
+                            <DropdownMenuItem onClick={() => restore(p)}>
+                                <RotateCcw className="size-4" />
+                                Restore
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             ),
