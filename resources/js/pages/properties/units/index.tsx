@@ -6,6 +6,7 @@ import {
     Eye,
     Move,
     Pencil,
+    RotateCcw,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -234,6 +235,15 @@ export default function Index({
         setDeleteDialogOpen(false);
     }
 
+    function restore(unit: Unit) {
+        router.post(
+            properties.units.restore.url({
+                property: property.slug,
+                unit: unit.slug,
+            }),
+        );
+    }
+
     function getFilteredUnitsForMove(
         currentUnitId: number,
     ): (typeof _availableUnits)[number][] {
@@ -265,9 +275,12 @@ export default function Index({
             key: 'status',
             label: 'Status',
             sortable: true,
-            render: (r) => (
-                <StatusBadge domain="unit" value={r.status} />
-            ),
+            render: (r) =>
+                r.deleted_at ? (
+                    <StatusBadge domain="unit" value="archived" />
+                ) : (
+                    <StatusBadge domain="unit" value={r.status} />
+                ),
         },
         {
             key: 'capacity',
@@ -360,7 +373,7 @@ export default function Index({
                                 <Eye className="size-4" />
                                 View
                             </DropdownMenuItem>
-                            {r.capacity > occupants.length && (
+                            {!r.deleted_at && r.capacity > occupants.length && (
                                 <DropdownMenuItem
                                     onClick={() => {
                                         setAssignUnit(r);
@@ -372,7 +385,7 @@ export default function Index({
                                     {r.capacity > 1 ? '(s)' : ''}
                                 </DropdownMenuItem>
                             )}
-                            {hasActiveLease && (
+                            {!r.deleted_at && hasActiveLease && (
                                 <DropdownMenuItem
                                     onClick={() => {
                                         setViewingUnit(r);
@@ -390,19 +403,28 @@ export default function Index({
                                     Move Unit
                                 </DropdownMenuItem>
                             )}
-                            {(r.capacity > occupants.length ||
+                            {!r.deleted_at && (r.capacity > occupants.length ||
                                 hasActiveLease) && <DropdownMenuSeparator />}
-                            <DropdownMenuItem onClick={() => openEdit(r)}>
-                                <Pencil className="size-4" />
-                                Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => confirmDelete(r)}
-                            >
-                                <Trash2 className="size-4" />
-                                Delete
-                            </DropdownMenuItem>
+                            {r.deleted_at ? (
+                                <DropdownMenuItem onClick={() => restore(r)}>
+                                    <RotateCcw className="size-4" />
+                                    Restore
+                                </DropdownMenuItem>
+                            ) : (
+                                <>
+                                    <DropdownMenuItem onClick={() => openEdit(r)}>
+                                        <Pencil className="size-4" />
+                                        Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onClick={() => confirmDelete(r)}
+                                    >
+                                        <Trash2 className="size-4" />
+                                        Delete
+                                    </DropdownMenuItem>
+                                </>
+                            )}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 );
