@@ -424,7 +424,7 @@ export default function LeaseDetailSheet({
                                                                         payment.amount,
                                                                     )}
                                                                 </p>
-<StatusBadge domain="payment" value={payment.verified_at ? 'verified' : payment.status} />
+<StatusBadge domain="payment" value={payment.verified_at && payment.status === 'confirmed' ? 'verified' : payment.status} />
                                                             </div>
                                                         </div>
                                                         {payment.proofs
