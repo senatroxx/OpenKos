@@ -26,8 +26,6 @@ class Invoice extends Model
 {
     use Auditable, HasFactory;
 
-    protected $appends = ['outstanding'];
-
     protected static function boot(): void
     {
         parent::boot();
