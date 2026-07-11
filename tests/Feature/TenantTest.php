@@ -211,6 +211,24 @@ describe('cross-property access', function () {
             ->assertForbidden();
     });
 
+    it('denies admin from restoring a tenant in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $unit = Unit::factory()->for($propertyB)->create();
+        $tenant = Tenant::factory()->create();
+        Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $unit->id,
+        ]);
+        $tenant->delete();
+
+        $this->actingAs($admin)
+            ->post(route('tenants.restore', $tenant))
+            ->assertForbidden();
+    });
+
     it('denies admin from archiving a tenant in a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
         $propertyA = Property::factory()->create();
@@ -230,6 +248,20 @@ describe('cross-property access', function () {
 });
 
 describe('archive lifecycle', function () {
+    it('restores an archived tenant', function () {
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $tenant->delete();
+
+        expect(Tenant::count())->toBe(0);
+
+        $this->actingAs($user)
+            ->post(route('tenants.restore', $tenant))
+            ->assertRedirect();
+
+        expect(Tenant::count())->toBe(1);
+    });
+
     it('blocks archiving a tenant with active leases', function () {
         $owner = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();

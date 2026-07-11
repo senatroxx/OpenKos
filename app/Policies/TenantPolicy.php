@@ -5,7 +5,6 @@ namespace App\Policies;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
-use App\Enums\LeaseStatus;
 
 class TenantPolicy
 {
@@ -33,6 +32,11 @@ class TenantPolicy
         return $tenant->leases()
             ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
+    }
+
+    public function restore(User $user, Tenant $tenant): bool
+    {
+        return $this->delete($user, $tenant);
     }
 
     public function assignUnit(User $user, Unit $unit): bool

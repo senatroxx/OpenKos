@@ -5,6 +5,7 @@ import {
     ExternalLink,
     Eye,
     Pencil,
+    RotateCcw,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -158,6 +159,10 @@ export default function Index({
         setArchiveConfirm(null);
     }
 
+    function restore(tenant: WorkspaceTenant) {
+        router.post(tenants.restore.url(tenant));
+    }
+
     const columns: TableColumn<WorkspaceTenant>[] = [
         {
             key: 'name',
@@ -235,7 +240,12 @@ export default function Index({
                                 Edit
                             </DropdownMenuItem>
                         )}
-                        {!t.deleted_at && (
+                        {t.deleted_at ? (
+                            <DropdownMenuItem onClick={() => restore(t)}>
+                                <RotateCcw className="size-4" />
+                                Restore
+                            </DropdownMenuItem>
+                        ) : (
                             <DropdownMenuItem
                                 variant="destructive"
                                 onClick={() => archive(t)}
