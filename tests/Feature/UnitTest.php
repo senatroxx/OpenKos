@@ -29,6 +29,34 @@ describe('authorization', function () {
 });
 
 describe('archive lifecycle', function () {
+    it('restores a soft-deleted unit', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $unit->delete();
+
+        expect(Unit::count())->toBe(0);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.restore', [$property, $unit]))
+            ->assertRedirect();
+
+        expect(Unit::count())->toBe(1);
+    });
+
+    it('denies admin restoring a unit in a property they are not assigned to', function () {
+        $admin = User::factory()->admin()->create();
+        $propertyA = Property::factory()->create();
+        $propertyB = Property::factory()->create();
+        $admin->properties()->sync([$propertyA->id]);
+        $unit = Unit::factory()->for($propertyB)->create();
+        $unit->delete();
+
+        $this->actingAs($admin)
+            ->post(route('properties.units.restore', [$propertyB, $unit]))
+            ->assertForbidden();
+    });
+
     it('blocks deleting a unit with active leases', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
@@ -148,6 +176,23 @@ describe('CRUD', function () {
             ->component('properties/units/index')
             ->has('units.data', 1)
             ->where('status', 'occupied')
+        );
+    });
+
+    it('filters archived units', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        Unit::factory()->for($property)->create();
+        $archived = Unit::factory()->for($property)->create();
+        $archived->delete();
+
+        $response = $this->actingAs($user)
+            ->get(route('properties.units.index', [$property, 'status' => 'archived']))
+            ->assertOk();
+
+        $response->assertInertia(fn ($page) => $page
+            ->component('properties/units/index')
+            ->has('units.data', 1)
         );
     });
 

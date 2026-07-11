@@ -12,6 +12,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         occupied: { label: 'Occupied', className: 'bg-blue-600 text-white' },
         maintenance: { label: 'Maintenance', className: 'bg-amber-500 text-white' },
         unavailable: { label: 'Unavailable', className: 'bg-gray-400 text-white' },
+        archived: { label: 'Archived', variant: 'secondary' },
     },
     lease: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },

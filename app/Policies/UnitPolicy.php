@@ -32,4 +32,9 @@ class UnitPolicy
     {
         return $user->properties->contains($unit->property_id);
     }
+
+    public function restore(User $user, Unit $unit): bool
+    {
+        return $this->delete($user, $unit);
+    }
 }

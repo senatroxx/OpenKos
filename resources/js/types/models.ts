@@ -90,6 +90,7 @@ export type Unit = {
     leases?: LeaseInfo[];
     active_rates?: UnitRate[];
     tenants?: TenantInfo[];
+    deleted_at?: string | null;
 };
 
 export type UnitWithProperty = Unit & {
