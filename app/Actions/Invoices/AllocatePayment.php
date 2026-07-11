@@ -39,9 +39,15 @@ class AllocatePayment
             $remaining = (float) $payment->amount;
             $affected = collect();
 
+            // ponytail: orderBy('id') ensures consistent lock ordering and
+            // reduces deadlock risk with concurrent payments on the same
+            // lease. The caller (RecordPayment) already holds a lock on the
+            // primary invoice, which creates an implicit lock outside this
+            // ordered set — a true fix would move all locking into this query.
             $invoices = Invoice::where('lease_id', $payment->invoice->lease_id)
                 ->payable()
                 ->orderBy('due_date')
+                ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
 
