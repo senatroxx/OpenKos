@@ -71,12 +71,23 @@ class LeaseController extends Controller
 
         $table = Table::make()
             ->columns([
-                Column::make('invoice.period_start', 'Period')->sortable(),
+                Column::make('invoice.period_start', 'Period')
+                    ->sortable(function (Builder $q, string $direction) {
+                        $q->join('invoices', 'payments.invoice_id', '=', 'invoices.id')
+                            ->orderBy('invoices.period_start', $direction)
+                            ->select('payments.*');
+                    }),
                 Column::make('payment_date', 'Paid on')->sortable(),
                 Column::make('amount', 'Amount')->sortable(),
                 Column::make('payment_method', 'Method')->sortable(),
                 Column::make('invoice.reference', 'Reference')
-                    ->sortable()
+                    ->sortable(function (Builder $q, string $direction) {
+                        $q->orderBy(
+                            Invoice::select('reference')
+                                ->whereColumn('id', 'payments.invoice_id'),
+                            $direction
+                        );
+                    })
                     ->searchable(function (Builder $q, string $search) {
                         $q->whereHas('invoice', fn (Builder $q) => $q->where(DB::raw('lower(reference)'), 'like', '%'.mb_strtolower($search).'%'));
                     }),
