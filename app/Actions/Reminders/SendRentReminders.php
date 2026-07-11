@@ -59,9 +59,7 @@ class SendRentReminders
                     continue;
                 }
 
-                $invoice = $invoices->get($event->periodStart);
-
-                InvoiceReminderDispatched::dispatch($event, $invoice);
+                InvoiceReminderDispatched::dispatch($event, $invoices->get($event->periodStart));
                 $sent->push($log);
             }
         }

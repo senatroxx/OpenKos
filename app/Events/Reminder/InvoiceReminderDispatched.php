@@ -12,6 +12,6 @@ class InvoiceReminderDispatched
 
     public function __construct(
         public readonly ReminderEvent $event,
-        public readonly Invoice $invoice,
+        public readonly ?Invoice $invoice = null,
     ) {}
 }
