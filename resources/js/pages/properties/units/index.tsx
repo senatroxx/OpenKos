@@ -356,23 +356,27 @@ export default function Index({
                                 e.stopPropagation()
                             }
                         >
-                            <DropdownMenuItem
-                                onClick={() =>
-                                    router.get(
-                                        properties.units.show.url({
-                                            property: property.slug,
-                                            unit: r.slug,
-                                        }),
-                                    )
-                                }
-                            >
-                                <ExternalLink className="size-4" />
-                                Open Workspace
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDetail(r)}>
-                                <Eye className="size-4" />
-                                View
-                            </DropdownMenuItem>
+                            {!r.deleted_at && (
+                                <DropdownMenuItem
+                                    onClick={() =>
+                                        router.get(
+                                            properties.units.show.url({
+                                                property: property.slug,
+                                                unit: r.slug,
+                                            }),
+                                        )
+                                    }
+                                >
+                                    <ExternalLink className="size-4" />
+                                    Open Workspace
+                                </DropdownMenuItem>
+                            )}
+                            {!r.deleted_at && (
+                                <DropdownMenuItem onClick={() => openDetail(r)}>
+                                    <Eye className="size-4" />
+                                    View
+                                </DropdownMenuItem>
+                            )}
                             {!r.deleted_at && r.capacity > occupants.length && (
                                 <DropdownMenuItem
                                     onClick={() => {
