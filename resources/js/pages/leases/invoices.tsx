@@ -1,3 +1,4 @@
+import { router } from '@inertiajs/react';
 import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -89,6 +90,7 @@ export default function LeaseInvoices({
                     defaultSort="-period_start"
                     searchPlaceholder="Search by reference..."
                     emptyMessage="No invoices generated yet."
+                    onRowClick={(invoice) => router.get(`/leases/${lease.id}/invoices/${invoice.id}`)}
                 />
             </PluginRegion>
         </LeaseLayout>
