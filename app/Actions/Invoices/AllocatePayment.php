@@ -24,6 +24,8 @@ class AllocatePayment
             // Track invoices previously affected so we can reset their
             // amount_paid before re-computing from new allocations.
             $previousIds = $payment->allocations()->pluck('invoice_id');
+            $priorStatuses = Invoice::whereIn('id', $previousIds)
+                ->pluck('status', 'id');
             Invoice::whereIn('id', $previousIds)->update([
                 'amount_paid' => 0,
                 'status' => InvoiceStatus::Pending,
@@ -80,7 +82,9 @@ class AllocatePayment
                     'status' => $status,
                 ]);
 
-                if ($status === InvoiceStatus::Paid) {
+                if ($status === InvoiceStatus::Paid
+                    && ($priorStatuses[$invoice->id] ?? null) !== InvoiceStatus::Paid
+                ) {
                     // ponytail: dispatched via afterCommit so listeners
                     // never see uncommitted data.
                     DB::afterCommit(fn () => InvoiceFullyPaid::dispatch($invoice));
