@@ -3,11 +3,14 @@
 namespace App\Actions\Reminders;
 
 use App\Business\Reminders\PaymentReminderScheduler;
+use App\Data\Reminder\ReminderEvent;
 use App\Data\Reminder\ReminderSettings;
+use App\Enums\ReminderType;
 use App\Events\Reminder\InvoiceReminderDispatched;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Repositories\ReminderRepository;
+use Carbon\Carbon;
 
 class ForceSendReminder
 {
@@ -36,23 +39,46 @@ class ForceSendReminder
 
         $events = $this->scheduler->pendingFor($lease, $settings);
 
-        if (empty($events)) {
-            return 'all_paid';
+        if (! empty($events)) {
+            $event = $events[0];
+        } else {
+            // ponytail: fallback when no event is scheduled (e.g. invoice due
+            // outside daysBefore window). Build a reminder for the first payable
+            // invoice so manual "Send Reminder" always works.
+            $invoice = $lease->invoices()->payable()->orderBy('period_start')->first();
+
+            if (! $invoice) {
+                return 'all_paid';
+            }
+
+            $today = now()->startOfDay();
+            $dueDate = Carbon::parse($invoice->due_date)->startOfDay();
+            $overdueDays = $dueDate->lessThan($today) ? (int) $dueDate->diffInDays($today) : null;
+
+            $type = match (true) {
+                $overdueDays !== null => ReminderType::Overdue,
+                $today->eq($dueDate) => ReminderType::DueToday,
+                default => ReminderType::Upcoming,
+            };
+
+            $event = new ReminderEvent(
+                lease: $lease,
+                type: $type,
+                periodStart: $invoice->period_start->toDateString(),
+                periodEnd: $invoice->period_end->toDateString(),
+                dueDate: $invoice->due_date->toDateString(),
+                amount: (int) round((float) $invoice->outstanding * 100),
+                overdueDays: $overdueDays,
+            );
         }
 
-        $event = $events[0];
         $log = $this->repository->recordIfAbsent($event, $channels);
 
         if (! $log) {
             return 'already_sent';
         }
 
-        $invoice = $lease->invoices()
-            ->payable()
-            ->whereDate('period_start', $event->periodStart)
-            ->first();
-
-        InvoiceReminderDispatched::dispatch($event, $invoice);
+        InvoiceReminderDispatched::dispatch($event);
 
         return 'sent';
     }
