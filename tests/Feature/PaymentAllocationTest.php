@@ -2,11 +2,10 @@
 
 use App\Actions\Invoices\AllocatePayment;
 use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
-use App\Models\Tenant;
-use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 
@@ -27,7 +26,7 @@ it('creates allocation records when recording a confirmed payment', function () 
     $payment = Payment::factory()->create([
         'invoice_id' => $invoice->id,
         'amount' => 500_000,
-        'status' => \App\Enums\PaymentStatus::Confirmed,
+        'status' => PaymentStatus::Confirmed,
     ]);
 
     app(AllocatePayment::class)->execute($payment);
@@ -47,7 +46,7 @@ it('marks invoice as partial after partial payment', function () {
     $payment = Payment::factory()->create([
         'invoice_id' => $invoice->id,
         'amount' => 500_000,
-        'status' => \App\Enums\PaymentStatus::Confirmed,
+        'status' => PaymentStatus::Confirmed,
     ]);
 
     app(AllocatePayment::class)->execute($payment);
@@ -69,7 +68,7 @@ it('marks invoice as paid after full payment', function () {
     $payment = Payment::factory()->create([
         'invoice_id' => $invoice->id,
         'amount' => 1_000_000,
-        'status' => \App\Enums\PaymentStatus::Confirmed,
+        'status' => PaymentStatus::Confirmed,
     ]);
 
     app(AllocatePayment::class)->execute($payment);

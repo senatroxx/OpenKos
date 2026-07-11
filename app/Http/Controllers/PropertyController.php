@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\LeaseStatus;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\City;
+use App\Models\Lease;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
@@ -12,8 +14,6 @@ use App\Models\Setting;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
-use App\Enums\LeaseStatus;
-use App\Models\Lease;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
