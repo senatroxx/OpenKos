@@ -468,15 +468,16 @@ export default function CollectionQueue({
                             </button>
                         );
                     })}
+                </div>
 
-                    <div className="ml-auto">
-                        <SearchInput
-                            value={table.searchValue}
-                            onChange={table.onSearchChange}
-                            onClear={table.clearSearch}
-                            placeholder="Search tenant, invoice, unit, property..."
-                        />
-                    </div>
+                {/* Search */}
+                <div className="flex items-center gap-1">
+                    <SearchInput
+                        value={table.searchValue}
+                        onChange={table.onSearchChange}
+                        onClear={table.clearSearch}
+                        placeholder="Search tenant, invoice, unit, property..."
+                    />
                 </div>
 
                 {/* Queue */}
