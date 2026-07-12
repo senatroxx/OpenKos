@@ -252,13 +252,36 @@ export default function CollectionQueue({
             className: 'font-medium',
             render: (entry) => (
                 <Link
-                    href={`/leases/${entry.lease_id}`}
+                    href={`/tenants/${entry.primary_tenant_id}`}
                     className="hover:underline"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {entry.tenant_name}
                 </Link>
             ),
+        },
+        {
+            key: 'lease_reference',
+            label: 'Lease',
+            className: 'text-xs',
+            render: (entry) =>
+                entry.lease_reference ? (
+                    <Link
+                        href={`/leases/${entry.lease_id}`}
+                        className="hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {entry.lease_reference}
+                    </Link>
+                ) : (
+                    <Link
+                        href={`/leases/${entry.lease_id}`}
+                        className="text-muted-foreground hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        #{entry.lease_id}
+                    </Link>
+                ),
         },
         {
             key: 'urgency',
@@ -303,14 +326,6 @@ export default function CollectionQueue({
 
                 return (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                        size="sm"
-                        disabled={isPaid}
-                        onClick={() => openPaymentSheet(entry)}
-                    >
-                        <Banknote className="mr-1 size-3" />
-                        Record
-                    </Button>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="sm">
@@ -318,6 +333,13 @@ export default function CollectionQueue({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                                disabled={isPaid}
+                                onClick={() => openPaymentSheet(entry)}
+                            >
+                                <Banknote className="mr-2 size-4" />
+                                Record Payment
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                                 <Link
                                     href={`/leases/${entry.lease_id}/invoices/${entry.id}`}
