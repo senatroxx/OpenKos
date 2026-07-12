@@ -166,7 +166,11 @@ export default function AssignUnitSheet({
     }
 
     return (
-        <Sheet key={tenant?.id ?? 'closed'} open={open} onOpenChange={onOpenChange}>
+        <Sheet
+            key={tenant?.id ?? 'closed'}
+            open={open}
+            onOpenChange={onOpenChange}
+        >
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Assign to Unit</SheetTitle>

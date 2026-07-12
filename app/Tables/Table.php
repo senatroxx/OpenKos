@@ -57,6 +57,13 @@ class Table
         return $this;
     }
 
+    public function withPerPage(int $perPage): self
+    {
+        $this->defaultPerPage = $perPage;
+
+        return $this;
+    }
+
     public function paginate(Builder|Relation $query, Request $request, string $dataKey): array
     {
         $search = $this->applySearch($query, $request);

@@ -30,7 +30,9 @@ export default function TenantDetailSheet({
     onAssignToUnit,
     onMoveOut,
 }: {
-    tenant?: (WorkspaceTenant & { leases?: Lease[]; documents?: TenantDocument[] }) | null;
+    tenant?:
+        | (WorkspaceTenant & { leases?: Lease[]; documents?: TenantDocument[] })
+        | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onEdit: () => void;
@@ -79,9 +81,18 @@ export default function TenantDetailSheet({
                             <div className="flex items-center gap-2">
                                 <span>Status:</span>
                                 {(() => {
-                                    const status = isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive';
+                                    const status = isArchived
+                                        ? 'archived'
+                                        : tenant.is_active
+                                          ? 'active'
+                                          : 'inactive';
 
-                                    return <StatusBadge domain="tenant" value={status} />;
+                                    return (
+                                        <StatusBadge
+                                            domain="tenant"
+                                            value={status}
+                                        />
+                                    );
                                 })()}
                             </div>
 
@@ -298,19 +309,13 @@ export default function TenantDetailSheet({
                 )}
             </SheetContent>
 
-            <Dialog
-                open={archiveConfirm}
-                onOpenChange={setArchiveConfirm}
-            >
+            <Dialog open={archiveConfirm} onOpenChange={setArchiveConfirm}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Archive tenant</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to archive{' '}
-                            <span className="font-medium">
-                                {tenant?.name}
-                            </span>
-                            ?
+                            <span className="font-medium">{tenant?.name}</span>?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -320,10 +325,7 @@ export default function TenantDetailSheet({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmArchive}
-                        >
+                        <Button variant="destructive" onClick={confirmArchive}>
                             Archive
                         </Button>
                     </DialogFooter>

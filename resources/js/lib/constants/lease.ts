@@ -28,6 +28,9 @@ export const DUE_DAY_LABELS: Record<number, string> = {
 
 export const DEPOSIT_HANDLING_OPTIONS = [
     { value: 'carry_forward', label: 'Carry forward to new lease' },
-    { value: 'refund_and_collect_new', label: 'Refund and collect new deposit' },
+    {
+        value: 'refund_and_collect_new',
+        label: 'Refund and collect new deposit',
+    },
     { value: 'forfeit', label: 'Forfeit deposit' },
 ];

@@ -259,10 +259,7 @@ export default function TenantDocumentsSheet({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmDelete}
-                        >
+                        <Button variant="destructive" onClick={confirmDelete}>
                             Delete
                         </Button>
                     </DialogFooter>

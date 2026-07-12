@@ -100,7 +100,10 @@ export default function TicketDetailSheet({
                     <SheetTitle>{ticket.title}</SheetTitle>
                     <SheetDescription>
                         {ticket.reference ?? `#${ticket.id}`} &middot;{' '}
-                        <StatusBadge domain="maintenance" value={ticket.status} />
+                        <StatusBadge
+                            domain="maintenance"
+                            value={ticket.status}
+                        />
                     </SheetDescription>
                 </SheetHeader>
 
@@ -283,10 +286,7 @@ export default function TicketDetailSheet({
                 </div>
             </SheetContent>
 
-            <Dialog
-                open={deleteConfirm}
-                onOpenChange={setDeleteConfirm}
-            >
+            <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Delete ticket</DialogTitle>
@@ -301,10 +301,7 @@ export default function TicketDetailSheet({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmDelete}
-                        >
+                        <Button variant="destructive" onClick={confirmDelete}>
                             Delete
                         </Button>
                     </DialogFooter>

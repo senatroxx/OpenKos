@@ -407,8 +407,11 @@ export default function Index({
                                     Move Unit
                                 </DropdownMenuItem>
                             )}
-                            {!r.deleted_at && (r.capacity > occupants.length ||
-                                hasActiveLease) && <DropdownMenuSeparator />}
+                            {!r.deleted_at &&
+                                (r.capacity > occupants.length ||
+                                    hasActiveLease) && (
+                                    <DropdownMenuSeparator />
+                                )}
                             {r.deleted_at ? (
                                 <DropdownMenuItem onClick={() => restore(r)}>
                                     <RotateCcw className="size-4" />
@@ -416,7 +419,9 @@ export default function Index({
                                 </DropdownMenuItem>
                             ) : (
                                 <>
-                                    <DropdownMenuItem onClick={() => openEdit(r)}>
+                                    <DropdownMenuItem
+                                        onClick={() => openEdit(r)}
+                                    >
                                         <Pencil className="size-4" />
                                         Edit
                                     </DropdownMenuItem>
@@ -545,10 +550,7 @@ export default function Index({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={destroy}
-                        >
+                        <Button variant="destructive" onClick={destroy}>
                             Delete
                         </Button>
                     </DialogFooter>

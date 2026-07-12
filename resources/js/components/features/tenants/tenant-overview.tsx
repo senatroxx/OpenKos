@@ -2,7 +2,11 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease, WorkspaceTenant } from '@/types';
 
-export default function TenantOverview({ tenant }: { tenant: WorkspaceTenant & { leases?: Lease[] } }) {
+export default function TenantOverview({
+    tenant,
+}: {
+    tenant: WorkspaceTenant & { leases?: Lease[] };
+}) {
     const activeLease = tenant.leases?.[0];
     const isArchived = Boolean(tenant.deleted_at);
 
@@ -10,10 +14,18 @@ export default function TenantOverview({ tenant }: { tenant: WorkspaceTenant & {
         <div className="space-y-6">
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Status:</span>
-                {<StatusBadge
-                    domain="tenant"
-                    value={isArchived ? 'archived' : tenant.is_active ? 'active' : 'inactive'}
-                />}
+                {
+                    <StatusBadge
+                        domain="tenant"
+                        value={
+                            isArchived
+                                ? 'archived'
+                                : tenant.is_active
+                                  ? 'active'
+                                  : 'inactive'
+                        }
+                    />
+                }
             </div>
 
             <div className="rounded-lg border bg-muted/30 p-4">
