@@ -357,6 +357,7 @@ export default function CollectionQueue({
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
                 {/* Header cards */}
+                <h1 className="text-lg font-semibold">Collection Queue</h1>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
                         <AlertTriangle className="size-8 shrink-0 text-red-500" />
