@@ -121,6 +121,9 @@ class RentController extends Controller
                     ->selectRaw('COALESCE(SUM(COALESCE(total, 0) - COALESCE(amount_paid, 0)), 0)')
                     ->whereColumn('lease_id', 'leases.id')
                     ->payable(),
+                'has_any_invoice' => Invoice::query()
+                    ->selectRaw('COUNT(*) > 0')
+                    ->whereColumn('lease_id', 'leases.id'),
             ]);
 
         $result = $table->paginate($query, $request, 'entries');

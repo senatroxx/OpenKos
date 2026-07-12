@@ -36,12 +36,29 @@ class RentStatsCalculator
             ->whereBetween('due_date', [$now->copy()->addDay(), $now->copy()->addDays(7)])
             ->count();
 
-        $paidLeaseIds = Invoice::query()
+        $paidByCurrentMonth = Invoice::query()
             ->whereIn('lease_id', $leaseIds)
             ->where('status', InvoiceStatus::Paid)
             ->whereBetween('period_start', [$monthStart, $monthEnd])
             ->distinct()
             ->pluck('lease_id');
+
+        // Leases with invoices but no payable ones are paid up.
+        $leaseIdsWithInvoices = Invoice::query()
+            ->whereIn('lease_id', $leaseIds)
+            ->distinct()
+            ->pluck('lease_id');
+
+        $paidUp = collect($leaseIdsWithInvoices)
+            ->diff($overdueInvoices->pluck('lease_id'))
+            ->diff(
+                Invoice::query()
+                    ->whereIn('lease_id', $leaseIds)
+                    ->payable()
+                    ->whereDate('due_date', '<=', $now->copy()->addDays(7))
+                    ->distinct()
+                    ->pluck('lease_id'),
+            );
 
         return [
             'overdue' => [
@@ -50,7 +67,7 @@ class RentStatsCalculator
             ],
             'due_today' => $dueTodayCount,
             'due_soon' => $dueSoonCount,
-            'paid' => $paidLeaseIds->count(),
+            'paid' => $paidByCurrentMonth->merge($paidUp)->unique()->count(),
         ];
     }
 
@@ -66,25 +83,34 @@ class RentStatsCalculator
             $dueDate = $lease->next_due_date ? Carbon::parse($lease->next_due_date)->startOfDay() : null;
 
             if (! $dueDate) {
-                return null;
-            }
+                // No payable invoices. If the lease has any invoices at all,
+                // it means everything is paid up — show as "paid".
+                // Only hide leases that have never been invoiced.
+                if (! ($lease->has_any_invoice ?? false)) {
+                    return null;
+                }
 
-            $now = now()->startOfDay();
-
-            if ($dueDate->lt($now)) {
-                $status = 'overdue';
-                $daysOverdue = (int) $dueDate->diffInDays($now, false);
-            } elseif ($dueDate->eq($now)) {
-                $status = 'due_today';
+                $status = 'paid';
                 $daysOverdue = null;
-            } elseif ($dueDate->lte($now->copy()->addDays(7))) {
-                $status = 'due_soon';
-                $daysOverdue = null;
+                $amount = 0;
             } else {
-                return null;
-            }
+                $now = now()->startOfDay();
 
-            $amount = (float) ($lease->next_outstanding ?? 0);
+                if ($dueDate->lt($now)) {
+                    $status = 'overdue';
+                    $daysOverdue = (int) $dueDate->diffInDays($now, false);
+                } elseif ($dueDate->eq($now)) {
+                    $status = 'due_today';
+                    $daysOverdue = null;
+                } elseif ($dueDate->lte($now->copy()->addDays(7))) {
+                    $status = 'due_soon';
+                    $daysOverdue = null;
+                } else {
+                    return null;
+                }
+
+                $amount = (float) ($lease->next_outstanding ?? 0);
+            }
         }
 
         $primaryTenant = $lease->primaryTenant;
