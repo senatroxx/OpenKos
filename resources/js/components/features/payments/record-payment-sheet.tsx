@@ -39,6 +39,7 @@ function RecordPaymentForm({
     const [fetchError, setFetchError] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
     const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     useEffect(() => {
         const controller = new AbortController();
@@ -191,7 +192,7 @@ function RecordPaymentForm({
                                 id="paid_at"
                                 name="paid_at"
                                 type="date"
-                                defaultValue={now.toISOString().split('T')[0]}
+                                defaultValue={todayStr}
                                 required
                             />
                             <InputError message={errors.paid_at} />

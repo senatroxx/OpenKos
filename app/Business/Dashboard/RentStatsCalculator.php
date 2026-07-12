@@ -6,10 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class RentStatsCalculator
 {
@@ -60,41 +57,6 @@ class RentStatsCalculator
             'due_today' => $dueTodayCount,
             'due_soon' => $dueSoonCount,
             'paid' => $paidCount,
-        ];
-    }
-
-    public function computeBillingStats(Builder $invoiceQuery, CarbonInterface $now): array
-    {
-        $overdueInvoices = (clone $invoiceQuery)
-            ->payable()
-            ->where('due_date', '<', $now->toDateString())
-            ->get();
-
-        $dueToday = (clone $invoiceQuery)
-            ->payable()
-            ->whereDate('due_date', '=', $now->toDateString())
-            ->count();
-
-        $dueSoon = (clone $invoiceQuery)
-            ->payable()
-            ->whereBetween('due_date', [
-                $now->copy()->addDay()->toDateString(),
-                $now->copy()->addDays(7)->toDateString(),
-            ])
-            ->count();
-
-        $outstandingBalance = (float) (clone $invoiceQuery)
-            ->payable()
-            ->sum(DB::raw('total - amount_paid'));
-
-        return [
-            'overdue' => [
-                'count' => $overdueInvoices->count(),
-                'amount' => (int) $overdueInvoices->sum(fn (Invoice $i) => (float) $i->total - (float) $i->amount_paid),
-            ],
-            'due_today' => $dueToday,
-            'due_soon' => $dueSoon,
-            'outstanding_balance' => (int) $outstandingBalance,
         ];
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Business\Dashboard\RentStatsCalculator;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
@@ -23,7 +22,7 @@ use Inertia\Response;
 
 class RentController extends Controller
 {
-    public function __invoke(Request $request, RentStatsCalculator $stats): Response
+    public function __invoke(Request $request): Response
     {
         $now = now();
 
@@ -109,7 +108,7 @@ class RentController extends Controller
                         });
                     });
                 }),
-                Column::make('urgency', 'Status')->sortable(),
+                Column::make('urgency', 'Status'),
                 Column::make('total', 'Amount')->sortable(),
                 Column::make('outstanding', 'Outstanding'),
                 Column::make('due_date', 'Due')->sortable(),
@@ -185,10 +184,12 @@ class RentController extends Controller
         // --- Recent Reminders ---
 
         $recentReminders = ReminderLog::with(['lease.primaryTenant', 'lease.tenants'])
-            ->whereHas('lease', fn (Builder $q) => $q->whereHas(
-                'unit',
-                fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds),
-            ))
+            ->whereHas('lease', fn (Builder $q) => $q
+                ->where('status', 'active')
+                ->whereHas(
+                    'unit',
+                    fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds),
+                ))
             ->latest('sent_at')
             ->limit(10)
             ->get()
@@ -246,9 +247,9 @@ class RentController extends Controller
         $unit = $lease->unit;
         $dueDate = $invoice->due_date;
 
-        $daysOverdue = $dueDate->isPast()
-            ? (int) $dueDate->startOfDay()->diffInDays($now->startOfDay())
-            : null;
+        $daysOverdue = $dueDate->isToday()
+            ? null
+            : ($dueDate->isPast() ? (int) $dueDate->startOfDay()->diffInDays($now->startOfDay()) : null);
 
         $urgency = match (true) {
             $daysOverdue !== null => 'overdue',
