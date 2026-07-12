@@ -1,8 +1,14 @@
 <?php
 
+use App\Enums\InvoiceStatus;
+use App\Enums\LeaseStatus;
+use App\Models\Invoice;
+use App\Models\Lease;
+use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 
@@ -175,4 +181,167 @@ test('dashboard requires dashboard.view permission', function () {
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertForbidden();
+});
+
+test('dashboard shows overdue invoice count and amount in attention', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $lease = Lease::factory()->create(['status' => LeaseStatus::Active->value, 'start_date' => now()->subMonths(2)]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'due_date' => '2026-07-03',
+        'total' => 500000,
+        'amount_paid' => 100000,
+        'status' => InvoiceStatus::Partial,
+    ]);
+
+    $lease2 = Lease::factory()->create(['status' => LeaseStatus::Active->value, 'start_date' => now()->subMonths(2)]);
+    Invoice::factory()->create([
+        'lease_id' => $lease2->id,
+        'due_date' => '2026-07-05',
+        'total' => 200000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.overdue_invoices.count', 2)
+            ->where('attention.overdue_invoices.amount', 600000)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard shows due today count in attention', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $lease = Lease::factory()->create(['status' => LeaseStatus::Active->value, 'start_date' => now()->subMonths(2)]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'due_date' => '2026-07-10',
+        'total' => 300000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.due_today', 1)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard shows open maintenance count in attention', function () {
+    $user = User::factory()->owner()->create();
+
+    $property = Property::factory()->create();
+    $unit = Unit::factory()->create(['property_id' => $property->id]);
+    MaintenanceTicket::factory()->create([
+        'property_id' => $property->id,
+        'unit_id' => $unit->id,
+        'status' => 'reported',
+    ]);
+    MaintenanceTicket::factory()->create([
+        'property_id' => $property->id,
+        'unit_id' => $unit->id,
+        'status' => 'in_progress',
+    ]);
+    MaintenanceTicket::factory()->create([
+        'property_id' => $property->id,
+        'unit_id' => $unit->id,
+        'status' => 'resolved',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.open_maintenance', 2)
+        );
+});
+
+test('dashboard shows leases ending soon count in attention', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    Lease::factory()->create([
+        'status' => LeaseStatus::Active->value,
+        'start_date' => now()->subMonths(6),
+        'end_date' => '2026-07-20',
+    ]);
+    Lease::factory()->create([
+        'status' => LeaseStatus::Active->value,
+        'start_date' => now()->subMonths(6),
+        'end_date' => '2026-08-05',
+    ]);
+    Lease::factory()->create([
+        'status' => LeaseStatus::Active->value,
+        'start_date' => now()->subMonths(6),
+        'end_date' => '2026-09-01',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.leases_ending_soon', 2)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard includes recent activity from audit log', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('recent_activity')
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard attention shows zeros when no actionable items exist', function () {
+    $user = User::factory()->owner()->create();
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.overdue_invoices.count', 0)
+            ->where('attention.overdue_invoices.amount', 0)
+            ->where('attention.due_today', 0)
+            ->where('attention.open_maintenance', 0)
+            ->where('attention.leases_ending_soon', 0)
+        );
+});
+
+test('dashboard returns properties and units for maintenance sheet', function () {
+    $user = User::factory()->owner()->create();
+
+    $property = Property::factory()->create();
+    Unit::factory()->create(['property_id' => $property->id, 'status' => 'available']);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('properties')
+            ->has('units')
+        );
 });
