@@ -1,70 +1,140 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
+import { PropertyFormSheet, TenantFormSheet, TicketFormSheet } from '@/components/features';
 import { formatRupiah } from '@/lib/formatters';
 import { dashboard } from '@/routes';
-import type { Finance, PropertyStats, Stats } from '@/types';
+import type { Finance, PropertyStats, RecentActivityEntry, Stats } from '@/types';
+
+interface Attention {
+    overdue_invoices: { count: number; amount: number };
+    due_today: number;
+    open_maintenance: number;
+    leases_ending_soon: number;
+}
+
+type MaintenanceProperty = { id: number; name: string };
+type MaintenanceUnit = {
+    id: number;
+    slug: string;
+    name: string;
+    property_id: number;
+    status: string;
+    active_lease_count: number;
+    has_maintenance_transfer?: number;
+    leases?: { tenants: { id: number; name: string }[] }[];
+};
 
 export default function Overview({
+    attention,
     finance,
     stats,
+    recent_activity,
+    properties,
+    units,
 }: {
+    attention: Attention;
     finance: Finance;
     stats: Stats;
+    recent_activity: RecentActivityEntry[];
+    properties: MaintenanceProperty[];
+    units: MaintenanceUnit[];
 }) {
+    const [tenantSheetOpen, setTenantSheetOpen] = useState(false);
+    const [propertySheetOpen, setPropertySheetOpen] = useState(false);
+    const [ticketSheetOpen, setTicketSheetOpen] = useState(false);
+
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-                <div className="grid gap-4 md:grid-cols-4">
-                    <StatCard
-                        label="Occupied Units"
-                        value={stats.occupied_units}
-                        bgColor="bg-blue-50 dark:bg-blue-950/20"
-                    />
-                    <StatCard
-                        label="Available Units"
-                        value={stats.available_units}
-                        bgColor="bg-green-50 dark:bg-green-950/20"
-                    />
-                    <StatCard
-                        label="Maintenance"
-                        value={stats.maintenance_units}
-                        bgColor="bg-amber-50 dark:bg-amber-950/20"
-                    />
-                    <StatCard
-                        label="Occupancy Rate"
-                        value={stats.occupancy_percentage}
-                        bgColor="bg-indigo-50 dark:bg-indigo-950/20"
-                        isPercentage
-                    />
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-4">
-                    <StatCard
-                        label="Revenue This Month"
-                        value={formatRupiah(finance.revenue_this_month)}
-                        bgColor="bg-emerald-50 dark:bg-emerald-950/20"
-                    />
-                    <StatCard
-                        label="Monthly Potential"
-                        value={formatRupiah(finance.monthly_potential)}
-                        bgColor="bg-violet-50 dark:bg-violet-950/20"
-                    />
-                    <StatCard
-                        label="Outstanding"
-                        value={formatRupiah(finance.outstanding)}
-                        bgColor="bg-rose-50 dark:bg-rose-950/20"
-                    />
-                    <StatCard
-                        label="Collection Rate"
-                        value={finance.collection_rate}
-                        bgColor="bg-cyan-50 dark:bg-cyan-950/20"
-                        isPercentage
-                    />
-                </div>
-
-                <div>
+                <section>
                     <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
-                        Per Property
+                        Today&apos;s Attention
+                    </h2>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <AttentionCard
+                            label="Overdue Invoices"
+                            count={attention.overdue_invoices.count}
+                            amount={attention.overdue_invoices.amount}
+                            bgColor="bg-rose-50 dark:bg-rose-950/20"
+                            textColor="text-rose-600 dark:text-rose-400"
+                        />
+                        <AttentionCard
+                            label="Due Today"
+                            count={attention.due_today}
+                            bgColor="bg-amber-50 dark:bg-amber-950/20"
+                            textColor="text-amber-600 dark:text-amber-400"
+                        />
+                        <AttentionCard
+                            label="Open Maintenance"
+                            count={attention.open_maintenance}
+                            bgColor="bg-orange-50 dark:bg-orange-950/20"
+                            textColor="text-orange-600 dark:text-orange-400"
+                        />
+                        <AttentionCard
+                            label="Leases Ending Soon"
+                            count={attention.leases_ending_soon}
+                            bgColor="bg-sky-50 dark:bg-sky-950/20"
+                            textColor="text-sky-600 dark:text-sky-400"
+                        />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
+                        Quick Access
+                    </h2>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                        <QuickAccessButton
+                            label="Add Tenant"
+                            onClick={() => setTenantSheetOpen(true)}
+                        />
+                        <QuickAccessButton
+                            label="Add Property"
+                            onClick={() => setPropertySheetOpen(true)}
+                        />
+                        <QuickAccessButton
+                            label="Report Maintenance"
+                            onClick={() => setTicketSheetOpen(true)}
+                        />
+                        <QuickAccessLink label="Assign Tenant" href="/tenants" />
+                        <QuickAccessLink label="Collect Rent" href="/dashboard/rent" />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
+                        Business Health
+                    </h2>
+                    <div className="grid gap-4 md:grid-cols-4">
+                        <StatCard
+                            label="Revenue This Month"
+                            value={formatRupiah(finance.revenue_this_month)}
+                            bgColor="bg-emerald-50 dark:bg-emerald-950/20"
+                        />
+                        <StatCard
+                            label="Monthly Potential"
+                            value={formatRupiah(finance.monthly_potential)}
+                            bgColor="bg-violet-50 dark:bg-violet-950/20"
+                        />
+                        <StatCard
+                            label="Outstanding"
+                            value={formatRupiah(finance.outstanding)}
+                            bgColor="bg-rose-50 dark:bg-rose-950/20"
+                        />
+                        <StatCard
+                            label="Collection Rate"
+                            value={finance.collection_rate}
+                            bgColor="bg-cyan-50 dark:bg-cyan-950/20"
+                            isPercentage
+                        />
+                    </div>
+                </section>
+
+                <section>
+                    <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
+                        Property Overview
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {stats.properties.map((property) => (
@@ -74,9 +144,109 @@ export default function Overview({
                             />
                         ))}
                     </div>
-                </div>
+                </section>
+
+                {recent_activity.length > 0 && (
+                    <section>
+                        <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
+                            Recent Activity
+                        </h2>
+                        <div className="rounded-xl border border-sidebar-border/70 p-4 dark:border-sidebar-border">
+                            <div className="space-y-3">
+                                {recent_activity.map((entry) => (
+                                    <div
+                                        key={entry.id}
+                                        className="flex items-center gap-3 text-sm"
+                                    >
+                                        <div className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/40" />
+                                        <span className="text-foreground">{entry.description}</span>
+                                        <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
+                                            {relativeTime(entry.created_at)}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
             </div>
+
+            <TenantFormSheet
+                open={tenantSheetOpen}
+                onOpenChange={setTenantSheetOpen}
+            />
+            <PropertyFormSheet
+                open={propertySheetOpen}
+                onOpenChange={setPropertySheetOpen}
+            />
+            <TicketFormSheet
+                open={ticketSheetOpen}
+                onOpenChange={setTicketSheetOpen}
+                properties={properties}
+                units={units}
+            />
         </>
+    );
+}
+
+function AttentionCard({
+    label,
+    count,
+    amount,
+    bgColor,
+    textColor,
+}: {
+    label: string;
+    count: number;
+    amount?: number;
+    bgColor: string;
+    textColor: string;
+}) {
+    return (
+        <div
+            className={`rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border ${bgColor}`}
+        >
+            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                {label}
+            </p>
+            <p className={`mt-2 text-3xl font-bold tabular-nums ${textColor}`}>
+                {count}
+            </p>
+            {amount !== undefined && amount > 0 && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                    {formatRupiah(amount)}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function QuickAccessButton({
+    label,
+    onClick,
+}: {
+    label: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex cursor-pointer items-center justify-center rounded-xl border border-sidebar-border/70 p-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground dark:border-sidebar-border"
+        >
+            {label}
+        </button>
+    );
+}
+
+function QuickAccessLink({ label, href }: { label: string; href: string }) {
+    return (
+        <Link
+            href={href}
+            className="flex items-center justify-center rounded-xl border border-sidebar-border/70 p-4 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground dark:border-sidebar-border"
+        >
+            {label}
+        </Link>
     );
 }
 
@@ -117,7 +287,10 @@ function StatCard({
 
 function PropertyCard({ property }: { property: PropertyStats }) {
     return (
-        <div className="rounded-xl border border-sidebar-border/70 p-5 dark:border-sidebar-border">
+        <Link
+            href={`/properties/${property.slug}`}
+            className="block rounded-xl border border-sidebar-border/70 p-5 transition-colors hover:bg-accent dark:border-sidebar-border"
+        >
             <h3 className="truncate text-sm font-semibold">{property.name}</h3>
 
             <div className="mt-4 grid grid-cols-2 gap-4">
@@ -161,8 +334,32 @@ function PropertyCard({ property }: { property: PropertyStats }) {
                     />
                 </div>
             </div>
-        </div>
+        </Link>
     );
+}
+
+function relativeTime(iso: string): string {
+    const then = new Date(iso).getTime();
+    const now = Date.now();
+    const diff = Math.floor((now - then) / 1000);
+
+    if (diff < 60) {
+        return 'just now';
+    }
+
+    if (diff < 3600) {
+        return `${Math.floor(diff / 60)}m ago`;
+    }
+
+    if (diff < 86400) {
+        return `${Math.floor(diff / 3600)}h ago`;
+    }
+
+    if (diff < 2592000) {
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
+
+    return `${Math.floor(diff / 2592000)}mo ago`;
 }
 
 Overview.layout = {

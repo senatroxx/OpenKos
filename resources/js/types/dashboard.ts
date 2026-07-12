@@ -1,6 +1,7 @@
 export type PropertyStats = {
     id: number;
     name: string;
+    slug: string;
     total_units: number;
     occupied_units: number;
     available_units: number;
@@ -93,4 +94,18 @@ export type CollectionProgress = {
     outstanding_this_month: number;
     monthly_potential: number;
     collection_rate: number;
+};
+
+export type AttentionItem = {
+    label: string;
+    count: number;
+    amount?: number;
+    href: string;
+};
+
+export type RecentActivityEntry = {
+    id: number;
+    description: string;
+    created_at: string;
+    subject_type: string | null;
 };
