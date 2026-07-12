@@ -86,7 +86,16 @@ const TABS = [
 function urgencyLabel(
     urgency: string,
     daysOverdue: number | null,
+    status: string,
 ): { text: string; color: string } {
+    if (status === 'paid') {
+return { text: 'Paid', color: 'text-green-600' };
+}
+
+    if (status === 'partial') {
+return { text: 'Partial', color: 'text-blue-600' };
+}
+
     if (urgency === 'overdue' && daysOverdue !== null) {
         const color =
             daysOverdue > 90 ? 'text-red-700' :
@@ -199,7 +208,14 @@ export default function CollectionQueue({
     const applyTab = (tab: string) => {
         router.get(
             dashboardRent().url,
-            { urgency: tab, page: '' },
+            {
+                urgency: tab,
+                page: '',
+                search: currentSearch,
+                sort: currentSort,
+                per_page: String(currentPerPage),
+                properties: currentProperties,
+            },
             { preserveState: true, replace: true },
         );
     };
@@ -248,6 +264,7 @@ export default function CollectionQueue({
                 const { text, color } = urgencyLabel(
                     entry.urgency,
                     entry.days_overdue,
+                    entry.status,
                 );
 
                 return (
@@ -584,6 +601,7 @@ export default function CollectionQueue({
             </div>
 
             <QueuePaymentSheet
+                key={paymentSheetInvoice?.id}
                 invoice={paymentSheetInvoice}
                 open={paymentSheetInvoice !== null}
                 onOpenChange={(open) => {
