@@ -266,7 +266,7 @@ export default function CollectionQueue({
         {
             key: 'outstanding',
             label: 'Outstanding',
-            className: 'tabular-nums text-muted-foreground',
+            className: 'tabular-nums text-muted-foreground hidden sm:table-cell',
             render: (entry) => formatPrice(entry.outstanding),
         },
         {
@@ -434,7 +434,7 @@ export default function CollectionQueue({
                 </div>
 
                 {/* Tab pills */}
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
                     {TABS.map((tab) => {
                         const count =
                             tab.key === ''
