@@ -273,7 +273,8 @@ export default function CollectionQueue({
             key: 'tenant_name',
             label: 'Tenant',
             className: 'font-medium',
-            render: (entry) => (
+            render: (entry) =>
+                entry.primary_tenant_id !== null ? (
                 <Link
                     href={`/tenants/${entry.primary_tenant_id}`}
                     className="hover:underline"
@@ -281,6 +282,8 @@ export default function CollectionQueue({
                 >
                     {entry.tenant_name}
                 </Link>
+            ) : (
+                <span>{entry.tenant_name}</span>
             ),
         },
         {

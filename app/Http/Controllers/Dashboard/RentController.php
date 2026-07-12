@@ -151,7 +151,8 @@ class RentController extends Controller
                         fn (Builder $q) => $q->whereIn('property_id', explode(',', $value)),
                     )),
             ])
-            ->defaultSort('due_date');
+            ->defaultSort('due_date')
+            ->withPerPage(25);
 
         $needsAttention = $table->paginate($queueQuery, $request, 'entries');
 
