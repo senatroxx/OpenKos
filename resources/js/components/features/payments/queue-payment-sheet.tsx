@@ -38,6 +38,7 @@ export default function QueuePaymentSheet({
     const [fileName, setFileName] = useState<string | null>(null);
     const formRef = useRef<HTMLFormElement>(null);
     const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -102,6 +103,7 @@ return;
                         className="space-y-6 pt-4"
                     >
                         <div className="grid gap-4">
+                            <InputError message={errors.invoice_id} />
                             <div className="grid gap-2">
                                 <Label htmlFor="amount">Amount (IDR)</Label>
                                 <Input
@@ -148,9 +150,7 @@ return;
                                         id="paid_at"
                                         name="paid_at"
                                         type="date"
-                                        defaultValue={
-                                            now.toISOString().split('T')[0]
-                                        }
+                                        defaultValue={todayStr}
                                         required
                                     />
                                     <InputError message={errors.paid_at} />
