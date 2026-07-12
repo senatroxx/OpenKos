@@ -12,7 +12,6 @@ import {
     MoreHorizontal,
     Square,
     TrendingUp,
-    User,
 } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
@@ -298,10 +297,14 @@ export default function CollectionQueue({
         {
             key: 'actions',
             label: '',
-            render: (entry) => (
+            render: (entry) => {
+                const isPaid = entry.status === 'paid';
+
+                return (
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button
                         size="sm"
+                        disabled={isPaid}
                         onClick={() => openPaymentSheet(entry)}
                     >
                         <Banknote className="mr-1 size-3" />
@@ -324,25 +327,22 @@ export default function CollectionQueue({
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                                 <Link href={`/leases/${entry.lease_id}`}>
-                                    <User className="mr-2 size-4" />
-                                    View Lease
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/leases/${entry.lease_id}`}>
                                     <Bell className="mr-2 size-4" />
-                                    Send Reminder
+                                    View Lease
                                 </Link>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-            ),
+                );
+            },
         },
     ];
 
     const onRowClick = (entry: NeedsAttentionInvoice) => {
-        openPaymentSheet(entry);
+        if (entry.status !== 'paid') {
+            openPaymentSheet(entry);
+        }
     };
 
     const progressPercent =
@@ -484,7 +484,7 @@ export default function CollectionQueue({
                     {TABS.map((tab) => {
                         const count =
                             tab.key === ''
-                                ? outstanding.count + tabCounts.paid
+                                ? data.total
                                 : tabCounts[tab.key as keyof TabCounts] ?? 0;
                         const active =
                             currentUrgency === tab.key ||
