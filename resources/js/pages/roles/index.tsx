@@ -152,11 +152,12 @@ export default function Index({
         {
             key: '_status',
             label: 'Status',
-            render: (role) =>
+            render: (role) => (
                 <StatusBadge
                     domain="role"
                     value={role.is_active ? 'active' : 'disabled'}
-                />,
+                />
+            ),
         },
         {
             key: '_actions',

@@ -164,7 +164,12 @@ export default function Index({
         {
             key: '_status',
             label: 'Status',
-            render: (p) => <StatusBadge domain="property" value={p.is_active ? 'active' : 'archived'} />,
+            render: (p) => (
+                <StatusBadge
+                    domain="property"
+                    value={p.is_active ? 'active' : 'archived'}
+                />
+            ),
         },
         {
             key: '_actions',
@@ -301,10 +306,7 @@ export default function Index({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmArchive}
-                        >
+                        <Button variant="destructive" onClick={confirmArchive}>
                             Archive
                         </Button>
                     </DialogFooter>

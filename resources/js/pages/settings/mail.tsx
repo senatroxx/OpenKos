@@ -172,9 +172,7 @@ export default function Mail({
                                         id="mail_config[from_address]"
                                         name="mail_config[from_address]"
                                         type="email"
-                                        defaultValue={
-                                            config.from_address ?? ''
-                                        }
+                                        defaultValue={config.from_address ?? ''}
                                         placeholder="noreply@openkos.app"
                                     />
                                     {errors['mail_config.from_address'] && (
@@ -192,9 +190,7 @@ export default function Mail({
                                         id="mail_config[from_name]"
                                         name="mail_config[from_name]"
                                         type="text"
-                                        defaultValue={
-                                            config.from_name ?? ''
-                                        }
+                                        defaultValue={config.from_name ?? ''}
                                         placeholder="OpenKOS"
                                     />
                                     {errors['mail_config.from_name'] && (
