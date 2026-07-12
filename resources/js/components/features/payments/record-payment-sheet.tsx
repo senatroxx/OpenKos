@@ -43,7 +43,9 @@ function RecordPaymentForm({
     useEffect(() => {
         const controller = new AbortController();
 
-        fetch(`/leases/${lease.id}/rent-schedule`, { signal: controller.signal })
+        fetch(`/leases/${lease.id}/rent-schedule`, {
+            signal: controller.signal,
+        })
             .then((r) => r.json())
             .then((d: { schedule: RentScheduleEntry[] }) => {
                 const payable = d.schedule.filter((entry) =>
@@ -94,20 +96,14 @@ function RecordPaymentForm({
     }
 
     return (
-        <form
-            ref={formRef}
-            onSubmit={handleSubmit}
-            className="space-y-6 pt-4"
-        >
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 pt-4">
             <section>
                 <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                     Invoice
                 </h3>
 
                 <div className="grid gap-2">
-                    <Label htmlFor="invoice_id">
-                        Billing Period
-                    </Label>
+                    <Label htmlFor="invoice_id">Billing Period</Label>
                     {invoices === null ? (
                         <p className="text-sm text-muted-foreground">
                             {fetchError
@@ -133,15 +129,10 @@ function RecordPaymentForm({
                                         key={entry.id}
                                         value={String(entry.id)}
                                     >
-                                        {formatPeriod(
-                                            entry.period_start,
-                                        )}
+                                        {formatPeriod(entry.period_start)}
                                         {' — '}
-                                        {formatPrice(
-                                            entry.outstanding,
-                                        )}
-                                        {entry.status ===
-                                            'partial' &&
+                                        {formatPrice(entry.outstanding)}
+                                        {entry.status === 'partial' &&
                                             ' outstanding'}
                                     </SelectItem>
                                 ))}
@@ -159,9 +150,7 @@ function RecordPaymentForm({
 
                 <div className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="amount">
-                            Amount (IDR)
-                        </Label>
+                        <Label htmlFor="amount">Amount (IDR)</Label>
                         <Input
                             id="amount"
                             name="amount"
@@ -178,45 +167,35 @@ function RecordPaymentForm({
                         <InputError message={errors.amount} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="payment_method">
-                            Payment Method
-                        </Label>
-                        <Select
-                            name="payment_method"
-                            defaultValue="cash"
-                        >
-                            <SelectTrigger id="payment_method">
-                                <SelectValue placeholder="Select method" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {PAYMENT_METHODS.map((m) => (
-                                    <SelectItem
-                                        key={m.value}
-                                        value={m.value}
-                                    >
-                                        {m.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError
-                            message={errors.payment_method}
-                        />
-                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="payment_method">Payment Method</Label>
+                            <Select name="payment_method" defaultValue="cash">
+                                <SelectTrigger id="payment_method" className="w-full">
+                                    <SelectValue placeholder="Select method" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PAYMENT_METHODS.map((m) => (
+                                        <SelectItem key={m.value} value={m.value}>
+                                            {m.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={errors.payment_method} />
+                        </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="paid_at">Paid At</Label>
-                        <Input
-                            id="paid_at"
-                            name="paid_at"
-                            type="date"
-                            defaultValue={
-                                now.toISOString().split('T')[0]
-                            }
-                            required
-                        />
-                        <InputError message={errors.paid_at} />
+                        <div className="grid gap-2">
+                            <Label htmlFor="paid_at">Paid At</Label>
+                            <Input
+                                id="paid_at"
+                                name="paid_at"
+                                type="date"
+                                defaultValue={now.toISOString().split('T')[0]}
+                                required
+                            />
+                            <InputError message={errors.paid_at} />
+                        </div>
                     </div>
 
                     <div className="grid gap-2">
@@ -231,9 +210,7 @@ function RecordPaymentForm({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="proof">
-                            Payment Proof (optional)
-                        </Label>
+                        <Label htmlFor="proof">Payment Proof (optional)</Label>
                         <Input
                             id="proof"
                             name="proof"
@@ -241,8 +218,7 @@ function RecordPaymentForm({
                             accept=".jpg,.jpeg,.png,.pdf"
                             className="file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
                             onChange={(e) => {
-                                const file =
-                                    e.target.files?.[0];
+                                const file = e.target.files?.[0];
                                 setFileName(file?.name ?? null);
                             }}
                         />
@@ -267,14 +243,10 @@ function RecordPaymentForm({
                 </Button>
                 <Button
                     disabled={
-                        processing ||
-                        invoices === null ||
-                        invoices.length === 0
+                        processing || invoices === null || invoices.length === 0
                     }
                 >
-                    {processing
-                        ? 'Recording...'
-                        : 'Record Payment'}
+                    {processing ? 'Recording...' : 'Record Payment'}
                 </Button>
             </div>
         </form>
