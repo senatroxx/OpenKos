@@ -264,6 +264,12 @@ export default function CollectionQueue({
             render: (entry) => formatPrice(entry.total),
         },
         {
+            key: 'outstanding',
+            label: 'Outstanding',
+            className: 'tabular-nums text-red-600',
+            render: (entry) => formatPrice(entry.outstanding),
+        },
+        {
             key: 'due_date',
             label: 'Due',
             sortable: true,
