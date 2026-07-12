@@ -206,19 +206,7 @@ export default function CollectionQueue({
     const columns: TableColumn<NeedsAttentionInvoice>[] = [
         {
             key: 'select',
-            label: (
-                <button
-                    type="button"
-                    onClick={toggleSelectAll}
-                    className="flex items-center"
-                >
-                    {selectedCount > 0 && selectedCount === data.data.length ? (
-                        <Check className="size-4" />
-                    ) : (
-                        <Square className="size-4" />
-                    )}
-                </button>
-            ),
+            label: '',
             render: (entry) => {
                 const checked = selectedIds.has(entry.id);
 
@@ -421,9 +409,19 @@ export default function CollectionQueue({
                             </button>
                         </>
                     ) : (
-                        <span className="text-muted-foreground">
-                            No invoices selected. Select invoices to enable bulk actions.
-                        </span>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={toggleSelectAll}
+                                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                            >
+                                <Square className="size-4" />
+                                Select all
+                            </button>
+                            <span className="text-muted-foreground">
+                                to enable bulk actions.
+                            </span>
+                        </div>
                     )}
                 </div>
 
