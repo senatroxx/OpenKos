@@ -1,6 +1,7 @@
 export type PropertyStats = {
     id: number;
     name: string;
+    slug: string;
     total_units: number;
     occupied_units: number;
     available_units: number;
