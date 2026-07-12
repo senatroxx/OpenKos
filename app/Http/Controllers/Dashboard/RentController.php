@@ -111,6 +111,7 @@ class RentController extends Controller
                 }),
                 Column::make('urgency', 'Status')->sortable(),
                 Column::make('total', 'Amount')->sortable(),
+                Column::make('outstanding', 'Outstanding'),
                 Column::make('due_date', 'Due')->sortable(),
             ])
             ->filters([
