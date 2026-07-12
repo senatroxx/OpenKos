@@ -5,7 +5,12 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { MaintenanceTicket, PaginatedData, TableMeta, WorkspaceUnit } from '@/types';
+import type {
+    MaintenanceTicket,
+    PaginatedData,
+    TableMeta,
+    WorkspaceUnit,
+} from '@/types';
 import { UnitLayout } from './layout';
 
 const priorityColors: Record<string, string> = {
@@ -49,9 +54,7 @@ const columns: TableColumn<MaintenanceTicket>[] = [
         key: 'status',
         label: 'Status',
         sortable: true,
-        render: (t) => (
-            <StatusBadge domain="maintenance" value={t.status} />
-        ),
+        render: (t) => <StatusBadge domain="maintenance" value={t.status} />,
     },
     {
         key: 'cost',

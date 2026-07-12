@@ -2,7 +2,12 @@ import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { formatDate, formatPeriod } from '@/lib/formatters';
-import type { PaginatedData, ProofRow, TableMeta, WorkspaceLease } from '@/types';
+import type {
+    PaginatedData,
+    ProofRow,
+    TableMeta,
+    WorkspaceLease,
+} from '@/types';
 import { LeaseLayout } from './layout';
 
 const columns: TableColumn<ProofRow>[] = [
