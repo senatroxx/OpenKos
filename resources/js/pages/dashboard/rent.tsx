@@ -353,30 +353,39 @@ export default function CollectionQueue({
             <Head title="Collection Queue" />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
-                {/* Header card */}
-                <div className="rounded-lg border p-5">
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
-                        <div className="sm:col-span-3">
-                            <h1 className="text-lg font-semibold">Collection Queue</h1>
-                            <p className="mt-1 text-sm">
-                                <span className="text-red-600 font-medium">{tabCounts.overdue} overdue</span>
-                                {' · '}
-                                <span className="text-amber-600">{tabCounts.due_today} due today</span>
-                                {' · '}
-                                <span className="text-muted-foreground">{tabCounts.upcoming} upcoming</span>
-                            </p>
-                        </div>
-                        <div className="sm:col-span-2 sm:text-right">
-                            <p className="text-lg font-bold tabular-nums">
-                                {formatRupiah(outstanding.amount)}
-                            </p>
-                            <p className="text-sm text-muted-foreground">outstanding</p>
-                            {lastPaymentAgo && (
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Last payment {lastPaymentAgo}
-                                </p>
-                            )}
-                        </div>
+                {/* Header cards */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-lg border px-4 py-3">
+                        <p className="text-xs text-muted-foreground">Overdue</p>
+                        <p className="text-xl font-bold tabular-nums text-red-600">
+                            {tabCounts.overdue}
+                        </p>
+                    </div>
+                    <div className="rounded-lg border px-4 py-3">
+                        <p className="text-xs text-muted-foreground">Due Today</p>
+                        <p className="text-xl font-bold tabular-nums text-amber-600">
+                            {tabCounts.due_today}
+                        </p>
+                    </div>
+                    <div className="rounded-lg border px-4 py-3">
+                        <p className="text-xs text-muted-foreground">Upcoming</p>
+                        <p className="text-xl font-bold tabular-nums text-muted-foreground">
+                            {tabCounts.upcoming}
+                        </p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border px-4 py-3">
+                        <p className="text-xs text-muted-foreground">Outstanding</p>
+                        <p className="text-xl font-bold tabular-nums">
+                            {formatRupiah(outstanding.amount)}
+                        </p>
+                    </div>
+                    <div className="rounded-lg border px-4 py-3">
+                        <p className="text-xs text-muted-foreground">Last Payment</p>
+                        <p className="text-xl font-bold tabular-nums">
+                            {lastPaymentAgo ?? '—'}
+                        </p>
                     </div>
                 </div>
 
