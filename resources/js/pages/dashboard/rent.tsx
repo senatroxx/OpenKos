@@ -254,6 +254,7 @@ export default function CollectionQueue({
                 <Link
                     href={`/leases/${entry.lease_id}`}
                     className="hover:underline"
+                    onClick={(e) => e.stopPropagation()}
                 >
                     {entry.tenant_name}
                 </Link>
