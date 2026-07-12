@@ -247,20 +247,6 @@ export default function CollectionQueue({
             },
         },
         {
-            key: 'tenant_name',
-            label: 'Tenant',
-            className: 'font-medium',
-            render: (entry) => (
-                <Link
-                    href={`/tenants/${entry.primary_tenant_id}`}
-                    className="hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {entry.tenant_name}
-                </Link>
-            ),
-        },
-        {
             key: 'lease_reference',
             label: 'Lease',
             className: 'text-xs',
@@ -282,6 +268,20 @@ export default function CollectionQueue({
                         #{entry.lease_id}
                     </Link>
                 ),
+        },
+        {
+            key: 'tenant_name',
+            label: 'Tenant',
+            className: 'font-medium',
+            render: (entry) => (
+                <Link
+                    href={`/tenants/${entry.primary_tenant_id}`}
+                    className="hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {entry.tenant_name}
+                </Link>
+            ),
         },
         {
             key: 'urgency',
