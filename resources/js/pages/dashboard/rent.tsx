@@ -1,10 +1,13 @@
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    AlertTriangle,
     ArrowUpRight,
     Banknote,
     Bell,
+    CalendarClock,
     Check,
     ChevronDown,
+    Clock,
     Download,
     MoreHorizontal,
     Square,
@@ -355,37 +358,52 @@ export default function CollectionQueue({
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
                 {/* Header cards */}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div className="rounded-lg border px-4 py-3">
-                        <p className="text-xs text-muted-foreground">Overdue</p>
-                        <p className="text-xl font-bold tabular-nums text-red-600">
-                            {tabCounts.overdue}
-                        </p>
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+                        <AlertTriangle className="size-8 shrink-0 text-red-500" />
+                        <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Overdue</p>
+                            <p className="text-xl font-bold tabular-nums">
+                                {tabCounts.overdue}
+                            </p>
+                        </div>
                     </div>
-                    <div className="rounded-lg border px-4 py-3">
-                        <p className="text-xs text-muted-foreground">Due Today</p>
-                        <p className="text-xl font-bold tabular-nums text-amber-600">
-                            {tabCounts.due_today}
-                        </p>
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+                        <CalendarClock className="size-8 shrink-0 text-amber-500" />
+                        <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Due Today</p>
+                            <p className="text-xl font-bold tabular-nums">
+                                {tabCounts.due_today}
+                            </p>
+                        </div>
                     </div>
-                    <div className="rounded-lg border px-4 py-3">
-                        <p className="text-xs text-muted-foreground">Upcoming</p>
-                        <p className="text-xl font-bold tabular-nums text-muted-foreground">
-                            {tabCounts.upcoming}
-                        </p>
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+                        <Bell className="size-8 shrink-0 text-blue-500" />
+                        <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Upcoming</p>
+                            <p className="text-xl font-bold tabular-nums">
+                                {tabCounts.upcoming}
+                            </p>
+                        </div>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border px-4 py-3">
-                        <p className="text-xs text-muted-foreground">Outstanding</p>
-                        <p className="text-xl font-bold tabular-nums">
-                            {formatRupiah(outstanding.amount)}
-                        </p>
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+                        <Banknote className="size-8 shrink-0 text-green-600" />
+                        <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Outstanding</p>
+                            <p className="truncate text-xl font-bold tabular-nums">
+                                {formatRupiah(outstanding.amount)}
+                            </p>
+                        </div>
                     </div>
-                    <div className="rounded-lg border px-4 py-3">
-                        <p className="text-xs text-muted-foreground">Last Payment</p>
-                        <p className="text-xl font-bold tabular-nums">
-                            {lastPaymentAgo ?? '—'}
-                        </p>
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+                        <Clock className="size-8 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Last Payment</p>
+                            <p className="text-xl font-bold tabular-nums">
+                                {lastPaymentAgo ?? '—'}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
