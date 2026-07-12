@@ -31,7 +31,6 @@ import {
 import { useTable } from '@/hooks/use-table';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPrice, formatRupiah } from '@/lib/formatters';
-import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
 import type {
     NeedsAttentionInvoice,
@@ -600,8 +599,8 @@ setPaymentSheetInvoice(null);
 CollectionQueue.layout = {
     breadcrumbs: [
         {
-            title: 'Dashboard',
-            href: dashboard(),
+            title: 'Billing',
+            href: dashboardRent(),
         },
         {
             title: 'Collection',
