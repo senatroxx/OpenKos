@@ -379,22 +379,47 @@ export default function Index({
                         </DialogTitle>
                         <DialogDescription>
                             {confirmState?.action === 'disable' && (
-                                <>Disable access for <span className="font-medium">{confirmState.user.name}</span>?</>
+                                <>
+                                    Disable access for{' '}
+                                    <span className="font-medium">
+                                        {confirmState.user.name}
+                                    </span>
+                                    ?
+                                </>
                             )}
                             {confirmState?.action === 'reset' && (
-                                <>Send password reset to <span className="font-medium">{confirmState.user.email}</span>?</>
+                                <>
+                                    Send password reset to{' '}
+                                    <span className="font-medium">
+                                        {confirmState.user.email}
+                                    </span>
+                                    ?
+                                </>
                             )}
                             {confirmState?.action === 'resend' && (
-                                <>Resend invitation to <span className="font-medium">{confirmState.user.email}</span>?</>
+                                <>
+                                    Resend invitation to{' '}
+                                    <span className="font-medium">
+                                        {confirmState.user.email}
+                                    </span>
+                                    ?
+                                </>
                             )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setConfirmState(null)}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setConfirmState(null)}
+                        >
                             Cancel
                         </Button>
                         <Button
-                            variant={confirmState?.action === 'disable' ? 'destructive' : 'default'}
+                            variant={
+                                confirmState?.action === 'disable'
+                                    ? 'destructive'
+                                    : 'default'
+                            }
                             onClick={executeConfirmed}
                         >
                             {confirmState?.action === 'disable'

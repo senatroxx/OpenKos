@@ -86,7 +86,11 @@ export default function PropertyDetailSheet({
                                 <span>Status:</span>
                                 <StatusBadge
                                     domain="property"
-                                    value={property.is_active ? 'active' : 'archived'}
+                                    value={
+                                        property.is_active
+                                            ? 'active'
+                                            : 'archived'
+                                    }
                                 />
                                 {property.type && (
                                     <Badge variant="outline">
@@ -199,10 +203,7 @@ export default function PropertyDetailSheet({
                 )}
             </SheetContent>
 
-            <Dialog
-                open={archiveConfirm}
-                onOpenChange={setArchiveConfirm}
-            >
+            <Dialog open={archiveConfirm} onOpenChange={setArchiveConfirm}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Archive property</DialogTitle>
@@ -221,10 +222,7 @@ export default function PropertyDetailSheet({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmArchive}
-                        >
+                        <Button variant="destructive" onClick={confirmArchive}>
                             Archive
                         </Button>
                     </DialogFooter>
