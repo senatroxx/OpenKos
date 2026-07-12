@@ -353,28 +353,30 @@ export default function CollectionQueue({
             <Head title="Collection Queue" />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
-                {/* Header */}
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-xl font-semibold">Collection Queue</h1>
-
-                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
-                        <span className="text-red-600">
-                            {tabCounts.overdue} overdue
-                        </span>
-                        <span className="text-amber-600">
-                            {tabCounts.due_today} due today
-                        </span>
-                        <span className="text-muted-foreground">
-                            {tabCounts.upcoming} upcoming
-                        </span>
-                        <span className="tabular-nums font-medium">
-                            {formatRupiah(outstanding.amount)} outstanding
-                        </span>
-                        {lastPaymentAgo && (
-                            <span className="text-muted-foreground">
-                                Last payment {lastPaymentAgo}
-                            </span>
-                        )}
+                {/* Header card */}
+                <div className="rounded-lg border p-5">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+                        <div className="sm:col-span-3">
+                            <h1 className="text-lg font-semibold">Collection Queue</h1>
+                            <p className="mt-1 text-sm">
+                                <span className="text-red-600 font-medium">{tabCounts.overdue} overdue</span>
+                                {' · '}
+                                <span className="text-amber-600">{tabCounts.due_today} due today</span>
+                                {' · '}
+                                <span className="text-muted-foreground">{tabCounts.upcoming} upcoming</span>
+                            </p>
+                        </div>
+                        <div className="sm:col-span-2 sm:text-right">
+                            <p className="text-lg font-bold tabular-nums">
+                                {formatRupiah(outstanding.amount)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">outstanding</p>
+                            {lastPaymentAgo && (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    Last payment {lastPaymentAgo}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
 
