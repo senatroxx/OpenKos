@@ -180,7 +180,7 @@ class OverviewController extends Controller
 
     private function describeAudit(AuditLog $log): string
     {
-        $model = class_basename($log->auditable_type);
+        $model = $log->auditable_type ? class_basename($log->auditable_type) : null;
         $op = match ($log->operation) {
             'create' => 'created',
             'update' => 'updated',

@@ -197,9 +197,9 @@ test('dashboard shows overdue invoice count and amount in attention', function (
         'status' => InvoiceStatus::Partial,
     ]);
 
-    Lease::factory()->create(['status' => LeaseStatus::Active->value, 'start_date' => now()->subMonths(2)]);
+    $lease2 = Lease::factory()->create(['status' => LeaseStatus::Active->value, 'start_date' => now()->subMonths(2)]);
     Invoice::factory()->create([
-        'lease_id' => $lease->id,
+        'lease_id' => $lease2->id,
         'due_date' => '2026-07-05',
         'total' => 200000,
         'amount_paid' => 0,
