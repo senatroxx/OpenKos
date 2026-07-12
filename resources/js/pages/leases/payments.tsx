@@ -18,7 +18,8 @@ const columns: TableColumn<Payment>[] = [
         key: 'period_start',
         label: 'Period',
         className: 'font-medium',
-        render: (p) => (p.invoice ? formatPeriod(p.invoice.period_start, 'id-ID') : '—'),
+        render: (p) =>
+            p.invoice ? formatPeriod(p.invoice.period_start, 'id-ID') : '—',
     },
     {
         key: 'payment_date',
@@ -53,7 +54,16 @@ const columns: TableColumn<Payment>[] = [
         key: 'status',
         label: 'Status',
         sortable: true,
-        render: (p) => <StatusBadge domain="payment" value={p.verified_at && p.status === 'confirmed' ? 'verified' : p.status} />,
+        render: (p) => (
+            <StatusBadge
+                domain="payment"
+                value={
+                    p.verified_at && p.status === 'confirmed'
+                        ? 'verified'
+                        : p.status
+                }
+            />
+        ),
     },
     {
         key: '_proofs',

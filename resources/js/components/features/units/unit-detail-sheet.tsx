@@ -81,7 +81,10 @@ export default function UnitDetailSheet({
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                                     Status
                                 </h3>
-                                <StatusBadge domain="unit" value={unit.status} />
+                                <StatusBadge
+                                    domain="unit"
+                                    value={unit.status}
+                                />
                             </section>
 
                             {/* Unit Details */}

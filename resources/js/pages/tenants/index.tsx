@@ -40,7 +40,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import tenants from '@/routes/tenants';
-import type { AvailableUnit, Lease, PaginatedData, TableMeta, WorkspaceTenant } from '@/types';
+import type {
+    AvailableUnit,
+    Lease,
+    PaginatedData,
+    TableMeta,
+    WorkspaceTenant,
+} from '@/types';
 
 type PageProps = {
     tenants: PaginatedData<WorkspaceTenant>;
@@ -62,21 +68,31 @@ export default function Index({
     table: tableMeta,
 }: PageProps) {
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editingTenant, setEditingTenant] = useState<WorkspaceTenant | null>(null);
+    const [editingTenant, setEditingTenant] = useState<WorkspaceTenant | null>(
+        null,
+    );
 
     const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingTenant, setViewingTenant] = useState<WorkspaceTenant | null>(null);
+    const [viewingTenant, setViewingTenant] = useState<WorkspaceTenant | null>(
+        null,
+    );
 
     const [assignUnitOpen, setAssignUnitOpen] = useState(false);
-    const [assignTenant, setAssignTenant] = useState<WorkspaceTenant | null>(null);
+    const [assignTenant, setAssignTenant] = useState<WorkspaceTenant | null>(
+        null,
+    );
 
     const [moveOutOpen, setMoveOutOpen] = useState(false);
-    const [moveOutTenant, setMoveOutTenant] = useState<WorkspaceTenant | null>(null);
+    const [moveOutTenant, setMoveOutTenant] = useState<WorkspaceTenant | null>(
+        null,
+    );
 
     const [documentsOpen, setDocumentsOpen] = useState(false);
-    const [documentsTenant, setDocumentsTenant] = useState<WorkspaceTenant | null>(null);
+    const [documentsTenant, setDocumentsTenant] =
+        useState<WorkspaceTenant | null>(null);
 
-    const [archiveConfirm, setArchiveConfirm] = useState<WorkspaceTenant | null>(null);
+    const [archiveConfirm, setArchiveConfirm] =
+        useState<WorkspaceTenant | null>(null);
 
     const table = useTable({
         routeFn: () => tenants.index(),
@@ -191,7 +207,11 @@ export default function Index({
             key: '_status',
             label: 'Status',
             render: (t) => {
-                const status = t.deleted_at ? 'archived' : t.is_active ? 'active' : 'inactive';
+                const status = t.deleted_at
+                    ? 'archived'
+                    : t.is_active
+                      ? 'active'
+                      : 'inactive';
 
                 return <StatusBadge domain="tenant" value={status} />;
             },
@@ -344,7 +364,12 @@ export default function Index({
                 lease={
                     moveOutTenant
                         ? {
-                              id: (moveOutTenant as WorkspaceTenant & { leases?: Lease[] }).leases?.[0]?.id ?? 0,
+                              id:
+                                  (
+                                      moveOutTenant as WorkspaceTenant & {
+                                          leases?: Lease[];
+                                      }
+                                  ).leases?.[0]?.id ?? 0,
                               tenants: [
                                   {
                                       id: moveOutTenant.id,
@@ -358,7 +383,12 @@ export default function Index({
                                   name: moveOutTenant.name,
                                   phone: moveOutTenant.phone,
                               },
-                              unit: (moveOutTenant as WorkspaceTenant & { leases?: Lease[] }).leases?.[0]?.unit ?? null,
+                              unit:
+                                  (
+                                      moveOutTenant as WorkspaceTenant & {
+                                          leases?: Lease[];
+                                      }
+                                  ).leases?.[0]?.unit ?? null,
                           }
                         : null
                 }
@@ -389,10 +419,7 @@ export default function Index({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={confirmArchive}
-                        >
+                        <Button variant="destructive" onClick={confirmArchive}>
                             Archive
                         </Button>
                     </DialogFooter>

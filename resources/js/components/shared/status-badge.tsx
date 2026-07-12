@@ -10,14 +10,23 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     unit: {
         available: { label: 'Available', className: 'bg-green-600 text-white' },
         occupied: { label: 'Occupied', className: 'bg-blue-600 text-white' },
-        maintenance: { label: 'Maintenance', className: 'bg-amber-500 text-white' },
-        unavailable: { label: 'Unavailable', className: 'bg-gray-400 text-white' },
+        maintenance: {
+            label: 'Maintenance',
+            className: 'bg-amber-500 text-white',
+        },
+        unavailable: {
+            label: 'Unavailable',
+            className: 'bg-gray-400 text-white',
+        },
         archived: { label: 'Archived', variant: 'secondary' },
     },
     lease: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },
         expired: { label: 'Expired', className: 'bg-gray-500 text-white' },
-        terminated: { label: 'Terminated', className: 'bg-gray-400 text-white' },
+        terminated: {
+            label: 'Terminated',
+            className: 'bg-gray-400 text-white',
+        },
         renewed: { label: 'Renewed', className: 'bg-blue-600 text-white' },
     },
     rent: {
@@ -28,7 +37,10 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         due_today: { label: 'Due Today', className: 'bg-amber-600 text-white' },
         due_soon: { label: 'Due Soon', className: 'bg-blue-600 text-white' },
         upcoming: { label: 'Upcoming', className: 'bg-gray-400 text-white' },
-        cancelled: { label: 'Cancelled', className: 'bg-gray-300 text-gray-700' },
+        cancelled: {
+            label: 'Cancelled',
+            className: 'bg-gray-300 text-gray-700',
+        },
     },
     payment: {
         confirmed: { label: 'Confirmed', className: 'bg-green-600 text-white' },
@@ -38,9 +50,18 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     },
     maintenance: {
         reported: { label: 'Reported', className: 'bg-blue-100 text-blue-700' },
-        in_progress: { label: 'In Progress', className: 'bg-purple-100 text-purple-700' },
-        resolved: { label: 'Resolved', className: 'bg-green-100 text-green-700' },
-        cancelled: { label: 'Cancelled', className: 'bg-gray-100 text-gray-500' },
+        in_progress: {
+            label: 'In Progress',
+            className: 'bg-purple-100 text-purple-700',
+        },
+        resolved: {
+            label: 'Resolved',
+            className: 'bg-green-100 text-green-700',
+        },
+        cancelled: {
+            label: 'Cancelled',
+            className: 'bg-gray-100 text-gray-500',
+        },
     },
     user: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },
@@ -85,7 +106,11 @@ export function StatusBadge({
     }
 
     if (config.variant) {
-        return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
+        return (
+            <Badge variant={config.variant} className={config.className}>
+                {config.label}
+            </Badge>
+        );
     }
 
     return <Badge className={config.className}>{config.label}</Badge>;

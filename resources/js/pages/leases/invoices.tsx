@@ -4,7 +4,12 @@ import { PluginRegion } from '@/components/shared/plugin-region';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
-import type { Invoice, PaginatedData, TableMeta, WorkspaceLease } from '@/types';
+import type {
+    Invoice,
+    PaginatedData,
+    TableMeta,
+    WorkspaceLease,
+} from '@/types';
 import { LeaseLayout } from './layout';
 
 const columns: TableColumn<Invoice>[] = [
@@ -90,7 +95,9 @@ export default function LeaseInvoices({
                     defaultSort="-period_start"
                     searchPlaceholder="Search by reference..."
                     emptyMessage="No invoices generated yet."
-                    onRowClick={(invoice) => router.get(`/leases/${lease.id}/invoices/${invoice.id}`)}
+                    onRowClick={(invoice) =>
+                        router.get(`/leases/${lease.id}/invoices/${invoice.id}`)
+                    }
                 />
             </PluginRegion>
         </LeaseLayout>

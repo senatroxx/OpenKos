@@ -4,7 +4,12 @@ import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Badge } from '@/components/ui/badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { LeaseInfo, PaginatedData, TableMeta, WorkspaceUnit } from '@/types';
+import type {
+    LeaseInfo,
+    PaginatedData,
+    TableMeta,
+    WorkspaceUnit,
+} from '@/types';
 import { UnitLayout } from './layout';
 
 const columns: TableColumn<LeaseInfo>[] = [
