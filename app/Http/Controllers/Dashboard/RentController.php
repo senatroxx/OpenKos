@@ -75,6 +75,7 @@ class RentController extends Controller
 
         $lastPayment = Payment::where('status', PaymentStatus::Confirmed->value)
             ->whereHas('invoice', fn (Builder $q) => $q
+                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
                 ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
             ->latest('payment_date')
             ->first();
