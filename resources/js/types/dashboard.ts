@@ -94,3 +94,17 @@ export type CollectionProgress = {
     monthly_potential: number;
     collection_rate: number;
 };
+
+export type AttentionItem = {
+    label: string;
+    count: number;
+    amount?: number;
+    href: string;
+};
+
+export type RecentActivityEntry = {
+    id: number;
+    description: string;
+    created_at: string;
+    subject_type: string | null;
+};
