@@ -4,10 +4,20 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Business\Dashboard\OverviewStatsCalculator;
 use App\Enums\LeaseStatus;
+use App\Enums\MaintenanceStatus;
 use App\Enums\UnitStatus;
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Models\Invoice;
 use App\Models\Lease;
+use App\Models\LeaseUnitHistory;
+use App\Models\MaintenanceTicket;
 use App\Models\Property;
+use App\Models\PropertyType;
+use App\Models\Region;
+use App\Models\Setting;
+use App\Models\Unit;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -54,9 +64,84 @@ class OverviewController extends Controller
         $activeLeases = Lease::where('status', LeaseStatus::Active->value)
             ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
 
+        $invoiceScope = Invoice::whereHas('lease', fn (Builder $q) => $q
+            ->where('status', LeaseStatus::Active->value)
+            ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties)));
+
+        $overdueInvoices = (clone $invoiceScope)
+            ->payable()
+            ->whereDate('due_date', '<', now())
+            ->selectRaw('COUNT(*) as count, COALESCE(SUM(total - amount_paid), 0) as amount')
+            ->first();
+
+        $dueTodayInvoices = (clone $invoiceScope)
+            ->payable()
+            ->whereDate('due_date', now())
+            ->count();
+
+        $openMaintenance = MaintenanceTicket::whereIn('property_id', $accessibleProperties)
+            ->whereIn('status', [MaintenanceStatus::Reported->value, MaintenanceStatus::InProgress->value])
+            ->count();
+
+        $leasesEndingSoon = (clone $activeLeases)
+            ->whereDate('end_date', '<=', Carbon::today()->addDays(30))
+            ->whereDate('end_date', '>', Carbon::today())
+            ->count();
+
+        $attention = [
+            'overdue_invoices' => [
+                'count' => (int) ($overdueInvoices->count ?? 0),
+                'amount' => (int) ($overdueInvoices->amount ?? 0),
+            ],
+            'due_today' => $dueTodayInvoices,
+            'open_maintenance' => $openMaintenance,
+            'leases_ending_soon' => $leasesEndingSoon,
+        ];
+
+        $recentActivity = AuditLog::with('auditable')
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'description' => $this->describeAudit($log),
+                'created_at' => $log->created_at->toISOString(),
+                'subject_type' => $log->auditable_type,
+            ])
+            ->values()
+            ->toArray();
+
+        $ticketFormUnits = Unit::query()
+            ->select(['id', 'slug', 'name', 'property_id', 'status'])
+            ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)])
+            ->with(['leases' => fn ($q) => $q->where('status', LeaseStatus::Active->value)->with('tenants:id,name')])
+            ->addSelect([
+                'has_maintenance_transfer' => LeaseUnitHistory::query()
+                    ->selectRaw('1')
+                    ->whereColumn('from_unit_id', 'units.id')
+                    ->where('reason', 'maintenance')
+                    ->limit(1),
+            ])
+            ->whereIn('property_id', $accessibleProperties)
+            ->orderBy('name')
+            ->get();
+
+        $ticketFormProperties = Property::query()
+            ->whereIn('id', $accessibleProperties)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $countryCode = Setting::get('country_code', 'ID');
+        $regions = Region::where('country_code', $countryCode)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $propertyTypes = PropertyType::active()->ordered()->get(['slug', 'label']);
+
         $financeResult = $finance->computeFinance($activeLeases);
 
         return Inertia::render('dashboard/overview', [
+            'attention' => $attention,
             'finance' => $financeResult,
             'stats' => [
                 'total_units' => $totalUnits,
@@ -80,6 +165,28 @@ class OverviewController extends Controller
                         : 0,
                 ])->values()->toArray(),
             ],
+            'recent_activity' => $recentActivity,
+            'properties' => $ticketFormProperties,
+            'units' => $ticketFormUnits,
+            'regions' => $regions,
+            'propertyTypes' => $propertyTypes,
         ]);
+    }
+
+    private function describeAudit(AuditLog $log): string
+    {
+        $model = class_basename($log->auditable_type);
+        $op = match ($log->operation) {
+            'created' => 'created',
+            'updated' => 'updated',
+            'deleted' => 'deleted',
+            default => $log->operation,
+        };
+
+        if ($model) {
+            return ucfirst($model).' '.$op;
+        }
+
+        return ucfirst($log->operation);
     }
 }
