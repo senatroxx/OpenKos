@@ -266,7 +266,7 @@ export default function CollectionQueue({
         {
             key: 'outstanding',
             label: 'Outstanding',
-            className: 'tabular-nums text-red-600',
+            className: 'tabular-nums text-muted-foreground',
             render: (entry) => formatPrice(entry.outstanding),
         },
         {
