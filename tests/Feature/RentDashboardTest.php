@@ -22,13 +22,21 @@ function createLeaseWithPayment(array $leaseOverrides = [], ?array $paymentData 
         'rent_due_day' => 5,
     ], $leaseOverrides));
 
+    $dueDay = min($lease->rent_due_day, now()->daysInMonth);
+    $dueDate = now()->startOfMonth()->setDay($dueDay);
+
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'period_start' => now()->startOfMonth(),
+        'period_end' => now()->endOfMonth(),
+        'due_date' => $dueDate,
+        'total' => 100000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
     if ($paymentData !== null) {
-        Invoice::factory()->create([
-            'lease_id' => $lease->id,
-            'period_start' => now()->startOfMonth(),
-            'period_end' => now()->endOfMonth(),
-            'due_date' => now()->startOfMonth()->addDays(4),
-            'total' => 100000,
+        $invoice->update([
             'amount_paid' => 100000,
             'status' => InvoiceStatus::Paid,
         ]);
@@ -108,16 +116,19 @@ test('rent dashboard shows due today correctly', function () {
 });
 
 test('rent dashboard shows due soon correctly', function () {
-    $today = now()->day;
-    Carbon::setTestNow(now()->setDay($today));
+    // Use a fixed date so we control due-day math precisely
+    Carbon::setTestNow(Carbon::parse('2026-07-05'));
 
     $user = User::factory()->owner()->create();
 
-    createLeaseWithPayment(['rent_due_day' => $today + 3]);
-    createLeaseWithPayment(['rent_due_day' => $today + 5]);
-    createLeaseWithPayment(['rent_due_day' => $today + 14]);
+    // due_day = 8 → due_date = July 8 → 3 days ahead → due_soon
+    createLeaseWithPayment(['rent_due_day' => 8]);
+    // due_day = 10 → due_date = July 10 → 5 days ahead → due_soon
+    createLeaseWithPayment(['rent_due_day' => 10]);
+    // due_day = 19 → due_date = July 19 → 14 days ahead → excluded
+    createLeaseWithPayment(['rent_due_day' => 19]);
     createLeaseWithPayment(
-        ['rent_due_day' => $today + 3],
+        ['rent_due_day' => 8],
         ['status' => 'confirmed'],
     );
 
@@ -164,17 +175,33 @@ test('rent dashboard search filters by tenant name', function () {
     $user = User::factory()->owner()->create();
 
     $tenantA = Tenant::factory()->create(['name' => 'Budi Santoso']);
-    Lease::factory()->create([
+    $leaseA = Lease::factory()->create([
         'primary_tenant_id' => $tenantA->id,
         'start_date' => now()->subMonths(2),
         'rent_due_day' => 5,
     ]);
+    Invoice::factory()->create([
+        'lease_id' => $leaseA->id,
+        'period_start' => now()->startOfMonth(),
+        'period_end' => now()->endOfMonth(),
+        'due_date' => now()->startOfMonth()->setDay(5),
+        'total' => 100000,
+        'status' => InvoiceStatus::Pending,
+    ]);
 
     $tenantB = Tenant::factory()->create(['name' => 'Siti Rahma']);
-    Lease::factory()->create([
+    $leaseB = Lease::factory()->create([
         'primary_tenant_id' => $tenantB->id,
         'start_date' => now()->subMonths(2),
         'rent_due_day' => 3,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $leaseB->id,
+        'period_start' => now()->startOfMonth(),
+        'period_end' => now()->endOfMonth(),
+        'due_date' => now()->startOfMonth()->setDay(3),
+        'total' => 100000,
+        'status' => InvoiceStatus::Pending,
     ]);
 
     $this->actingAs($user)
@@ -201,7 +228,7 @@ test('rent dashboard requires dashboard.view permission', function () {
 });
 
 test('rent dashboard shows days overdue correctly', function () {
-    Carbon::setTestNow(now()->setDay(15));
+    Carbon::setTestNow(Carbon::parse('2026-07-15'));
 
     $user = User::factory()->owner()->create();
 
@@ -225,20 +252,36 @@ test('rent dashboard scopes to user properties for non-owner', function () {
 
     $propertyA = Property::factory()->create();
     $tenantA = Tenant::factory()->create();
-    Lease::factory()->create([
+    $leaseA = Lease::factory()->create([
         'unit_id' => Unit::factory()->create(['property_id' => $propertyA->id])->id,
         'primary_tenant_id' => $tenantA->id,
         'start_date' => now()->subMonths(2),
         'rent_due_day' => 5,
     ]);
+    Invoice::factory()->create([
+        'lease_id' => $leaseA->id,
+        'period_start' => now()->startOfMonth(),
+        'period_end' => now()->endOfMonth(),
+        'due_date' => now()->startOfMonth()->setDay(5),
+        'total' => 100000,
+        'status' => InvoiceStatus::Pending,
+    ]);
 
     $propertyB = Property::factory()->create();
     $tenantB = Tenant::factory()->create();
-    Lease::factory()->create([
+    $leaseB = Lease::factory()->create([
         'unit_id' => Unit::factory()->create(['property_id' => $propertyB->id])->id,
         'primary_tenant_id' => $tenantB->id,
         'start_date' => now()->subMonths(2),
         'rent_due_day' => 3,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $leaseB->id,
+        'period_start' => now()->startOfMonth(),
+        'period_end' => now()->endOfMonth(),
+        'due_date' => now()->startOfMonth()->setDay(3),
+        'total' => 100000,
+        'status' => InvoiceStatus::Pending,
     ]);
 
     $propertyA->users()->attach($user->id);

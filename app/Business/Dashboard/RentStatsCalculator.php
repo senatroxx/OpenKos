@@ -10,79 +10,81 @@ use Illuminate\Support\Collection;
 
 class RentStatsCalculator
 {
-    public function computeStats(Collection $leases, int $today, int $currentMonth, int $currentYear): array
+    public function computeStats(Collection $leases, int $currentMonth, int $currentYear): array
     {
         $leaseIds = $leases->pluck('id')->all();
 
-        $paidLeaseIds = Invoice::query()
-            ->where('status', InvoiceStatus::Paid->value)
-            ->whereBetween('period_start', [
-                Carbon::create($currentYear, $currentMonth, 1)->startOfDay(),
-                Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay(),
-            ])
+        $now = now()->startOfDay();
+        $monthStart = Carbon::create($currentYear, $currentMonth, 1)->startOfDay();
+        $monthEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay();
+
+        $overdueInvoices = Invoice::query()
             ->whereIn('lease_id', $leaseIds)
+            ->payable()
+            ->where('due_date', '<', $now)
+            ->get();
+
+        $dueTodayCount = Invoice::query()
+            ->whereIn('lease_id', $leaseIds)
+            ->payable()
+            ->whereDate('due_date', '=', $now)
+            ->count();
+
+        $dueSoonCount = Invoice::query()
+            ->whereIn('lease_id', $leaseIds)
+            ->payable()
+            ->whereBetween('due_date', [$now->copy()->addDay(), $now->copy()->addDays(7)])
+            ->count();
+
+        $paidLeaseIds = Invoice::query()
+            ->whereIn('lease_id', $leaseIds)
+            ->where('status', InvoiceStatus::Paid)
+            ->whereBetween('period_start', [$monthStart, $monthEnd])
             ->distinct()
-            ->pluck('lease_id')
-            ->toArray();
-
-        $paidSet = array_flip($paidLeaseIds);
-
-        $overdueCount = 0;
-        $overdueAmount = 0.0;
-        $dueTodayCount = 0;
-        $dueSoonCount = 0;
-        $paidCount = 0;
-
-        foreach ($leases as $lease) {
-            if (isset($paidSet[$lease->id])) {
-                $paidCount++;
-
-                continue;
-            }
-
-            $dueDay = $lease->rent_due_day;
-
-            if ($dueDay < $today) {
-                $overdueCount++;
-                $overdueAmount += (float) $lease->rent_amount;
-            } elseif ($dueDay === $today) {
-                $dueTodayCount++;
-            } elseif ($dueDay <= $today + 7) {
-                $dueSoonCount++;
-            }
-        }
+            ->pluck('lease_id');
 
         return [
-            'overdue' => ['count' => $overdueCount, 'amount' => $overdueAmount],
+            'overdue' => [
+                'count' => $overdueInvoices->count(),
+                'amount' => $overdueInvoices->sum(fn (Invoice $inv) => (float) $inv->total - (float) $inv->amount_paid),
+            ],
             'due_today' => $dueTodayCount,
             'due_soon' => $dueSoonCount,
-            'paid' => $paidCount,
+            'paid' => $paidLeaseIds->count(),
         ];
     }
 
-    public function transformEntry(Lease $lease, int $today): ?array
+    public function transformEntry(Lease $lease): ?array
     {
         $hasPayment = $lease->has_payment_this_month ?? false;
 
         if ($hasPayment) {
             $status = 'paid';
             $daysOverdue = null;
+            $amount = 0;
         } else {
-            $dueDay = $lease->rent_due_day;
+            $dueDate = $lease->next_due_date ? Carbon::parse($lease->next_due_date)->startOfDay() : null;
 
-            if ($dueDay < $today) {
+            if (! $dueDate) {
+                return null;
+            }
+
+            $now = now()->startOfDay();
+
+            if ($dueDate->lt($now)) {
                 $status = 'overdue';
-                $dueDateThisMonth = now()->setDay(min($dueDay, now()->daysInMonth));
-                $daysOverdue = (int) $dueDateThisMonth->diffInDays(now(), false);
-            } elseif ($dueDay === $today) {
+                $daysOverdue = (int) $dueDate->diffInDays($now, false);
+            } elseif ($dueDate->eq($now)) {
                 $status = 'due_today';
                 $daysOverdue = null;
-            } elseif ($dueDay <= $today + 7) {
+            } elseif ($dueDate->lte($now->copy()->addDays(7))) {
                 $status = 'due_soon';
                 $daysOverdue = null;
             } else {
                 return null;
             }
+
+            $amount = (float) ($lease->next_outstanding ?? 0);
         }
 
         $primaryTenant = $lease->primaryTenant;
@@ -96,7 +98,7 @@ class RentStatsCalculator
             'property_name' => $unit?->property?->name ?? '—',
             'rent_due_day' => $lease->rent_due_day,
             'days_overdue' => $daysOverdue,
-            'rent_amount' => (string) $lease->rent_amount,
+            'rent_amount' => (string) $amount,
             'rent_status' => $status,
         ];
     }
