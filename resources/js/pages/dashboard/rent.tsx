@@ -44,6 +44,7 @@ type TabCounts = {
     overdue: number;
     due_today: number;
     upcoming: number;
+    partial: number;
     paid: number;
 };
 
@@ -79,6 +80,7 @@ const TABS = [
     { key: 'overdue', label: 'Overdue' },
     { key: 'due_today', label: 'Due Today' },
     { key: 'upcoming', label: 'Upcoming' },
+    { key: 'partial', label: 'Partial' },
     { key: 'paid', label: 'Paid' },
 ] as const;
 
@@ -487,11 +489,13 @@ export default function CollectionQueue({
                         message:
                             currentUrgency === 'paid'
                                 ? 'No paid invoices this period.'
-                                : currentUrgency === 'upcoming'
-                                  ? 'No upcoming invoices.'
-                                  : 'All caught up. Nothing needs attention.',
-                        createLabel: 'View Paid',
-                        onCreate: () => applyTab('paid'),
+                                : currentUrgency === 'partial'
+                                  ? 'No partially paid invoices.'
+                                  : currentUrgency === 'upcoming'
+                                    ? 'No upcoming invoices.'
+                                    : 'All caught up. Nothing needs attention.',
+                        createLabel: currentUrgency === '' ? 'View Paid' : undefined,
+                        onCreate: currentUrgency === '' ? () => applyTab('paid') : undefined,
                     }}
                 />
 

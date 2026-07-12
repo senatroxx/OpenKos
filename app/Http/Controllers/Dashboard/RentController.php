@@ -42,6 +42,11 @@ class RentController extends Controller
             'overdue' => $this->countPayable($accessiblePropertyIds, $now, '<'),
             'due_today' => $this->countPayable($accessiblePropertyIds, $now, '='),
             'upcoming' => $this->countPayable($accessiblePropertyIds, $now, '>'),
+            'partial' => Invoice::query()
+                ->where('status', InvoiceStatus::Partial->value)
+                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
+                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
+                ->count(),
             'paid' => Invoice::query()
                 ->where('status', InvoiceStatus::Paid->value)
                 ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
@@ -78,14 +83,17 @@ class RentController extends Controller
         // --- Queue table ---
 
         $isPaidTab = $urgency === 'paid';
+        $isPartialTab = $urgency === 'partial';
 
         $queueQuery = Invoice::query()
             ->with(['lease.primaryTenant', 'lease.tenants', 'lease.unit.property'])
             ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
             ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
 
-        if (! $isPaidTab) {
+        if (! $isPaidTab && ! $isPartialTab) {
             $queueQuery->payable();
+        } elseif ($isPartialTab) {
+            $queueQuery->where('status', InvoiceStatus::Partial->value);
         } else {
             $queueQuery->where('status', InvoiceStatus::Paid->value);
         }
@@ -110,10 +118,11 @@ class RentController extends Controller
                     ['value' => 'overdue', 'label' => 'Overdue'],
                     ['value' => 'due_today', 'label' => 'Due Today'],
                     ['value' => 'upcoming', 'label' => 'Upcoming'],
+                    ['value' => 'partial', 'label' => 'Partial'],
                     ['value' => 'paid', 'label' => 'Paid'],
                 ])
-                    ->query(function (Builder $q, string $value) use ($now, $isPaidTab): void {
-                        if ($isPaidTab) {
+                    ->query(function (Builder $q, string $value) use ($now, $isPaidTab, $isPartialTab): void {
+                        if ($isPaidTab || $isPartialTab) {
                             return;
                         }
 
