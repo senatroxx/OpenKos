@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     BookOpen,
     Building2,
+    DollarSign,
     FileText,
     FolderGit2,
     LayoutGrid,
@@ -55,12 +56,22 @@ export function AppSidebar() {
                               icon: LayoutGrid,
                               href: dashboard(),
                           },
+                          ...platformPageNavItems(platform.dashboard, auth),
+                      ],
+                  },
+              ]
+            : []),
+        ...(isOwner || permissions.includes('dashboard.view')
+            ? [
+                  {
+                      title: 'Billing',
+                      icon: DollarSign,
+                      children: [
                           {
-                              title: 'Rent',
+                              title: 'Collection',
                               icon: Receipt,
                               href: dashboardRent(),
                           },
-                          ...platformPageNavItems(platform.dashboard, auth),
                       ],
                   },
               ]
