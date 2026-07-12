@@ -47,7 +47,7 @@ class OverviewController extends Controller
                     ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)),
             ])
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'slug']);
 
         $totalUnits = $properties->sum('units_count');
         $occupiedUnits = $properties->sum('occupied_units_count');
@@ -98,7 +98,11 @@ class OverviewController extends Controller
             'leases_ending_soon' => $leasesEndingSoon,
         ];
 
-        $recentActivity = AuditLog::with('auditable')
+        $recentActivity = AuditLog::query()
+            ->when(! $request->user()->isOwner(), fn (Builder $q) => $q
+                ->where('actor_type', $request->user()->getMorphClass())
+                ->where('actor_id', $request->user()->id),
+            )
             ->latest()
             ->take(10)
             ->get()
@@ -155,6 +159,7 @@ class OverviewController extends Controller
                 'properties' => $properties->map(fn (Property $p) => [
                     'id' => $p->id,
                     'name' => $p->name,
+                    'slug' => $p->slug,
                     'total_units' => $p->units_count,
                     'occupied_units' => $p->occupied_units_count,
                     'available_units' => $p->units_count - $p->occupied_units_count - $p->maintenance_units_count - $p->unavailable_units_count,
@@ -177,9 +182,9 @@ class OverviewController extends Controller
     {
         $model = class_basename($log->auditable_type);
         $op = match ($log->operation) {
-            'created' => 'created',
-            'updated' => 'updated',
-            'deleted' => 'deleted',
+            'create' => 'created',
+            'update' => 'updated',
+            'delete' => 'deleted',
             default => $log->operation,
         };
 
