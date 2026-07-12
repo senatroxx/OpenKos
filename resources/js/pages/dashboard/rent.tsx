@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
+import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import QueuePaymentSheet from '@/components/features/payments/queue-payment-sheet';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ import type {
     PaginatedData,
     RecentPaymentEntry,
     RecentReminderEntry,
+    TableMeta,
 } from '@/types';
 
 type TabCounts = {
@@ -62,6 +64,7 @@ type PageProps = {
     urgency?: string;
     properties?: string;
     per_page?: number;
+    table: TableMeta;
     outstanding: { count: number; amount: number };
     tab_counts: TabCounts;
     progress: Progress;
@@ -141,6 +144,7 @@ export default function CollectionQueue({
     urgency: currentUrgency = '',
     properties: currentProperties = '',
     per_page: currentPerPage = 25,
+    table: tableMeta,
     outstanding,
     tab_counts: tabCounts,
     progress,
@@ -470,11 +474,20 @@ export default function CollectionQueue({
                     })}
 
                     <div className="ml-auto">
-                        <SearchInput
-                            value={table.searchValue}
-                            onChange={table.onSearchChange}
-                            onClear={table.clearSearch}
-                            placeholder="Search tenant, invoice, unit, property..."
+                        <FilterBar
+                            filters={tableMeta.filters}
+                            activeFilters={table.activeFilters}
+                            activeFilterCount={table.activeFilterCount}
+                            onToggleOption={table.toggleFilterOption}
+                            onClearAll={table.clearAllFilters}
+                            searchInput={
+                                <SearchInput
+                                    value={table.searchValue}
+                                    onChange={table.onSearchChange}
+                                    onClear={table.clearSearch}
+                                    placeholder="Search tenant, invoice, unit, property..."
+                                />
+                            }
                         />
                     </div>
                 </div>
