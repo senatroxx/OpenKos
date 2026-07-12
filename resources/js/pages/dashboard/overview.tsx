@@ -288,7 +288,7 @@ function StatCard({
 function PropertyCard({ property }: { property: PropertyStats }) {
     return (
         <Link
-            href={`/properties/${property.id}`}
+            href={`/properties/${property.slug}`}
             className="block rounded-xl border border-sidebar-border/70 p-5 transition-colors hover:bg-accent dark:border-sidebar-border"
         >
             <h3 className="truncate text-sm font-semibold">{property.name}</h3>
