@@ -20,12 +20,15 @@ export interface MailConfig {
 export type Driver = {
     name: string;
     label: string;
-    configuration_schema?: Record<string, {
-        label: string;
-        required?: boolean;
-        type?: string;
-        placeholder?: string;
-    }>;
+    configuration_schema?: Record<
+        string,
+        {
+            label: string;
+            required?: boolean;
+            type?: string;
+            placeholder?: string;
+        }
+    >;
 };
 
 export type DynamicSettingsFormProps = {

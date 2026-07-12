@@ -186,7 +186,10 @@ export default function Index({
                                             {lease.rent_due_day}
                                         </td>
                                         <td className="px-4 py-3">
-                                        <StatusBadge domain="lease" value={lease.status} />
+                                            <StatusBadge
+                                                domain="lease"
+                                                value={lease.status}
+                                            />
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             {lease.termination_date ? (

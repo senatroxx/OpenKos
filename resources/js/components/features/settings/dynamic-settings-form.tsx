@@ -12,7 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import type { DynamicSettingsFormProps, SettingDefinition } from '@/types/settings';
+import type {
+    DynamicSettingsFormProps,
+    SettingDefinition,
+} from '@/types/settings';
 
 export function DynamicSettingsForm({
     definitions,
@@ -30,22 +33,24 @@ export function DynamicSettingsForm({
                             </CardDescription>
                         )}
                         {def.type === 'json' && (
-                            <CardDescription>
-                                Enter valid JSON.
-                            </CardDescription>
+                            <CardDescription>Enter valid JSON.</CardDescription>
                         )}
                     </CardHeader>
                     <CardContent>
                         {/* ponytail: replace with Wayfinder import after `php artisan wayfinder:generate` */}
-                        <Form
-                            action={'/settings/values'}
-                            method="post"
-                        >
+                        <Form action={'/settings/values'} method="post">
                             {({ processing, errors }) => (
                                 <div className="space-y-4">
-                                    <input type="hidden" name="key" value={def.key} />
+                                    <input
+                                        type="hidden"
+                                        name="key"
+                                        value={def.key}
+                                    />
                                     {def.type === 'bool' ? (
-                                        <BoolField def={def} value={!!values[def.key]} />
+                                        <BoolField
+                                            def={def}
+                                            value={!!values[def.key]}
+                                        />
                                     ) : def.type === 'json' ? (
                                         <div className="grid gap-2">
                                             <Label htmlFor={def.key}>
@@ -87,9 +92,14 @@ export function DynamicSettingsForm({
                                                           : 'text'
                                                 }
                                                 defaultValue={
-                                                    values[def.key] as string | number | undefined
+                                                    values[def.key] as
+                                                        | string
+                                                        | number
+                                                        | undefined
                                                 }
-                                                placeholder={String(def.default ?? '')}
+                                                placeholder={String(
+                                                    def.default ?? '',
+                                                )}
                                             />
                                             {errors.value && (
                                                 <p className="text-sm text-red-600">
@@ -98,9 +108,7 @@ export function DynamicSettingsForm({
                                             )}
                                         </div>
                                     )}
-                                    <Button disabled={processing}>
-                                        Save
-                                    </Button>
+                                    <Button disabled={processing}>Save</Button>
                                 </div>
                             )}
                         </Form>
@@ -117,7 +125,11 @@ function BoolField({ def, value }: { def: SettingDefinition; value: boolean }) {
     return (
         <div className="flex items-center gap-2">
             <input type="hidden" name="value" value={checked ? '1' : '0'} />
-            <Switch id={def.key} checked={checked} onCheckedChange={setChecked} />
+            <Switch
+                id={def.key}
+                checked={checked}
+                onCheckedChange={setChecked}
+            />
             <Label htmlFor={def.key}>{def.label}</Label>
         </div>
     );

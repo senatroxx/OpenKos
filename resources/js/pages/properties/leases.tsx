@@ -67,9 +67,7 @@ const columns: TableColumn<Lease>[] = [
         key: 'status',
         label: 'Status',
         sortable: true,
-        render: (l) => (
-            <StatusBadge domain="lease" value={l.status} />
-        ),
+        render: (l) => <StatusBadge domain="lease" value={l.status} />,
     },
 ];
 

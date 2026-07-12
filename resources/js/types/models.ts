@@ -374,4 +374,3 @@ export type WorkspaceUnit = {
 export type PropertyRef = { id: number; name: string };
 
 export type RoleOption = { value: string; label: string };
-
