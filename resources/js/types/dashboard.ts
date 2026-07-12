@@ -48,6 +48,8 @@ export type BillingStats = {
 export type NeedsAttentionInvoice = {
     id: number;
     lease_id: number;
+    lease_reference: string | null;
+    primary_tenant_id: number | null;
     tenant_name: string;
     unit_name: string;
     property_name: string;

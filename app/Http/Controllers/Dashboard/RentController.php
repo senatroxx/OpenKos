@@ -109,6 +109,7 @@ class RentController extends Controller
                         });
                     });
                 }),
+                Column::make('lease_reference', 'Lease'),
                 Column::make('urgency', 'Status'),
                 Column::make('total', 'Amount')->sortable(),
                 Column::make('outstanding', 'Outstanding'),
@@ -263,6 +264,8 @@ class RentController extends Controller
         return [
             'id' => $invoice->id,
             'lease_id' => $lease->id,
+            'lease_reference' => $lease->reference,
+            'primary_tenant_id' => $lease->primary_tenant_id,
             'tenant_name' => $tenants->pluck('name')->join(', ') ?: ($lease->primaryTenant?->name ?? '—'),
             'unit_name' => $unit?->name ?? '—',
             'property_name' => $unit?->property?->name ?? '—',
