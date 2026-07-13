@@ -185,24 +185,28 @@ class InstallationService
 
     public function setupOrganization(array $data): void
     {
-        if (isset($data['site_name'])) {
-            Setting::set('site_name', $data['site_name']);
+        foreach (['site_name', 'country_code', 'timezone', 'currency', 'locale'] as $key) {
+            if (isset($data[$key])) {
+                Setting::set($key, $data[$key]);
+            }
         }
 
-        if (isset($data['country_code'])) {
-            Setting::set('country_code', $data['country_code']);
+        $mailConfig = array_filter([
+            'host' => $data['mail_host'] ?? null,
+            'port' => $data['mail_port'] ?? null,
+            'username' => $data['mail_username'] ?? null,
+            'password' => $data['mail_password'] ?? null,
+            'encryption' => $data['mail_encryption'] ?? null,
+            'from_address' => $data['mail_from_address'] ?? null,
+            'from_name' => $data['mail_from_name'] ?? null,
+        ]);
+
+        if ($mailConfig !== []) {
+            Setting::set('mail_config', $mailConfig);
         }
 
-        if (isset($data['timezone'])) {
-            Setting::set('timezone', $data['timezone']);
-        }
-
-        if (isset($data['currency'])) {
-            Setting::set('currency', $data['currency']);
-        }
-
-        if (isset($data['locale'])) {
-            Setting::set('locale', $data['locale']);
+        if (isset($data['whatsapp_driver'])) {
+            Setting::set('whatsapp_driver', $data['whatsapp_driver']);
         }
     }
 

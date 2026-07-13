@@ -170,9 +170,14 @@ class InstallationController extends Controller
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
+        $whatsappDrivers = collect(config('services.whatsapp.drivers'))
+            ->map(fn ($d, $name) => ['name' => $name, 'label' => $d['label']])
+            ->values();
+
         return Inertia::render('install/organization', [
             'steps' => $this->installer->completedSteps(),
             'pluginSteps' => OpenKOS::installationSteps()->toArray(),
+            'whatsappDrivers' => $whatsappDrivers,
         ]);
     }
 
@@ -184,6 +189,14 @@ class InstallationController extends Controller
             'timezone' => ['required', 'string', 'timezone'],
             'currency' => ['required', 'string', 'size:3'],
             'locale' => ['required', 'string', 'size:2'],
+            'mail_host' => ['nullable', 'string', 'max:255'],
+            'mail_port' => ['nullable', 'string', 'max:5'],
+            'mail_username' => ['nullable', 'string', 'max:255'],
+            'mail_password' => ['nullable', 'string', 'max:255'],
+            'mail_encryption' => ['nullable', 'string', 'in:tls,ssl,null'],
+            'mail_from_address' => ['nullable', 'email', 'max:255'],
+            'mail_from_name' => ['nullable', 'string', 'max:255'],
+            'whatsapp_driver' => ['nullable', 'string'],
         ]);
 
         $this->installer->setupOrganization($data);
