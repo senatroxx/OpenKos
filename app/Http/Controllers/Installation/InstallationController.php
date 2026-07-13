@@ -76,10 +76,7 @@ class InstallationController extends Controller
 
     public function database(): Response|RedirectResponse
     {
-        $validStates = [InstallationState::Database, InstallationState::Admin,
-            InstallationState::Organization, InstallationState::Installing];
-
-        if (! in_array($this->installer->state(), $validStates)) {
+        if ($this->installer->state() !== InstallationState::Database) {
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
@@ -117,10 +114,7 @@ class InstallationController extends Controller
 
     public function admin(): Response|RedirectResponse
     {
-        $validStates = [InstallationState::Admin, InstallationState::Organization,
-            InstallationState::Installing];
-
-        if (! in_array($this->installer->state(), $validStates)) {
+        if ($this->installer->state() !== InstallationState::Admin) {
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
@@ -145,9 +139,7 @@ class InstallationController extends Controller
 
     public function organization(): Response|RedirectResponse
     {
-        $validStates = [InstallationState::Organization, InstallationState::Installing];
-
-        if (! in_array($this->installer->state(), $validStates)) {
+        if ($this->installer->state() !== InstallationState::Organization) {
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
