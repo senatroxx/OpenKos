@@ -23,8 +23,8 @@ export function InstallStepper({ steps }: Props) {
                     const s = steps[step.key];
                     const completed = s === true;
                     const isActive = s === false;
-                    const future = s === null;
                     const isLast = index === STEPS.length - 1;
+                    const prevCompleted = index > 0 && steps[STEPS[index - 1]?.key] === true;
 
                     return (
                         <li
@@ -36,7 +36,7 @@ export function InstallStepper({ steps }: Props) {
                                     className={cn(
                                         'h-px flex-1',
                                         index === 0 && 'invisible',
-                                        completed
+                                        prevCompleted
                                             ? 'bg-primary'
                                             : 'bg-border',
                                     )}
