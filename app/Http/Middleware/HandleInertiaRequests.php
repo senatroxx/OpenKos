@@ -24,7 +24,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'setting' => fn () => Setting::get(),
+            'setting' => $installed ? fn () => Setting::get() : fn () => collect(),
             'auth' => [
                 'user' => $request->user(),
                 'role' => $request->user()?->getRoleNames()->first(),
