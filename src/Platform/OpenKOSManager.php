@@ -3,6 +3,7 @@
 namespace OpenKOS\Platform;
 
 use OpenKOS\Platform\Dashboard\DashboardRegistry;
+use OpenKOS\Platform\Installation\InstallationStepRegistry;
 use OpenKOS\Platform\Navigation\NavigationRegistry;
 use OpenKOS\Platform\Notification\NotificationRegistry;
 use OpenKOS\Platform\Payment\PaymentRegistry;
@@ -27,6 +28,7 @@ class OpenKOSManager
         private readonly NotificationRegistry $notifications,
         private readonly PaymentRegistry $payments,
         private readonly PermissionRegistry $permissions,
+        private readonly InstallationStepRegistry $installationSteps,
     ) {}
 
     public function dashboard(): DashboardRegistry
@@ -87,5 +89,10 @@ class OpenKOSManager
     public function permissions(): PermissionRegistry
     {
         return $this->permissions;
+    }
+
+    public function installationSteps(): InstallationStepRegistry
+    {
+        return $this->installationSteps;
     }
 }

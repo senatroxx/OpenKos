@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Http\Controllers\Installation;
+
+use App\Http\Controllers\Controller;
+use App\Installation\InstallationService;
+use App\Installation\InstallationState;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
+use Inertia\Inertia;
+use Inertia\Response;
+use OpenKOS\Platform\Facades\OpenKOS;
+
+class InstallationController extends Controller
+{
+    public function __construct(
+        private readonly InstallationService $installer,
+    ) {}
+
+    public function index(): RedirectResponse
+    {
+        $state = $this->installer->state();
+
+        if ($state === InstallationState::Completed) {
+            return redirect('/auth/login');
+        }
+
+        return redirect()->route('install.'.$state->value);
+    }
+
+    public function welcome(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Welcome) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/welcome', [
+            'version' => config('platform.version', '0.1.0'),
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function start(): RedirectResponse
+    {
+        $this->installer->setState(InstallationState::Requirements);
+
+        return redirect()->route('install.requirements');
+    }
+
+    public function requirements(): Response|RedirectResponse
+    {
+        if ($this->installer->state() === InstallationState::Welcome) {
+            return redirect()->route('install.welcome');
+        }
+
+        return Inertia::render('install/requirements', [
+            'requirements' => $this->installer->requirements(),
+            'allMet' => $this->installer->allRequirementsMet(),
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function checkRequirements(): RedirectResponse
+    {
+        if (! $this->installer->allRequirementsMet()) {
+            return back()->withErrors(['requirements' => 'All requirements must be met before proceeding.']);
+        }
+
+        $this->installer->advance();
+
+        return redirect()->route('install.database');
+    }
+
+    public function database(): Response|RedirectResponse
+    {
+        $validStates = [InstallationState::Database, InstallationState::Installing,
+            InstallationState::Admin, InstallationState::Organization];
+
+        if (! in_array($this->installer->state(), $validStates)) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/database', [
+            'connection' => config('database.default'),
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function configureDatabase(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'connection' => ['required', 'string', 'in:mysql,pgsql,sqlite'],
+            'host' => ['required_if:connection,mysql,pgsql', 'nullable', 'string'],
+            'port' => ['required_if:connection,mysql,pgsql', 'nullable', 'string'],
+            'database' => ['required', 'string'],
+            'username' => ['nullable', 'string'],
+            'password' => ['nullable', 'string'],
+        ]);
+
+        $connection = $data['connection'];
+
+        if ($connection !== 'sqlite') {
+            $this->updateDatabaseConfig($connection, $data);
+        }
+
+        $result = $this->installer->testDatabaseConnection($connection);
+
+        if (! $result['success']) {
+            return back()->withErrors(['connection' => $result['message']]);
+        }
+
+        $this->installer->advance();
+
+        return redirect()->route('install.installing');
+    }
+
+    public function installing(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Installing) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/installing', [
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function runInstall(): RedirectResponse
+    {
+        $result = $this->installer->runInstallation();
+
+        if (! $result['success']) {
+            return back()->withErrors(['install' => $result['message']]);
+        }
+
+        $this->installer->advance();
+
+        return redirect()->route('install.admin');
+    }
+
+    public function admin(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Admin) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/admin', [
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function createAdmin(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $this->installer->createOwner($data['name'], $data['email'], $data['password']);
+        $this->installer->advance();
+
+        return redirect()->route('install.organization');
+    }
+
+    public function organization(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Organization) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/organization', [
+            'steps' => $this->installer->completedSteps(),
+            'pluginSteps' => OpenKOS::installationSteps()->toArray(),
+        ]);
+    }
+
+    public function setupOrganization(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'site_name' => ['required', 'string', 'max:255'],
+            'country_code' => ['required', 'string', 'size:2'],
+            'timezone' => ['required', 'string', 'timezone'],
+            'currency' => ['required', 'string', 'size:3'],
+            'locale' => ['required', 'string', 'size:2'],
+        ]);
+
+        $this->installer->setupOrganization($data);
+        $this->installer->markCompleted();
+
+        return redirect()->route('install.finished');
+    }
+
+    public function finished(): Response
+    {
+        return Inertia::render('install/finished', [
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    private function updateDatabaseConfig(string $connection, array $data): void
+    {
+        $envPath = base_path('.env');
+
+        if (! file_exists($envPath)) {
+            return;
+        }
+
+        $env = File::get($envPath);
+        $replacements = [
+            'DB_CONNECTION' => $connection,
+            'DB_HOST' => $data['host'] ?? '127.0.0.1',
+            'DB_PORT' => $data['port'] ?? ($connection === 'pgsql' ? '5432' : '3306'),
+            'DB_DATABASE' => $data['database'],
+            'DB_USERNAME' => $data['username'] ?? 'root',
+            'DB_PASSWORD' => $data['password'] ?? '',
+        ];
+
+        foreach ($replacements as $key => $value) {
+            $escaped = str_replace('"', '\"', $value);
+            $env = preg_replace("/^{$key}=.*/m", "{$key}=\"{$escaped}\"", $env);
+        }
+
+        File::put($envPath, $env);
+        DB::purge($connection);
+    }
+}

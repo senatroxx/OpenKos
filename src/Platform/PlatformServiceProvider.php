@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use OpenKOS\Platform\Console\SyncPluginPermissionsCommand;
 use OpenKOS\Platform\Dashboard\DashboardRegistry;
+use OpenKOS\Platform\Installation\InstallationStepRegistry;
 use OpenKOS\Platform\Navigation\NavigationRegistry;
 use OpenKOS\Platform\Notification\NotificationRegistry;
 use OpenKOS\Platform\Payment\PaymentRegistry;
@@ -23,6 +24,7 @@ class PlatformServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(DashboardRegistry::class);
+        $this->app->singleton(InstallationStepRegistry::class);
         $this->app->singleton(NavigationRegistry::class);
         $this->app->singleton(WorkspaceRegistry::class);
         $this->app->singleton(SettingsRegistry::class);
@@ -62,6 +64,10 @@ class PlatformServiceProvider extends ServiceProvider
 
         foreach ($plugins as $plugin) {
             $plugin->boot($manager);
+        }
+
+        foreach ($plugins as $plugin) {
+            $plugin->installationSteps($manager->installationSteps());
         }
 
         foreach ($plugins as $plugin) {

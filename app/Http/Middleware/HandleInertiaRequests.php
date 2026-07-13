@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Installation\InstallationService;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -18,6 +19,8 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $installed = app(InstallationService::class)->isInstalled();
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -29,12 +32,12 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $request->user()?->getAllPermissions()->pluck('name') ?? [],
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'platform' => fn () => [
+            'platform' => $installed ? fn () => [
                 'navigation' => OpenKOS::navigation()->toArray(),
                 'workspaces' => OpenKOS::workspaces()->toArray(),
                 'settings' => OpenKOS::settings()->toArray(),
                 'dashboard' => OpenKOS::dashboard()->toArray(),
-            ],
+            ] : [],
         ];
     }
 }

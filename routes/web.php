@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
+use App\Http\Controllers\Installation\InstallationController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseInvoiceController;
 use App\Http\Controllers\LeaseRentScheduleController;
@@ -16,6 +17,29 @@ use App\Http\Controllers\TenantDocumentController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('install')->name('install.')->group(function () {
+    Route::get('/', [InstallationController::class, 'index'])->name('index');
+    Route::get('/welcome', [InstallationController::class, 'welcome'])->name('welcome');
+    Route::post('/welcome', [InstallationController::class, 'start'])->name('start');
+
+    Route::get('/requirements', [InstallationController::class, 'requirements'])->name('requirements');
+    Route::post('/requirements', [InstallationController::class, 'checkRequirements'])->name('check-requirements');
+
+    Route::get('/database', [InstallationController::class, 'database'])->name('database');
+    Route::post('/database', [InstallationController::class, 'configureDatabase'])->name('configure-database');
+
+    Route::get('/installing', [InstallationController::class, 'installing'])->name('installing');
+    Route::post('/installing', [InstallationController::class, 'runInstall'])->name('run-install');
+
+    Route::get('/admin', [InstallationController::class, 'admin'])->name('admin');
+    Route::post('/admin', [InstallationController::class, 'createAdmin'])->name('create-admin');
+
+    Route::get('/organization', [InstallationController::class, 'organization'])->name('organization');
+    Route::post('/organization', [InstallationController::class, 'setupOrganization'])->name('setup-organization');
+
+    Route::get('/finished', [InstallationController::class, 'finished'])->name('finished');
+});
 
 Route::inertia('/', 'welcome')->name('home');
 
