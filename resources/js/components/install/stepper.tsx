@@ -85,8 +85,4 @@ export function InstallStepper({ steps }: Props) {
             </ol>
         </nav>
     );
-                })}
-            </ol>
-        </nav>
-    );
 }
