@@ -18,7 +18,7 @@ type Props = {
 export function InstallStepper({ steps }: Props) {
     return (
         <nav aria-label="Installation progress" className="-mx-12 w-[calc(100%+6rem)]">
-            <ol className="flex w-full items-start">
+            <ol className="flex w-full items-center">
                 {STEPS.map((step, index) => {
                     const s = steps[step.key];
                     const completed = s === true;
