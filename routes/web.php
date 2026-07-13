@@ -29,14 +29,14 @@ Route::prefix('install')->name('install.')->group(function () {
     Route::get('/database', [InstallationController::class, 'database'])->name('database');
     Route::post('/database', [InstallationController::class, 'configureDatabase'])->name('configure-database');
 
-    Route::get('/installing', [InstallationController::class, 'installing'])->name('installing');
-    Route::post('/installing', [InstallationController::class, 'runInstall'])->name('run-install');
-
     Route::get('/admin', [InstallationController::class, 'admin'])->name('admin');
     Route::post('/admin', [InstallationController::class, 'createAdmin'])->name('create-admin');
 
     Route::get('/organization', [InstallationController::class, 'organization'])->name('organization');
     Route::post('/organization', [InstallationController::class, 'setupOrganization'])->name('setup-organization');
+
+    Route::get('/installing', [InstallationController::class, 'installing'])->name('installing');
+    Route::post('/installing', [InstallationController::class, 'runInstall'])->name('run-install');
 
     Route::get('/finished', [InstallationController::class, 'finished'])->name('finished');
 });

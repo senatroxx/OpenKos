@@ -2,7 +2,6 @@
 
 use App\Installation\InstallationService;
 use App\Installation\InstallationState;
-use App\Models\Setting;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {
@@ -84,14 +83,10 @@ test('organization setup saves settings', function () {
         'timezone' => 'Asia/Jakarta',
         'currency' => 'IDR',
         'locale' => 'id',
-    ])->assertRedirect('/install/finished');
+    ])->assertRedirect('/install/installing');
 
-    $this->get('/install/finished')
-        ->assertInertia(fn (Assert $page) => $page->component('install/finished'));
-
-    expect(Setting::get('site_name'))->toBe('My Test Boarding');
-    expect(Setting::get('country_code'))->toBe('ID');
-    expect(file_exists(storage_path('installed')))->toBeTrue();
+    expect(session()->get('org_data.site_name'))->toBe('My Test Boarding');
+    expect(session()->get('org_data.country_code'))->toBe('ID');
 });
 
 test('finished page renders when state is completed', function () {
@@ -110,5 +105,5 @@ test('completed steps only marks previous steps as done', function () {
     expect($steps['welcome'])->toBeTrue();
     expect($steps['requirements'])->toBeTrue();
     expect($steps['database'])->toBeFalse();
-    expect($steps['installing'])->toBeFalse();
+    expect($steps['admin'])->toBeFalse();
 });

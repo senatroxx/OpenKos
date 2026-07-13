@@ -13,6 +13,10 @@ class InstallationService
 {
     private const STATE_KEY = 'installation_state';
 
+    private const ADMIN_DATA_KEY = 'admin_data';
+
+    private const ORG_DATA_KEY = 'org_data';
+
     public function isInstalled(): bool
     {
         return File::exists(storage_path('installed'));
@@ -126,6 +130,20 @@ class InstallationService
         }
     }
 
+    public function saveAdminData(string $name, string $email, string $password): void
+    {
+        session()->put(self::ADMIN_DATA_KEY, [
+            'name' => $name,
+            'email' => $email,
+            'password' => $password,
+        ]);
+    }
+
+    public function saveOrgData(array $data): void
+    {
+        session()->put(self::ORG_DATA_KEY, $data);
+    }
+
     public function runInstallation(): array
     {
         try {
@@ -148,6 +166,20 @@ class InstallationService
 
             if ($exitCode !== 0) {
                 return ['success' => false, 'message' => 'Seeding failed.'];
+            }
+
+            $adminData = session()->get(self::ADMIN_DATA_KEY, []);
+            if ($adminData !== []) {
+                $this->createOwner(
+                    $adminData['name'],
+                    $adminData['email'],
+                    $adminData['password'],
+                );
+            }
+
+            $orgData = session()->get(self::ORG_DATA_KEY, []);
+            if ($orgData !== []) {
+                $this->setupOrganization($orgData);
             }
 
             $this->createStorageLink();

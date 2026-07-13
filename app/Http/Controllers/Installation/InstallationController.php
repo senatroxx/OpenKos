@@ -76,8 +76,8 @@ class InstallationController extends Controller
 
     public function database(): Response|RedirectResponse
     {
-        $validStates = [InstallationState::Database, InstallationState::Installing,
-            InstallationState::Admin, InstallationState::Organization];
+        $validStates = [InstallationState::Database, InstallationState::Admin,
+            InstallationState::Organization, InstallationState::Installing];
 
         if (! in_array($this->installer->state(), $validStates)) {
             return redirect()->route('install.'.$this->installer->state()->value);
@@ -112,36 +112,15 @@ class InstallationController extends Controller
 
         $this->installer->advance();
 
-        return redirect()->route('install.installing');
-    }
-
-    public function installing(): Response|RedirectResponse
-    {
-        if ($this->installer->state() !== InstallationState::Installing) {
-            return redirect()->route('install.'.$this->installer->state()->value);
-        }
-
-        return Inertia::render('install/installing', [
-            'steps' => $this->installer->completedSteps(),
-        ]);
-    }
-
-    public function runInstall(): RedirectResponse
-    {
-        $result = $this->installer->runInstallation();
-
-        if (! $result['success']) {
-            return back()->withErrors(['install' => $result['message']]);
-        }
-
-        $this->installer->advance();
-
         return redirect()->route('install.admin');
     }
 
     public function admin(): Response|RedirectResponse
     {
-        if ($this->installer->state() !== InstallationState::Admin) {
+        $validStates = [InstallationState::Admin, InstallationState::Organization,
+            InstallationState::Installing];
+
+        if (! in_array($this->installer->state(), $validStates)) {
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
@@ -158,7 +137,7 @@ class InstallationController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $this->installer->createOwner($data['name'], $data['email'], $data['password']);
+        $this->installer->saveAdminData($data['name'], $data['email'], $data['password']);
         $this->installer->advance();
 
         return redirect()->route('install.organization');
@@ -166,7 +145,9 @@ class InstallationController extends Controller
 
     public function organization(): Response|RedirectResponse
     {
-        if ($this->installer->state() !== InstallationState::Organization) {
+        $validStates = [InstallationState::Organization, InstallationState::Installing];
+
+        if (! in_array($this->installer->state(), $validStates)) {
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
@@ -199,20 +180,41 @@ class InstallationController extends Controller
             'whatsapp_driver' => ['nullable', 'string'],
         ]);
 
-        $this->installer->setupOrganization($data);
+        $this->installer->saveOrgData($data);
+        $this->installer->advance();
+
+        return redirect()->route('install.installing');
+    }
+
+    public function installing(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Installing) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/installing', [
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function runInstall(): RedirectResponse
+    {
+        $result = $this->installer->runInstallation();
+
+        if (! $result['success']) {
+            return back()->withErrors(['install' => $result['message']]);
+        }
+
+        $this->installer->markCompleted();
 
         return redirect()->route('install.finished');
     }
 
     public function finished(): Response
     {
-        if ($this->installer->state() === InstallationState::Organization) {
-            $this->installer->markCompleted();
-        }
-
         return Inertia::render('install/finished', [
             'steps' => $this->installer->completedSteps(),
-            'setting' => ['site_name' => Setting::get('site_name')],
+            'setting' => ['site_name' => Setting::get('site_name') ?? config('app.name')],
         ]);
     }
 
