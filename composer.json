@@ -1,13 +1,20 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "openkos/openkos",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Open-source property management platform for boarding houses, rentals, and apartments.",
     "keywords": [
+        "property-management",
+        "property",
+        "rental",
+        "boarding-house",
+        "kos",
+        "pms",
         "laravel",
-        "framework"
+        "react",
+        "inertia"
     ],
-    "license": "MIT",
+    "license": "Apache-2.0",
     "require": {
         "php": "^8.3",
         "composer/semver": "^3.4",
