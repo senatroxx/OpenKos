@@ -5,6 +5,13 @@ use App\Installation\InstallationState;
 use App\Models\Setting;
 use Inertia\Testing\AssertableInertia as Assert;
 
+beforeEach(function () {
+    $file = storage_path('installed');
+    if (file_exists($file)) {
+        unlink($file);
+    }
+});
+
 test('installation service detects uninstalled state', function () {
     expect(app(InstallationService::class)->isInstalled())->toBeFalse();
 });
@@ -34,7 +41,7 @@ test('requirements page redirects to welcome when state is welcome', function ()
 });
 
 test('requirements page renders when state is requirements', function () {
-    app(InstallationService::class)->setState(InstallationState::Requirements);
+    $this->session(['installation_state' => InstallationState::Requirements->value]);
 
     $this->get('/install/requirements')
         ->assertInertia(fn (Assert $page) => $page
@@ -45,14 +52,14 @@ test('requirements page renders when state is requirements', function () {
 });
 
 test('database page renders when state is database', function () {
-    app(InstallationService::class)->setState(InstallationState::Database);
+    $this->session(['installation_state' => InstallationState::Database->value]);
 
     $this->get('/install/database')
         ->assertInertia(fn (Assert $page) => $page->component('install/database'));
 });
 
 test('admin page validates input', function () {
-    app(InstallationService::class)->setState(InstallationState::Admin);
+    $this->session(['installation_state' => InstallationState::Admin->value]);
 
     $this->get('/install/admin')
         ->assertInertia(fn (Assert $page) => $page->component('install/admin'));
@@ -66,7 +73,7 @@ test('admin page validates input', function () {
 });
 
 test('organization setup saves settings', function () {
-    app(InstallationService::class)->setState(InstallationState::Organization);
+    $this->session(['installation_state' => InstallationState::Organization->value]);
 
     $this->get('/install/organization')
         ->assertInertia(fn (Assert $page) => $page->component('install/organization'));
@@ -84,11 +91,11 @@ test('organization setup saves settings', function () {
 
     expect(Setting::get('site_name'))->toBe('My Test Boarding');
     expect(Setting::get('country_code'))->toBe('ID');
-    expect(Setting::get('installed'))->toBeTruthy();
+    expect(file_exists(storage_path('installed')))->toBeTrue();
 });
 
 test('finished page renders when state is completed', function () {
-    app(InstallationService::class)->setState(InstallationState::Completed);
+    $this->session(['installation_state' => InstallationState::Completed->value]);
 
     $this->get('/install/finished')
         ->assertInertia(fn (Assert $page) => $page->component('install/finished'));

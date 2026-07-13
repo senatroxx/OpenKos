@@ -11,16 +11,13 @@ class RedirectIfNotInstalled
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // ponytail: skip in tests so existing tests don't need every request
-        // expecting to be an "installed" app. Guard no longer masks a crash
-        // — isInstalled() handles missing DB tables gracefully.
         if (app()->runningUnitTests()) {
             return $next($request);
         }
 
-        $service = app(InstallationService::class);
+        $installed = app(InstallationService::class)->isInstalled();
 
-        if ($service->isInstalled()) {
+        if ($installed) {
             if ($request->is('install/*') || $request->is('install')) {
                 return redirect('/auth/login');
             }

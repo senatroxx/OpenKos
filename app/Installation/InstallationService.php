@@ -4,66 +4,29 @@ namespace App\Installation;
 
 use App\Enums\Role;
 use App\Models\Setting;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
 
 class InstallationService
 {
     private const STATE_KEY = 'installation_state';
 
-    private const INSTALLED_KEY = 'installed';
-
     public function isInstalled(): bool
     {
-        try {
-            if (! Schema::hasTable('settings')) {
-                return false;
-            }
-        } catch (QueryException) {
-            return false;
-        }
-
-        return (bool) Setting::get(self::INSTALLED_KEY);
+        return File::exists(storage_path('installed'));
     }
 
     public function state(): InstallationState
     {
-        if (session()->has(self::STATE_KEY)) {
-            return InstallationState::tryFrom(session()->get(self::STATE_KEY))
-                ?? InstallationState::Welcome;
-        }
-
-        try {
-            if (Schema::hasTable('settings')) {
-                $dbState = Setting::get(self::STATE_KEY);
-
-                if ($dbState !== null) {
-                    return InstallationState::tryFrom($dbState)
-                        ?? InstallationState::Welcome;
-                }
-            }
-        } catch (QueryException) {
-            // DB not available yet
-        }
-
-        return InstallationState::Welcome;
+        return InstallationState::tryFrom(session()->get(self::STATE_KEY))
+            ?? InstallationState::Welcome;
     }
 
     public function setState(InstallationState $state): void
     {
         session()->put(self::STATE_KEY, $state->value);
-
-        try {
-            if (Schema::hasTable('settings')) {
-                Setting::set(self::STATE_KEY, $state->value);
-            }
-        } catch (QueryException) {
-            // DB not available yet
-        }
     }
 
     public function advance(): InstallationState
@@ -238,7 +201,7 @@ class InstallationService
 
     public function markCompleted(): void
     {
-        Setting::set(self::INSTALLED_KEY, true);
+        File::put(storage_path('installed'), now()->toDateTimeString());
         $this->setState(InstallationState::Completed);
     }
 
