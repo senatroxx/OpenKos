@@ -79,6 +79,9 @@ test('organization setup saves settings', function () {
         'locale' => 'id',
     ])->assertRedirect('/install/finished');
 
+    $this->get('/install/finished')
+        ->assertInertia(fn (Assert $page) => $page->component('install/finished'));
+
     expect(Setting::get('site_name'))->toBe('My Test Boarding');
     expect(Setting::get('country_code'))->toBe('ID');
     expect(Setting::get('installed'))->toBeTruthy();

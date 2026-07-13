@@ -187,13 +187,16 @@ class InstallationController extends Controller
         ]);
 
         $this->installer->setupOrganization($data);
-        $this->installer->markCompleted();
 
         return redirect()->route('install.finished');
     }
 
     public function finished(): Response
     {
+        if ($this->installer->state() === InstallationState::Organization) {
+            $this->installer->markCompleted();
+        }
+
         return Inertia::render('install/finished', [
             'steps' => $this->installer->completedSteps(),
             'setting' => ['site_name' => Setting::get('site_name')],
