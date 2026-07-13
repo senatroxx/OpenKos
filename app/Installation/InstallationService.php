@@ -32,21 +32,38 @@ class InstallationService
 
     public function state(): InstallationState
     {
-        try {
-            if (! Schema::hasTable('settings')) {
-                return InstallationState::Welcome;
-            }
-        } catch (QueryException) {
-            return InstallationState::Welcome;
+        if (session()->has(self::STATE_KEY)) {
+            return InstallationState::tryFrom(session()->get(self::STATE_KEY))
+                ?? InstallationState::Welcome;
         }
 
-        return InstallationState::tryFrom(Setting::get(self::STATE_KEY))
-            ?? InstallationState::Welcome;
+        try {
+            if (Schema::hasTable('settings')) {
+                $dbState = Setting::get(self::STATE_KEY);
+
+                if ($dbState !== null) {
+                    return InstallationState::tryFrom($dbState)
+                        ?? InstallationState::Welcome;
+                }
+            }
+        } catch (QueryException) {
+            // DB not available yet
+        }
+
+        return InstallationState::Welcome;
     }
 
     public function setState(InstallationState $state): void
     {
-        Setting::set(self::STATE_KEY, $state->value);
+        session()->put(self::STATE_KEY, $state->value);
+
+        try {
+            if (Schema::hasTable('settings')) {
+                Setting::set(self::STATE_KEY, $state->value);
+            }
+        } catch (QueryException) {
+            // DB not available yet
+        }
     }
 
     public function advance(): InstallationState
