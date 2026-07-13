@@ -5,14 +5,14 @@ const STEPS = [
     { key: 'welcome', label: 'Welcome' },
     { key: 'requirements', label: 'Requirements' },
     { key: 'database', label: 'Database' },
-    { key: 'installing', label: 'Installing' },
-    { key: 'admin', label: 'Admin' },
+    { key: 'admin', label: 'Administrator' },
     { key: 'organization', label: 'Organization' },
+    { key: 'installing', label: 'Installing' },
     { key: 'completed', label: 'Complete' },
 ] as const;
 
 type Props = {
-    steps: Record<string, boolean>;
+    steps: Record<string, boolean | null>;
 };
 
 export function InstallStepper({ steps }: Props) {
@@ -20,10 +20,11 @@ export function InstallStepper({ steps }: Props) {
         <nav aria-label="Installation progress" className="-mx-12 w-[calc(100%+6rem)]">
             <ol className="flex w-full items-start">
                 {STEPS.map((step, index) => {
-                    const completed = steps[step.key] === true;
+                    const s = steps[step.key];
+                    const completed = s === true;
+                    const isActive = s === false;
+                    const future = s === null;
                     const isLast = index === STEPS.length - 1;
-                    const isActive = !completed && steps[step.key] === false && (index === 0 || steps[STEPS[index - 1]?.key]);
-                    const prevCompleted = index > 0 && steps[STEPS[index - 1]?.key] === true;
 
                     return (
                         <li
@@ -35,7 +36,7 @@ export function InstallStepper({ steps }: Props) {
                                     className={cn(
                                         'h-px flex-1',
                                         index === 0 && 'invisible',
-                                        prevCompleted
+                                        completed
                                             ? 'bg-primary'
                                             : 'bg-border',
                                     )}
@@ -80,6 +81,10 @@ export function InstallStepper({ steps }: Props) {
                             </span>
                         </li>
                     );
+                })}
+            </ol>
+        </nav>
+    );
                 })}
             </ol>
         </nav>

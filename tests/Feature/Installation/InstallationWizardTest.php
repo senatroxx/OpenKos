@@ -105,5 +105,5 @@ test('completed steps only marks previous steps as done', function () {
     expect($steps['welcome'])->toBeTrue();
     expect($steps['requirements'])->toBeTrue();
     expect($steps['database'])->toBeFalse();
-    expect($steps['admin'])->toBeFalse();
+    expect($steps['admin'])->toBeNull();
 });

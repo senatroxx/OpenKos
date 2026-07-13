@@ -57,9 +57,12 @@ class InstallationService
 
         $completed = [];
         foreach ($states as $i => $state) {
-            $completed[$state->value] = $state === InstallationState::Completed
-                ? $i === $currentIndex
-                : $i < $currentIndex;
+            $completed[$state->value] = match (true) {
+                $state === InstallationState::Completed => $i === $currentIndex,
+                $i < $currentIndex => true,
+                $i === $currentIndex => false,
+                default => null,
+            };
         }
 
         return $completed;
