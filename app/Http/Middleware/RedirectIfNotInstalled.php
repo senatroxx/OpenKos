@@ -11,7 +11,9 @@ class RedirectIfNotInstalled
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // ponytail: skip in tests so existing tests don't need rewrites
+        // ponytail: skip in tests so existing tests don't need every request
+        // expecting to be an "installed" app. Guard no longer masks a crash
+        // — isInstalled() handles missing DB tables gracefully.
         if (app()->runningUnitTests()) {
             return $next($request);
         }

@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { InstallStepper } from '@/components/install/stepper';
 import { checkRequirements } from '@/routes/install';
@@ -16,8 +17,13 @@ type Props = {
 };
 
 export default function InstallRequirements({ requirements, allMet, steps }: Props) {
+    const [submitting, setSubmitting] = useState(false);
+
     const proceed = () => {
-        router.post(checkRequirements.url());
+        setSubmitting(true);
+        router.post(checkRequirements.url(), undefined, {
+            onFinish: () => setSubmitting(false),
+        });
     };
 
     return (
@@ -66,7 +72,7 @@ export default function InstallRequirements({ requirements, allMet, steps }: Pro
                         <Button
                             onClick={proceed}
                             className="mt-6 w-full"
-                            disabled={!allMet}
+                            disabled={!allMet || submitting}
                         >
                             {allMet ? 'Continue' : 'Requirements Not Met'}
                         </Button>

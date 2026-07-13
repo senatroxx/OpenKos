@@ -55,28 +55,30 @@ export default function InstallDatabase({ connection, steps }: Props) {
                                         <InputError message={errors.connection} />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="host">Host</Label>
-                                            <Input
-                                                id="host"
-                                                name="host"
-                                                defaultValue="127.0.0.1"
-                                                placeholder="127.0.0.1"
-                                            />
-                                            <InputError message={errors.host} />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="host">Host</Label>
+                                                <Input
+                                                    key={`host-${driver}`}
+                                                    id="host"
+                                                    name="host"
+                                                    defaultValue="127.0.0.1"
+                                                    placeholder="127.0.0.1"
+                                                />
+                                                <InputError message={errors.host} />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="port">Port</Label>
+                                                <Input
+                                                    key={`port-${driver}`}
+                                                    id="port"
+                                                    name="port"
+                                                    defaultValue={driver === 'mysql' ? '3306' : '5432'}
+                                                    placeholder={driver === 'mysql' ? '3306' : '5432'}
+                                                />
+                                                <InputError message={errors.port} />
+                                            </div>
                                         </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="port">Port</Label>
-                                            <Input
-                                                id="port"
-                                                name="port"
-                                                defaultValue="5432"
-                                                placeholder="5432"
-                                            />
-                                            <InputError message={errors.port} />
-                                        </div>
-                                    </div>
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="database">Database Name</Label>

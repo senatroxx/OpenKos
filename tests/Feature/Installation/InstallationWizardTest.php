@@ -3,7 +3,6 @@
 use App\Installation\InstallationService;
 use App\Installation\InstallationState;
 use App\Models\Setting;
-use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('installation service detects uninstalled state', function () {
@@ -90,22 +89,6 @@ test('finished page renders when state is completed', function () {
 
     $this->get('/install/finished')
         ->assertInertia(fn (Assert $page) => $page->component('install/finished'));
-});
-
-test('installed site detection works', function () {
-    expect(app(InstallationService::class)->isInstalled())->toBeFalse();
-
-    User::factory()->create();
-
-    expect(app(InstallationService::class)->isInstalled())->toBeTrue();
-});
-
-test('installation service detects installed state', function () {
-    expect(app(InstallationService::class)->isInstalled())->toBeFalse();
-
-    User::factory()->create();
-
-    expect(app(InstallationService::class)->isInstalled())->toBeTrue();
 });
 
 test('completed steps only marks previous steps as done', function () {

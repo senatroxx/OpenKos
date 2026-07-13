@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Installation;
 use App\Http\Controllers\Controller;
 use App\Installation\InstallationService;
 use App\Installation\InstallationState;
+use App\Models\Setting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -101,9 +102,7 @@ class InstallationController extends Controller
 
         $connection = $data['connection'];
 
-        if ($connection !== 'sqlite') {
-            $this->updateDatabaseConfig($connection, $data);
-        }
+        $this->updateDatabaseConfig($connection, $data);
 
         $result = $this->installer->testDatabaseConnection($connection);
 
@@ -197,11 +196,26 @@ class InstallationController extends Controller
     {
         return Inertia::render('install/finished', [
             'steps' => $this->installer->completedSteps(),
+            'setting' => ['site_name' => Setting::get('site_name')],
         ]);
     }
 
     private function updateDatabaseConfig(string $connection, array $data): void
     {
+        $config = [
+            'host' => $data['host'] ?? '127.0.0.1',
+            'port' => $data['port'] ?? ($connection === 'pgsql' ? '5432' : '3306'),
+            'database' => $data['database'],
+            'username' => $data['username'] ?? 'root',
+            'password' => $data['password'] ?? '',
+        ];
+
+        foreach ($config as $key => $value) {
+            config(["database.connections.{$connection}.{$key}" => $value]);
+        }
+
+        DB::purge($connection);
+
         $envPath = base_path('.env');
 
         if (! file_exists($envPath)) {
@@ -209,21 +223,23 @@ class InstallationController extends Controller
         }
 
         $env = File::get($envPath);
-        $replacements = [
-            'DB_CONNECTION' => $connection,
-            'DB_HOST' => $data['host'] ?? '127.0.0.1',
-            'DB_PORT' => $data['port'] ?? ($connection === 'pgsql' ? '5432' : '3306'),
-            'DB_DATABASE' => $data['database'],
-            'DB_USERNAME' => $data['username'] ?? 'root',
-            'DB_PASSWORD' => $data['password'] ?? '',
-        ];
+        $replacements = array_merge(
+            ['DB_CONNECTION' => $connection],
+            array_combine(
+                array_map(fn ($k) => 'DB_'.strtoupper($k), array_keys($config)),
+                $config,
+            ),
+        );
 
         foreach ($replacements as $key => $value) {
             $escaped = str_replace('"', '\"', $value);
-            $env = preg_replace("/^{$key}=.*/m", "{$key}=\"{$escaped}\"", $env);
+            $env = preg_replace_callback(
+                "/^{$key}=.*/m",
+                fn () => "{$key}=\"{$escaped}\"",
+                $env,
+            );
         }
 
         File::put($envPath, $env);
-        DB::purge($connection);
     }
 }
