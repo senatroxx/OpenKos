@@ -4,11 +4,11 @@ namespace App\Installation;
 
 use App\Enums\Role;
 use App\Models\Setting;
-use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class InstallationService
 {
@@ -18,15 +18,19 @@ class InstallationService
 
     public function isInstalled(): bool
     {
-        if (Setting::get(self::INSTALLED_KEY)) {
-            return true;
+        if (! Schema::hasTable('settings')) {
+            return false;
         }
 
-        return User::exists();
+        return (bool) Setting::get(self::INSTALLED_KEY);
     }
 
     public function state(): InstallationState
     {
+        if (! Schema::hasTable('settings')) {
+            return InstallationState::Welcome;
+        }
+
         return InstallationState::tryFrom(Setting::get(self::STATE_KEY))
             ?? InstallationState::Welcome;
     }
