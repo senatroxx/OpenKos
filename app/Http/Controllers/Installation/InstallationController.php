@@ -214,6 +214,7 @@ class InstallationController extends Controller
             config(["database.connections.{$connection}.{$key}" => $value]);
         }
 
+        config(['database.default' => $connection]);
         DB::purge($connection);
 
         $envPath = base_path('.env');
