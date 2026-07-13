@@ -78,7 +78,7 @@
         ],
         "post-install-cmd": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php -r \"\\\$env = file_get_contents('.env'); \\\$env = preg_replace('/^APP_KEY=.*/m', 'APP_KEY=' . base64_encode(random_bytes(32)), \\\$env); file_put_contents('.env', \\\$env);\""
+            "@php -r 'file_put_contents(\".env\", preg_replace(\"/^APP_KEY=\\s*$/m\", \"APP_KEY=\" . base64_encode(random_bytes(32)), file_get_contents(\".env\")));'"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
