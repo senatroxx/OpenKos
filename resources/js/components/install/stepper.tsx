@@ -21,7 +21,7 @@ export function InstallStepper({ steps }: Props) {
 
     return (
         <>
-            <nav aria-label="Installation progress" className="hidden md:block">
+            <nav aria-label="Installation progress" className="hidden md:-mx-12 md:w-[calc(100%+6rem)] md:block">
                 <ol className="flex w-full items-center">
                     {STEPS.map((step, index) => {
                         const s = steps[step.key];
