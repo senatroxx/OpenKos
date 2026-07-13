@@ -4,6 +4,7 @@ namespace App\Installation;
 
 use App\Enums\Role;
 use App\Models\Setting;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -18,7 +19,11 @@ class InstallationService
 
     public function isInstalled(): bool
     {
-        if (! Schema::hasTable('settings')) {
+        try {
+            if (! Schema::hasTable('settings')) {
+                return false;
+            }
+        } catch (QueryException) {
             return false;
         }
 
@@ -27,7 +32,11 @@ class InstallationService
 
     public function state(): InstallationState
     {
-        if (! Schema::hasTable('settings')) {
+        try {
+            if (! Schema::hasTable('settings')) {
+                return InstallationState::Welcome;
+            }
+        } catch (QueryException) {
             return InstallationState::Welcome;
         }
 
