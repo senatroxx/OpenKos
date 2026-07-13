@@ -21,6 +21,7 @@ use OpenKOS\Platform\OpenKOSManager;
  * @method static \OpenKOS\Platform\Notification\NotificationRegistry notifications()
  * @method static \OpenKOS\Platform\Payment\PaymentRegistry payments()
  * @method static \OpenKOS\Platform\Permission\PermissionRegistry permissions()
+ * @method static \OpenKOS\Platform\Installation\InstallationStepRegistry installationSteps()
  *
  * @see OpenKOSManager
  */

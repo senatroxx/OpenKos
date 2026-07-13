@@ -2,6 +2,7 @@
 
 namespace OpenKOS\Platform\Plugin;
 
+use OpenKOS\Platform\Installation\InstallationStepRegistry;
 use OpenKOS\Platform\OpenKOSManager;
 
 abstract class Plugin
@@ -21,6 +22,11 @@ abstract class Plugin
      * Optional hook that runs after all plugins have registered.
      */
     public function boot(OpenKOSManager $platform): void {}
+
+    /**
+     * Register optional installation steps contributed by this plugin.
+     */
+    public function installationSteps(InstallationStepRegistry $registry): void {}
 
     /**
      * Domain-event subscriptions, wired via Laravel's event dispatcher.
