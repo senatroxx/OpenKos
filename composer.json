@@ -14,7 +14,7 @@
         "react",
         "inertia"
     ],
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
     "require": {
         "php": "^8.3",
         "composer/semver": "^3.4",
