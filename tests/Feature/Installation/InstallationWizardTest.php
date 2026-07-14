@@ -1,7 +1,7 @@
 <?php
 
-use App\Installation\InstallationService;
-use App\Installation\InstallationState;
+use App\Enums\Installation\InstallationState;
+use App\Services\InstallationService;
 use Inertia\Testing\AssertableInertia as Assert;
 
 beforeEach(function () {

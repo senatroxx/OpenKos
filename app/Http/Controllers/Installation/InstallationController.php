@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Installation;
 
+use App\Enums\Installation\InstallationState;
 use App\Http\Controllers\Controller;
-use App\Installation\InstallationService;
-use App\Installation\InstallationState;
 use App\Models\Setting;
+use App\Services\InstallationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

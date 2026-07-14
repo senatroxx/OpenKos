@@ -1,9 +1,11 @@
 <?php
 
-namespace App\Installation;
+namespace App\Services;
 
+use App\Enums\Installation\InstallationState;
 use App\Enums\Role;
 use App\Models\Setting;
+use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;

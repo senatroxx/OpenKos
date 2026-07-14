@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Installation\InstallationService;
+use App\Services\InstallationService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;

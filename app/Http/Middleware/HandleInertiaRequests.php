@@ -2,8 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Installation\InstallationService;
 use App\Models\Setting;
+use App\Services\InstallationService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use OpenKOS\Platform\Facades\OpenKOS;
