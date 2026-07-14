@@ -9,7 +9,6 @@ use App\Services\InstallationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Inertia\Inertia;
 use Inertia\Response;
 use OpenKOS\Platform\Facades\OpenKOS;
@@ -98,8 +97,24 @@ class InstallationController extends Controller
         ]);
 
         $connection = $data['connection'];
+        $config = [
+            'connection' => $connection,
+            'host' => $data['host'] ?? '127.0.0.1',
+            'port' => $data['port'] ?? ($connection === 'pgsql' ? '5432' : '3306'),
+            'database' => $data['database'],
+            'username' => $data['username'] ?? 'root',
+            'password' => $data['password'] ?? '',
+        ];
 
-        $this->updateDatabaseConfig($connection, $data);
+        foreach ($config as $key => $value) {
+            if ($key === 'connection') {
+                continue;
+            }
+            config(["database.connections.{$connection}.{$key}" => $value]);
+        }
+
+        config(['database.default' => $connection]);
+        DB::purge($connection);
 
         $result = $this->installer->testDatabaseConnection($connection);
 
@@ -107,6 +122,7 @@ class InstallationController extends Controller
             return back()->withErrors(['connection' => $result['message']]);
         }
 
+        $this->installer->saveDatabaseConfig($config);
         $this->installer->advance();
 
         return redirect()->route('install.admin');
@@ -208,49 +224,5 @@ class InstallationController extends Controller
             'steps' => $this->installer->completedSteps(),
             'setting' => ['site_name' => Setting::get('site_name') ?? config('app.name')],
         ]);
-    }
-
-    private function updateDatabaseConfig(string $connection, array $data): void
-    {
-        $config = [
-            'host' => $data['host'] ?? '127.0.0.1',
-            'port' => $data['port'] ?? ($connection === 'pgsql' ? '5432' : '3306'),
-            'database' => $data['database'],
-            'username' => $data['username'] ?? 'root',
-            'password' => $data['password'] ?? '',
-        ];
-
-        foreach ($config as $key => $value) {
-            config(["database.connections.{$connection}.{$key}" => $value]);
-        }
-
-        config(['database.default' => $connection]);
-        DB::purge($connection);
-
-        $envPath = base_path('.env');
-
-        if (! file_exists($envPath)) {
-            return;
-        }
-
-        $env = File::get($envPath);
-        $replacements = array_merge(
-            ['DB_CONNECTION' => $connection],
-            array_combine(
-                array_map(fn ($k) => 'DB_'.strtoupper($k), array_keys($config)),
-                $config,
-            ),
-        );
-
-        foreach ($replacements as $key => $value) {
-            $escaped = str_replace('"', '\"', $value);
-            $env = preg_replace_callback(
-                "/^{$key}=.*/m",
-                fn () => "{$key}=\"{$escaped}\"",
-                $env,
-            );
-        }
-
-        File::put($envPath, $env);
     }
 }

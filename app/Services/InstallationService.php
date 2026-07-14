@@ -19,6 +19,8 @@ class InstallationService
 
     private const ORG_DATA_KEY = 'org_data';
 
+    private const DB_CONFIG_KEY = 'db_config';
+
     public function isInstalled(): bool
     {
         return File::exists(storage_path('installed'));
@@ -148,9 +150,52 @@ class InstallationService
         session()->put(self::ORG_DATA_KEY, $data);
     }
 
+    public function saveDatabaseConfig(array $config): void
+    {
+        session()->put(self::DB_CONFIG_KEY, $config);
+    }
+
+    public function writeDatabaseConfig(): void
+    {
+        $config = session()->get(self::DB_CONFIG_KEY, []);
+
+        if ($config === []) {
+            return;
+        }
+
+        $envPath = base_path('.env');
+
+        if (! file_exists($envPath)) {
+            return;
+        }
+
+        $connection = $config['connection'];
+        $env = File::get($envPath);
+        $replacements = ['DB_CONNECTION' => $connection];
+
+        foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
+            if (isset($config[$key])) {
+                $replacements['DB_'.strtoupper($key)] = $config[$key];
+            }
+        }
+
+        foreach ($replacements as $key => $value) {
+            $escaped = str_replace('"', '\"', $value);
+            $env = preg_replace_callback(
+                "/^{$key}=.*/m",
+                fn () => "{$key}=\"{$escaped}\"",
+                $env,
+            );
+        }
+
+        File::put($envPath, $env);
+    }
+
     public function runInstallation(): array
     {
         try {
+            $this->writeDatabaseConfig();
+
             $exitCode = Artisan::call('key:generate', ['--force' => true]);
 
             if ($exitCode !== 0) {

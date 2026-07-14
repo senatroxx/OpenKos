@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Installation;
+namespace App\Enums\Installation;
 
 enum InstallationState: string
 {
