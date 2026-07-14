@@ -114,10 +114,10 @@ export default function InstallApplication({ steps, timezones }: Props) {
                                         </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="locale">Locale</Label>
+                                            <input type="hidden" name="locale" value="en" />
                                             <Input
                                                 id="locale"
-                                                name="locale"
-                                                required
+                                                name="locale_disabled"
                                                 disabled
                                                 defaultValue="en"
                                             />

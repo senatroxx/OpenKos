@@ -5,10 +5,10 @@ const STEPS = [
     { key: 'welcome', label: 'Welcome' },
     { key: 'requirements', label: 'Requirements' },
     { key: 'database', label: 'Database' },
-    { key: 'application', label: 'Application' },
-    { key: 'admin', label: 'Administrator' },
+    { key: 'application', label: 'App Config' },
+    { key: 'admin', label: 'Admin' },
     { key: 'organization', label: 'Organization' },
-    { key: 'notifications', label: 'Notifications' },
+    { key: 'notifications', label: 'Notify' },
     { key: 'installing', label: 'Installing' },
     { key: 'completed', label: 'Complete' },
 ] as const;
@@ -47,19 +47,19 @@ export function InstallStepper({ steps }: Props) {
                                                 : 'bg-border',
                                         )}
                                     />
-                                    <span
-                                        className={cn(
-                                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium',
-                                            completed
-                                                ? 'bg-primary text-primary-foreground'
-                                                : isActive
-                                                    ? 'border-2 border-primary bg-card text-primary'
-                                                    : 'bg-muted text-muted-foreground',
-                                        )}
-                                    >
-                                        {completed ? (
-                                            <Check className="h-3.5 w-3.5" />
-                                        ) : (
+                                <span
+                                    className={cn(
+                                        'flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-medium md:size-6 md:text-xs',
+                                        completed
+                                            ? 'bg-primary text-primary-foreground'
+                                            : isActive
+                                                ? 'border-2 border-primary bg-card text-primary'
+                                                : 'bg-muted text-muted-foreground',
+                                    )}
+                                >
+                                    {completed ? (
+                                        <Check className="size-3" />
+                                    ) : (
                                             index + 1
                                         )}
                                     </span>
@@ -75,7 +75,7 @@ export function InstallStepper({ steps }: Props) {
                                 </div>
                                 <span
                                     className={cn(
-                                        'mt-1.5 text-center text-xs',
+                                        'mt-1.5 text-center md:text-[0.6rem] md:leading-tight',
                                         isActive
                                             ? 'font-medium text-primary'
                                             : completed
