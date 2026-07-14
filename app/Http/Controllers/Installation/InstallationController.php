@@ -125,6 +125,32 @@ class InstallationController extends Controller
         $this->installer->saveDatabaseConfig($config);
         $this->installer->advance();
 
+        return redirect()->route('install.application');
+    }
+
+    public function application(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Application) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        return Inertia::render('install/application', [
+            'steps' => $this->installer->completedSteps(),
+        ]);
+    }
+
+    public function configureApplication(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'app_url' => ['required', 'url'],
+            'app_name' => ['required', 'string', 'max:255'],
+            'timezone' => ['required', 'string', 'timezone'],
+            'locale' => ['required', 'string', 'size:2'],
+        ]);
+
+        $this->installer->saveApplicationData($data);
+        $this->installer->advance();
+
         return redirect()->route('install.admin');
     }
 
@@ -159,25 +185,45 @@ class InstallationController extends Controller
             return redirect()->route('install.'.$this->installer->state()->value);
         }
 
-        $whatsappDrivers = collect(config('services.whatsapp.drivers'))
-            ->map(fn ($d, $name) => ['name' => $name, 'label' => $d['label']])
-            ->values();
-
         return Inertia::render('install/organization', [
             'steps' => $this->installer->completedSteps(),
             'pluginSteps' => OpenKOS::installationSteps()->toArray(),
-            'whatsappDrivers' => $whatsappDrivers,
         ]);
     }
 
     public function setupOrganization(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'site_name' => ['required', 'string', 'max:255'],
+            'property_name' => ['required', 'string', 'max:255'],
             'country_code' => ['required', 'string', 'size:2'],
-            'timezone' => ['required', 'string', 'timezone'],
             'currency' => ['required', 'string', 'size:3'],
-            'locale' => ['required', 'string', 'size:2'],
+        ]);
+
+        $this->installer->saveOrgData($data);
+        $this->installer->advance();
+
+        return redirect()->route('install.notifications');
+    }
+
+    public function notifications(): Response|RedirectResponse
+    {
+        if ($this->installer->state() !== InstallationState::Notifications) {
+            return redirect()->route('install.'.$this->installer->state()->value);
+        }
+
+        $whatsappDrivers = collect(config('services.whatsapp.drivers'))
+            ->map(fn ($d, $name) => ['name' => $name, 'label' => $d['label']])
+            ->values();
+
+        return Inertia::render('install/notifications', [
+            'steps' => $this->installer->completedSteps(),
+            'whatsappDrivers' => $whatsappDrivers,
+        ]);
+    }
+
+    public function configureNotifications(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
             'mail_host' => ['nullable', 'string', 'max:255'],
             'mail_port' => ['nullable', 'string', 'max:5'],
             'mail_username' => ['nullable', 'string', 'max:255'],
@@ -188,7 +234,7 @@ class InstallationController extends Controller
             'whatsapp_driver' => ['nullable', 'string'],
         ]);
 
-        $this->installer->saveOrgData($data);
+        $this->installer->saveNotificationData($data);
         $this->installer->advance();
 
         return redirect()->route('install.installing');

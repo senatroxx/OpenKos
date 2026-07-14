@@ -78,14 +78,12 @@ test('organization setup saves settings', function () {
         ->assertInertia(fn (Assert $page) => $page->component('install/organization'));
 
     $this->post('/install/organization', [
-        'site_name' => 'My Test Boarding',
+        'property_name' => 'My Test Boarding',
         'country_code' => 'ID',
-        'timezone' => 'Asia/Jakarta',
         'currency' => 'IDR',
-        'locale' => 'id',
-    ])->assertRedirect('/install/installing');
+    ])->assertRedirect('/install/notifications');
 
-    expect(session()->get('org_data.site_name'))->toBe('My Test Boarding');
+    expect(session()->get('org_data.property_name'))->toBe('My Test Boarding');
     expect(session()->get('org_data.country_code'))->toBe('ID');
 });
 

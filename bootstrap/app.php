@@ -59,13 +59,13 @@ $app = Application::configure(basePath: dirname(__DIR__))
 // find them before any middleware runs.
 $envPath = dirname(__DIR__).'/.env';
 if (! file_exists($envPath)) {
+    $example = dirname(__DIR__).'/.env.example';
+    if (file_exists($example)) {
+        copy($example, $envPath);
+    }
     $key = 'base64:'.base64_encode(random_bytes(32));
-    file_put_contents($envPath, "APP_KEY={$key}\n");
-    putenv("APP_KEY={$key}");
-    putenv('SESSION_DRIVER=file');
-    putenv('CACHE_STORE=file');
-    putenv('QUEUE_CONNECTION=sync');
-    putenv('DB_CONNECTION=sqlite');
+    $env = preg_replace('/^APP_KEY=.*/m', "APP_KEY={$key}", file_get_contents($envPath));
+    file_put_contents($envPath, $env);
 }
 
 return $app;

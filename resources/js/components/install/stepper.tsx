@@ -5,8 +5,10 @@ const STEPS = [
     { key: 'welcome', label: 'Welcome' },
     { key: 'requirements', label: 'Requirements' },
     { key: 'database', label: 'Database' },
+    { key: 'application', label: 'Application' },
     { key: 'admin', label: 'Administrator' },
     { key: 'organization', label: 'Organization' },
+    { key: 'notifications', label: 'Notifications' },
     { key: 'installing', label: 'Installing' },
     { key: 'completed', label: 'Complete' },
 ] as const;

@@ -5,83 +5,81 @@ import { Input } from '@/components/ui/input';
 import { InstallStepper } from '@/components/install/stepper';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import { setupOrganization } from '@/routes/install';
+import { configureApplication } from '@/routes/install';
 
 type Props = {
     steps: Record<string, boolean | null>;
-    pluginSteps: Array<{ key: string; label: string; route: string }>;
 };
 
-export default function InstallOrganization({ pluginSteps, steps }: Props) {
+export default function InstallApplication({ steps }: Props) {
     return (
         <>
-            <Head title="Organization" />
+            <Head title="Application Settings" />
             <div className="flex min-h-screen flex-col items-center justify-center bg-[#FDFDFC] p-6 dark:bg-[#0a0a0a]">
                 <div className="w-full max-w-lg space-y-8">
                     <InstallStepper steps={steps} />
                     <div className="text-center">
-                        <h1 className="text-2xl font-bold">Organization</h1>
+                        <h1 className="text-2xl font-bold">Application Settings</h1>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Tell us about your business
+                            Configure your application
                         </p>
                     </div>
 
                     <div className="rounded-lg border bg-card p-8 text-card-foreground shadow-sm">
                         <Form
-                            {...setupOrganization.form()}
+                            {...configureApplication.form()}
                             className="flex flex-col gap-6"
                         >
                             {({ processing, errors }) => (
                                 <>
                                     <div className="grid gap-2">
-                                        <Label htmlFor="property_name">Property Name</Label>
+                                        <Label htmlFor="app_url">Application URL</Label>
                                         <Input
-                                            id="property_name"
-                                            name="property_name"
+                                            id="app_url"
+                                            name="app_url"
+                                            type="url"
                                             required
-                                            autoFocus
-                                            placeholder="BudiProp"
+                                            defaultValue="http://localhost:8000"
+                                            placeholder="http://localhost:8000"
                                         />
-                                        <InputError message={errors.property_name} />
+                                        <InputError message={errors.app_url} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="app_name">Application Name</Label>
+                                        <Input
+                                            id="app_name"
+                                            name="app_name"
+                                            required
+                                            defaultValue="OpenKOS"
+                                            placeholder="OpenKOS"
+                                        />
+                                        <InputError message={errors.app_name} />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="country_code">Country</Label>
+                                            <Label htmlFor="timezone">Timezone</Label>
                                             <Input
-                                                id="country_code"
-                                                name="country_code"
+                                                id="timezone"
+                                                name="timezone"
                                                 required
-                                                maxLength={2}
-                                                defaultValue="ID"
-                                                placeholder="ID"
+                                                defaultValue="Asia/Jakarta"
                                             />
-                                            <InputError message={errors.country_code} />
+                                            <InputError message={errors.timezone} />
                                         </div>
                                         <div className="grid gap-2">
-                                            <Label htmlFor="currency">Currency</Label>
+                                            <Label htmlFor="locale">Locale</Label>
                                             <Input
-                                                id="currency"
-                                                name="currency"
+                                                id="locale"
+                                                name="locale"
                                                 required
-                                                maxLength={3}
-                                                defaultValue="IDR"
-                                                placeholder="IDR"
+                                                defaultValue="id"
+                                                placeholder="id"
                                             />
-                                            <InputError message={errors.currency} />
+                                            <InputError message={errors.locale} />
                                         </div>
                                     </div>
-
-                                    {pluginSteps.length > 0 && (
-                                        <div className="rounded-md bg-muted p-4">
-                                            <p className="text-sm font-medium">
-                                                Additional Configuration
-                                            </p>
-                                            <p className="mt-1 text-xs text-muted-foreground">
-                                                Plugins have registered additional setup steps.
-                                            </p>
-                                        </div>
-                                    )}
 
                                     <Button
                                         type="submit"

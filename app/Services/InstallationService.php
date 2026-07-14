@@ -17,7 +17,11 @@ class InstallationService
 
     private const ADMIN_DATA_KEY = 'admin_data';
 
+    private const APP_DATA_KEY = 'app_data';
+
     private const ORG_DATA_KEY = 'org_data';
+
+    private const NOTIF_DATA_KEY = 'notif_data';
 
     private const DB_CONFIG_KEY = 'db_config';
 
@@ -150,6 +154,16 @@ class InstallationService
         session()->put(self::ORG_DATA_KEY, $data);
     }
 
+    public function saveApplicationData(array $data): void
+    {
+        session()->put(self::APP_DATA_KEY, $data);
+    }
+
+    public function saveNotificationData(array $data): void
+    {
+        session()->put(self::NOTIF_DATA_KEY, $data);
+    }
+
     public function saveDatabaseConfig(array $config): void
     {
         session()->put(self::DB_CONFIG_KEY, $config);
@@ -238,6 +252,16 @@ class InstallationService
                 $this->setupOrganization($orgData);
             }
 
+            $appData = session()->get(self::APP_DATA_KEY, []);
+            if ($appData !== []) {
+                $this->setupApplication($appData);
+            }
+
+            $notifData = session()->get(self::NOTIF_DATA_KEY, []);
+            if ($notifData !== []) {
+                $this->setupNotifications($notifData);
+            }
+
             $this->createStorageLink();
 
             return ['success' => true, 'message' => 'Installation completed successfully.'];
@@ -262,12 +286,55 @@ class InstallationService
 
     public function setupOrganization(array $data): void
     {
-        foreach (['site_name', 'country_code', 'timezone', 'currency', 'locale'] as $key) {
-            if (isset($data[$key])) {
-                Setting::set($key, $data[$key]);
-            }
+        if (isset($data['property_name'])) {
+            Setting::set('site_name', $data['property_name']);
+        }
+        if (isset($data['country_code'])) {
+            Setting::set('country_code', $data['country_code']);
+        }
+        if (isset($data['currency'])) {
+            Setting::set('currency', $data['currency']);
+        }
+    }
+
+    public function setupApplication(array $data): void
+    {
+        if (isset($data['timezone'])) {
+            Setting::set('timezone', $data['timezone']);
+        }
+        if (isset($data['locale'])) {
+            Setting::set('locale', $data['locale']);
         }
 
+        $envPath = base_path('.env');
+        if (! file_exists($envPath)) {
+            return;
+        }
+
+        $env = File::get($envPath);
+        $replacements = [];
+
+        if (isset($data['app_url'])) {
+            $replacements['APP_URL'] = $data['app_url'];
+        }
+        if (isset($data['app_name'])) {
+            $replacements['APP_NAME'] = $data['app_name'];
+        }
+
+        foreach ($replacements as $key => $value) {
+            $escaped = str_replace('"', '\"', $value);
+            $env = preg_replace_callback(
+                "/^{$key}=.*/m",
+                fn () => "{$key}=\"{$escaped}\"",
+                $env,
+            );
+        }
+
+        File::put($envPath, $env);
+    }
+
+    public function setupNotifications(array $data): void
+    {
         $mailConfig = array_filter([
             'host' => $data['mail_host'] ?? null,
             'port' => $data['mail_port'] ?? null,
