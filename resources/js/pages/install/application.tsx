@@ -1,17 +1,26 @@
 import { Form, Head } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { InputError } from '@/components/shared';
 import { Input } from '@/components/ui/input';
 import { InstallStepper } from '@/components/install/stepper';
 import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { configureApplication } from '@/routes/install';
 
 type Props = {
     steps: Record<string, boolean | null>;
+    timezones: string[];
 };
 
-export default function InstallApplication({ steps }: Props) {
+export default function InstallApplication({ steps, timezones }: Props) {
+    const [tzOpen, setTzOpen] = useState(false);
+    const [tzValue, setTzValue] = useState('Asia/Jakarta');
+
     return (
         <>
             <Head title="Application Settings" />
@@ -59,13 +68,48 @@ export default function InstallApplication({ steps }: Props) {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
-                                            <Label htmlFor="timezone">Timezone</Label>
-                                            <Input
-                                                id="timezone"
-                                                name="timezone"
-                                                required
-                                                defaultValue="Asia/Jakarta"
-                                            />
+                                            <Label>Timezone</Label>
+                                            <input type="hidden" name="timezone" value={tzValue} />
+                                            <Popover open={tzOpen} onOpenChange={setTzOpen}>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        className="w-full justify-between"
+                                                    >
+                                                        {tzValue}
+                                                        <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                                    <Command>
+                                                        <CommandInput placeholder="Search timezone..." />
+                                                        <CommandList>
+                                                            <CommandEmpty>No timezone found.</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {timezones.map(tz => (
+                                                                    <CommandItem
+                                                                        key={tz}
+                                                                        value={tz}
+                                                                        onSelect={() => {
+                                                                            setTzValue(tz);
+                                                                            setTzOpen(false);
+                                                                        }}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                'mr-2 size-4',
+                                                                                tzValue === tz ? 'opacity-100' : 'opacity-0',
+                                                                            )}
+                                                                        />
+                                                                        {tz}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                             <InputError message={errors.timezone} />
                                         </div>
                                         <div className="grid gap-2">

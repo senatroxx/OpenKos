@@ -136,6 +136,7 @@ class InstallationController extends Controller
 
         return Inertia::render('install/application', [
             'steps' => $this->installer->completedSteps(),
+            'timezones' => \DateTimeZone::listIdentifiers(),
         ]);
     }
 
