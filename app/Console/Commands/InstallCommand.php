@@ -21,10 +21,9 @@ class InstallCommand extends Command
     {
         $this->setupEnvironment();
 
-        $migrateArgs = ['--force' => true];
+        $migrateArgs = ['--force' => true, '--quiet' => true];
 
         if ($this->option('fresh')) {
-            $migrateArgs = ['--force' => true];
             $this->call('migrate:fresh', $migrateArgs);
         } else {
             $this->call('migrate', $migrateArgs);
@@ -44,11 +43,21 @@ class InstallCommand extends Command
             'ID',
         );
 
+        $appUrl = $this->ask('What is the application URL?', 'http://localhost');
+
+        $timezone = $this->ask(
+            'What timezone should be used?',
+            $country === 'ID' ? 'Asia/Jakarta' : 'UTC',
+        );
+
         $name = $this->ask('What is the owner\'s name?');
 
         $email = $this->ask('What is the owner\'s email address?');
 
-        $password = $this->secret('Choose a password for the owner account');
+        do {
+            $password = $this->secret('Choose a password for the owner account');
+            $confirm = $this->secret('Confirm the password');
+        } while ($password !== $confirm && ! $this->error('Passwords do not match. Please try again.'));
 
         $this->call('db:seed', [
             '--class' => 'Database\Seeders\RoleAndPermissionSeeder',
@@ -57,11 +66,18 @@ class InstallCommand extends Command
 
         Setting::set('site_name', $siteName);
         Setting::set('country_code', $country);
-        Setting::set('locale', $country === 'ID' ? 'id' : config('app.locale'));
+        Setting::set('locale', 'en');
         Setting::set('currency', $country === 'ID' ? 'IDR' : 'USD');
-        Setting::set('timezone', $country === 'ID' ? 'Asia/Jakarta' : config('app.timezone'));
+        Setting::set('timezone', $timezone);
 
-        $this->updateAppNameInEnv($siteName);
+        $this->info('Locale set to en. Internationalization (i18n) is planned for a future release.');
+
+        $this->updateEnv([
+            'APP_NAME' => $siteName,
+            'APP_ENV' => 'production',
+            'APP_DEBUG' => 'false',
+            'APP_URL' => $appUrl,
+        ]);
 
         $user = User::create([
             'name' => $name,
@@ -78,7 +94,7 @@ class InstallCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function updateAppNameInEnv(string $siteName): void
+    protected function updateEnv(array $values): void
     {
         $envPath = base_path('.env');
 
@@ -87,8 +103,19 @@ class InstallCommand extends Command
         }
 
         $env = File::get($envPath);
-        $escaped = str_replace('"', '\"', $siteName);
-        $env = preg_replace('/^APP_NAME=.*/m', "APP_NAME=\"{$escaped}\"", $env);
+
+        foreach ($values as $key => $value) {
+            $quoted = str_contains($value, ' ') ? "\"{$value}\"" : $value;
+            $pattern = '/^'.preg_quote($key, '/').'=.*/m';
+            $replacement = $key.'='.$quoted;
+
+            if (preg_match($pattern, $env)) {
+                $env = preg_replace($pattern, $replacement, $env);
+            } else {
+                $env .= PHP_EOL.$replacement;
+            }
+        }
+
         File::put($envPath, $env);
     }
 
