@@ -59,6 +59,16 @@ export default function InstallApplication({ steps }: Props) {
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
+                                            <Label htmlFor="timezone">Timezone</Label>
+                                            <Input
+                                                id="timezone"
+                                                name="timezone"
+                                                required
+                                                defaultValue="Asia/Jakarta"
+                                            />
+                                            <InputError message={errors.timezone} />
+                                        </div>
+                                        <div className="grid gap-2">
                                             <Label htmlFor="locale">Locale</Label>
                                             <Input
                                                 id="locale"
@@ -71,6 +81,7 @@ export default function InstallApplication({ steps }: Props) {
                                                 Internationalization is not yet implemented. Defaults to English.
                                             </p>
                                         </div>
+                                    </div>
                                         <div className="grid gap-2">
                                             <Label htmlFor="locale">Locale</Label>
                                             <Input
