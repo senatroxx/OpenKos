@@ -171,46 +171,40 @@ class InstallationService
 
     public function writeDatabaseConfig(): void
     {
-        $config = session()->get(self::DB_CONFIG_KEY, []);
+        $envPath = base_path('.env');
 
-        $lines = [
-            'APP_NAME="OpenKOS"',
-            'APP_ENV=local',
-            'APP_KEY="'.str_replace('"', '\"', env('APP_KEY')).'"',
-            'APP_DEBUG=true',
-            'APP_TIMEZONE=UTC',
-            'APP_URL="http://localhost"',
-            '',
-            'SESSION_DRIVER=file',
-            'CACHE_STORE=file',
-            'QUEUE_CONNECTION=sync',
-            '',
-        ];
-
-        if ($config !== []) {
-            $connection = $config['connection'];
-            $lines[] = 'DB_CONNECTION='.$connection;
-
-            foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
-                if (isset($config[$key])) {
-                    $lines[] = 'DB_'.strtoupper($key).'="'.str_replace('"', '\"', $config[$key]).'"';
-                }
-            }
-        } else {
-            $lines[] = 'DB_CONNECTION=sqlite';
+        if (! file_exists($envPath)) {
+            return;
         }
 
-        $lines[] = '';
-        $lines[] = '# Previous Sail / pgsql defaults (kept for reference)';
-        $lines[] = '# DB_HOST=pgsql';
-        $lines[] = '# DB_PORT=5432';
-        $lines[] = '# DB_DATABASE=openkos';
-        $lines[] = '# DB_USERNAME=sail';
-        $lines[] = '# DB_PASSWORD=password';
+        $env = File::get($envPath);
+        $config = session()->get(self::DB_CONFIG_KEY, []);
 
-        File::put(base_path('.env'), implode("\n", $lines)."\n");
+        if ($config === []) {
+            return;
+        }
 
-        if ($config === [] || $config['connection'] === 'sqlite') {
+        $connection = $config['connection'];
+        $replacements = ['DB_CONNECTION' => $connection];
+
+        foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
+            if (isset($config[$key])) {
+                $replacements['DB_'.strtoupper($key)] = $config[$key];
+            }
+        }
+
+        foreach ($replacements as $key => $value) {
+            $escaped = str_replace('"', '\"', $value);
+            if (preg_match("/^{$key}=/m", $env)) {
+                $env = preg_replace("/^{$key}=.*/m", "{$key}=\"{$escaped}\"", $env);
+            } else {
+                $env .= "\n{$key}=\"{$escaped}\"";
+            }
+        }
+
+        File::put($envPath, $env);
+
+        if ($connection === 'sqlite') {
             $dbPath = database_path('database.sqlite');
             if (! file_exists($dbPath)) {
                 File::put($dbPath, '');
