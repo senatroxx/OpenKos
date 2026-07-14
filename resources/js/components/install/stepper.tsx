@@ -23,7 +23,7 @@ export function InstallStepper({ steps }: Props) {
 
     return (
         <>
-            <nav aria-label="Installation progress" className="hidden md:-mx-12 md:w-[calc(100%+6rem)] md:block">
+            <nav aria-label="Installation progress" className="hidden lg:-mx-12 lg:w-[calc(100%+6rem)] lg:block">
                 <ol className="flex w-full items-center">
                     {STEPS.map((step, index) => {
                         const s = steps[step.key];
@@ -49,7 +49,7 @@ export function InstallStepper({ steps }: Props) {
                                     />
                                 <span
                                     className={cn(
-                                        'flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-medium md:size-6 md:text-xs',
+                                        'flex size-5 shrink-0 items-center justify-center rounded-full text-[0.6rem] font-medium lg:size-6 lg:text-xs',
                                         completed
                                             ? 'bg-primary text-primary-foreground'
                                             : isActive
@@ -75,7 +75,7 @@ export function InstallStepper({ steps }: Props) {
                                 </div>
                                 <span
                                     className={cn(
-                                        'mt-1.5 text-center md:text-[0.6rem] md:leading-tight',
+                                        'mt-1.5 text-center lg:text-[0.6rem] lg:leading-tight',
                                         isActive
                                             ? 'font-medium text-primary'
                                             : completed
@@ -90,7 +90,7 @@ export function InstallStepper({ steps }: Props) {
                     })}
                 </ol>
             </nav>
-            <p className="text-center text-sm text-muted-foreground md:hidden">
+            <p className="text-center text-sm text-muted-foreground lg:hidden">
                 Step {currentStep ? currentIndex + 1 : STEPS.length} of {STEPS.length}
                 {currentStep && <> &mdash; {currentStep.label}</>}
             </p>
