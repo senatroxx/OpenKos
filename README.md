@@ -35,31 +35,19 @@ OpenKOS handles the full rental lifecycle — properties, units, leases, tenants
 # 1. Install PHP dependencies
 composer install
 
-# 2. Set up environment
-cp .env.example .env
-php artisan key:generate
-```
-
-Edit `.env` to match your PostgreSQL setup — at minimum `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`.
-
-```bash
-# 3. Run migrations
-php artisan migrate
-
-# 4. Install frontend dependencies
+# 2. Install frontend dependencies
 npm install
 
-# 5. Generate TypeScript route functions
-npm run wayfinder:generate --with-form
-
-# 6. Build frontend assets
+# 3. Build frontend assets
 npm run build
 
-# 7. Create the owner account
+# 4. Run the installer (creates .env, sets up database, runs migrations, creates owner)
 php artisan app:install
 ```
 
-The `app:install` command will prompt for the owner's name, email, and password. Only one owner account can be created — subsequent runs will fail.
+The `app:install` command is fully interactive — it prompts for database connection, site name, country, application URL, timezone, and owner credentials (with password confirmation). It sets production-safe defaults (`APP_ENV=production`, `APP_DEBUG=false`) and generates the app key automatically. Only one owner account can be created — subsequent runs will fail.
+
+For non-interactive setups, you can manually configure `.env` before running `app:install` — it will skip environment setup and proceed straight to migrations and owner creation.
 
 ## Development
 
