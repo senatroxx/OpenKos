@@ -1,5 +1,5 @@
-import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const STEPS = [
     { key: 'welcome', label: 'Welcome' },

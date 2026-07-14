@@ -1,15 +1,15 @@
 import { Form, Head } from '@inertiajs/react';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Check, ChevronsUpDown } from 'lucide-react';
-import { InputError } from '@/components/shared';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 import { InstallStepper } from '@/components/install/stepper';
+import { InputError } from '@/components/shared';
+import { Button } from '@/components/ui/button';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
+import { cn } from '@/lib/utils';
 import { configureApplication } from '@/routes/install';
 
 type Props = {

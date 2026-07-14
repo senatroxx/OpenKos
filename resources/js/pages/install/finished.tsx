@@ -1,6 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 import { InstallStepper } from '@/components/install/stepper';
+import { Button } from '@/components/ui/button';
 import { login } from '@/routes';
 
 type Props = {

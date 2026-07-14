@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
 import { InstallStepper } from '@/components/install/stepper';
+import { Button } from '@/components/ui/button';
 import { start } from '@/routes/install';
 
 type Props = {

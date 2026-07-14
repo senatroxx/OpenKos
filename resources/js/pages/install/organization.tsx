@@ -1,8 +1,8 @@
 import { Form, Head } from '@inertiajs/react';
-import { Button } from '@/components/ui/button';
-import { InputError } from '@/components/shared';
-import { Input } from '@/components/ui/input';
 import { InstallStepper } from '@/components/install/stepper';
+import { InputError } from '@/components/shared';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { setupOrganization } from '@/routes/install';

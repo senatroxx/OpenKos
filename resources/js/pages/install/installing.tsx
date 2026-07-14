@@ -1,7 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { InstallStepper } from '@/components/install/stepper';
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { runInstall } from '@/routes/install';
 
@@ -15,7 +15,9 @@ export default function InstallInstalling({ steps }: Props) {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (status !== 'idle') return;
+        if (status !== 'idle') {
+return;
+}
 
         setStatus('running');
         setMessage('Generating application key...');

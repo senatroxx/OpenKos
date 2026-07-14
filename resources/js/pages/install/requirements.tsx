@@ -1,7 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { InstallStepper } from '@/components/install/stepper';
+import { Button } from '@/components/ui/button';
 import { checkRequirements } from '@/routes/install';
 
 type Requirement = {
