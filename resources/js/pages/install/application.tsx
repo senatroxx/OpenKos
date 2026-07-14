@@ -77,23 +77,12 @@ export default function InstallApplication({ steps }: Props) {
                                                 disabled
                                                 defaultValue="en"
                                             />
-                                            <p className="text-xs text-muted-foreground">
-                                                Internationalization is not yet implemented. Defaults to English.
-                                            </p>
-                                        </div>
-                                    </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="locale">Locale</Label>
-                                            <Input
-                                                id="locale"
-                                                name="locale"
-                                                required
-                                                defaultValue="id"
-                                                placeholder="id"
-                                            />
                                             <InputError message={errors.locale} />
                                         </div>
                                     </div>
+                                    <p className="-mt-2 text-xs text-muted-foreground">
+                                        Internationalization is not yet implemented. Locale defaults to English.
+                                    </p>
 
                                     <Button
                                         type="submit"
