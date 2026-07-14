@@ -76,11 +76,7 @@
             "@lint:check",
             "@php artisan test"
         ],
-        "post-install-cmd": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php -r 'file_put_contents(\".env\", preg_replace(\"/^APP_KEY=\\s*$/m\", \"APP_KEY=base64:\" . base64_encode(random_bytes(32)), file_get_contents(\".env\")));'"
-        ],
+        "post-install-cmd": [],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"

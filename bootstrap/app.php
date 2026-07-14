@@ -15,7 +15,7 @@ use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -53,3 +53,19 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
     })->create();
+
+// ponytail: run without .env on fresh install — set essential
+// env vars here so bootstrappers (LoadConfiguration, etc.)
+// find them before any middleware runs.
+$envPath = dirname(__DIR__).'/.env';
+if (! file_exists($envPath)) {
+    $key = 'base64:'.base64_encode(random_bytes(32));
+    file_put_contents($envPath, "APP_KEY={$key}\n");
+    putenv("APP_KEY={$key}");
+    putenv('SESSION_DRIVER=file');
+    putenv('CACHE_STORE=file');
+    putenv('QUEUE_CONNECTION=sync');
+    putenv('DB_CONNECTION=sqlite');
+}
+
+return $app;

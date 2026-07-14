@@ -159,48 +159,55 @@ class InstallationService
     {
         $config = session()->get(self::DB_CONFIG_KEY, []);
 
-        if ($config === []) {
-            return;
+        $lines = [
+            'APP_NAME="OpenKOS"',
+            'APP_ENV=local',
+            'APP_KEY="'.str_replace('"', '\"', env('APP_KEY')).'"',
+            'APP_DEBUG=true',
+            'APP_TIMEZONE=UTC',
+            'APP_URL="http://localhost"',
+            '',
+            'SESSION_DRIVER=file',
+            'CACHE_STORE=file',
+            'QUEUE_CONNECTION=sync',
+            '',
+        ];
+
+        if ($config !== []) {
+            $connection = $config['connection'];
+            $lines[] = 'DB_CONNECTION='.$connection;
+
+            foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
+                if (isset($config[$key])) {
+                    $lines[] = 'DB_'.strtoupper($key).'="'.str_replace('"', '\"', $config[$key]).'"';
+                }
+            }
+        } else {
+            $lines[] = 'DB_CONNECTION=sqlite';
         }
 
-        $envPath = base_path('.env');
+        $lines[] = '';
+        $lines[] = '# Previous Sail / pgsql defaults (kept for reference)';
+        $lines[] = '# DB_HOST=pgsql';
+        $lines[] = '# DB_PORT=5432';
+        $lines[] = '# DB_DATABASE=openkos';
+        $lines[] = '# DB_USERNAME=sail';
+        $lines[] = '# DB_PASSWORD=password';
 
-        if (! file_exists($envPath)) {
-            return;
-        }
+        File::put(base_path('.env'), implode("\n", $lines)."\n");
 
-        $connection = $config['connection'];
-        $env = File::get($envPath);
-        $replacements = ['DB_CONNECTION' => $connection];
-
-        foreach (['host', 'port', 'database', 'username', 'password'] as $key) {
-            if (isset($config[$key])) {
-                $replacements['DB_'.strtoupper($key)] = $config[$key];
+        if ($config === [] || $config['connection'] === 'sqlite') {
+            $dbPath = database_path('database.sqlite');
+            if (! file_exists($dbPath)) {
+                File::put($dbPath, '');
             }
         }
-
-        foreach ($replacements as $key => $value) {
-            $escaped = str_replace('"', '\"', $value);
-            $env = preg_replace_callback(
-                "/^{$key}=.*/m",
-                fn () => "{$key}=\"{$escaped}\"",
-                $env,
-            );
-        }
-
-        File::put($envPath, $env);
     }
 
     public function runInstallation(): array
     {
         try {
             $this->writeDatabaseConfig();
-
-            $exitCode = Artisan::call('key:generate', ['--force' => true]);
-
-            if ($exitCode !== 0) {
-                return ['success' => false, 'message' => 'Failed to generate application key.'];
-            }
 
             $exitCode = Artisan::call('migrate', ['--force' => true]);
 
