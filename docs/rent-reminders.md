@@ -84,9 +84,9 @@ Scheduler methods accept `CarbonInterface` instead of `Carbon`.
 
 ### 11. Manual Send Goes Through ForceSendReminder Action
 
-`LeaseController::sendReminder()` delegates to `ForceSendReminder` Action, which picks the first payable invoice, creates one `ReminderEvent`, sends synchronously via `$tenant->notifyNow()`, and logs via `ReminderRepository::recordIfAbsent()`. It bypasses the interval scheduler entirely.
+`LeaseController::sendReminder()` delegates to `ForceSendReminder` Action, which first tries `PaymentReminderScheduler::pendingFor()` to find already-scheduled but unlogged events. If none exist, it falls back to the first payable invoice and creates a one-off `ReminderEvent`. In either case it records the log via `ReminderRepository::recordIfAbsent()` and dispatches `InvoiceReminderDispatched`. A listener in `AppServiceProvider` picks up that event and performs the actual notification delivery.
 
-**Rationale:** Manual send is a one-off action for the landlord — send one reminder right now, regardless of whether the automated scheduler would have sent one. Using `notifyNow()` ensures the log file is written immediately (the sent_at timestamp is visible on refresh). The `ForceSendReminder` action keeps the manual path consistent with the scheduled path, sharing the repository and notification logic.
+**Rationale:** Manual send is a one-off action for the landlord — send one reminder right now, regardless of whether the automated scheduler would have sent one. The scheduled-path fallback ensures consistency: manual send reuses the same event types, dedup, and logging as the automated path. Dispatching `InvoiceReminderDispatched` instead of calling `notifyNow()` directly lets the same listener handle both scheduled and manual sends, keeping channel resolution in one place.
 
 ### 12. Primary Tenant Only
 
@@ -102,19 +102,20 @@ Schedule (routes/console.php)
        └─ SendRentReminders (Action)
             ├─ PaymentReminderScheduler (Business)
             │    └─ $lease->invoices()->payable()
-            ├─ ReminderRepository::recordIfAbsent() (Repositories)
-            └─ Tenant::notify(new RentReminder)
-                 └─ WhatsAppChannel
-                      └─ WhatsAppManager
-                           └─ WhatsAppDriver (LogDriver | Baileys)
+            ├─ ReminderRepository::recordIfAbsent()
+            └─ InvoiceReminderDispatched::dispatch()
+                 └─ AppServiceProvider listener
+                      └─ Notification delivery (WhatsApp, mail, etc.)
 
 Manual Send (LeaseController)
   └─ LeaseController::sendReminder()
        └─ ForceSendReminder (Action)
-            ├─ $lease->invoices()->payable()
-            ├─ ReminderEvent
-            ├─ Tenant::notifyNow(new RentReminder)
-            └─ ReminderRepository::recordIfAbsent()
+            ├─ PaymentReminderScheduler::pendingFor() (Business)
+            │    └─ $lease->invoices()->payable()
+            ├─ ReminderRepository::recordIfAbsent()
+            └─ InvoiceReminderDispatched::dispatch()
+                 └─ AppServiceProvider listener
+                      └─ Notification delivery (WhatsApp, mail, etc.)
 ```
 
 ### Directory Layout
