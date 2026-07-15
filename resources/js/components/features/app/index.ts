@@ -1,7 +1,7 @@
 export { AppContent } from './app-content';
 export { default as AppearanceTabs } from './appearance-tabs';
 export { AppHeader } from './app-header';
-export { default as AppLogoIcon } from './app-logo-icon';
+
 export { default as AppLogo } from './app-logo';
 export { AppShell } from './app-shell';
 export { AppSidebarHeader } from './app-sidebar-header';
