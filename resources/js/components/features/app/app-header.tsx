@@ -47,7 +47,7 @@ const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    const { auth, setting } = usePage<{ auth: Auth; setting: { site_name: string } }>().props;
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
@@ -76,7 +76,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start text-left">
                                     <span className="text-base font-semibold">
-                                        OpenKOS
+                                        {setting.site_name}
                                     </span>
                                 </SheetHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
