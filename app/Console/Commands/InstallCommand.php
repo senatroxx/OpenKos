@@ -90,6 +90,7 @@ class InstallCommand extends Command
             'email' => $email,
             'password' => Hash::make($password),
         ]);
+        $user->markEmailAsVerified();
 
         $role = SpatieRole::findOrCreate(Role::Owner->value);
         $user->assignRole($role);
