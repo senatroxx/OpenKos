@@ -23,10 +23,12 @@ class InstallCommand extends Command
 
         $migrateArgs = ['--force' => true, '--quiet' => true];
 
-        if ($this->option('fresh')) {
-            $this->call('migrate:fresh', $migrateArgs);
-        } else {
-            $this->call('migrate', $migrateArgs);
+        $exitCode = $this->option('fresh')
+            ? $this->call('migrate:fresh', $migrateArgs)
+            : $this->call('migrate', $migrateArgs);
+
+        if ($exitCode !== 0) {
+            return $exitCode;
         }
 
         if (User::exists()) {
@@ -57,7 +59,11 @@ class InstallCommand extends Command
         do {
             $password = $this->secret('Choose a password for the owner account');
             $confirm = $this->secret('Confirm the password');
-        } while ($password !== $confirm && ! $this->error('Passwords do not match. Please try again.'));
+
+            if ($password !== $confirm) {
+                $this->error('Passwords do not match. Please try again.');
+            }
+        } while ($password !== $confirm);
 
         $this->call('db:seed', [
             '--class' => 'Database\Seeders\RoleAndPermissionSeeder',
@@ -105,12 +111,13 @@ class InstallCommand extends Command
         $env = File::get($envPath);
 
         foreach ($values as $key => $value) {
-            $quoted = str_contains($value, ' ') ? "\"{$value}\"" : $value;
+            $escaped = str_replace('"', '\"', $value);
+            $quoted = str_contains($value, ' ') ? "\"{$escaped}\"" : $escaped;
             $pattern = '/^'.preg_quote($key, '/').'=.*/m';
             $replacement = $key.'='.$quoted;
 
             if (preg_match($pattern, $env)) {
-                $env = preg_replace($pattern, $replacement, $env);
+                $env = preg_replace($pattern, addcslashes($replacement, '\\$'), $env);
             } else {
                 $env .= PHP_EOL.$replacement;
             }

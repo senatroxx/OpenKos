@@ -47,7 +47,7 @@ php artisan app:install
 
 The `app:install` command is fully interactive — it prompts for database connection, site name, country, application URL, timezone, and owner credentials (with password confirmation). It sets production-safe defaults (`APP_ENV=production`, `APP_DEBUG=false`) and generates the app key automatically. Only one owner account can be created — subsequent runs will fail.
 
-For non-interactive setups, you can manually configure `.env` before running `app:install` — it will skip environment setup and proceed straight to migrations and owner creation.
+For non-interactive setups, you can manually configure `.env` before running `app:install` — it will skip environment setup and proceed straight to migrations and owner creation. Make sure a valid `APP_KEY` is already set (run `php artisan key:generate` if needed).
 
 ## Development
 
