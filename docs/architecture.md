@@ -28,6 +28,7 @@ app/
 ├── Actions/          Single-responsibility operations (orchestration)
 ├── Business/         Pure domain logic, business rules
 ├── Data/             Typed DTOs / value objects
+├── Database/         PostgreSQL driver extensions
 ├── Results/          Typed result objects from action/business operations
 ├── Repositories/     Query abstraction over Eloquent
 ├── Models/           Eloquent models
@@ -35,6 +36,8 @@ app/
 ├── Contracts/        Interfaces
 ├── Services/         External integrations
 ├── Enums/            Type-safe domain constants
+├── Events/           Domain event classes
+├── Listeners/        Event subscribers and listeners
 ├── Http/             Controllers, Middleware, Form Requests
 ├── Policies/         Authorization per model
 ├── Concerns/         Reusable traits
@@ -112,9 +115,15 @@ Property (has a type — see below)
   ├── Regions / Cities (location)
   └── Units
        ├── UnitRates (pricing history)
+       ├── LeaseUnitHistory (unit transfer records)
+       ├── MaintenanceTickets
        └── Leases
             ├── Tenants (pivot: lease_tenant)
-            ├── Payments
+            ├── Invoices
+            │    ├── InvoiceLineItems
+            │    └── Payments
+            │         ├── PaymentAllocations (M:N pivot: payment_id, invoice_id, amount)
+            │         └── PaymentProofs
             └── ReminderLogs
 
 Tenant
@@ -124,11 +133,14 @@ Tenant
 User (staff / owner)
   ├── Properties (pivot: property_user)
   └── Roles / Permissions
+
+ActivityLog (records user-triggered activity across entities)
+AuditLog (records setting changes and sensitive operations)
 ```
 
 ### Property Type
 
-Every property has a `type` (`properties.type`), backed by the `App\Enums\PropertyType` string enum: `kos` (default), `apartment`, `villa`, `hostel`, `hotel`. The column defaults to `kos`, so existing properties and any created without an explicit type are boarding houses. The enum is cast on the `Property` model, validated on create/update, filterable on the properties index, and shown in the UI. It exists so future business logic can branch on the property type instead of assuming every property is a kos — no behaviour differs by type yet; it's the domain seam for that divergence.
+Every property has a `type` (`properties.type`), backed by the `App\Models\PropertyType` Eloquent model: `boarding_house` (default), `apartment`, `villa`, `hostel`, `hotel`. The column defaults to `boarding_house`, so existing properties and any created without an explicit type are boarding houses. The model is a user-managed CRUD resource (`Settings\PropertyTypeController`) with `slug`, `label`, `is_active`, and `sort_order` columns. Property types exist so future business logic can branch on the type instead of assuming every property is a kos — no behaviour differs by type yet; it's the domain seam for that divergence.
 
 ### Multi-Tenant Occupancy
 
@@ -136,7 +148,7 @@ A unit can hold multiple tenants on a single lease via the `lease_tenant` pivot 
 
 ### Payments & Rent Schedule
 
-Payments are tracked on the `payments` polymorphic table (morphs to `Lease`). The rent schedule is generated dynamically by `Lease::schedule()` — it is not stored. The schedule engine calculates periods from the lease's `start_date`, `end_date`, `billing_interval`, and `billing_unit`, then matches each period against payments to derive status (`paid`, `upcoming`, `due`, `overdue`).
+Payments settle invoices — `payments` has an `invoice_id` FK (not polymorphic). The rent schedule is generated dynamically by `Lease::schedule()` — it is not stored. The schedule engine feeds `invoices:generate` (daily 01:00, 2-month horizon), which materializes `Invoice` records with `total`, `amount_paid`, `status`, `period_start`, and `period_end`. Payments are recorded against a specific invoice via `RecordPayment`, and `Invoice::recalculateStatus()` recomputes status (Pending, Partial, Paid) from confirmed payment totals. See `docs/architecture/adr/007-invoice-aggregate.md`.
 
 ### Reminders
 
@@ -173,6 +185,7 @@ resources/js/
 ├── hooks/           Custom React hooks
 ├── lib/             Utility functions
 ├── types/           TypeScript type definitions
+├── plugins/         Plugin frontend entry points (side-effect imports)
 ├── actions/         Wayfinder-generated TS functions for controllers
 └── routes/          Wayfinder-generated TS functions for named routes
 ```
@@ -262,7 +275,7 @@ Occupied   ──→ Available       (all leases terminated)
 - Timestamps use `nullableTimestamps()` where appropriate (pivot tables).
 - Foreign keys use `constrained()` with explicit `cascadeOnDelete` / `nullOnDelete` / `restrictOnDelete`.
 - Unique constraints cover business-unique combinations (e.g., `lease_id + period_start + reminder_type + overdue_days` on `reminder_logs`).
-- Currency values are stored as integers (cents/sen). The frontend divides by 100 for display.
+- Currency values are stored as `decimal(12, 2)`. The frontend formats as-is for display.
 - The `settings` table is a singleton — one row with columns for each setting group. No key-value pattern.
 
 ### Foreign Key Delete Strategy
@@ -290,7 +303,6 @@ Composite indexes are added to support production query patterns (filtering and 
 
 | Table                  | Index                                     | Columns                                    | Query pattern                                                                                                                                                                                                                                              |
 | ---------------------- | ----------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `payments`             | `idx_payments_type_id_status`             | `paymentable_type, paymentable_id, status` | Dashboard rent stats (`whereNotIn status`), overview finance (`where status = confirmed`), lease overdue checks. The previous morphs-only index `(paymentable_type, paymentable_id)` was a prefix — this superset covers it and status filtering together. |
 | `leases`               | `idx_leases_status_start_date`            | `status, start_date`                       | Dashboard base query `where(status='active', start_date <= now)`, overdue lease calculation.                                                                                                                                                               |
 | `maintenance_tickets`  | `idx_maintenance_tickets_property_status` | `property_id, status`                      | Property-scoped ticket filtering.                                                                                                                                                                                                                          |
 | `maintenance_tickets`  | `idx_maintenance_tickets_unit_status`     | `unit_id, status`                          | Unit-scoped maintenance history queries.                                                                                                                                                                                                                   |
@@ -301,7 +313,6 @@ Composite indexes are added to support production query patterns (filtering and 
 
 **Design decisions:**
 
-- `period_start` was intentionally excluded from the payments index. The original queries used `whereMonth()`/`whereYear()`, which wrap the column in `EXTRACT()` — a B-tree index cannot accelerate function-wrapped predicates. Those queries were rewritten to range conditions (`whereBetween`) so the index is usable.
 - Existing single-column indexes (`status`, `priority`) are preserved — they serve queries that filter on those columns alone without additional columns (e.g., global status filter on maintenance tickets).
 - The set of composite indexes is enforced by `tests/Feature/Schema/CompositeIndexTest.php`.
 
@@ -318,7 +329,7 @@ Composite indexes are added to support production query patterns (filtering and 
 ## Infrastructure
 
 - Queue driver is `database` — jobs are stored in the `jobs` table. Queue worker must be running for async notifications.
-- WhatsApp driver is pluggable via `config('services.whatsapp.driver')`. Default is `LogDriver` (writes to `storage/logs/whatsapp.log`).
+- WhatsApp driver is resolved from the platform `NotificationRegistry` (seeded by `config/services.php`). Default is `WhatsappLogDriver` (writes to `storage/logs/whatsapp.log`).
 - `Date` facade uses `CarbonImmutable` (configured in `AppServiceProvider`). All date type hints use `CarbonInterface` to accept both `Carbon` and `CarbonImmutable`.
 - Prohibits destructive DB commands (`DB::prohibitDestructiveCommands()`) in production.
 - Password defaults are strict in production (12 chars, mixed case, symbols, uncompromised).

@@ -12,7 +12,7 @@ OpenKOS is open-source and self-hosted first. A hosted ("cloud") offering may ex
 We will keep the **open-source core fully functional and self-hostable, with cloud concerns strictly outside the core**.
 
 - The core must run on commodity infrastructure: PostgreSQL, the `database` queue driver, local/file storage, SMTP. No feature in core may hard-depend on a managed cloud service.
-- External integrations go behind pluggable drivers with a self-hosted default (e.g. the WhatsApp channel defaults to `LogDriver`; drivers are registered via the platform `NotificationRegistry`).
+- External integrations go behind pluggable drivers with a self-hosted default (e.g. the WhatsApp channel defaults to `WhatsappLogDriver`; drivers are registered via the platform `NotificationRegistry`).
 - Anything cloud-specific (managed hosting, billing, provisioning, telemetry) is built *around* the core — as separate services or plugins ([ADR-005](005-plugin-philosophy.md)) — never as conditional branches inside it.
 - A hosted offering provisions per-customer single-tenant installations ([ADR-001](001-single-tenant.md)); it does not get a privileged multi-tenant fork of the core.
 

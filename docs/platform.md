@@ -18,7 +18,9 @@ src/
 ├── Platform/
 │   ├── OpenKOSManager.php    Central manager — the object plugins receive
 │   ├── PlatformServiceProvider.php
+│   ├── Console/
 │   ├── Facades/OpenKOS.php
+│   ├── Permission/           PermissionRegistry
 │   ├── Plugin/               Plugin base, PluginManifest, PluginLoader
 │   ├── Dashboard/            DashboardRegistry + DashboardPage
 │   ├── Navigation/           NavigationRegistry + NavigationItem
@@ -38,16 +40,19 @@ Core also dispatches domain events plugins can subscribe to, e.g. `App\Events\Pa
 
 ## The Registries
 
-Six registries, each bound as a **container singleton** (no static state) in `PlatformServiceProvider::register()`. All implement `Arrayable`, so exposing any of them to the frontend later is `->toArray()` in a shared Inertia prop.
+Nine singletons, each bound as a **container singleton** in `PlatformServiceProvider::register()`. All implement `Arrayable`, so exposing any of them to the frontend later is `->toArray()` in a shared Inertia prop.
 
 | Registry               | Registers                                        | Item shape                                                                                                                                                                                                                     |
 | ---------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `NavigationRegistry`   | Sidebar nav items, grouped (`main`, `footer`, …) | `NavigationItem(title, href?, icon?, permission?, children[])` — mirrors the TS `NavItem` type                                                                                                                                 |
 | `DashboardRegistry`    | Dashboard pages                                  | `DashboardPage(key, title, href, permission?)`                                                                                                                                                                                 |
 | `WorkspaceRegistry`    | Tabs on entity workspace pages                   | `WorkspaceTab(key, label, permission?, meta[])`                                                                                                                                                                                |
-| `SettingsRegistry`     | Settings pages                                   | `SettingsPage(key, title, href, permission?, group?, routeName?, order?)` — `group` renders under a nav section; `routeName` is resolved lazily in `toArray()` (safe for plugin `boot()`); pages sort by `order` (default 500) |
+| `SettingsRegistry`     | Settings pages + setting definitions             | `SettingsPage(key, title, href, permission?, group?, routeName?, order?)` — `group` renders under a nav section; `routeName` is resolved lazily in `toArray()` (safe for plugin `boot()`); pages sort by `order` (default 500) |
+| `SettingsManager`      | Settings storage (read/write by key)             | Injected class with `get(key)`, `set(key, value)`, `some(keys)` methods                                                                                                                                                        |
+| `PermissionRegistry`   | Plugin-declared permissions                      | `register(key, label)` — persisted to Spatie permissions table via `platform:permissions:sync`                                                                                                                                 |
 | `NotificationRegistry` | Notification drivers by name                     | `NotificationDriverRegistration(name, channel, driverClass, label, config[])`                                                                                                                                                  |
 | `PaymentRegistry`      | Payment gateways by key                          | class-string or instance of `PaymentGateway`                                                                                                                                                                                   |
+| `OpenKOSManager`       | Central manager — entry point for all registries | Injected into plugins; facade exposes `OpenKOS::navigation()->...`, `OpenKOS::dashboard()->...`, etc.                                                                                                                           |
 
 Conventions:
 
