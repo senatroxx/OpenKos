@@ -11,7 +11,7 @@
 The kos management system needs automated rent reminders via WhatsApp to reduce late payments. Requirements:
 
 - Remind tenants before rent is due (upcoming), on the due date (due today), and when overdue
-- Derive reminder events from the existing rent schedule engine (`Lease::schedule()`)
+- Derive reminder events from payable invoices on each lease
 - Allow manual sending from lease detail sheet as a separate action from automated scheduling
 - Support custom message templates per installation
 - No payment gateway integration in scope
@@ -26,11 +26,11 @@ All reminder code lives in domain layers — `Actions/`, `Business/`, `Repositor
 
 Initially built with a feature folder (`app/Reminders/`), then refactored into layers during implementation.
 
-### 2. Concurrency Safety: Unique Constraint + Record-First
+### 2. Concurrency Safety: Unique Constraint + Select-Then-Insert
 
-`ReminderRepository::recordIfAbsent()` inserts into `reminder_logs` first (with a unique constraint on `lease_id + period_start + reminder_type + overdue_days`), catches integrity constraint violations (`SQLSTATE 23*`).
+`ReminderRepository::recordIfAbsent()` checks for an existing record first (SELECT), then inserts only if none exists. The unique constraint on `lease_id + period_start + reminder_type + overdue_days` is a safety net — it prevents duplicates from concurrent requests even if the SELECT race window is hit.
 
-**Rationale:** Avoids race conditions inherent in read-then-write patterns. The DB constraint guarantees at most one log per reminder, so the `catch` is the dedup check. Error code prefix check (`str_starts_with('23')`) is cross-database compatible (PostgreSQL uses `23505`, SQLite uses `23000`).
+**Rationale:** The unique constraint guarantees at most one log per reminder. Error code prefix check (`str_starts_with('23')`) is cross-database compatible (PostgreSQL uses `23505`, SQLite uses `23000`).
 
 ### 3. Scheduler Produces Events, Action Orchestrates
 
@@ -82,11 +82,11 @@ Scheduler methods accept `CarbonInterface` instead of `Carbon`.
 
 **Rationale:** Development-safe default — writes to `storage/logs/whatsapp.log` instead of requiring a real WhatsApp connection. The env var `WHATSAPP_DRIVER` lives in `config/services.php` (not `AppServiceProvider`) so omitting it doesn't crash with "Target class [] does not exist."
 
-### 11. Manual Send Is Independent of Scheduler
+### 11. Manual Send Goes Through ForceSendReminder Action
 
-`LeaseController::sendReminder()` finds the first unpaid period from `Lease::schedule()`, creates one `ReminderEvent`, sends synchronously via `$tenant->notifyNow()`, and logs. It bypasses the interval scheduler entirely.
+`LeaseController::sendReminder()` delegates to `ForceSendReminder` Action, which picks the first payable invoice, creates one `ReminderEvent`, sends synchronously via `$tenant->notifyNow()`, and logs via `ReminderRepository::recordIfAbsent()`. It bypasses the interval scheduler entirely.
 
-**Rationale:** Manual send is a one-off action for the landlord — send one reminder right now, regardless of whether the automated scheduler would have sent one. Using `notifyNow()` ensures the log file is written immediately (the sent_at timestamp is visible on refresh).
+**Rationale:** Manual send is a one-off action for the landlord — send one reminder right now, regardless of whether the automated scheduler would have sent one. Using `notifyNow()` ensures the log file is written immediately (the sent_at timestamp is visible on refresh). The `ForceSendReminder` action keeps the manual path consistent with the scheduled path, sharing the repository and notification logic.
 
 ### 12. Primary Tenant Only
 
@@ -101,7 +101,7 @@ Schedule (routes/console.php)
   └─ SendRentRemindersCommand
        └─ SendRentReminders (Action)
             ├─ PaymentReminderScheduler (Business)
-            │    └─ Lease::scheduleForReminder()
+            │    └─ $lease->invoices()->payable()
             ├─ ReminderRepository::recordIfAbsent() (Repositories)
             └─ Tenant::notify(new RentReminder)
                  └─ WhatsAppChannel
@@ -110,10 +110,11 @@ Schedule (routes/console.php)
 
 Manual Send (LeaseController)
   └─ LeaseController::sendReminder()
-       ├─ Lease::scheduleForReminder()
-       ├─ ReminderEvent
-       ├─ Tenant::notifyNow(new RentReminder)
-       └─ ReminderLog::create()
+       └─ ForceSendReminder (Action)
+            ├─ $lease->invoices()->payable()
+            ├─ ReminderEvent
+            ├─ Tenant::notifyNow(new RentReminder)
+            └─ ReminderRepository::recordIfAbsent()
 ```
 
 ### Directory Layout
@@ -121,6 +122,7 @@ Manual Send (LeaseController)
 ```
 app/
 ├── Actions/Reminders/
+│   ├── ForceSendReminder.php
 │   └── SendRentReminders.php
 ├── Business/Reminders/
 │   └── PaymentReminderScheduler.php
@@ -139,7 +141,7 @@ app/
 │   ├── Channels/
 │   │   └── WhatsAppChannel.php
 │   ├── Drivers/
-│   │   └── LogDriver.php
+│   │   └── WhatsappLogDriver.php
 │   └── RentReminder.php
 ├── Repositories/
 │   └── ReminderRepository.php

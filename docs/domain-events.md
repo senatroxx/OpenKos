@@ -13,24 +13,25 @@
 
 ### Lease
 
-| Event                      | Payload                                            | Dispatched from                                                                                           |
-| -------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds`                   | `LeaseController::store`                                                                                  |
-| `Lease\LeaseStatusChanged` | `Lease $lease, LeaseStatus $from, LeaseStatus $to` | `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::renew`, `LeaseController::destroy` |
+| Event                      | Payload                                                               | Dispatched from                                                                                           |
+| -------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds, ?int $actorId`                      | `LeaseController::store`                                                                                  |
+| `Lease\LeaseStatusChanged` | `Lease $lease, LeaseStatus $from, LeaseStatus $to, ?int $actorId`    | `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::renew`, `LeaseController::destroy` |
 
 **Payload: `LeaseCreated`**
 
 ```php
 public readonly Lease $lease;
 public readonly array $tenantIds;   // IDs of attached tenants
+public readonly ?int $actorId;      // ID of the acting user, null for system-triggered
 ```
 
 ### Payment
 
-| Event                          | Payload                                                    | Dispatched from             |
-| ------------------------------ | ---------------------------------------------------------- | --------------------------- |
-| `Payment\PaymentRecorded`      | `Payment $payment`                                         | `PaymentController::store`  |
-| `Payment\PaymentStatusChanged` | `Payment $payment, PaymentStatus $from, PaymentStatus $to` | `PaymentController::verify` |
+| Event                          | Payload                                                                 | Dispatched from             |
+| ------------------------------ | ----------------------------------------------------------------------- | --------------------------- |
+| `Payment\PaymentRecorded`      | `Payment $payment, ?int $actorId`                                       | `PaymentController::store`  |
+| `Payment\PaymentStatusChanged` | `Payment $payment, PaymentStatus $from, PaymentStatus $to, ?int $actorId` | `PaymentController::verify` |
 
 Since [ADR-007](architecture/adr/007-invoice-aggregate.md) payments settle invoices; listeners reach the billing context via `$payment->invoice` (and `->invoice->lease`).
 
@@ -39,21 +40,24 @@ Since [ADR-007](architecture/adr/007-invoice-aggregate.md) payments settle invoi
 | Event                      | Payload            | Dispatched from                     |
 | -------------------------- | ------------------ | ----------------------------------- |
 | `Invoice\InvoiceGenerated` | `Invoice $invoice` | `GenerateInvoices` (post-commit)    |
+| `Invoice\InvoiceFullyPaid` | `Invoice $invoice` | `AllocatePayment`                   |
 
-`InvoiceGenerated` is the plugin hook for payment gateways, the tenant portal, and accounting — it fires once per invoice the generation engine creates, after the transaction commits, and never on reruns (generation is idempotent). Other invoice lifecycle events (status changed, cancelled) don't exist yet — add them when a consumer appears.
+`InvoiceGenerated` is the plugin hook for payment gateways, the tenant portal, and accounting — it fires once per invoice the generation engine creates, after the transaction commits, and never on reruns (generation is idempotent).
+
+`InvoiceFullyPaid` fires when an invoice's status transitions to `Paid` for the first time after a payment allocation. Other invoice lifecycle events (status changed, cancelled) don't exist yet — add them when a consumer appears.
 
 ### Maintenance
 
-| Event                                  | Payload                     | Dispatched from                       |
-| -------------------------------------- | --------------------------- | ------------------------------------- |
-| `Maintenance\MaintenanceTicketCreated` | `MaintenanceTicket $ticket` | `MaintenanceTicketController::store`  |
-| `Maintenance\MaintenanceResolved`      | `MaintenanceTicket $ticket` | `MaintenanceTicketController::update` |
+| Event                                  | Payload                               | Dispatched from                       |
+| -------------------------------------- | ------------------------------------- | ------------------------------------- |
+| `Maintenance\MaintenanceTicketCreated` | `MaintenanceTicket $ticket, ?int $actorId` | `MaintenanceTicketController::store`  |
+| `Maintenance\MaintenanceResolved`      | `MaintenanceTicket $ticket, ?int $actorId` | `MaintenanceTicketController::update` |
 
 ### Unit
 
-| Event                    | Payload                                        | Dispatched from                                                                                                                                                                        |
-| ------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Unit\UnitStatusChanged` | `Unit $unit, UnitStatus $from, UnitStatus $to` | `LeaseController::store`, `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::destroy`, `MaintenanceTicketController::store`, `MaintenanceTicketController::update` |
+| Event                    | Payload                                                           | Dispatched from                                                                                                                                                                        |
+| ------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Unit\UnitStatusChanged` | `Unit $unit, UnitStatus $from, UnitStatus $to, ?int $actorId`     | `LeaseController::store`, `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::destroy`, `MaintenanceTicketController::store`, `MaintenanceTicketController::update` |
 
 **Payload: `UnitStatusChanged`**
 
@@ -61,13 +65,22 @@ Since [ADR-007](architecture/adr/007-invoice-aggregate.md) payments settle invoi
 public readonly Unit $unit;
 public readonly UnitStatus $from;   // previous status
 public readonly UnitStatus $to;     // new status
+public readonly ?int $actorId;      // ID of the acting user, null for system-triggered
 ```
+
+### Reminder
+
+| Event                                  | Payload                 | Dispatched from                       |
+| -------------------------------------- | ----------------------- | ------------------------------------- |
+| `Reminder\InvoiceReminderDispatched`   | `ReminderEvent $event`  | `SendRentReminders`, `ForceSendReminder` |
+
+`InvoiceReminderDispatched` fires when a rent reminder notification has been sent via WhatsApp — one event per reminder log entry created. Plugin consumers can use it for analytics, tenant-facing notification history, or cross-channel relay.
 
 ### Settings
 
-| Event                      | Payload                      | Dispatched from                                   |
-| -------------------------- | ---------------------------- | ------------------------------------------------- |
-| `Settings\SettingsUpdated` | `string $group, array $keys` | `UpdateSettings` action, `SettingsManager::set()` |
+| Event                      | Payload                                   | Dispatched from                                   |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| `Settings\SettingsUpdated` | `string $group, array $keys, ?int $actorId` | `UpdateSettings` action, `SettingsManager::set()` |
 
 **Payload: `SettingsUpdated`**
 

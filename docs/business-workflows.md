@@ -124,7 +124,6 @@ app/
 │   ├── Leases/
 │   │   ├── CreateLease.php
 │   │   ├── MoveOutLease.php
-│   │   ├── RecordPayment.php
 │   │   └── RenewLease.php
 │   ├── Payments/
 │   │   └── RecordPayment.php
@@ -149,11 +148,11 @@ app/
 │       ├── ReminderEvent.php
 │       └── ReminderSettings.php
 ├── Results/
-│   └── Lease/
-│       ├── MoveOutLeaseResult.php
-│       └── RenewLeaseResult.php
-├── Payment/
-│   └── RecordPaymentResult.php
+│   ├── Lease/
+│   │   ├── MoveOutLeaseResult.php
+│   │   └── RenewLeaseResult.php
+│   └── Payment/
+│       └── RecordPaymentResult.php
 └── Repositories/
     └── ReminderRepository.php
 ```
