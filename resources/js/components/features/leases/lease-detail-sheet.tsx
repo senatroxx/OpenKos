@@ -29,14 +29,12 @@ export default function LeaseDetailSheet({
     onOpenChange,
     onMoveOut,
     onMoveUnit,
-    onEdit,
 }: {
     lease?: Lease | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onMoveOut?: () => void;
     onMoveUnit?: () => void;
-    onEdit?: () => void;
 }) {
     const { auth } = usePage<{ auth: { permissions: string[] } }>().props;
     const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
@@ -625,11 +623,7 @@ export default function LeaseDetailSheet({
                         </div>
 
                         <div className="flex flex-wrap items-center justify-end gap-4">
-                            {onEdit && (
-                                <Button variant="outline" onClick={onEdit}>
-                                    Edit
-                                </Button>
-                            )}
+
                             {isActive && (
                                 <Button
                                     variant="default"
