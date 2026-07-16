@@ -375,13 +375,6 @@ export default function Index({
                         ? openMoveOutFromDetail
                         : undefined
                 }
-                onEdit={detailLease ? openEditFromDetail : undefined}
-            />
-
-            <LeaseEditSheet
-                lease={detailLease}
-                open={editOpen}
-                onOpenChange={setEditOpen}
             />
 
             <MoveOutSheet
