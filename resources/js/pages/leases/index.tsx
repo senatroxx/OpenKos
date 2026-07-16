@@ -4,7 +4,6 @@ import {
     Eye,
     LogOut,
     EllipsisVertical,
-    Pencil,
     RefreshCw,
     Building2,
     Banknote,
