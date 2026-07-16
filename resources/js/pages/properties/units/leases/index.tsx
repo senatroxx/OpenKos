@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { LeaseDetailSheet, MoveOutSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
@@ -35,15 +35,6 @@ export default function Index({
     function openMoveOutFromDetail() {
         setDetailOpen(false);
         setMoveOutOpen(true);
-    }
-
-    function openEditFromDetail() {
-        if (!detailLease) {
-            return;
-        }
-
-        setDetailOpen(false);
-        router.get(backUrl);
     }
 
     return (
