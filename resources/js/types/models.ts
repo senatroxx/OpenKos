@@ -320,6 +320,7 @@ export type WorkspaceLease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string | null;
+    billing_strategy?: string;
     status: string;
 };
 
