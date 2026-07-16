@@ -18,7 +18,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { DUE_DAY_LABELS } from '@/lib/constants';
-import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
+import { BILLING_STRATEGIES, PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import type { Lease, Payment } from '@/types';
@@ -29,14 +29,12 @@ export default function LeaseDetailSheet({
     onOpenChange,
     onMoveOut,
     onMoveUnit,
-    onEdit,
 }: {
     lease?: Lease | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onMoveOut?: () => void;
     onMoveUnit?: () => void;
-    onEdit?: () => void;
 }) {
     const { auth } = usePage<{ auth: { permissions: string[] } }>().props;
     const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
@@ -274,6 +272,14 @@ export default function LeaseDetailSheet({
                                                         lease.rent_amount,
                                                     )}
                                                     {lease.billing_label}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm">
+                                                <span className="text-muted-foreground">
+                                                    Billing strategy
+                                                </span>
+                                                <span className="text-xs font-medium">
+                                                    {BILLING_STRATEGIES.find((s) => s.value === lease.billing_strategy)?.label ?? 'Advance (due within period)'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
@@ -617,11 +623,7 @@ export default function LeaseDetailSheet({
                         </div>
 
                         <div className="flex flex-wrap items-center justify-end gap-4">
-                            {onEdit && (
-                                <Button variant="outline" onClick={onEdit}>
-                                    Edit
-                                </Button>
-                            )}
+
                             {isActive && (
                                 <Button
                                     variant="default"

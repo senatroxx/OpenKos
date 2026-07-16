@@ -335,6 +335,8 @@ class LeaseController extends Controller
     {
         $this->authorize('update', $lease);
 
+        abort(403, 'Lease editing is temporarily disabled.');
+
         $lease->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease updated.')]);

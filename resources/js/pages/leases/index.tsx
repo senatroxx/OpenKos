@@ -4,7 +4,6 @@ import {
     Eye,
     LogOut,
     EllipsisVertical,
-    Pencil,
     RefreshCw,
     Building2,
     Banknote,
@@ -17,7 +16,7 @@ import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
     LeaseDetailSheet,
-    LeaseEditSheet,
+    // LeaseEditSheet,
     MoveOutSheet,
     RenewLeaseSheet,
 } from '@/components/features';
@@ -70,7 +69,7 @@ export default function Index({
 }: PageProps) {
     const [detailLease, setDetailLease] = useState<Lease | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
-    const [editOpen, setEditOpen] = useState(false);
+    // const [editOpen, setEditOpen] = useState(false);
     const [moveOutOpen, setMoveOutOpen] = useState(false);
     const [renewOpen, setRenewOpen] = useState(false);
 
@@ -98,11 +97,6 @@ export default function Index({
     function openMoveOutFromDetail() {
         setDetailOpen(false);
         setMoveOutOpen(true);
-    }
-
-    function openEditFromDetail() {
-        setDetailOpen(false);
-        setEditOpen(true);
     }
 
     const columns: TableColumn<Lease>[] = [
@@ -230,7 +224,7 @@ export default function Index({
                             <Eye className="size-4" />
                             View
                         </DropdownMenuItem>
-                        <DropdownMenuItem
+                        {/* <DropdownMenuItem
                             onClick={() => {
                                 setDetailLease(lease);
                                 setDetailOpen(false);
@@ -239,7 +233,7 @@ export default function Index({
                         >
                             <Pencil className="size-4" />
                             Edit
-                        </DropdownMenuItem>
+                        </DropdownMenuItem> */}
                         {lease.status === 'active' && (
                             <>
                                 <DropdownMenuItem
@@ -375,13 +369,6 @@ export default function Index({
                         ? openMoveOutFromDetail
                         : undefined
                 }
-                onEdit={detailLease ? openEditFromDetail : undefined}
-            />
-
-            <LeaseEditSheet
-                lease={detailLease}
-                open={editOpen}
-                onOpenChange={setEditOpen}
             />
 
             <MoveOutSheet

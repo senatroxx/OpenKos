@@ -180,11 +180,8 @@ describe('CRUD', function () {
         $this->actingAs($user)
             ->put(route('properties.units.leases.update', [$property, $unit, $lease]), [
                 'rent_amount' => 2_000_000,
-            ]);
-
-        $lease->refresh();
-
-        expect($lease->rent_amount)->toBe('2000000.00');
+            ])
+            ->assertForbidden();
     });
 });
 

@@ -25,6 +25,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { DUE_DAY_OPTIONS } from '@/lib/constants';
+import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { computeMonthlyEquivalent, formatPrice } from '@/lib/formatters';
 import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
@@ -45,6 +46,7 @@ export default function LeaseFormSheet({
     }>().props;
     const [selectedTenantIds, setSelectedTenantIds] = useState<number[]>([]);
     const [dueDay, setDueDay] = useState('1');
+    const [billingStrategy, setBillingStrategy] = useState('advance');
     const [hasDeposit, setHasDeposit] = useState(false);
     const dueDayInitialized = useRef(false);
 
@@ -408,6 +410,23 @@ export default function LeaseFormSheet({
                                                 message={errors.rent_due_day}
                                             />
                                         </div>
+                                    </div>
+                                    <div className="mt-4 grid gap-2">
+                                        <Label htmlFor="billing_strategy">Billing Strategy</Label>
+                                        <input type="hidden" name="billing_strategy" value={billingStrategy} />
+                                        <Select value={billingStrategy} onValueChange={setBillingStrategy}>
+                                            <SelectTrigger id="billing_strategy">
+                                                <SelectValue placeholder="Select billing strategy" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {BILLING_STRATEGIES.map((s) => (
+                                                    <SelectItem key={s.value} value={s.value}>
+                                                        {s.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <InputError message={errors.billing_strategy} />
                                     </div>
                                 </section>
 

@@ -6,6 +6,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { DUE_DAY_LABELS } from '@/lib/constants';
+import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease } from '@/types';
 
@@ -182,6 +183,14 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                 <span className="tabular-nums">
                                     {formatPrice(lease.rent_amount)}
                                     {lease.billing_label}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                    Billing strategy
+                                </span>
+                                <span className="text-xs font-medium">
+                                    {BILLING_STRATEGIES.find((s) => s.value === lease.billing_strategy)?.label ?? 'Advance (due within period)'}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">

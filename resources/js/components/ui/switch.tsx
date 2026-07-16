@@ -13,6 +13,7 @@ function Switch({
   checked?: boolean
   onCheckedChange?: (checked: boolean) => void
   disabled?: boolean
+  id?: string
 }) {
   return (
     <button
