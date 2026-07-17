@@ -185,7 +185,7 @@ class TenantController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant assigned to unit.')]);
 
-        return to_route('tenants.index');
+        return back();
     }
 
     public function store(StoreTenantRequest $request): RedirectResponse
@@ -194,7 +194,7 @@ class TenantController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant created.')]);
 
-        return to_route('tenants.index');
+        return back();
     }
 
     public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
@@ -205,7 +205,7 @@ class TenantController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant updated.')]);
 
-        return to_route('tenants.index');
+        return back();
     }
 
     public function restore(Tenant $tenant): RedirectResponse

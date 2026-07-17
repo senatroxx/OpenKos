@@ -1,16 +1,6 @@
 import { StatusBadge } from '@/components/shared/status-badge';
+import { formatPrice } from '@/lib/formatters';
 import type { Unit } from '@/types';
-
-function formatPrice(cents: string): string {
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
 
 export default function UnitOverview({ unit }: { unit: Unit }) {
     const isOccupied = (unit.active_leases ?? 0) > 0;

@@ -52,7 +52,7 @@ describe('authorization', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease))
             ->assertForbidden();
     });
@@ -61,7 +61,7 @@ describe('authorization', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -78,7 +78,7 @@ describe('authorization', function () {
         $user->givePermissionTo('leases.renew');
         $user->properties()->sync([$property->id]);
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -94,7 +94,7 @@ describe('authorization', function () {
         $user = User::factory()->admin()->create();
         $user->properties()->sync([$property->id]);
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -110,7 +110,7 @@ describe('authorization', function () {
         $user = User::factory()->admin()->create();
         $user->givePermissionTo('leases.renew');
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -127,7 +127,7 @@ describe('eligibility', function () {
         [, , $lease] = createRenewableLease(['end_date' => null]);
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -144,7 +144,7 @@ describe('eligibility', function () {
         [, , $lease] = createRenewableLease(['status' => 'terminated']);
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -162,7 +162,7 @@ describe('eligibility', function () {
         [, , $lease] = createRenewableLease(['status' => 'expired']);
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -181,7 +181,7 @@ describe('renewal', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_500_000,
                 'extension_value' => 12,
@@ -210,7 +210,7 @@ describe('renewal', function () {
         [, , $lease, $tenant] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 6,
@@ -229,7 +229,7 @@ describe('renewal', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -248,7 +248,7 @@ describe('renewal', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -267,7 +267,7 @@ describe('renewal', function () {
         [, , $lease] = createRenewableLease(['end_date' => '2026-12-31']);
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_000_000,
                 'extension_value' => 2,
@@ -290,7 +290,7 @@ describe('renewal', function () {
         ]);
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -324,7 +324,7 @@ describe('renewal', function () {
         $invoice->recalculateStatus();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 12,
@@ -345,7 +345,7 @@ describe('outstanding balance', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 6,
@@ -374,7 +374,7 @@ describe('outstanding balance', function () {
 
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 6,
@@ -403,7 +403,7 @@ describe('outstanding balance', function () {
         }
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 6,
@@ -431,7 +431,7 @@ describe('outstanding balance', function () {
 
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_200_000,
                 'extension_value' => 6,
@@ -452,7 +452,7 @@ describe('validation', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [])
             ->assertSessionHasErrors(['rent_amount', 'extension_value', 'extension_unit', 'deposit_handling']);
     });
@@ -461,7 +461,7 @@ describe('validation', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 'abc',
                 'extension_value' => 12,
@@ -476,7 +476,7 @@ describe('validation', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_000_000,
                 'extension_value' => 0,
@@ -491,7 +491,7 @@ describe('validation', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_000_000,
                 'extension_value' => 12,
@@ -505,7 +505,7 @@ describe('validation', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
 
-        $this->actingAs($user)
+        $this->from(route('leases.index'))->actingAs($user)
             ->post(route('leases.renew', $lease), [
                 'rent_amount' => 1_000_000,
                 'extension_value' => 12,

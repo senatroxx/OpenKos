@@ -11,7 +11,7 @@ describe('Reminder settings page', function () {
     it('renders the form', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.reminders.edit'))->actingAs($owner)
             ->get(route('settings.reminders.edit'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -25,7 +25,7 @@ describe('Reminder settings page', function () {
     it('updates reminder settings', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.reminders.edit'))->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_enabled' => true,
                 'reminder_days_before' => 5,
@@ -46,7 +46,7 @@ describe('Reminder settings page', function () {
     it('updates reminder channels', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.reminders.edit'))->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 3,
                 'reminder_overdue_intervals' => '1, 3, 7',
@@ -60,7 +60,7 @@ describe('Reminder settings page', function () {
     it('requires at least one reminder channel', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.reminders.edit'))->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 3,
                 'reminder_overdue_intervals' => '1, 3, 7',
@@ -72,7 +72,7 @@ describe('Reminder settings page', function () {
     it('validates reminder settings', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.reminders.edit'))->actingAs($owner)
             ->patch(route('settings.reminders.update'), [
                 'reminder_days_before' => 100,
                 'reminder_overdue_intervals' => 'invalid',

@@ -57,6 +57,8 @@ src/
 
 **Controllers** (`Http/Controllers/`) — Handle HTTP, validate requests (via Form Requests), authorize (via Policies), delegate to Actions, return responses (Inertia or redirect). Never contain business logic. Max one `try/catch` at the controller boundary for integration-level errors.
 
+**Redirect convention** — Mutations (`store`, `update`, and sheet-triggered actions like `assign`, `moveOut`, `renew`) return **`back()`**, not `to_route('…index')`. The UI is sheet-driven: a form opens as a `<Sheet>` over a list _or_ a detail page and closes client-side on success, so `back()` keeps the user on whichever page they triggered it from, with fresh data, and avoids hardcoding a destination. Inertia converts the `PUT`/`PATCH`/`DELETE` redirect to 303 automatically. Two exceptions stay explicit: **`destroy`** returns `to_route('…index')` (redirecting to the just-deleted record's page would 404), and auth/cross-context flows (e.g. `completeInvitation` → `login`) target their real destination. When testing a `back()` action, set `->from(route(...))` on the request so the assertion has a referer to land on.
+
 **Form Requests** (`Http/Requests/`) — Per-endpoint validation rules and `authorize()` checks that don't require model instance access. Keep validation rules here, not in the controller.
 
 **Actions** (`Actions/`) — Single-responsibility operations that orchestrate multiple steps. Typically: call Business layer → call Repository → dispatch notification. Actions are injectable classes (not static). Constructor-inject dependencies.
@@ -171,6 +173,8 @@ Permissions are defined as PHP enums (`App\Enums\Permission`) with:
 Route authorization is done at the controller level via `$this->authorize()` with Policy methods. The frontend gates UI elements by checking the permission in the user's session data.
 
 ## Frontend Architecture
+
+Component-level UI conventions — form handling (`useForm`), sheet/dialog patterns (reset-on-close, remount keys, footer layout), and the shared building blocks to reuse — are documented in [`docs/frontend-conventions.md`](frontend-conventions.md).
 
 ### Directory Structure
 
@@ -301,15 +305,15 @@ The full FK inventory with per-constraint rationale is enforced by `tests/Featur
 
 Composite indexes are added to support production query patterns (filtering and sorting across multiple columns). The rationale for each:
 
-| Table                  | Index                                     | Columns                                    | Query pattern                                                                                                                                                                                                                                              |
-| ---------------------- | ----------------------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `leases`               | `idx_leases_status_start_date`            | `status, start_date`                       | Dashboard base query `where(status='active', start_date <= now)`, overdue lease calculation.                                                                                                                                                               |
-| `maintenance_tickets`  | `idx_maintenance_tickets_property_status` | `property_id, status`                      | Property-scoped ticket filtering.                                                                                                                                                                                                                          |
-| `maintenance_tickets`  | `idx_maintenance_tickets_unit_status`     | `unit_id, status`                          | Unit-scoped maintenance history queries.                                                                                                                                                                                                                   |
-| `units`                | `idx_units_property_status`               | `property_id, status`                      | Unit availability listings (`scopeAvailableForAssignment`).                                                                                                                                                                                                |
-| `lease_unit_histories` | `idx_luh_from_reason_date`                | `from_unit_id, reason, effective_date`     | Maintenance transfer lookups — equality on first 2 columns + ORDER BY on third.                                                                                                                                                                            |
-| `unit_rates`           | `idx_unit_rates_unit_active_interval`     | `unit_id, is_active, billing_interval`     | `activeRates()` relation.                                                                                                                                                                                                                                  |
-| `properties`           | `idx_properties_active_name`              | `is_active, name`                          | Admin property dropdowns sorted by name.                                                                                                                                                                                                                   |
+| Table                  | Index                                     | Columns                                | Query pattern                                                                                |
+| ---------------------- | ----------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `leases`               | `idx_leases_status_start_date`            | `status, start_date`                   | Dashboard base query `where(status='active', start_date <= now)`, overdue lease calculation. |
+| `maintenance_tickets`  | `idx_maintenance_tickets_property_status` | `property_id, status`                  | Property-scoped ticket filtering.                                                            |
+| `maintenance_tickets`  | `idx_maintenance_tickets_unit_status`     | `unit_id, status`                      | Unit-scoped maintenance history queries.                                                     |
+| `units`                | `idx_units_property_status`               | `property_id, status`                  | Unit availability listings (`scopeAvailableForAssignment`).                                  |
+| `lease_unit_histories` | `idx_luh_from_reason_date`                | `from_unit_id, reason, effective_date` | Maintenance transfer lookups — equality on first 2 columns + ORDER BY on third.              |
+| `unit_rates`           | `idx_unit_rates_unit_active_interval`     | `unit_id, is_active, billing_interval` | `activeRates()` relation.                                                                    |
+| `properties`           | `idx_properties_active_name`              | `is_active, name`                      | Admin property dropdowns sorted by name.                                                     |
 
 **Design decisions:**
 

@@ -147,15 +147,16 @@ export default function TicketFormSheet({
                         </SheetDescription>
                     </SheetHeader>
 
-                    <div className="flex-1 overflow-y-auto px-4">
-                        <Form
-                            id="ticket-form"
-                            action={formAction}
-                            method={formMethod}
-                            onSuccess={() => onOpenChange(false)}
-                        >
-                            {({ processing, errors }) => (
-                                <div className="space-y-6 pt-4">
+                    <Form
+                        id="ticket-form"
+                        action={formAction}
+                        method={formMethod}
+                        onSuccess={() => onOpenChange(false)}
+                        className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
+                    >
+                        {({ processing, errors }) => (
+                            <>
+                                <div className="space-y-6">
                                     {!isEdit && (
                                         <div className="grid gap-2">
                                             <Label>Property</Label>
@@ -419,28 +420,27 @@ export default function TicketFormSheet({
                                                 </div>
                                             );
                                         })()}
-
-                                    <div className="flex items-center justify-end gap-4 pt-2">
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            onClick={() => onOpenChange(false)}
-                                            disabled={processing}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button
-                                            disabled={processing}
-                                            type="submit"
-                                            onClick={handleCreateClick}
-                                        >
-                                            {isEdit ? 'Save' : 'Create'}
-                                        </Button>
-                                    </div>
                                 </div>
-                            )}
-                        </Form>
-                    </div>
+                                <div className="flex items-center justify-end gap-4">
+                                    <Button
+                                        variant="outline"
+                                        type="button"
+                                        onClick={() => onOpenChange(false)}
+                                        disabled={processing}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        disabled={processing}
+                                        type="submit"
+                                        onClick={handleCreateClick}
+                                    >
+                                        {isEdit ? 'Save' : 'Create'}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Form>
                 </SheetContent>
             </Sheet>
 

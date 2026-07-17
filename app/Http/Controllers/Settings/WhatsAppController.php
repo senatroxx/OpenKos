@@ -121,7 +121,7 @@ class WhatsAppController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('WhatsApp settings updated.')]);
 
-        return to_route('settings.whatsapp.edit');
+        return back();
     }
 
     public function test(): RedirectResponse
@@ -134,7 +134,7 @@ class WhatsAppController extends Controller
             Inertia::flash('toast', ['type' => 'error', 'message' => $result->message ?? __('WhatsApp connection failed.')]);
         }
 
-        return to_route('settings.whatsapp.edit');
+        return back();
     }
 
     public function status(): JsonResponse
@@ -155,6 +155,6 @@ class WhatsAppController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Device disconnected.')]);
 
-        return to_route('settings.whatsapp.edit');
+        return back();
     }
 }

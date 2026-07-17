@@ -189,7 +189,7 @@ class MaintenanceTicketController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket created.')]);
 
-        return to_route('maintenance-tickets.index');
+        return back();
     }
 
     public function update(UpdateMaintenanceTicketRequest $request, MaintenanceTicket $ticket): RedirectResponse
@@ -248,12 +248,12 @@ class MaintenanceTicketController extends Controller
             $unitName = $unit->name ?? '';
             Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket updated. Unit :name restored.', ['name' => $unitName])]);
 
-            return to_route('maintenance-tickets.index');
+            return back();
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket updated.')]);
 
-        return to_route('maintenance-tickets.index');
+        return back();
     }
 
     public function assign(Request $request, MaintenanceTicket $ticket): RedirectResponse
@@ -276,7 +276,7 @@ class MaintenanceTicketController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Ticket assigned.')]);
 
-        return to_route('maintenance-tickets.index');
+        return back();
     }
 
     public function destroy(MaintenanceTicket $ticket): RedirectResponse

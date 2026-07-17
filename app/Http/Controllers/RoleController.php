@@ -141,7 +141,7 @@ class RoleController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role created.')]);
 
-        return to_route('roles.index');
+        return back();
     }
 
     public function update(UpdateRoleRequest $request, Role $role, RoleGuard $guard): RedirectResponse
@@ -161,7 +161,7 @@ class RoleController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role updated.')]);
 
-        return to_route('roles.index');
+        return back();
     }
 
     public function destroy(Role $role, RoleGuard $guard): RedirectResponse
@@ -200,6 +200,6 @@ class RoleController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Role cloned.')]);
 
-        return to_route('roles.index');
+        return back();
     }
 }

@@ -35,7 +35,7 @@ class PropertyTypeController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property type added.')]);
 
-        return to_route('settings.property-types.index');
+        return back();
     }
 
     public function update(UpdatePropertyTypeRequest $request, PropertyType $propertyType): RedirectResponse
@@ -45,7 +45,7 @@ class PropertyTypeController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property type updated.')]);
 
-        return to_route('settings.property-types.index');
+        return back();
     }
 
     public function destroy(PropertyType $propertyType): RedirectResponse

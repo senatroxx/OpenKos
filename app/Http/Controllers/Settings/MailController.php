@@ -54,7 +54,7 @@ class MailController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Mail settings updated.')]);
 
-        return to_route('settings.mail.edit');
+        return back();
     }
 
     public function test(): RedirectResponse
@@ -64,7 +64,7 @@ class MailController extends Controller
         if (! ($config['host'] ?? null)) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Configure SMTP host before testing.')]);
 
-            return to_route('settings.mail.edit');
+            return back();
         }
 
         try {
@@ -78,6 +78,6 @@ class MailController extends Controller
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Failed to send: :error', ['error' => $e->getMessage()])]);
         }
 
-        return to_route('settings.mail.edit');
+        return back();
     }
 }

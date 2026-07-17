@@ -99,7 +99,7 @@ class PropertyController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property created.')]);
 
-        return to_route('properties.index');
+        return back();
     }
 
     public function update(UpdatePropertyRequest $request, Property $property): RedirectResponse
@@ -110,7 +110,7 @@ class PropertyController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property updated.')]);
 
-        return to_route('properties.index');
+        return back();
     }
 
     public function destroy(Property $property): RedirectResponse

@@ -15,7 +15,7 @@ import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
-    LeaseFormSheet,
+    AssignTenantSheet,
     MoveOutSheet,
     MoveUnitSheet,
     UnitDetailSheet,
@@ -155,6 +155,7 @@ export default function Index({
         }
 
         setEditingUnit(viewingUnit);
+        setDetailOpen(false);
         setDialogOpen(true);
     }
 
@@ -505,7 +506,7 @@ export default function Index({
             />
 
             {assignUnit && (
-                <LeaseFormSheet
+                <AssignTenantSheet
                     unit={assignUnit}
                     property={property}
                     open={leaseFormOpen}

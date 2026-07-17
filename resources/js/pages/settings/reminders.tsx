@@ -12,6 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import {
     edit as editReminders,
     update as updateReminders,
@@ -276,10 +277,10 @@ Amount: ${preview.amount}`}
                                     <Label htmlFor="reminder_message_template">
                                         Template
                                     </Label>
-                                    <textarea
+                                    <Textarea
                                         id="reminder_message_template"
                                         name="reminder_message_template"
-                                        className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="min-h-[120px]"
                                         placeholder={`Hi :name,
 
 Rent for :unit is due in :days days.

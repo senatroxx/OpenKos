@@ -19,8 +19,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
 import { PAYABLE_STATUSES, PAYMENT_METHODS } from '@/lib/constants/billing';
-import { formatPeriod, formatPrice } from '@/lib/formatters';
+import { formatPeriod, formatPrice, todayISO } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import type { Lease, RentScheduleEntry } from '@/types';
 
@@ -38,8 +39,6 @@ function RecordPaymentForm({
     const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
     const [fetchError, setFetchError] = useState(false);
     const formRef = useRef<HTMLFormElement>(null);
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
     useEffect(() => {
         const controller = new AbortController();
@@ -97,143 +96,160 @@ function RecordPaymentForm({
     }
 
     return (
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 pt-4">
-            <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Invoice
-                </h3>
+        <form
+            ref={formRef}
+            onSubmit={handleSubmit}
+            className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
+        >
+            <div className="space-y-6">
+                <section>
+                    <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                        Invoice
+                    </h3>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="invoice_id">Billing Period</Label>
-                    {invoices === null ? (
-                        <p className="text-sm text-muted-foreground">
-                            {fetchError
-                                ? 'Failed to load invoices.'
-                                : 'Loading invoices...'}
-                        </p>
-                    ) : invoices.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No payable invoices for this lease.
-                        </p>
-                    ) : (
-                        <Select
-                            name="invoice_id"
-                            value={selectedInvoiceId}
-                            onValueChange={setSelectedInvoiceId}
-                        >
-                            <SelectTrigger id="invoice_id">
-                                <SelectValue placeholder="Select invoice" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {invoices.map((entry) => (
-                                    <SelectItem
-                                        key={entry.id}
-                                        value={String(entry.id)}
-                                    >
-                                        {formatPeriod(entry.period_start)}
-                                        {' — '}
-                                        {formatPrice(entry.outstanding)}
-                                        {entry.status === 'partial' &&
-                                            ' outstanding'}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    )}
-                    <InputError message={errors.invoice_id} />
-                </div>
-            </section>
-
-            <section>
-                <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                    Payment Details
-                </h3>
-
-                <div className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="amount">Amount (IDR)</Label>
-                        <Input
-                            id="amount"
-                            name="amount"
-                            type="number"
-                            min={1}
-                            key={selectedInvoiceId}
-                            defaultValue={
-                                selectedInvoice?.outstanding ??
-                                lease?.rent_amount ??
-                                ''
-                            }
-                            required
-                        />
-                        <InputError message={errors.amount} />
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="grid gap-2">
-                            <Label htmlFor="payment_method">Payment Method</Label>
-                            <Select name="payment_method" defaultValue="cash">
-                                <SelectTrigger id="payment_method" className="w-full">
-                                    <SelectValue placeholder="Select method" />
+                        <Label htmlFor="invoice_id">Billing Period</Label>
+                        {invoices === null ? (
+                            <p className="text-sm text-muted-foreground">
+                                {fetchError
+                                    ? 'Failed to load invoices.'
+                                    : 'Loading invoices...'}
+                            </p>
+                        ) : invoices.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                No payable invoices for this lease.
+                            </p>
+                        ) : (
+                            <Select
+                                name="invoice_id"
+                                value={selectedInvoiceId}
+                                onValueChange={setSelectedInvoiceId}
+                            >
+                                <SelectTrigger id="invoice_id">
+                                    <SelectValue placeholder="Select invoice" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {PAYMENT_METHODS.map((m) => (
-                                        <SelectItem key={m.value} value={m.value}>
-                                            {m.label}
+                                    {invoices.map((entry) => (
+                                        <SelectItem
+                                            key={entry.id}
+                                            value={String(entry.id)}
+                                        >
+                                            {formatPeriod(entry.period_start)}
+                                            {' — '}
+                                            {formatPrice(entry.outstanding)}
+                                            {entry.status === 'partial' &&
+                                                ' outstanding'}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <InputError message={errors.payment_method} />
+                        )}
+                        <InputError message={errors.invoice_id} />
+                    </div>
+                </section>
+
+                <section>
+                    <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                        Payment Details
+                    </h3>
+
+                    <div className="grid gap-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="amount">Amount (IDR)</Label>
+                            <Input
+                                id="amount"
+                                name="amount"
+                                type="number"
+                                min={1}
+                                key={selectedInvoiceId}
+                                defaultValue={
+                                    selectedInvoice?.outstanding ??
+                                    lease?.rent_amount ??
+                                    ''
+                                }
+                                required
+                            />
+                            <InputError message={errors.amount} />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-2">
+                                <Label htmlFor="payment_method">
+                                    Payment Method
+                                </Label>
+                                <Select
+                                    name="payment_method"
+                                    defaultValue="cash"
+                                >
+                                    <SelectTrigger
+                                        id="payment_method"
+                                        className="w-full"
+                                    >
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {PAYMENT_METHODS.map((m) => (
+                                            <SelectItem
+                                                key={m.value}
+                                                value={m.value}
+                                            >
+                                                {m.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.payment_method} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="paid_at">Paid At</Label>
+                                <Input
+                                    id="paid_at"
+                                    name="paid_at"
+                                    type="date"
+                                    defaultValue={todayISO()}
+                                    required
+                                />
+                                <InputError message={errors.paid_at} />
+                            </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="paid_at">Paid At</Label>
-                            <Input
-                                id="paid_at"
-                                name="paid_at"
-                                type="date"
-                                defaultValue={todayStr}
-                                required
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                                id="notes"
+                                name="notes"
+                                placeholder="Optional notes"
                             />
-                            <InputError message={errors.paid_at} />
+                            <InputError message={errors.notes} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="proof">
+                                Payment Proof (optional)
+                            </Label>
+                            <Input
+                                id="proof"
+                                name="proof"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.pdf"
+                                className="file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    setFileName(file?.name ?? null);
+                                }}
+                            />
+                            {fileName && (
+                                <p className="text-xs text-muted-foreground">
+                                    {fileName}
+                                </p>
+                            )}
+                            <InputError message={errors.proof} />
                         </div>
                     </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="notes">Notes</Label>
-                        <textarea
-                            id="notes"
-                            name="notes"
-                            placeholder="Optional notes"
-                            className="flex min-h-15 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
-                        />
-                        <InputError message={errors.notes} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <Label htmlFor="proof">Payment Proof (optional)</Label>
-                        <Input
-                            id="proof"
-                            name="proof"
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.pdf"
-                            className="file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                setFileName(file?.name ?? null);
-                            }}
-                        />
-                        {fileName && (
-                            <p className="text-xs text-muted-foreground">
-                                {fileName}
-                            </p>
-                        )}
-                        <InputError message={errors.proof} />
-                    </div>
-                </div>
-            </section>
-
-            <div className="flex items-center justify-end gap-4 pt-2">
+                </section>
+            </div>
+            <div className="flex items-center justify-end gap-4">
                 <Button
                     variant="outline"
                     type="button"
@@ -273,15 +289,13 @@ export default function RecordPaymentSheet({
                     </SheetDescription>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto px-4">
-                    {lease && (
-                        <RecordPaymentForm
-                            key={lease.id}
-                            lease={lease}
-                            onOpenChange={onOpenChange}
-                        />
-                    )}
-                </div>
+                {lease && (
+                    <RecordPaymentForm
+                        key={lease.id}
+                        lease={lease}
+                        onOpenChange={onOpenChange}
+                    />
+                )}
             </SheetContent>
         </Sheet>
     );

@@ -141,7 +141,7 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User invited.')]);
 
-        return to_route('users.index');
+        return back();
     }
 
     public function update(UpdateUserRequest $request, User $user, UserGuard $guard): RedirectResponse
@@ -174,7 +174,7 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User updated.')]);
 
-        return to_route('users.index');
+        return back();
     }
 
     public function destroy(User $user, UserGuard $guard): RedirectResponse
@@ -209,7 +209,7 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Password reset link sent.')]);
 
-        return to_route('users.index');
+        return back();
     }
 
     public function resendInvitation(User $user): RedirectResponse
@@ -228,7 +228,7 @@ class UserController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation link resent.')]);
 
-        return to_route('users.index');
+        return back();
     }
 
     public function acceptInvitation(Request $request, string $token): Response

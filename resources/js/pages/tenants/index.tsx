@@ -129,6 +129,7 @@ export default function Index({
         }
 
         setEditingTenant(viewingTenant);
+        setDetailOpen(false);
         setDialogOpen(true);
     }
 
@@ -340,6 +341,7 @@ export default function Index({
             />
 
             <TenantFormSheet
+                key={editingTenant?.id ?? 'new'}
                 tenant={editingTenant}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}

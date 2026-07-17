@@ -388,6 +388,7 @@ export default function Index({
             />
 
             <RenewLeaseSheet
+                key={detailLease?.id ?? 'renew'}
                 lease={detailLease}
                 open={renewOpen}
                 onOpenChange={setRenewOpen}

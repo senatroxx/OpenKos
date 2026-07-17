@@ -19,14 +19,18 @@ import { countryCodes, parseE164 } from './country-codes';
 
 export default function PhoneInput({
     name,
+    value,
+    onChange,
     defaultValue,
     placeholder,
 }: {
-    name: string;
+    name?: string;
+    value?: string | null;
+    onChange?: (value: string) => void;
     defaultValue?: string | null;
     placeholder?: string;
 }) {
-    const parsed = parseE164(defaultValue);
+    const parsed = parseE164(value ?? defaultValue);
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState(parsed);
     const [number, setNumber] = useState(parsed.number);
@@ -119,6 +123,11 @@ export default function PhoneInput({
                                                 ...c,
                                                 number: selected.number,
                                             });
+                                            onChange?.(
+                                                number
+                                                    ? c.dialCode + number
+                                                    : '',
+                                            );
                                             setOpen(false);
                                             setSearch('');
                                         }}
@@ -158,13 +167,15 @@ export default function PhoneInput({
                     </Command>
                 </PopoverContent>
             </Popover>
-            <input type="hidden" name={name} value={full} />
+            {name && <input type="hidden" name={name} value={full} />}
             <Input
                 type="tel"
                 value={number}
-                onChange={(e) =>
-                    setNumber(e.target.value.replace(/[^0-9]/g, ''))
-                }
+                onChange={(e) => {
+                    const next = e.target.value.replace(/[^0-9]/g, '');
+                    setNumber(next);
+                    onChange?.(next ? selected.dialCode + next : '');
+                }}
                 placeholder={placeholder}
                 className="h-10 flex-1"
             />
