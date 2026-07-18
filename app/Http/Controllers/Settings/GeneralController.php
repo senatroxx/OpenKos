@@ -36,13 +36,13 @@ class GeneralController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'site_name' => ['required', 'string', 'max:255'],
-            'country_code' => ['required', 'string', 'size:2', 'regex:/^[A-Z]+$/'],
-            'locale' => ['required', 'string', 'max:10'],
-            'currency' => ['required', 'string', 'size:3', 'regex:/^[A-Z]+$/'],
-            'timezone' => ['required', 'string', Rule::in(timezone_identifiers_list())],
-            'lease_id_prefix' => ['required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
-            'invoice_id_prefix' => ['required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
+            'site_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'country_code' => ['sometimes', 'required', 'string', 'size:2', 'regex:/^[A-Z]+$/'],
+            'locale' => ['sometimes', 'required', 'string', 'max:10'],
+            'currency' => ['sometimes', 'required', 'string', 'size:3', 'regex:/^[A-Z]+$/'],
+            'timezone' => ['sometimes', 'required', 'string', Rule::in(timezone_identifiers_list())],
+            'lease_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
+            'invoice_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
         ]);
 
         $this->updateSettings->execute($validated, $request->user());
