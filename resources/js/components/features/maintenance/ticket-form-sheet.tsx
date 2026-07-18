@@ -88,18 +88,34 @@ export default function TicketFormSheet({
     );
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
-    const { data, setData, transform, submit, processing, errors } = useForm({
-        property_id: ticket?.property_id ? String(ticket.property_id) : '',
-        unit_id: ticket?.unit_id ? String(ticket.unit_id) : '',
-        location: ticket?.location ?? '',
-        block_unit: false,
-        title: ticket?.title ?? '',
-        description: ticket?.description ?? '',
-        priority: ticket?.priority ?? 'medium',
-        resolution_notes: ticket?.resolution_notes ?? '',
-        cost: ticket?.cost != null ? String(ticket.cost) : '',
-        restore_unit: false,
-    });
+    const { data, setData, transform, submit, reset, processing, errors } =
+        useForm({
+            property_id: ticket?.property_id ? String(ticket.property_id) : '',
+            unit_id: ticket?.unit_id ? String(ticket.unit_id) : '',
+            location: ticket?.location ?? '',
+            block_unit: false,
+            title: ticket?.title ?? '',
+            description: ticket?.description ?? '',
+            priority: ticket?.priority ?? 'medium',
+            resolution_notes: ticket?.resolution_notes ?? '',
+            cost: ticket?.cost != null ? String(ticket.cost) : '',
+            restore_unit: false,
+        });
+
+    function handleOpenChange(next: boolean) {
+        onOpenChange(next);
+
+        if (!next) {
+            reset();
+            setLocationType(
+                ticket?.unit_id ? 'unit' : ticket?.location ? 'area' : 'unit',
+            );
+            setMoveToUnitId('');
+            setOccupantAction('move');
+            setShowOccupiedDialog(false);
+            setShowMoveBackDialog(false);
+        }
+    }
 
     const filteredUnits = data.property_id
         ? units.filter((r) => r.property_id === Number(data.property_id))
@@ -158,7 +174,7 @@ export default function TicketFormSheet({
     function submitTicket(extra: Record<string, unknown> = {}) {
         transform(() => buildPayload(extra));
         submit(formMethod, formAction, {
-            onSuccess: () => onOpenChange(false),
+            onSuccess: () => handleOpenChange(false),
         });
     }
 
@@ -194,7 +210,7 @@ export default function TicketFormSheet({
 
     return (
         <>
-            <Sheet open={open} onOpenChange={onOpenChange}>
+            <Sheet open={open} onOpenChange={handleOpenChange}>
                 <SheetContent className="sm:max-w-lg">
                     <SheetHeader>
                         <SheetTitle>
@@ -462,7 +478,7 @@ export default function TicketFormSheet({
                             <Button
                                 variant="outline"
                                 type="button"
-                                onClick={() => onOpenChange(false)}
+                                onClick={() => handleOpenChange(false)}
                                 disabled={processing}
                             >
                                 Cancel

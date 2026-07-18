@@ -101,7 +101,6 @@ export default function Index({
     property_id?: string;
 }) {
     const [formOpen, setFormOpen] = useState(false);
-    const [formVersion, setFormVersion] = useState(0);
     const [editingTicket, setEditingTicket] =
         useState<MaintenanceTicket | null>(null);
     const [detailTicket, setDetailTicket] = useState<MaintenanceTicket | null>(
@@ -323,7 +322,6 @@ export default function Index({
                         <Button
                             onClick={() => {
                                 setEditingTicket(null);
-                                setFormVersion((v) => v + 1);
                                 setFormOpen(true);
                             }}
                         >
@@ -364,7 +362,6 @@ export default function Index({
                         createLabel: can.create ? 'Report an issue' : undefined,
                         onCreate: can.create
                             ? () => {
-                                  setFormVersion((v) => v + 1);
                                   setFormOpen(true);
                               }
                             : undefined,
@@ -372,11 +369,7 @@ export default function Index({
                 />
 
                 <TicketFormSheet
-                    key={
-                        editingTicket
-                            ? `edit-${editingTicket.id}`
-                            : `create-${formVersion}`
-                    }
+                    key={editingTicket?.id ?? 'new'}
                     open={formOpen}
                     onOpenChange={(open) => {
                         setFormOpen(open);
