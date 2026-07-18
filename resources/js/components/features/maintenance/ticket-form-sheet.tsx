@@ -179,6 +179,9 @@ export default function TicketFormSheet({
 
         // Blocking an occupied unit prompts what to do with the tenant.
         if (!isEdit && data.block_unit && selectedUnitOccupied) {
+            // Start the dialog fresh: a destination picked for a previous
+            // property/unit must not carry over (it may no longer be valid).
+            setMoveToUnitId('');
             // Default to "move" only when there's somewhere to move them.
             setOccupantAction(availableMoveUnits.length > 0 ? 'move' : 'keep');
             setShowOccupiedDialog(true);
