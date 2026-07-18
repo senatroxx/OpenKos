@@ -53,6 +53,12 @@ transform((d) => {
 });
 ```
 
+### Every control that affects the payload must be state-bound
+
+A radio/checkbox/select that influences what gets submitted must have its selection tracked in state (`checked`/`onChange` bound to a value), and the payload must be derived from that state — never from the DOM, and never inferred from an unrelated field. A "decorative" control (default-checked, `onChange={() => {}}`, or unbound) is a bug waiting to happen: the user's choice is silently ignored.
+
+Concretely, this has bitten us twice — a dialog with "Move tenant / Keep tenant" radios that had no state, so the payload was driven by a leftover select value regardless of which radio was picked. If a control is shown, it must be wired; if it shouldn't affect the payload, don't render it. Gate the submit button (`disabled=…`) when the current selection is incomplete rather than submitting an ambiguous payload.
+
 ### Errors and processing
 
 - Render field errors with `<InputError message={errors.x} />` — not an inline `<p className="text-red-500">`.

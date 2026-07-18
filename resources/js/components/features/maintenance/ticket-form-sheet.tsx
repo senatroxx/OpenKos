@@ -83,6 +83,9 @@ export default function TicketFormSheet({
     );
     const [showOccupiedDialog, setShowOccupiedDialog] = useState(false);
     const [moveToUnitId, setMoveToUnitId] = useState('');
+    const [occupantAction, setOccupantAction] = useState<'move' | 'keep'>(
+        'move',
+    );
     const [showMoveBackDialog, setShowMoveBackDialog] = useState(false);
 
     const { data, setData, transform, submit, processing, errors } = useForm({
@@ -176,6 +179,8 @@ export default function TicketFormSheet({
 
         // Blocking an occupied unit prompts what to do with the tenant.
         if (!isEdit && data.block_unit && selectedUnitOccupied) {
+            // Default to "move" only when there's somewhere to move them.
+            setOccupantAction(availableMoveUnits.length > 0 ? 'move' : 'keep');
             setShowOccupiedDialog(true);
 
             return;
@@ -487,8 +492,10 @@ export default function TicketFormSheet({
                                         <input
                                             type="radio"
                                             name="occupant_action"
-                                            defaultChecked
-                                            onChange={() => {}}
+                                            checked={occupantAction === 'move'}
+                                            onChange={() =>
+                                                setOccupantAction('move')
+                                            }
                                             className="mt-0.5"
                                         />
                                         <div className="flex-1">
@@ -497,7 +504,10 @@ export default function TicketFormSheet({
                                             </div>
                                             <Select
                                                 value={moveToUnitId}
-                                                onValueChange={setMoveToUnitId}
+                                                onValueChange={(v) => {
+                                                    setMoveToUnitId(v);
+                                                    setOccupantAction('move');
+                                                }}
                                             >
                                                 <SelectTrigger className="mt-2 w-full">
                                                     <SelectValue placeholder="Select unit" />
@@ -526,6 +536,10 @@ export default function TicketFormSheet({
                                     <input
                                         type="radio"
                                         name="occupant_action"
+                                        checked={occupantAction === 'keep'}
+                                        onChange={() =>
+                                            setOccupantAction('keep')
+                                        }
                                         className="mt-0.5"
                                     />
                                     <span className="text-sm font-medium">
@@ -543,10 +557,13 @@ export default function TicketFormSheet({
                             Cancel
                         </Button>
                         <Button
+                            disabled={
+                                occupantAction === 'move' && !moveToUnitId
+                            }
                             onClick={() => {
                                 setShowOccupiedDialog(false);
                                 submitTicket(
-                                    moveToUnitId
+                                    occupantAction === 'move' && moveToUnitId
                                         ? {
                                               move_tenant_to_unit_id:
                                                   moveToUnitId,
