@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { AppearanceTabs } from '@/components/features';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -219,6 +220,18 @@ export default function General({
                     </CardContent>
                 </Card>
             </form>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Appearance</CardTitle>
+                    <CardDescription>
+                        Choose how the application looks for you.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AppearanceTabs />
+                </CardContent>
+            </Card>
 
             <form
                 onSubmit={(e) => {

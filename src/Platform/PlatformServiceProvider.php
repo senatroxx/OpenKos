@@ -77,7 +77,7 @@ class PlatformServiceProvider extends ServiceProvider
             ->registerPage(new SettingsPage('profile', 'Profile', '/settings/profile', group: 'Account', order: 100, routeName: 'profile.edit'))
             ->registerPage(new SettingsPage('security', 'Security', '/settings/security', group: 'Account', order: 200, routeName: 'security.edit'))
             ->registerPage(new SettingsPage('general', 'General', '/settings/general', group: 'Preferences', order: 100, routeName: 'settings.general.edit'))
-            ->registerPage(new SettingsPage('appearance', 'Appearance', '/settings/appearance', group: 'Preferences', order: 200, routeName: 'appearance.edit'))
+
             ->registerPage(new SettingsPage('reminders', 'Reminders', '/settings/reminders', group: 'Preferences', order: 300, routeName: 'settings.reminders.edit'))
             ->registerPage(new SettingsPage('property-types', 'Property Types', '/settings/property-types', group: 'Property', order: 100, routeName: 'settings.property-types.index'))
             ->registerPage(new SettingsPage('mail', 'Mail', '/settings/mail', group: 'Integrations', order: 100, routeName: 'settings.mail.edit'));
