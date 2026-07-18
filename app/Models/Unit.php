@@ -79,9 +79,19 @@ class Unit extends Model
 
     public function activeRates(): HasMany
     {
+        // Deterministic, meaningful order: shortest billing period first
+        // (day < week < month < year), then interval, then id as a final
+        // tiebreaker. Without this, two rates that share a billing_interval
+        // (e.g. "1 month" and "1 year") tie, and the DB may return them in a
+        // different order after an update — flipping which rate a "first rate"
+        // consumer (the units list price) shows.
         return $this->hasMany(UnitRate::class)
             ->where('is_active', true)
-            ->orderBy('billing_interval');
+            ->orderByRaw(
+                "case billing_unit when 'day' then 1 when 'week' then 2 when 'month' then 3 when 'year' then 4 else 5 end"
+            )
+            ->orderBy('billing_interval')
+            ->orderBy('id');
     }
 
     public function scopeAvailableForAssignment(Builder $query): void
