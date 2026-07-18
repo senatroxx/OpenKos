@@ -112,7 +112,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         });
     });
 
-    Route::prefix('payments/{payment}')->name('payments.')->group(function () {
+    Route::prefix('payments/{payment}')->name('payments.')->scopeBindings()->group(function () {
         Route::get('proof/{proof}', [PaymentController::class, 'proof'])->name('proof');
         Route::post('verify', [PaymentController::class, 'verify'])->name('verify')->middleware('permission:payments.verify');
     });

@@ -5,12 +5,14 @@ use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
+use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Support\Facades\File;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -270,5 +272,89 @@ describe('invoice settlement', function () {
 
         expect($payment2->fresh()->status)->toBe(PaymentStatus::Cancelled)
             ->and($payment2->invoice->fresh()->status)->toBe(InvoiceStatus::Pending);
+    });
+});
+
+describe('proof download', function () {
+    it('allows authorized user to download a valid proof', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $proofPath = 'proofs/test-proof.pdf';
+        $fullPath = storage_path('app/private/'.$proofPath);
+        File::makeDirectory(dirname($fullPath), 0755, true, true);
+        File::put($fullPath, 'fake-pdf-content');
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $payment->id,
+            'path' => $proofPath,
+            'original_name' => 'proof.pdf',
+            'mime_type' => 'application/pdf',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertOk();
+
+        File::delete($fullPath);
+    });
+
+    it('returns 404 when proof belongs to another payment', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $otherPayment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+
+        $proofPath = 'proofs/test-proof.pdf';
+        $fullPath = storage_path('app/private/'.$proofPath);
+        File::makeDirectory(dirname($fullPath), 0755, true, true);
+        File::put($fullPath, 'fake-pdf-content');
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $otherPayment->id,
+            'path' => $proofPath,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertNotFound();
+
+        File::delete($fullPath);
+    });
+
+    it('returns 403 for user without access to the property', function () {
+        $user = User::factory()->admin()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $proofPath = 'proofs/test-proof.pdf';
+        $fullPath = storage_path('app/private/'.$proofPath);
+        File::makeDirectory(dirname($fullPath), 0755, true, true);
+        File::put($fullPath, 'fake-pdf-content');
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $payment->id,
+            'path' => $proofPath,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertForbidden();
+
+        File::delete($fullPath);
+    });
+
+    it('returns 404 when proof file is missing from disk', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $payment->id,
+            'path' => 'proofs/nonexistent.pdf',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertNotFound();
     });
 });
