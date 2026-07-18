@@ -291,7 +291,7 @@ export default function General({
                                 onChange={(e) =>
                                     referenceForm.setData(
                                         'invoice_id_prefix',
-                                        e.target.value,
+                                        e.target.value.toUpperCase(),
                                     )
                                 }
                                 maxLength={10}
