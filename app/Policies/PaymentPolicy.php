@@ -41,6 +41,6 @@ class PaymentPolicy
             return false;
         }
 
-        return true;
+        return $user->isOwner() || $user->properties->contains($payment->invoice->lease->unit->property_id);
     }
 }

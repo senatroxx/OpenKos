@@ -2,6 +2,7 @@
 
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\Permission;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
@@ -82,6 +83,52 @@ describe('authorization', function () {
         ]);
 
         expect($admin->can('view', $payment))->toBeFalse();
+    });
+
+    it('allows owner to verify payment', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $payment = Payment::factory()->pending()->create([
+            'invoice_id' => createInvoiceFor($lease)->id,
+        ]);
+
+        expect($user->can('verify', $payment))->toBeTrue();
+    });
+
+    it('allows user with permission assigned to property to verify payment', function () {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::PaymentsVerify->value);
+        $property = Property::factory()->create();
+        $user->properties()->sync([$property->id]);
+        $lease = createLeaseForProperty($property);
+        $payment = Payment::factory()->pending()->create([
+            'invoice_id' => createInvoiceFor($lease)->id,
+        ]);
+
+        expect($user->can('verify', $payment))->toBeTrue();
+    });
+
+    it('denies user with permission not assigned to property from verifying payment', function () {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::PaymentsVerify->value);
+        $propertyA = Property::factory()->create();
+        $user->properties()->sync([$propertyA->id]);
+        $lease = createLeaseForProperty();
+        $payment = Payment::factory()->pending()->create([
+            'invoice_id' => createInvoiceFor($lease)->id,
+        ]);
+
+        expect($user->can('verify', $payment))->toBeFalse();
+    });
+
+    it('denies user without payments.verify permission', function () {
+        $user = User::factory()->create();
+        $lease = createLeaseForProperty();
+        $payment = Payment::factory()->pending()->create([
+            'invoice_id' => createInvoiceFor($lease)->id,
+        ]);
+
+        expect($user->can('verify', $payment))->toBeFalse();
     });
 });
 
