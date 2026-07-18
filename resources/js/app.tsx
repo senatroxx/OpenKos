@@ -7,7 +7,33 @@ import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import '@/plugins';
 
-const appName = import.meta.env.VITE_APP_NAME || 'OpenKOS';
+// The server drives the display name from the settings table (site_name),
+// shared as the `name` prop on the initial page. Read it here so the title
+// suffix matches, rather than the build-time VITE_APP_NAME. The page JSON
+// lives in #app's data-page attribute (client render) or a <script data-page>
+// element (SSR hydration), so check both.
+function resolveAppName(): string {
+    const fallback = import.meta.env.VITE_APP_NAME || 'OpenKOS';
+
+    if (typeof document === 'undefined') {
+        return fallback;
+    }
+
+    try {
+        const raw =
+            document.getElementById('app')?.getAttribute('data-page') ||
+            document.querySelector('script[data-page]')?.textContent;
+        const name = raw
+            ? (JSON.parse(raw).props?.name as string | undefined)
+            : undefined;
+
+        return name || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+const appName = resolveAppName();
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

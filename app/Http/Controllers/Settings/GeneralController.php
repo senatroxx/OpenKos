@@ -34,6 +34,6 @@ class GeneralController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('General settings updated.')]);
 
-        return to_route('settings.general.edit');
+        return back();
     }
 }

@@ -101,6 +101,7 @@ export default function Index({
         }
 
         setEditingProperty(viewingProperty);
+        setDetailOpen(false);
         setDialogOpen(true);
     }
 
@@ -272,6 +273,7 @@ export default function Index({
             </div>
 
             <PropertyDetailSheet
+                key={viewingProperty?.id ?? 'new'}
                 property={viewingProperty}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
@@ -279,6 +281,7 @@ export default function Index({
             />
 
             <PropertyFormSheet
+                key={editingProperty?.id ?? 'new'}
                 property={editingProperty}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}

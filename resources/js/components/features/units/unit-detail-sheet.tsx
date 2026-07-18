@@ -9,19 +9,9 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { DUE_DAY_LABELS } from '@/lib/constants';
+import { formatPrice } from '@/lib/formatters';
 import properties from '@/routes/properties';
 import type { Property, Unit } from '@/types';
-
-function formatPrice(cents: string): string {
-    const num = Number.parseFloat(cents);
-
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(num);
-}
 
 export default function UnitDetailSheet({
     unit,
@@ -339,7 +329,7 @@ export default function UnitDetailSheet({
                                 </>
                             )}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
                                 Close

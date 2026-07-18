@@ -1,4 +1,4 @@
-import { Form, Link } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -40,6 +40,23 @@ export default function Mail({
 }) {
     const config = settings.mail_config ?? {};
 
+    const { data, setData, submit, processing, errors } = useForm({
+        mail_config: {
+            host: config.host ?? '',
+            port: config.port != null ? String(config.port) : '',
+            username: config.username ?? '',
+            password: '',
+            encryption: config.encryption ?? 'null',
+            from_address: config.from_address ?? '',
+            from_name: config.from_name ?? '',
+        },
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        submit(updateMail());
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -49,164 +66,181 @@ export default function Mail({
                 </p>
             </div>
 
-            <Form action={updateMail()}>
-                {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>SMTP Configuration</CardTitle>
-                                <CardDescription>
-                                    Leave empty to use the default log driver
-                                    (emails will not be sent).
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[host]">
-                                        SMTP Host
-                                    </Label>
-                                    <Input
-                                        id="mail_config[host]"
-                                        name="mail_config[host]"
-                                        type="text"
-                                        defaultValue={config.host ?? ''}
-                                        placeholder="smtp.example.com"
-                                    />
-                                    {errors['mail_config.host'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.host']}
-                                        </p>
-                                    )}
-                                </div>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>SMTP Configuration</CardTitle>
+                        <CardDescription>
+                            Leave empty to use the default log driver (emails
+                            will not be sent).
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[host]">SMTP Host</Label>
+                            <Input
+                                id="mail_config[host]"
+                                name="mail_config[host]"
+                                type="text"
+                                value={data.mail_config.host}
+                                onChange={(e) =>
+                                    setData('mail_config.host', e.target.value)
+                                }
+                                placeholder="smtp.example.com"
+                            />
+                            {errors['mail_config.host'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.host']}
+                                </p>
+                            )}
+                        </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[port]">
-                                        Port
-                                    </Label>
-                                    <Input
-                                        id="mail_config[port]"
-                                        name="mail_config[port]"
-                                        type="number"
-                                        defaultValue={config.port ?? ''}
-                                        placeholder="587"
-                                    />
-                                    {errors['mail_config.port'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.port']}
-                                        </p>
-                                    )}
-                                </div>
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[port]">Port</Label>
+                            <Input
+                                id="mail_config[port]"
+                                name="mail_config[port]"
+                                type="number"
+                                value={data.mail_config.port}
+                                onChange={(e) =>
+                                    setData('mail_config.port', e.target.value)
+                                }
+                                placeholder="587"
+                            />
+                            {errors['mail_config.port'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.port']}
+                                </p>
+                            )}
+                        </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[username]">
-                                        Username
-                                    </Label>
-                                    <Input
-                                        id="mail_config[username]"
-                                        name="mail_config[username]"
-                                        type="text"
-                                        defaultValue={config.username ?? ''}
-                                        placeholder="user@example.com"
-                                    />
-                                    {errors['mail_config.username'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.username']}
-                                        </p>
-                                    )}
-                                </div>
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[username]">
+                                Username
+                            </Label>
+                            <Input
+                                id="mail_config[username]"
+                                name="mail_config[username]"
+                                type="text"
+                                value={data.mail_config.username}
+                                onChange={(e) =>
+                                    setData(
+                                        'mail_config.username',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="user@example.com"
+                            />
+                            {errors['mail_config.username'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.username']}
+                                </p>
+                            )}
+                        </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[password]">
-                                        Password
-                                    </Label>
-                                    <Input
-                                        id="mail_config[password]"
-                                        name="mail_config[password]"
-                                        type="password"
-                                        placeholder="Enter SMTP password"
-                                    />
-                                    {errors['mail_config.password'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.password']}
-                                        </p>
-                                    )}
-                                </div>
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[password]">
+                                Password
+                            </Label>
+                            <Input
+                                id="mail_config[password]"
+                                name="mail_config[password]"
+                                type="password"
+                                value={data.mail_config.password}
+                                onChange={(e) =>
+                                    setData(
+                                        'mail_config.password',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="Enter SMTP password"
+                            />
+                            {errors['mail_config.password'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.password']}
+                                </p>
+                            )}
+                        </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[encryption]">
-                                        Encryption
-                                    </Label>
-                                    <Select
-                                        name="mail_config[encryption]"
-                                        defaultValue={
-                                            config.encryption ?? 'null'
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="None" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="null">
-                                                None
-                                            </SelectItem>
-                                            <SelectItem value="tls">
-                                                TLS
-                                            </SelectItem>
-                                            <SelectItem value="ssl">
-                                                SSL
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors['mail_config.encryption'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.encryption']}
-                                        </p>
-                                    )}
-                                </div>
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[encryption]">
+                                Encryption
+                            </Label>
+                            <Select
+                                value={data.mail_config.encryption}
+                                onValueChange={(value) =>
+                                    setData('mail_config.encryption', value)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="None" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="null">None</SelectItem>
+                                    <SelectItem value="tls">TLS</SelectItem>
+                                    <SelectItem value="ssl">SSL</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors['mail_config.encryption'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.encryption']}
+                                </p>
+                            )}
+                        </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[from_address]">
-                                        From Address
-                                    </Label>
-                                    <Input
-                                        id="mail_config[from_address]"
-                                        name="mail_config[from_address]"
-                                        type="email"
-                                        defaultValue={config.from_address ?? ''}
-                                        placeholder="noreply@openkos.app"
-                                    />
-                                    {errors['mail_config.from_address'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.from_address']}
-                                        </p>
-                                    )}
-                                </div>
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[from_address]">
+                                From Address
+                            </Label>
+                            <Input
+                                id="mail_config[from_address]"
+                                name="mail_config[from_address]"
+                                type="email"
+                                value={data.mail_config.from_address}
+                                onChange={(e) =>
+                                    setData(
+                                        'mail_config.from_address',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="noreply@openkos.app"
+                            />
+                            {errors['mail_config.from_address'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.from_address']}
+                                </p>
+                            )}
+                        </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="mail_config[from_name]">
-                                        From Name
-                                    </Label>
-                                    <Input
-                                        id="mail_config[from_name]"
-                                        name="mail_config[from_name]"
-                                        type="text"
-                                        defaultValue={config.from_name ?? ''}
-                                        placeholder="OpenKOS"
-                                    />
-                                    {errors['mail_config.from_name'] && (
-                                        <p className="text-sm text-red-600">
-                                            {errors['mail_config.from_name']}
-                                        </p>
-                                    )}
-                                </div>
-                            </CardContent>
-                            <CardFooter>
-                                <Button disabled={processing}>Save</Button>
-                            </CardFooter>
-                        </Card>
-                    </div>
-                )}
-            </Form>
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="mail_config[from_name]">
+                                From Name
+                            </Label>
+                            <Input
+                                id="mail_config[from_name]"
+                                name="mail_config[from_name]"
+                                type="text"
+                                value={data.mail_config.from_name}
+                                onChange={(e) =>
+                                    setData(
+                                        'mail_config.from_name',
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="OpenKOS"
+                            />
+                            {errors['mail_config.from_name'] && (
+                                <p className="text-sm text-red-600">
+                                    {errors['mail_config.from_name']}
+                                </p>
+                            )}
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button disabled={processing}>Save</Button>
+                    </CardFooter>
+                </Card>
+            </form>
 
             <Card>
                 <CardHeader>

@@ -53,6 +53,6 @@ class ReminderController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Reminder settings updated.')]);
 
-        return to_route('settings.reminders.edit');
+        return back();
     }
 }

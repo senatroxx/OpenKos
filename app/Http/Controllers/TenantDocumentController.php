@@ -33,7 +33,7 @@ class TenantDocumentController extends Controller
             'size' => $file->getSize(),
         ]);
 
-        return to_route('tenants.index');
+        return back();
     }
 
     public function show(Tenant $tenant, TenantDocument $document): StreamedResponse

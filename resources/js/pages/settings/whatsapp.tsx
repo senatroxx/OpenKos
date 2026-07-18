@@ -1,4 +1,4 @@
-import { Form, Link } from '@inertiajs/react';
+import { Link, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,15 @@ export default function WhatsApp({
         lastConnected: string | null;
     } | null;
 }) {
-    const [driver, setDriver] = useState(settings.whatsapp_driver ?? 'log');
+    const { data, setData, submit, processing, errors } = useForm<{
+        whatsapp_driver: string;
+        whatsapp_config: Record<string, Record<string, string>>;
+    }>({
+        whatsapp_driver: settings.whatsapp_driver ?? 'log',
+        whatsapp_config: settings.whatsapp_config ?? {},
+    });
+    const driver = data.whatsapp_driver;
+
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [pairingLoading, setPairingLoading] = useState(false);
     const [pairingError, setPairingError] = useState<string | null>(null);
@@ -64,7 +72,7 @@ export default function WhatsApp({
 
     const currentDriver = drivers.find((d) => d.name === driver);
     const fields = currentDriver?.configuration_schema ?? {};
-    const driverConfig = settings.whatsapp_config?.[driver] ?? {};
+    const driverConfig = data.whatsapp_config[driver] ?? {};
     const isBaileys = driver === 'baileys';
     const showDisconnect = isBaileys && connectionStatus === 'connected';
 
@@ -124,6 +132,11 @@ export default function WhatsApp({
         pollingRef.current = setInterval(pollQr, 2000);
     };
 
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        submit(updateWhatsApp());
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -133,59 +146,57 @@ export default function WhatsApp({
                 </p>
             </div>
 
-            <Form action={updateWhatsApp()}>
-                {({ processing, errors }) => (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>WhatsApp Driver</CardTitle>
-                            <CardDescription>
-                                Select the active WhatsApp driver and configure
-                                its credentials.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid max-w-xs gap-2">
-                                <Label htmlFor="whatsapp_driver">Driver</Label>
-                                <input
-                                    type="hidden"
-                                    name="whatsapp_driver"
-                                    value={driver}
-                                />
-                                <Select
-                                    value={driver}
-                                    onValueChange={(value) => setDriver(value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {drivers.map((d) => (
-                                            <SelectItem
-                                                key={d.name}
-                                                value={d.name}
-                                            >
-                                                {d.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {errors.whatsapp_driver && (
-                                    <p className="text-sm text-red-600">
-                                        {errors.whatsapp_driver}
-                                    </p>
-                                )}
-                            </div>
-
-                            {Object.keys(fields).length > 0 && (
-                                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                                    Values set via environment variables
-                                    override the fields below and cannot be
-                                    changed here.
-                                </div>
+            <form onSubmit={handleSubmit}>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>WhatsApp Driver</CardTitle>
+                        <CardDescription>
+                            Select the active WhatsApp driver and configure its
+                            credentials.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid max-w-xs gap-2">
+                            <Label htmlFor="whatsapp_driver">Driver</Label>
+                            <Select
+                                value={driver}
+                                onValueChange={(value) =>
+                                    setData('whatsapp_driver', value)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {drivers.map((d) => (
+                                        <SelectItem key={d.name} value={d.name}>
+                                            {d.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.whatsapp_driver && (
+                                <p className="text-sm text-red-600">
+                                    {errors.whatsapp_driver}
+                                </p>
                             )}
+                        </div>
 
-                            {Object.keys(fields).length > 0 &&
-                                Object.entries(fields).map(([key, field]) => (
+                        {Object.keys(fields).length > 0 && (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                                Values set via environment variables override
+                                the fields below and cannot be changed here.
+                            </div>
+                        )}
+
+                        {Object.keys(fields).length > 0 &&
+                            Object.entries(fields).map(([key, field]) => {
+                                const fieldError =
+                                    errors[
+                                        `whatsapp_config.${driver}.${key}` as keyof typeof errors
+                                    ];
+
+                                return (
                                     <div
                                         key={key}
                                         className="grid max-w-xs gap-2"
@@ -209,33 +220,36 @@ export default function WhatsApp({
                                                       ? 'url'
                                                       : 'text'
                                             }
-                                            defaultValue={
-                                                driverConfig[key] ?? ''
+                                            value={driverConfig[key] ?? ''}
+                                            onChange={(e) =>
+                                                setData('whatsapp_config', {
+                                                    ...data.whatsapp_config,
+                                                    [driver]: {
+                                                        ...data.whatsapp_config[
+                                                            driver
+                                                        ],
+                                                        [key]: e.target.value,
+                                                    },
+                                                })
                                             }
                                             placeholder={
                                                 field.placeholder ?? ''
                                             }
                                         />
-                                        {errors[
-                                            `whatsapp_config.${driver}.${key}`
-                                        ] && (
+                                        {fieldError && (
                                             <p className="text-sm text-red-600">
-                                                {
-                                                    errors[
-                                                        `whatsapp_config.${driver}.${key}`
-                                                    ]
-                                                }
+                                                {fieldError}
                                             </p>
                                         )}
                                     </div>
-                                ))}
-                        </CardContent>
-                        <CardFooter>
-                            <Button disabled={processing}>Save</Button>
-                        </CardFooter>
-                    </Card>
-                )}
-            </Form>
+                                );
+                            })}
+                    </CardContent>
+                    <CardFooter>
+                        <Button disabled={processing}>Save</Button>
+                    </CardFooter>
+                </Card>
+            </form>
 
             {isBaileys && (
                 <Card>

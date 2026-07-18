@@ -1,5 +1,5 @@
-import { Form } from '@inertiajs/react';
-import { useState } from 'react';
+import { useForm } from '@inertiajs/react';
+import { InputError } from '@/components/shared';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,8 +36,16 @@ export default function RenewLeaseSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const [depositHandling, setDepositHandling] = useState('carry_forward');
-    const [confirmedOutstanding, setConfirmedOutstanding] = useState(false);
+    const { data, setData, transform, submit, reset, processing, errors } =
+        useForm({
+            rent_amount: lease?.rent_amount
+                ? String(Number.parseInt(lease.rent_amount))
+                : '',
+            extension_value: '',
+            extension_unit: 'months',
+            deposit_handling: 'carry_forward',
+            confirmed_outstanding: false,
+        });
 
     if (!lease) {
         return null;
@@ -46,12 +54,31 @@ export default function RenewLeaseSheet({
     const isOverdue =
         lease.status === 'active' && lease.payment_status === 'overdue';
 
+    function handleOpenChange(next: boolean) {
+        onOpenChange(next);
+
+        if (!next) {
+            reset();
+        }
+    }
+
     function handleClose() {
-        onOpenChange(false);
+        handleOpenChange(false);
+    }
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        transform((d) => ({
+            ...d,
+            confirmed_outstanding: d.confirmed_outstanding ? '1' : '0',
+        }));
+        submit(leases.renew({ lease: lease!.id }), {
+            onSuccess: handleClose,
+        });
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
+        <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>Renew Lease</SheetTitle>
@@ -61,183 +88,142 @@ export default function RenewLeaseSheet({
                     </SheetDescription>
                 </SheetHeader>
 
-                <div className="flex-1 overflow-y-auto px-4">
-                    <Form
-                        action={leases.renew.post({ lease: lease.id }).url}
-                        method="post"
-                        onSuccess={handleClose}
-                    >
-                        {({ processing, errors }) => (
-                            <div className="space-y-6 pt-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="rent_amount">
-                                        New Rent Amount (IDR)
-                                    </Label>
-                                    <Input
-                                        id="rent_amount"
-                                        name="rent_amount"
-                                        type="number"
-                                        min={1}
-                                        defaultValue={
-                                            lease.rent_amount
-                                                ? String(
-                                                      Number.parseInt(
-                                                          lease.rent_amount,
-                                                      ),
-                                                  )
-                                                : ''
-                                        }
-                                        required
-                                    />
-                                    {errors.rent_amount && (
-                                        <p className="text-sm text-red-500">
-                                            {errors.rent_amount}
-                                        </p>
-                                    )}
-                                </div>
+                <form
+                    onSubmit={handleSubmit}
+                    className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
+                >
+                    <div className="space-y-6">
+                        <div className="grid gap-2">
+                            <Label htmlFor="rent_amount">
+                                New Rent Amount (IDR)
+                            </Label>
+                            <Input
+                                id="rent_amount"
+                                type="number"
+                                min={1}
+                                value={data.rent_amount}
+                                onChange={(e) =>
+                                    setData('rent_amount', e.target.value)
+                                }
+                                required
+                            />
+                            <InputError message={errors.rent_amount} />
+                        </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="extension_value">
-                                            Extension
-                                        </Label>
-                                        <Input
-                                            id="extension_value"
-                                            name="extension_value"
-                                            type="number"
-                                            min={1}
-                                            max={120}
-                                            placeholder="e.g. 12"
-                                            required
-                                        />
-                                        {errors.extension_value && (
-                                            <p className="text-sm text-red-500">
-                                                {errors.extension_value}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="extension_unit">
-                                            Period
-                                        </Label>
-                                        <Select
-                                            name="extension_unit"
-                                            defaultValue="months"
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="months">
-                                                    Months
-                                                </SelectItem>
-                                                <SelectItem value="years">
-                                                    Years
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.extension_unit && (
-                                            <p className="text-sm text-red-500">
-                                                {errors.extension_unit}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="deposit_handling">
-                                        Security Deposit
-                                    </Label>
-                                    <input
-                                        type="hidden"
-                                        name="deposit_handling"
-                                        value={depositHandling}
-                                    />
-                                    <Select
-                                        value={depositHandling}
-                                        onValueChange={setDepositHandling}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {DEPOSIT_HANDLING.map((d) => (
-                                                <SelectItem
-                                                    key={d.value}
-                                                    value={d.value}
-                                                >
-                                                    {d.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.deposit_handling && (
-                                        <p className="text-sm text-red-500">
-                                            {errors.deposit_handling}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {isOverdue && (
-                                    <Alert variant="destructive">
-                                        <AlertTitle>
-                                            Outstanding Balance
-                                        </AlertTitle>
-                                        <AlertDescription>
-                                            <p className="mb-3">
-                                                This lease has overdue payments.
-                                                Renewal will proceed with the
-                                                existing balance.
-                                            </p>
-                                            <label className="flex items-start gap-3">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={
-                                                        confirmedOutstanding
-                                                    }
-                                                    onChange={(e) => {
-                                                        setConfirmedOutstanding(
-                                                            e.target.checked,
-                                                        );
-                                                    }}
-                                                    className="mt-0.5 size-4"
-                                                />
-                                                <input
-                                                    type="hidden"
-                                                    name="confirmed_outstanding"
-                                                    value={
-                                                        confirmedOutstanding
-                                                            ? '1'
-                                                            : '0'
-                                                    }
-                                                />
-                                                <span>
-                                                    I confirm I want to renew
-                                                    despite the outstanding
-                                                    balance
-                                                </span>
-                                            </label>
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-
-                                <div className="flex items-center justify-end gap-4 pt-2">
-                                    <Button
-                                        variant="outline"
-                                        type="button"
-                                        onClick={handleClose}
-                                        disabled={processing}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button disabled={processing}>
-                                        Renew Lease
-                                    </Button>
-                                </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="extension_value">
+                                    Extension
+                                </Label>
+                                <Input
+                                    id="extension_value"
+                                    type="number"
+                                    min={1}
+                                    max={120}
+                                    placeholder="e.g. 12"
+                                    value={data.extension_value}
+                                    onChange={(e) =>
+                                        setData(
+                                            'extension_value',
+                                            e.target.value,
+                                        )
+                                    }
+                                    required
+                                />
+                                <InputError message={errors.extension_value} />
                             </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="extension_unit">Period</Label>
+                                <Select
+                                    value={data.extension_unit}
+                                    onValueChange={(v) =>
+                                        setData('extension_unit', v)
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="months">
+                                            Months
+                                        </SelectItem>
+                                        <SelectItem value="years">
+                                            Years
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={errors.extension_unit} />
+                            </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="deposit_handling">
+                                Security Deposit
+                            </Label>
+                            <Select
+                                value={data.deposit_handling}
+                                onValueChange={(v) =>
+                                    setData('deposit_handling', v)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {DEPOSIT_HANDLING.map((d) => (
+                                        <SelectItem
+                                            key={d.value}
+                                            value={d.value}
+                                        >
+                                            {d.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={errors.deposit_handling} />
+                        </div>
+
+                        {isOverdue && (
+                            <Alert variant="destructive">
+                                <AlertTitle>Outstanding Balance</AlertTitle>
+                                <AlertDescription>
+                                    <p className="mb-3">
+                                        This lease has overdue payments. Renewal
+                                        will proceed with the existing balance.
+                                    </p>
+                                    <label className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={data.confirmed_outstanding}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'confirmed_outstanding',
+                                                    e.target.checked,
+                                                )
+                                            }
+                                            className="mt-0.5 size-4"
+                                        />
+                                        <span>
+                                            I confirm I want to renew despite
+                                            the outstanding balance
+                                        </span>
+                                    </label>
+                                </AlertDescription>
+                            </Alert>
                         )}
-                    </Form>
-                </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-4">
+                        <Button
+                            variant="outline"
+                            type="button"
+                            onClick={handleClose}
+                            disabled={processing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button disabled={processing}>Renew Lease</Button>
+                    </div>
+                </form>
             </SheetContent>
         </Sheet>
     );

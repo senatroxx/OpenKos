@@ -291,3 +291,31 @@ describe('slug', function () {
         expect($first->slug)->toBe('a1')->and($second->slug)->toBe('a1-2');
     });
 });
+
+describe('active rates ordering', function () {
+    it('surfaces the shortest billing period first, regardless of insertion order', function () {
+        $unit = Unit::factory()->create();
+        // Drop the factory's default month rate for a clean slate.
+        $unit->rates()->delete();
+
+        // Insert the yearly rate first (lower id) to prove ordering is by
+        // period length — not insertion order, and not the tied billing_interval.
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'year',
+            'amount' => 15_000_000,
+            'is_active' => true,
+        ]);
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => 1_500_000,
+            'is_active' => true,
+        ]);
+
+        $first = $unit->activeRates()->first();
+
+        expect($first->billing_unit->value)->toBe('month')
+            ->and($first->amount)->toBe('1500000.00');
+    });
+});

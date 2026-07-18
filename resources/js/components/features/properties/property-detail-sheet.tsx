@@ -190,14 +190,7 @@ export default function PropertyDetailSheet({
                             <Button variant="destructive" onClick={archive}>
                                 Archive
                             </Button>
-                            <Button
-                                onClick={() => {
-                                    onOpenChange(false);
-                                    onEdit();
-                                }}
-                            >
-                                Edit
-                            </Button>
+                            <Button onClick={onEdit}>Edit</Button>
                         </div>
                     </div>
                 )}

@@ -294,14 +294,7 @@ export default function TenantDetailSheet({
                                     <Button variant="outline" onClick={archive}>
                                         Archive
                                     </Button>
-                                    <Button
-                                        onClick={() => {
-                                            onOpenChange(false);
-                                            onEdit();
-                                        }}
-                                    >
-                                        Edit
-                                    </Button>
+                                    <Button onClick={onEdit}>Edit</Button>
                                 </>
                             )}
                         </div>

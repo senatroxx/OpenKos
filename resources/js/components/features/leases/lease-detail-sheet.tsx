@@ -18,7 +18,10 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { DUE_DAY_LABELS } from '@/lib/constants';
-import { BILLING_STRATEGIES, PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
+import {
+    BILLING_STRATEGIES,
+    PAYMENT_METHOD_LABELS,
+} from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import type { Lease, Payment } from '@/types';
@@ -279,7 +282,12 @@ export default function LeaseDetailSheet({
                                                     Billing strategy
                                                 </span>
                                                 <span className="text-xs font-medium">
-                                                    {BILLING_STRATEGIES.find((s) => s.value === lease.billing_strategy)?.label ?? 'Advance (due within period)'}
+                                                    {BILLING_STRATEGIES.find(
+                                                        (s) =>
+                                                            s.value ===
+                                                            lease.billing_strategy,
+                                                    )?.label ??
+                                                        'Advance (due within period)'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
@@ -623,11 +631,13 @@ export default function LeaseDetailSheet({
                         </div>
 
                         <div className="flex flex-wrap items-center justify-end gap-4">
-
                             {isActive && (
                                 <Button
                                     variant="default"
-                                    onClick={() => setRecordPaymentOpen(true)}
+                                    onClick={() => {
+                                        onOpenChange(false);
+                                        setRecordPaymentOpen(true);
+                                    }}
                                 >
                                     <Banknote className="mr-1.5 size-4" />
                                     Record Payment
@@ -659,7 +669,7 @@ export default function LeaseDetailSheet({
                                 </Button>
                             )}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
                                 Close

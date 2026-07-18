@@ -158,7 +158,7 @@ class UnitController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit created.')]);
 
-        return to_route('properties.units.index', $property);
+        return back();
     }
 
     public function update(UpdateUnitRequest $request, Property $property, Unit $unit): RedirectResponse
@@ -193,7 +193,7 @@ class UnitController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit updated.')]);
 
-        return to_route('properties.units.index', $property);
+        return back();
     }
 
     public function restore(Property $property, Unit $unit): RedirectResponse

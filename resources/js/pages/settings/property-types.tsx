@@ -1,4 +1,4 @@
-import { Form, router } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
@@ -31,6 +31,87 @@ import { Switch } from '@/components/ui/switch';
 import type { PropertyTypeOption } from '@/types';
 
 const BASE = '/settings/property-types';
+
+function PropertyTypeFormSheet({
+    editing,
+    open,
+    onOpenChange,
+}: {
+    editing: PropertyTypeOption | null;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const { data, setData, submit, transform, processing, errors } = useForm({
+        label: editing?.label ?? '',
+    });
+
+    function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+
+        if (editing) {
+            transform((d) => ({ ...d, is_active: editing.is_active ? 1 : 0 }));
+            submit('patch', `${BASE}/${editing.slug}`, {
+                onSuccess: () => onOpenChange(false),
+            });
+        } else {
+            submit('post', BASE, {
+                onSuccess: () => onOpenChange(false),
+            });
+        }
+    }
+
+    return (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            <SheetContent className="sm:max-w-md">
+                <SheetHeader>
+                    <SheetTitle>
+                        {editing ? 'Edit type' : 'New property type'}
+                    </SheetTitle>
+                    <SheetDescription>
+                        {editing
+                            ? 'Rename this type. Its slug stays fixed so existing properties keep working.'
+                            : 'Add a classification. A slug is generated from the name.'}
+                    </SheetDescription>
+                </SheetHeader>
+
+                <div className="px-4">
+                    <form onSubmit={handleSubmit}>
+                        <div className="space-y-6 pt-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="label">Name</Label>
+                                <Input
+                                    id="label"
+                                    name="label"
+                                    value={data.label}
+                                    onChange={(e) =>
+                                        setData('label', e.target.value)
+                                    }
+                                    placeholder="e.g. Guesthouse"
+                                    required
+                                />
+                                <InputError message={errors.label} />
+                            </div>
+
+                            <div className="flex items-center justify-end gap-4">
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() => onOpenChange(false)}
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button disabled={processing}>
+                                    {editing ? 'Save' : 'Add'}
+                                </Button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </SheetContent>
+        </Sheet>
+    );
+}
 
 export default function PropertyTypes({
     propertyTypes,
@@ -172,70 +253,12 @@ export default function PropertyTypes({
                 </CardContent>
             </Card>
 
-            <Sheet
+            <PropertyTypeFormSheet
                 key={editing?.slug ?? 'new'}
+                editing={editing}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
-            >
-                <SheetContent className="sm:max-w-md">
-                    <SheetHeader>
-                        <SheetTitle>
-                            {editing ? 'Edit type' : 'New property type'}
-                        </SheetTitle>
-                        <SheetDescription>
-                            {editing
-                                ? 'Rename this type. Its slug stays fixed so existing properties keep working.'
-                                : 'Add a classification. A slug is generated from the name.'}
-                        </SheetDescription>
-                    </SheetHeader>
-
-                    <div className="px-4">
-                        <Form
-                            action={editing ? `${BASE}/${editing.slug}` : BASE}
-                            method={editing ? 'patch' : 'post'}
-                            onSuccess={() => setSheetOpen(false)}
-                        >
-                            {({ processing, errors }) => (
-                                <div className="space-y-6 pt-4">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="label">Name</Label>
-                                        <Input
-                                            id="label"
-                                            name="label"
-                                            defaultValue={editing?.label ?? ''}
-                                            placeholder="e.g. Guesthouse"
-                                            required
-                                        />
-                                        <InputError message={errors.label} />
-                                    </div>
-
-                                    {editing && (
-                                        <input
-                                            type="hidden"
-                                            name="is_active"
-                                            value={editing.is_active ? 1 : 0}
-                                        />
-                                    )}
-
-                                    <div className="flex items-center justify-end gap-4">
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            onClick={() => setSheetOpen(false)}
-                                            disabled={processing}
-                                        >
-                                            Cancel
-                                        </Button>
-                                        <Button disabled={processing}>
-                                            {editing ? 'Save' : 'Add'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </Form>
-                    </div>
-                </SheetContent>
-            </Sheet>
+            />
 
             <Dialog
                 open={deleteConfirm !== null}

@@ -3,13 +3,25 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 use OpenKOS\Platform\Facades\OpenKOS;
+use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
+
+    public function handle(Request $request, Closure $next): Response
+    {
+        // Use the configured site name (settings table) as the app-wide display
+        // name for this request — drives the page <title> (blade + Inertia
+        // suffix) and the shared `name` prop. Falls back to config/env.
+        config(['app.name' => Setting::get('site_name') ?? config('app.name')]);
+
+        return parent::handle($request, $next);
+    }
 
     public function version(Request $request): ?string
     {

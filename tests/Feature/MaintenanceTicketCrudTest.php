@@ -223,6 +223,39 @@ it('moves tenant and blocks unit when move_tenant_to_unit_id provided', function
     expect($lease->fresh()->unitHistories()->count())->toBe(1);
 });
 
+it('keeps the tenant on the same unit when blocking without a move target', function () {
+    // Guards the "Keep tenant, just mark as maintenance" path: the occupied-unit
+    // dialog must NOT send move_tenant_to_unit_id, even if a destination was
+    // browsed. With no move target, the tenant stays put.
+    $owner = User::factory()->owner()->create();
+    $unit = Unit::factory()->create();
+    // A valid move target exists but must not be used.
+    Unit::factory()->create(['property_id' => $unit->property_id]);
+    $tenant = Tenant::factory()->create();
+    $lease = $unit->leases()->create([
+        'primary_tenant_id' => $tenant->id,
+        'start_date' => now(),
+        'rent_amount' => 1_000_000,
+        'status' => 'active',
+    ]);
+    $lease->tenants()->attach($tenant->id, ['is_primary' => true]);
+
+    $this->actingAs($owner)
+        ->post(route('maintenance-tickets.store'), [
+            'property_id' => $unit->property_id,
+            'unit_id' => $unit->id,
+            'title' => 'Broken heater',
+            'priority' => MaintenancePriority::High->value,
+            'block_unit' => true,
+            // no move_tenant_to_unit_id
+        ])
+        ->assertRedirect();
+
+    expect($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
+    expect($lease->fresh()->status)->toBe(LeaseStatus::Active);
+    expect($lease->fresh()->unit_id)->toBe($unit->id); // not moved
+});
+
 it('prevents leasing a maintenance unit', function () {
     $owner = User::factory()->owner()->create();
     $unit = Unit::factory()->create(['status' => UnitStatus::Maintenance]);

@@ -328,7 +328,7 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
-        return to_route('properties.units.index', $property);
+        return back();
     }
 
     public function update(UpdateLeaseRequest $request, Property $property, Unit $unit, Lease $lease): RedirectResponse
@@ -341,7 +341,7 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease updated.')]);
 
-        return to_route('properties.units.leases.index', [$property, $unit]);
+        return back();
     }
 
     public function destroy(Property $property, Unit $unit, Lease $lease): RedirectResponse
@@ -437,7 +437,7 @@ class LeaseController extends Controller
         ]);
 
         if ($validated['move_to_another_unit']) {
-            return to_route('properties.units.index', $lease->unit->property_id);
+            return back();
         }
 
         return back();
@@ -464,7 +464,7 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease renewed. New lease created.')]);
 
-        return to_route('leases.index');
+        return back();
     }
 
     public function sendReminder(Lease $lease, ForceSendReminder $action): RedirectResponse
@@ -532,6 +532,6 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new unit.')]);
 
-        return to_route('properties.units.index', $property);
+        return back();
     }
 }

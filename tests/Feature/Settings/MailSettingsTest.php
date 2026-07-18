@@ -11,7 +11,7 @@ describe('Mail settings page', function () {
     it('renders the form', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.mail.edit'))->actingAs($owner)
             ->get(route('settings.mail.edit'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -23,7 +23,7 @@ describe('Mail settings page', function () {
     it('updates mail settings', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.mail.edit'))->actingAs($owner)
             ->patch(route('settings.mail.update'), [
                 'mail_config' => [
                     'host' => 'smtp.example.com',
@@ -49,7 +49,7 @@ describe('Mail settings page', function () {
     it('encrypts the mail password', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.mail.edit'))->actingAs($owner)
             ->patch(route('settings.mail.update'), [
                 'mail_config' => [
                     'password' => 'secret123',
@@ -64,7 +64,7 @@ describe('Mail settings page', function () {
     it('validates mail settings', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->actingAs($owner)
+        $this->from(route('settings.mail.edit'))->actingAs($owner)
             ->patch(route('settings.mail.update'), [
                 'mail_config' => [
                     'port' => 'not-a-number',

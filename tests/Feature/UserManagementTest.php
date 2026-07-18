@@ -24,7 +24,7 @@ test('owner can view users page and tenant users are excluded', function () {
     $tenantUser = User::factory()->create(['name' => 'Tenant User']);
     Tenant::factory()->create(['user_id' => $tenantUser->id]);
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->get(route('users.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -38,7 +38,7 @@ test('owner can view users page and tenant users are excluded', function () {
 test('non owners cannot view users page', function () {
     $staff = User::factory()->staff()->create();
 
-    $this->actingAs($staff)
+    $this->from(route('users.index'))->actingAs($staff)
         ->get(route('users.index'))
         ->assertForbidden();
 });
@@ -46,7 +46,7 @@ test('non owners cannot view users page', function () {
 test('invalid role filter falls back gracefully without error', function () {
     $owner = User::factory()->owner()->create();
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->get(route('users.index', ['role' => 'does-not-exist']))
         ->assertOk();
 });
@@ -58,7 +58,7 @@ test('owner can invite admin and assign properties with custom notification', fu
 
     RoleModel::findOrCreate('admin')->update(['label' => 'Admin']);
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->post(route('users.store'), [
             'name' => 'Admin User',
             'email' => 'admin@example.com',
@@ -75,7 +75,7 @@ test('owner can invite admin and assign properties with custom notification', fu
         ->and($user->invited_at)->not->toBeNull()
         ->and($user->is_active)->toBeFalse();
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->get(route('users.index', ['status' => 'invited']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -100,7 +100,7 @@ test('owner can invite user with multiple roles', function () {
     RoleModel::findOrCreate('admin')->update(['label' => 'Admin']);
     RoleModel::findOrCreate('staff')->update(['label' => 'Staff']);
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->post(route('users.store'), [
             'name' => 'Multi Role User',
             'email' => 'multi@example.com',
@@ -127,7 +127,7 @@ test('owner can invite user with custom role', function () {
     ]);
     $customRole->givePermissionTo('financials.view');
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->post(route('users.store'), [
             'name' => 'Finance User',
             'email' => 'finance@example.com',
@@ -143,7 +143,7 @@ test('owner cannot invite owner through users page', function () {
     Notification::fake();
     $owner = User::factory()->owner()->create();
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->post(route('users.store'), [
             'name' => 'Owner User',
             'email' => 'new-owner@example.com',
@@ -160,7 +160,7 @@ test('invited user accepts invitation on dedicated invitation route and becomes 
 
     RoleModel::findOrCreate('staff')->update(['label' => 'Staff']);
 
-    $this->actingAs($owner)->post(route('users.store'), [
+    $this->from(route('users.index'))->actingAs($owner)->post(route('users.store'), [
         'name' => 'Staff User',
         'email' => 'staff@example.com',
         'roles' => ['staff'],
@@ -208,13 +208,13 @@ test('owner can disable staff but cannot disable last owner', function () {
     $owner = User::factory()->owner()->create();
     $staff = User::factory()->staff()->create();
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->delete(route('users.destroy', $staff))
         ->assertRedirect(route('users.index'));
 
     expect($staff->refresh()->is_active)->toBeFalse();
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->delete(route('users.destroy', $owner))
         ->assertSessionHasErrors('user');
 
@@ -226,7 +226,7 @@ test('reset password action sends default reset notification', function () {
     $owner = User::factory()->owner()->create();
     $admin = User::factory()->admin()->create();
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->post(route('users.reset-password', $admin))
         ->assertRedirect(route('users.index'));
 
@@ -243,7 +243,7 @@ test('owner can resend invitation link for invited user', function () {
         'invited_at' => now(),
     ]);
 
-    $this->actingAs($owner)
+    $this->from(route('users.index'))->actingAs($owner)
         ->post(route('users.resend-invitation', $invitedUser))
         ->assertRedirect(route('users.index'));
 
@@ -259,7 +259,7 @@ test('assigned property scope limits non owner dashboard and property list', fun
 
     $admin->properties()->sync([$assignedProperty->id]);
 
-    $this->actingAs($admin)
+    $this->from(route('users.index'))->actingAs($admin)
         ->get(route('dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -268,7 +268,7 @@ test('assigned property scope limits non owner dashboard and property list', fun
             ->where('stats.properties.0.name', 'Assigned Kos')
         );
 
-    $this->actingAs($admin)
+    $this->from(route('users.index'))->actingAs($admin)
         ->get(route('properties.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
@@ -284,7 +284,7 @@ test('non owner cannot access unassigned property units', function () {
 
     $admin->properties()->sync([$assignedProperty->id]);
 
-    $this->actingAs($admin)
+    $this->from(route('users.index'))->actingAs($admin)
         ->get(route('properties.units.index', $otherProperty))
         ->assertForbidden();
 });
