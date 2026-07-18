@@ -13,7 +13,7 @@ describe('authorization', function () {
     it('owner can view roles page', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->get(route('roles.index'))
             ->assertOk();
     });
@@ -21,7 +21,7 @@ describe('authorization', function () {
     it('non-owner cannot view roles page', function () {
         $admin = User::factory()->admin()->create();
 
-        $this->from(route('roles.index'))->actingAs($admin)
+        $this->actingAs($admin)
             ->get(route('roles.index'))
             ->assertForbidden();
     });
@@ -29,7 +29,7 @@ describe('authorization', function () {
     it('staff cannot view roles page', function () {
         $staff = User::factory()->staff()->create();
 
-        $this->from(route('roles.index'))->actingAs($staff)
+        $this->actingAs($staff)
             ->get(route('roles.index'))
             ->assertForbidden();
     });
@@ -39,7 +39,7 @@ describe('CRUD', function () {
     it('owner can create custom role with existing permissions', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'finance-staff',
                 'label' => 'Finance Staff',
@@ -64,7 +64,7 @@ describe('CRUD', function () {
     it('owner cannot assign unknown permission', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'test-role',
                 'label' => 'Test Role',
@@ -76,7 +76,7 @@ describe('CRUD', function () {
     it('owner can update custom role permissions', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'front-desk',
                 'label' => 'Front Desk',
@@ -85,7 +85,7 @@ describe('CRUD', function () {
 
         $role = Role::where('name', 'front-desk')->first();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->put(route('roles.update', $role), [
                 'label' => 'Front Desk Updated',
                 'description' => 'Manages front desk',
@@ -106,7 +106,7 @@ describe('CRUD', function () {
     it('owner can clone custom role', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'maintenance-staff',
                 'label' => 'Maintenance Staff',
@@ -115,7 +115,7 @@ describe('CRUD', function () {
 
         $role = Role::where('name', 'maintenance-staff')->first();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.clone', $role), [
                 'name' => 'maintenance-staff-clone',
             ])
@@ -131,7 +131,7 @@ describe('CRUD', function () {
     it('owner can delete custom role without affecting users', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'temp-role',
                 'label' => 'Temp Role',
@@ -144,7 +144,7 @@ describe('CRUD', function () {
 
         expect($admin->hasRole('temp-role'))->toBeTrue();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->delete(route('roles.destroy', $role))
             ->assertRedirect(route('roles.index'));
 
@@ -157,7 +157,7 @@ describe('CRUD', function () {
         $owner = User::factory()->owner()->create();
         $ownerRole = Role::where('name', 'owner')->first();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->delete(route('roles.destroy', $ownerRole))
             ->assertRedirect(route('roles.index'));
 
@@ -168,7 +168,7 @@ describe('CRUD', function () {
         $owner = User::factory()->owner()->create();
         $ownerRole = Role::where('name', 'owner')->first();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->delete(route('roles.destroy', $ownerRole))
             ->assertRedirect(route('roles.index'));
 
@@ -178,7 +178,7 @@ describe('CRUD', function () {
     it('owner can disable custom role', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'test-role',
                 'label' => 'Test Role',
@@ -187,7 +187,7 @@ describe('CRUD', function () {
 
         $role = Role::where('name', 'test-role')->first();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->put(route('roles.update', $role), [
                 'is_active' => false,
                 'permissions' => [Permission::DashboardView->value],
@@ -200,7 +200,7 @@ describe('CRUD', function () {
     it('owner can view create page with recommendations', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->get(route('roles.create'))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
@@ -213,7 +213,7 @@ describe('CRUD', function () {
     it('owner can view edit page', function () {
         $owner = User::factory()->owner()->create();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->post(route('roles.store'), [
                 'name' => 'editable-role',
                 'label' => 'Editable Role',
@@ -222,7 +222,7 @@ describe('CRUD', function () {
 
         $role = Role::where('name', 'editable-role')->first();
 
-        $this->from(route('roles.index'))->actingAs($owner)
+        $this->actingAs($owner)
             ->get(route('roles.edit', $role))
             ->assertOk()
             ->assertInertia(fn ($page) => $page
