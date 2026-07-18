@@ -14,10 +14,12 @@ use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
+use App\Models\PaymentProof;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class PaymentController extends Controller
@@ -68,13 +70,11 @@ class PaymentController extends Controller
     {
         $this->authorize('view', $payment);
 
-        $path = storage_path('app/private/'.$proof->path);
-
-        if (! file_exists($path)) {
+        if (! Storage::disk('local')->exists($proof->path)) {
             abort(404);
         }
 
-        return response()->file($path);
+        return Storage::disk('local')->response($proof->path);
     }
 
     public function __construct(
