@@ -48,7 +48,7 @@ class WhatsAppPlugin extends Plugin
             key: 'whatsapp',
             title: 'WhatsApp',
             href: '/settings/whatsapp',
-            group: 'Credentials',
+            group: 'Integrations',
             order: 400,
             routeName: 'settings.whatsapp.edit',
         ));
