@@ -103,6 +103,10 @@ class InstallCommand extends Command
 
     protected function updateEnv(array $values): void
     {
+        if (app()->environment('testing')) {
+            return;
+        }
+
         $envPath = base_path('.env');
 
         if (! file_exists($envPath)) {

@@ -29,8 +29,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('user-password.update');
 
-    Route::inertia('settings/appearance', 'settings/appearance')->name('appearance.edit');
-
     Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');
     Route::patch('settings/general', [GeneralController::class, 'update'])->name('settings.general.update');
 

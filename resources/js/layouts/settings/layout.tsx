@@ -6,28 +6,15 @@ import { Separator } from '@/components/ui/separator';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { platformPageNavItems } from '@/lib/platform';
 import { cn, toUrl } from '@/lib/utils';
-import { edit as editAppearance } from '@/routes/appearance';
-import { edit } from '@/routes/profile';
-import { edit as editSecurity } from '@/routes/security';
-import type { Auth, NavItem } from '@/types';
+import type { Auth } from '@/types';
 import type { Platform } from '@/types/platform';
-
-const sidebarNavItems: NavItem[] = [
-    { title: 'Profile', href: edit() },
-    { title: 'Security', href: editSecurity() },
-    { title: 'Appearance', href: editAppearance() },
-    { title: 'Property Types', href: '/settings/property-types' },
-];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
     const { isCurrentOrParentUrl } = useCurrentUrl();
     const { auth, platform } = usePage<{ auth: Auth; platform: Platform }>()
         .props;
 
-    const navItems: NavItem[] = [
-        ...sidebarNavItems,
-        ...platformPageNavItems(platform.settings, auth),
-    ];
+    const navItems = platformPageNavItems(platform.settings, auth);
 
     return (
         <div className="px-4 py-6">
