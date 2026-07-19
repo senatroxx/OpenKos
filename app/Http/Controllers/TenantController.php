@@ -14,16 +14,13 @@ use App\Http\Requests\Tenant\StoreTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
-use App\Notifications\TenantInvitation;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
-use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -127,6 +124,33 @@ class TenantController extends Controller
                         'archived' => $q->onlyTrashed(),
                         default => $q,
                     }),
+                Filter::select('app_access', 'App Access', [
+                    ['value' => 'active', 'label' => 'Has access'],
+                    ['value' => 'invited', 'label' => 'Invite pending'],
+                    ['value' => 'email_only', 'label' => 'Email only'],
+                    ['value' => 'disabled', 'label' => 'Access disabled'],
+                    ['value' => 'none', 'label' => 'No access'],
+                ])
+                    // Buckets mirror appAccessStatus() on the frontend.
+                    ->query(fn (Builder $q, string $value) => match ($value) {
+                        'none' => $q->whereNull('user_id'),
+                        'active' => $q->whereHas('user', fn (Builder $u) => $u
+                            ->where('is_active', true)
+                            ->whereNotNull('email_verified_at')),
+                        'invited' => $q->whereHas('user', fn (Builder $u) => $u
+                            ->whereNotNull('invited_at')
+                            ->where(fn (Builder $a) => $a
+                                ->where('is_active', false)
+                                ->orWhereNull('email_verified_at'))),
+                        'disabled' => $q->whereHas('user', fn (Builder $u) => $u
+                            ->where('is_active', false)
+                            ->whereNull('invited_at')
+                            ->whereNotNull('email_verified_at')),
+                        'email_only' => $q->whereHas('user', fn (Builder $u) => $u
+                            ->whereNull('invited_at')
+                            ->whereNull('email_verified_at')),
+                        default => $q,
+                    }),
             ])
             ->defaultSort('name');
 
@@ -135,7 +159,7 @@ class TenantController extends Controller
             : null;
 
         $query = Tenant::query()
-            ->with(['documents', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
+            ->with(['user:id,email,email_verified_at,last_login_at,is_active,invited_at', 'documents', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
             ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',
@@ -195,20 +219,45 @@ class TenantController extends Controller
         return back();
     }
 
-    public function store(StoreTenantRequest $request): RedirectResponse
+    public function store(StoreTenantRequest $request, InviteTenant $invite): RedirectResponse
     {
-        $tenant = Tenant::create($request->validated());
+        $tenant = Tenant::create($request->safe()->except(['email', 'send_invite']));
+
+        if ($email = $request->validated('email')) {
+            $invite->execute($tenant, $email, $request->boolean('send_invite'));
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant created.')]);
 
         return back();
     }
 
-    public function update(UpdateTenantRequest $request, Tenant $tenant): RedirectResponse
+    public function update(UpdateTenantRequest $request, Tenant $tenant, InviteTenant $invite): RedirectResponse
     {
         $this->authorize('update', $tenant);
 
-        $tenant->update($request->validated());
+        $tenant->update($request->safe()->except(['email', 'send_invite']));
+
+        $email = $request->validated('email');
+
+        if ($email) {
+            $user = $tenant->user;
+            $sendInvite = $request->boolean('send_invite');
+
+            if (! $user) {
+                $invite->execute($tenant, $email, $sendInvite);
+            } elseif (! ($user->is_active && $user->email_verified_at)) {
+                // Non-active account: email is editable here. Active accounts are
+                // read-only in the form and their login email is ignored server-side.
+                if ($user->email !== $email) {
+                    $user->update(['email' => $email]);
+                }
+
+                if ($sendInvite) {
+                    $invite->sendInvitation($user);
+                }
+            }
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant updated.')]);
 
@@ -248,7 +297,7 @@ class TenantController extends Controller
         return back();
     }
 
-    public function resendInvitation(Tenant $tenant): RedirectResponse
+    public function resendInvitation(Tenant $tenant, InviteTenant $action): RedirectResponse
     {
         $this->authorize('invite', $tenant);
 
@@ -258,19 +307,7 @@ class TenantController extends Controller
             return back()->withErrors(['invite' => __('Tenant has no user account. Invite them first.')]);
         }
 
-        // Active users can already sign in, so a resend is just a fresh access link —
-        // don't flag them as "pending invite". Only mark genuinely un-activated users.
-        if (! $user->is_active && ! $user->invited_at) {
-            $user->update(['invited_at' => now()]);
-        }
-
-        /** @var PasswordBroker $broker */
-        $broker = Password::broker();
-        $token = $broker->createToken($user);
-
-        $user->notify(new TenantInvitation(
-            route('tenants.invitations.accept', ['token' => $token, 'email' => $user->email]),
-        ));
+        $action->sendInvitation($user);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation resent.')]);
 

@@ -10,7 +10,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { appAccessStatus } from '@/lib/app-access';
 import tenants from '@/routes/tenants';
 import type { Tenant } from '@/types';
 
@@ -25,10 +27,16 @@ export default function TenantFormSheet({
 }) {
     const isEdit = Boolean(tenant);
 
+    // App access lives on the linked user. Its login email is read-only here once the
+    // account is active — changing it goes through the App Access section instead.
+    const emailLocked = isEdit && appAccessStatus(tenant?.user) === 'active';
+
     const { data, setData, transform, submit, reset, processing, errors } =
         useForm({
             name: tenant?.name ?? '',
             phone: tenant?.phone ?? '',
+            email: tenant?.user?.email ?? '',
+            send_invite: false,
             id_card_number: tenant?.id_card_number ?? '',
             emergency_contact_phone: tenant?.emergency_contact_phone ?? '',
             emergency_contact_name: tenant?.emergency_contact_name ?? '',
@@ -46,7 +54,11 @@ export default function TenantFormSheet({
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        transform((d) => ({ ...d, is_active: d.is_active ? '1' : '0' }));
+        transform((d) => ({
+            ...d,
+            is_active: d.is_active ? '1' : '0',
+            send_invite: d.send_invite ? '1' : '0',
+        }));
         submit(isEdit ? tenants.update(tenant!.id) : tenants.store(), {
             onSuccess: () => handleOpenChange(false),
         });
@@ -98,6 +110,48 @@ export default function TenantFormSheet({
                             />
                             <InputError message={errors.phone} />
                         </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                value={data.email}
+                                disabled={emailLocked}
+                                onChange={(e) =>
+                                    setData('email', e.target.value)
+                                }
+                                placeholder="e.g. tenant@example.com"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                {emailLocked
+                                    ? 'This tenant signs in with this email. To change it, disable their app access first, then edit.'
+                                    : 'Used for app access and notifications. Optional.'}
+                            </p>
+                            <InputError message={errors.email} />
+                        </div>
+
+                        {!emailLocked && data.email !== '' && (
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="grid gap-1">
+                                    <Label htmlFor="send_invite">
+                                        Send activation invite
+                                    </Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Emails a link to set a password and access
+                                        the portal. Leave off to only save the email
+                                        for notifications.
+                                    </p>
+                                </div>
+                                <Switch
+                                    id="send_invite"
+                                    checked={data.send_invite}
+                                    onCheckedChange={(v) =>
+                                        setData('send_invite', v)
+                                    }
+                                />
+                            </div>
+                        )}
 
                         <div className="grid gap-2">
                             <Label htmlFor="id_card_number">

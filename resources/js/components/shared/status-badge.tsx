@@ -69,6 +69,13 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         notified: { label: 'Email only', variant: 'outline' },
         disabled: { label: 'Disabled', variant: 'secondary' },
     },
+    app_access: {
+        active: { label: 'App access', className: 'bg-green-600 text-white' },
+        invited: { label: 'Invite pending', className: 'bg-amber-500 text-white' },
+        email_only: { label: 'Email only', variant: 'outline' },
+        disabled: { label: 'Access disabled', variant: 'secondary' },
+        none: { label: 'No access', variant: 'secondary' },
+    },
     tenant: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },
         inactive: { label: 'Inactive', className: 'bg-gray-400 text-white' },
