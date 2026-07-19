@@ -21,6 +21,7 @@ declare module '@inertiajs/core' {
                 currency: string;
                 timezone: string;
             };
+            notificationChannels: { mail: boolean; whatsapp: boolean };
             sidebarOpen: boolean;
             platform: Platform;
         };
