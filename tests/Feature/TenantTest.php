@@ -69,7 +69,6 @@ describe('CRUD', function () {
         $this->actingAs($user)->post(route('tenants.store'), [
             'name' => 'Budi Santoso',
             'phone' => '+6281234567890',
-            'email' => 'budi@example.com',
             'id_card_number' => '3273010203040005',
         ]);
 

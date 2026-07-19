@@ -34,6 +34,7 @@ enum Permission: string
     case TenantsUpdate = 'tenants.update';
     case TenantsDelete = 'tenants.delete';
     case TenantsExport = 'tenants.export';
+    case TenantsInvite = 'tenants.invite';
 
     case LeasesView = 'leases.view';
     case LeasesCreate = 'leases.create';
@@ -70,6 +71,7 @@ enum Permission: string
             'reset_password' => 'Reset Password',
             'resend_invitation' => 'Resend Invitation',
             'export' => 'Export',
+            'invite' => 'Invite',
             'move' => 'Move Unit',
             'move_out' => 'Move Out',
             'renew' => 'Renew Lease',
@@ -113,6 +115,7 @@ enum Permission: string
             self::TenantsUpdate => 'Edit existing tenant information.',
             self::TenantsDelete => 'Archive tenant records.',
             self::TenantsExport => 'Export tenant data.',
+            self::TenantsInvite => 'Invite tenants to access the app.',
 
             self::LeasesView => 'View lease agreements and history.',
             self::LeasesCreate => 'Create new leases and assign tenants to units.',

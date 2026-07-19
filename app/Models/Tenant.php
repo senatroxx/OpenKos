@@ -17,7 +17,6 @@ use Illuminate\Notifications\Notification;
     'user_id',
     'name',
     'phone',
-    'email',
     'id_card_number',
     'emergency_contact_name',
     'emergency_contact_phone',
@@ -28,7 +27,7 @@ class Tenant extends Model
 {
     use Auditable, HasFactory, Notifiable, SoftDeletes;
 
-    protected array $auditableMask = ['phone', 'email', 'id_card_number', 'emergency_contact_phone'];
+    protected array $auditableMask = ['phone', 'id_card_number', 'emergency_contact_phone'];
 
     protected function casts(): array
     {
@@ -44,7 +43,9 @@ class Tenant extends Model
 
     public function routeNotificationForMail(Notification $notification): array
     {
-        return [$this->email => $this->name];
+        $email = $this->user?->email;
+
+        return $email ? [$email => $this->name] : [];
     }
 
     public function user(): BelongsTo

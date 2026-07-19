@@ -39,6 +39,13 @@ class TenantPolicy
         return $this->delete($user, $tenant);
     }
 
+    public function invite(User $user, Tenant $tenant): bool
+    {
+        return $tenant->leases()
+            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
+            ->exists();
+    }
+
     public function assignUnit(User $user, Unit $unit): bool
     {
         return $user->properties->contains($unit->property_id);

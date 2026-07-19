@@ -114,13 +114,11 @@ describe('PII handling', function () {
     it('masks sensitive fields on Tenant', function () {
         Tenant::factory()->create([
             'phone' => '08123456789',
-            'email' => 'tenant@example.com',
             'id_card_number' => '1234567890123456',
         ]);
 
         $log = AuditLog::first();
         expect($log->after['phone'])->toBe('***MASKED***');
-        expect($log->after['email'])->toBe('***MASKED***');
         expect($log->after['id_card_number'])->toBe('***MASKED***');
         expect($log->after['name'])->not->toBe('***MASKED***');
     });

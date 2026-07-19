@@ -66,6 +66,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     user: {
         active: { label: 'Active', className: 'bg-green-600 text-white' },
         invited: { label: 'Invited', variant: 'outline' },
+        notified: { label: 'Email only', variant: 'outline' },
         disabled: { label: 'Disabled', variant: 'secondary' },
     },
     tenant: {

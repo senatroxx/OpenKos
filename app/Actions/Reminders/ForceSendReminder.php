@@ -21,11 +21,11 @@ class ForceSendReminder
 
     public function execute(Lease $lease): string
     {
-        $lease->load(['primaryTenant']);
+        $lease->load(['primaryTenant.user']);
         $tenant = $lease->primaryTenant;
 
         $channels = Setting::get('reminder_channels') ?? ['log'];
-        $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
+        $hasContact = $tenant?->phone || ($tenant?->user?->email && in_array('mail', $channels));
 
         if (! $hasContact) {
             return 'no_contact';

@@ -13,6 +13,7 @@ use App\Http\Controllers\PropertyLeasesController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantDocumentController;
+use App\Http\Controllers\TenantInvitationController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::get('leases', [TenantController::class, 'leases'])->name('workspace.leases')->middleware('permission:tenants.view');
             Route::get('documents', [TenantController::class, 'documents'])->name('workspace.documents')->middleware('permission:tenants.view');
             Route::post('assign-unit', [TenantController::class, 'assignUnit'])->name('assign-unit')->middleware('permission:tenants.update');
+            Route::post('invite', [TenantController::class, 'invite'])->name('invite')->middleware('permission:tenants.invite');
+            Route::post('resend-invitation', [TenantController::class, 'resendInvitation'])->name('resend-invitation')->middleware('permission:tenants.invite');
+            Route::post('disable-access', [TenantController::class, 'disableAccess'])->name('disable-access')->middleware('permission:tenants.invite');
 
             Route::prefix('documents')->name('documents.')->group(function () {
                 Route::post('/', [TenantDocumentController::class, 'store'])->name('store')->middleware('permission:tenants.update');
@@ -91,6 +95,11 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::delete('{document}', [TenantDocumentController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.update');
             });
         });
+    });
+
+    Route::prefix('tenants/invitations')->name('tenants.invitations.')->middleware('guest')->group(function () {
+        Route::get('{token}', [TenantInvitationController::class, 'acceptInvitation'])->name('accept');
+        Route::post('accept', [TenantInvitationController::class, 'completeInvitation'])->name('complete');
     });
 
     Route::prefix('leases')->name('leases.')->group(function () {

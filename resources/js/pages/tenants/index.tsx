@@ -4,6 +4,7 @@ import {
     EllipsisVertical,
     ExternalLink,
     Eye,
+    MailPlus,
     Pencil,
     RotateCcw,
     Trash2,
@@ -20,6 +21,7 @@ import {
     TenantDocumentsSheet,
     TenantFormSheet,
 } from '@/components/features';
+import InviteToAppSheet from '@/components/features/tenants/invite-to-app-sheet';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -93,6 +95,10 @@ export default function Index({
 
     const [archiveConfirm, setArchiveConfirm] =
         useState<WorkspaceTenant | null>(null);
+
+    const [inviteTenant, setInviteTenant] = useState<WorkspaceTenant | null>(
+        null,
+    );
 
     const table = useTable({
         routeFn: () => tenants.index(),
@@ -240,6 +246,14 @@ export default function Index({
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>
+                        {!t.deleted_at && !t.user_id && (
+                            <DropdownMenuItem
+                                onClick={() => setInviteTenant(t)}
+                            >
+                                <MailPlus className="size-4" />
+                                Invite to App
+                            </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => openDetail(t)}>
                             <Eye className="size-4" />
                             View
@@ -338,6 +352,14 @@ export default function Index({
                 onAssignToUnit={openAssignUnit}
                 onMoveOut={openMoveOut}
                 onDocuments={openDocuments}
+                onInvite={
+                    viewingTenant?.user_id ? undefined : () => {
+                        if (viewingTenant) {
+                            setDetailOpen(false);
+                            setInviteTenant(viewingTenant);
+                        }
+                    }
+                }
             />
 
             <TenantFormSheet
@@ -397,6 +419,12 @@ export default function Index({
                 availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}
+            />
+
+            <InviteToAppSheet
+                tenantId={inviteTenant?.id ?? null}
+                open={inviteTenant !== null}
+                onOpenChange={(open) => !open && setInviteTenant(null)}
             />
 
             <Dialog

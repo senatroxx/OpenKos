@@ -1,3 +1,4 @@
+import TenantAppAccessSection from '@/components/features/tenants/tenant-app-access-section';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease, WorkspaceTenant } from '@/types';
@@ -27,6 +28,8 @@ export default function TenantOverview({
                     />
                 }
             </div>
+
+            <TenantAppAccessSection tenant={tenant} />
 
             <div className="rounded-lg border bg-muted/30 p-4">
                 <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">

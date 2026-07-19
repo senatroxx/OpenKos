@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/react';
+import { MailPlus } from 'lucide-react';
 import { useState } from 'react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ export default function TenantDetailSheet({
     onDocuments,
     onAssignToUnit,
     onMoveOut,
+    onInvite,
 }: {
     tenant?:
         | (WorkspaceTenant & { leases?: Lease[]; documents?: TenantDocument[] })
@@ -39,6 +41,7 @@ export default function TenantDetailSheet({
     onDocuments: () => void;
     onAssignToUnit?: () => void;
     onMoveOut?: () => void;
+    onInvite?: () => void;
 }) {
     const [archiveConfirm, setArchiveConfirm] = useState(false);
 
@@ -278,6 +281,15 @@ export default function TenantDetailSheet({
                             </Button>
                             {!isArchived && tenant && (
                                 <>
+                                    {!tenant.user_id && onInvite && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={onInvite}
+                                        >
+                                            <MailPlus className="size-4" />
+                                            Invite to App
+                                        </Button>
+                                    )}
                                     {!activeLease && onAssignToUnit && (
                                         <Button onClick={onAssignToUnit}>
                                             Assign to Unit
