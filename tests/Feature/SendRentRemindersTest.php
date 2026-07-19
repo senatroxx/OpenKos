@@ -204,6 +204,42 @@ describe('SendRentRemindersAction', function () {
 
         Carbon::setTestNow();
     });
+
+    it('emails an invited but unverified tenant', function () {
+        Carbon::setTestNow(Carbon::parse('2026-07-01'));
+        Setting::set('reminder_channels', ['mail'], 'array');
+        Notification::fake();
+
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $user = User::factory()->create([
+            'email' => 'tenant@example.com',
+            'is_active' => false,
+            'email_verified_at' => null,
+            'invited_at' => now(),
+        ]);
+        $tenant = Tenant::factory()->create(['phone' => null, 'user_id' => $user->id]);
+
+        $lease = Lease::factory()->create([
+            'unit_id' => $unit->id,
+            'primary_tenant_id' => $tenant->id,
+            'start_date' => '2026-06-01',
+            'rent_amount' => 1500000.00,
+            'rent_due_day' => 1,
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'status' => 'active',
+        ]);
+        app(GenerateInvoices::class)->execute($lease);
+        $lease->load(['primaryTenant']);
+
+        $sent = app(SendRentReminders::class)->execute($lease);
+
+        expect($sent)->not->toBeEmpty();
+        Notification::assertSentTo($lease->primaryTenant, RentReminder::class);
+
+        Carbon::setTestNow();
+    });
 });
 
 describe('Command', function () {

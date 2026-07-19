@@ -3,21 +3,27 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Leases\CreateLease;
+use App\Actions\Tenants\DisableTenantAccess;
+use App\Actions\Tenants\InviteTenant;
 use App\Data\Lease\CreateLeaseData;
 use App\Enums\LeaseStatus;
 use App\Enums\TenantDocumentType;
 use App\Http\Requests\Tenant\AssignUnitRequest;
+use App\Http\Requests\Tenant\InviteTenantRequest;
 use App\Http\Requests\Tenant\StoreTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Notifications\TenantInvitation;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Password;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -28,6 +34,7 @@ class TenantController extends Controller
         $this->authorize('view', $tenant);
 
         $tenant->load([
+            'user:id,email,email_verified_at,last_login_at,is_active,invited_at',
             'documents',
             'leases' => fn ($q) => $q->where('status', 'active')
                 ->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
@@ -215,6 +222,68 @@ class TenantController extends Controller
         $tenant->restore();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant restored.')]);
+
+        return back();
+    }
+
+    public function invite(InviteTenantRequest $request, Tenant $tenant, InviteTenant $action): RedirectResponse
+    {
+        $this->authorize('invite', $tenant);
+
+        if ($tenant->user_id) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Tenant already has app access.')]);
+
+            return back();
+        }
+
+        $sendInvite = $request->boolean('send_invite', true);
+
+        $action->execute($tenant, $request->validated('email'), $sendInvite);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $sendInvite ? __('Tenant invited.') : __('Tenant email saved.'),
+        ]);
+
+        return back();
+    }
+
+    public function resendInvitation(Tenant $tenant): RedirectResponse
+    {
+        $this->authorize('invite', $tenant);
+
+        $user = $tenant->user;
+
+        if (! $user) {
+            return back()->withErrors(['invite' => __('Tenant has no user account. Invite them first.')]);
+        }
+
+        // Active users can already sign in, so a resend is just a fresh access link —
+        // don't flag them as "pending invite". Only mark genuinely un-activated users.
+        if (! $user->is_active && ! $user->invited_at) {
+            $user->update(['invited_at' => now()]);
+        }
+
+        /** @var PasswordBroker $broker */
+        $broker = Password::broker();
+        $token = $broker->createToken($user);
+
+        $user->notify(new TenantInvitation(
+            route('tenants.invitations.accept', ['token' => $token, 'email' => $user->email]),
+        ));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation resent.')]);
+
+        return back();
+    }
+
+    public function disableAccess(Tenant $tenant, DisableTenantAccess $action): RedirectResponse
+    {
+        $this->authorize('invite', $tenant);
+
+        $action->execute($tenant);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant access disabled.')]);
 
         return back();
     }

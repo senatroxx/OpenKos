@@ -32,8 +32,8 @@ class SendRentReminders
         }
 
         $leases = $lease
-            ? [$lease->load(['primaryTenant'])]
-            : Lease::active()->with(['primaryTenant'])->get();
+            ? [$lease->load(['primaryTenant.user'])]
+            : Lease::active()->with(['primaryTenant.user'])->get();
 
         $sent = collect();
 
@@ -41,7 +41,7 @@ class SendRentReminders
 
         foreach ($leases as $lease) {
             $tenant = $lease->primaryTenant;
-            $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
+            $hasContact = $tenant?->phone || ($tenant?->user?->email && in_array('mail', $channels));
             if (! $hasContact) {
                 continue;
             }

@@ -29,7 +29,6 @@ export default function TenantFormSheet({
         useForm({
             name: tenant?.name ?? '',
             phone: tenant?.phone ?? '',
-            email: tenant?.email ?? '',
             id_card_number: tenant?.id_card_number ?? '',
             emergency_contact_phone: tenant?.emergency_contact_phone ?? '',
             emergency_contact_name: tenant?.emergency_contact_name ?? '',
@@ -98,20 +97,6 @@ export default function TenantFormSheet({
                                 placeholder="e.g. 81234567890"
                             />
                             <InputError message={errors.phone} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                value={data.email}
-                                onChange={(e) =>
-                                    setData('email', e.target.value)
-                                }
-                                placeholder="e.g. john@example.com"
-                            />
-                            <InputError message={errors.email} />
                         </div>
 
                         <div className="grid gap-2">

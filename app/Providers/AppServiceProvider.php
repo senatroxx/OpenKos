@@ -96,11 +96,11 @@ class AppServiceProvider extends ServiceProvider
     {
         Event::listen(InvoiceReminderDispatched::class, function (InvoiceReminderDispatched $event): void {
             $lease = $event->event->lease;
-            $lease->loadMissing('primaryTenant');
+            $lease->loadMissing('primaryTenant.user');
             $tenant = $lease->primaryTenant;
 
             $channels = Setting::get('reminder_channels') ?? ['log'];
-            $hasContact = $tenant?->phone || ($tenant?->email && in_array('mail', $channels));
+            $hasContact = $tenant?->phone || ($tenant?->user?->email && in_array('mail', $channels));
 
             if (! $hasContact) {
                 return;

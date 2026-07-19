@@ -1,8 +1,8 @@
 export type Tenant = {
     id: number;
+    user_id: number | null;
     name: string;
     phone: string | null;
-    email: string | null;
     id_card_number: string | null;
     emergency_contact_name: string | null;
     emergency_contact_phone: string | null;
@@ -11,6 +11,14 @@ export type Tenant = {
     deleted_at?: string | null;
     active_leases_count?: number;
     documents?: TenantDocument[];
+    user?: {
+        id: number;
+        email: string;
+        email_verified_at: string | null;
+        last_login_at: string | null;
+        is_active: boolean;
+        invited_at: string | null;
+    } | null;
 };
 
 export type TenantInfo = {
