@@ -125,7 +125,7 @@ export default function InviteToAppSheet({
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-4">
+                    <div className="flex flex-wrap items-center justify-end gap-4">
                         <Button
                             variant="outline"
                             type="button"
