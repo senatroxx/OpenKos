@@ -29,9 +29,11 @@ class TenantInvitationController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        // Scope strictly to tenant invitations — this endpoint must never be able to
-        // activate a staff/owner account via its password-reset token.
-        if (! $user?->invited_at || ! $user->tenant()->exists()) {
+        // Scope strictly to tenant users who currently have access: a pending invite
+        // (invited_at) or an already-active account (a resend acts as a password reset).
+        // A disabled/un-invited tenant (inactive with no pending invite) is rejected, so
+        // this endpoint can never activate a staff account or revive disabled access.
+        if (! $user || ! $user->tenant()->exists() || (! $user->is_active && ! $user->invited_at)) {
             return back()->withErrors(['email' => __('This invitation is invalid or inactive.')]);
         }
 

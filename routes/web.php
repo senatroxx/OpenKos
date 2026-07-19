@@ -25,6 +25,11 @@ Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->g
     Route::post('accept', [UserController::class, 'completeInvitation'])->name('complete');
 });
 
+Route::prefix('tenants/invitations')->name('tenants.invitations.')->middleware('guest')->group(function () {
+    Route::get('{token}', [TenantInvitationController::class, 'acceptInvitation'])->name('accept');
+    Route::post('accept', [TenantInvitationController::class, 'completeInvitation'])->name('complete');
+});
+
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {
     Route::prefix('dashboard')->group(function () {
         Route::get('/', OverviewController::class)->name('dashboard');
@@ -95,11 +100,6 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::delete('{document}', [TenantDocumentController::class, 'destroy'])->name('destroy')->middleware('permission:tenants.update');
             });
         });
-    });
-
-    Route::prefix('tenants/invitations')->name('tenants.invitations.')->middleware('guest')->group(function () {
-        Route::get('{token}', [TenantInvitationController::class, 'acceptInvitation'])->name('accept');
-        Route::post('accept', [TenantInvitationController::class, 'completeInvitation'])->name('complete');
     });
 
     Route::prefix('leases')->name('leases.')->group(function () {

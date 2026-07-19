@@ -145,6 +145,27 @@ describe('resend invitation', function () {
         Notification::assertSentTo($user, TenantInvitation::class);
     });
 
+    it('resends to an active tenant without re-flagging invited_at', function () {
+        Notification::fake();
+
+        $owner = User::factory()->owner()->create();
+        $user = User::factory()->create([
+            'email' => 'tenant@example.com',
+            'invited_at' => null,
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+        $tenant = Tenant::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($owner)
+            ->post(route('tenants.resend-invitation', $tenant))
+            ->assertSessionHasNoErrors();
+
+        // Still emails a fresh link, but the active account stays "not pending".
+        Notification::assertSentTo($user, TenantInvitation::class);
+        expect($user->fresh()->invited_at)->toBeNull();
+    });
+
     it('returns error if tenant has no user account', function () {
         $owner = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
@@ -189,6 +210,12 @@ describe('disable access', function () {
 });
 
 describe('invitation acceptance', function () {
+    it('serves the accept page to a guest', function () {
+        $this->get(route('tenants.invitations.accept', ['token' => 'some-token', 'email' => 'tenant@example.com']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('auth/tenant-accept-invitation'));
+    });
+
     it('accepts a valid invitation and sets password', function () {
         $user = User::factory()->create([
             'email' => 'tenant@example.com',
@@ -199,8 +226,7 @@ describe('invitation acceptance', function () {
 
         $token = Password::broker()->createToken($user);
 
-        $this->withoutMiddleware()
-            ->post(route('tenants.invitations.complete'), [
+        $this->post(route('tenants.invitations.complete'), [
                 'email' => 'tenant@example.com',
                 'token' => $token,
                 'password' => 'NewPassword123!',
@@ -224,8 +250,7 @@ describe('invitation acceptance', function () {
         ]);
         Tenant::factory()->create(['user_id' => $user->id]);
 
-        $this->withoutMiddleware()
-            ->withSession(['_previous' => ['url' => route('tenants.invitations.accept', ['token' => 'invalid-token', 'email' => 'tenant@example.com'])]])
+        $this->withSession(['_previous' => ['url' => route('tenants.invitations.accept', ['token' => 'invalid-token', 'email' => 'tenant@example.com'])]])
             ->post(route('tenants.invitations.complete'), [
                 'email' => 'tenant@example.com',
                 'token' => 'invalid-token',
@@ -244,10 +269,53 @@ describe('invitation acceptance', function () {
 
         $token = Password::broker()->createToken($user);
 
-        $this->withoutMiddleware()
-            ->withSession(['_previous' => ['url' => route('tenants.invitations.accept', ['token' => $token, 'email' => 'staff@example.com'])]])
+        $this->withSession(['_previous' => ['url' => route('tenants.invitations.accept', ['token' => $token, 'email' => 'staff@example.com'])]])
             ->post(route('tenants.invitations.complete'), [
                 'email' => 'staff@example.com',
+                'token' => $token,
+                'password' => 'NewPassword123!',
+                'password_confirmation' => 'NewPassword123!',
+            ])
+            ->assertSessionHasErrors(['email']);
+
+        expect($user->fresh()->is_active)->toBeFalse();
+    });
+
+    it('lets an active tenant reset password via a resend link', function () {
+        $user = User::factory()->create([
+            'email' => 'tenant@example.com',
+            'invited_at' => null,
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+        Tenant::factory()->create(['user_id' => $user->id]);
+
+        $token = Password::broker()->createToken($user);
+
+        $this->post(route('tenants.invitations.complete'), [
+            'email' => 'tenant@example.com',
+            'token' => $token,
+            'password' => 'ResetPassword123!',
+            'password_confirmation' => 'ResetPassword123!',
+        ])->assertRedirect('/login');
+
+        expect($user->fresh()->is_active)->toBeTrue();
+    });
+
+    it('rejects completion for a disabled tenant', function () {
+        $user = User::factory()->create([
+            'email' => 'tenant@example.com',
+            'invited_at' => null,
+            'is_active' => false,
+            'email_verified_at' => now(),
+        ]);
+        Tenant::factory()->create(['user_id' => $user->id]);
+
+        $token = Password::broker()->createToken($user);
+
+        $this->withSession(['_previous' => ['url' => route('tenants.invitations.accept', ['token' => $token, 'email' => 'tenant@example.com'])]])
+            ->post(route('tenants.invitations.complete'), [
+                'email' => 'tenant@example.com',
                 'token' => $token,
                 'password' => 'NewPassword123!',
                 'password_confirmation' => 'NewPassword123!',

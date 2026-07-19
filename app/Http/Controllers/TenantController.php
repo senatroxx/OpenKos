@@ -258,7 +258,9 @@ class TenantController extends Controller
             return back()->withErrors(['invite' => __('Tenant has no user account. Invite them first.')]);
         }
 
-        if (! $user->invited_at) {
+        // Active users can already sign in, so a resend is just a fresh access link —
+        // don't flag them as "pending invite". Only mark genuinely un-activated users.
+        if (! $user->is_active && ! $user->invited_at) {
             $user->update(['invited_at' => now()]);
         }
 

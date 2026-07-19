@@ -28,12 +28,21 @@ export default function InviteToAppSheet({
     const [sending, setSending] = useState(false);
     const [sendInvite, setSendInvite] = useState(true);
 
+    function reset() {
+        setEmail('');
+        setError('');
+        setSendInvite(true);
+    }
+
     function close(next: boolean) {
+        // Block dismissal (X, Esc, overlay) while a request is in flight so the
+        // sheet can't be reopened and re-submitted before the first completes.
+        if (sending) {
+            return;
+        }
+
         if (!next) {
-            setEmail('');
-            setError('');
-            setSending(false);
-            setSendInvite(true);
+            reset();
         }
 
         onOpenChange(next);
@@ -55,7 +64,11 @@ export default function InviteToAppSheet({
             tenants.invite(tenantId).url,
             { email, send_invite: sendInvite },
             {
-                onSuccess: () => close(false),
+                onSuccess: () => {
+                    setSending(false);
+                    reset();
+                    onOpenChange(false);
+                },
                 onError: (errors) => {
                     setError(errors.email ?? 'Failed to send invitation');
                     setSending(false);
