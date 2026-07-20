@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
@@ -7,7 +7,9 @@ import {
     MailPlus,
     Pencil,
     RotateCcw,
+    Send,
     Trash2,
+    UserX,
 } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
@@ -38,11 +40,14 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { appAccessStatus, inviteActionLabel } from '@/lib/app-access';
 import tenants from '@/routes/tenants';
 import type {
+    Auth,
     AvailableUnit,
     Lease,
     PaginatedData,
@@ -69,6 +74,8 @@ export default function Index({
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const permissions = auth.permissions;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingTenant, setEditingTenant] = useState<WorkspaceTenant | null>(
         null,
@@ -94,6 +101,9 @@ export default function Index({
         useState<WorkspaceTenant | null>(null);
 
     const [archiveConfirm, setArchiveConfirm] =
+        useState<WorkspaceTenant | null>(null);
+
+    const [disableConfirm, setDisableConfirm] =
         useState<WorkspaceTenant | null>(null);
 
     const [inviteTenant, setInviteTenant] = useState<WorkspaceTenant | null>(
@@ -186,6 +196,19 @@ export default function Index({
         router.post(tenants.restore.url(tenant));
     }
 
+    function confirmDisable() {
+        if (!disableConfirm) {
+            return;
+        }
+
+        router.post(tenants.disableAccess(disableConfirm.id).url);
+        setDisableConfirm(null);
+    }
+
+    function resendInvitation(tenant: WorkspaceTenant) {
+        router.post(tenants.resendInvitation(tenant.id).url);
+    }
+
     const columns: TableColumn<WorkspaceTenant>[] = [
         {
             key: 'name',
@@ -224,6 +247,19 @@ export default function Index({
             },
         },
         {
+            key: '_app_access',
+            label: 'App Access',
+            render: (t) => {
+                const status = appAccessStatus(t.user);
+
+                return status === 'none' ? (
+                    <span className="text-muted-foreground">—</span>
+                ) : (
+                    <StatusBadge domain="app_access" value={status} />
+                );
+            },
+        },
+        {
             key: '_actions',
             label: '',
             render: (t) => (
@@ -246,14 +282,6 @@ export default function Index({
                             <ExternalLink className="size-4" />
                             Open Workspace
                         </DropdownMenuItem>
-                        {!t.deleted_at && !t.user_id && (
-                            <DropdownMenuItem
-                                onClick={() => setInviteTenant(t)}
-                            >
-                                <MailPlus className="size-4" />
-                                Invite to App
-                            </DropdownMenuItem>
-                        )}
                         <DropdownMenuItem onClick={() => openDetail(t)}>
                             <Eye className="size-4" />
                             View
@@ -275,6 +303,41 @@ export default function Index({
                                 Edit
                             </DropdownMenuItem>
                         )}
+
+                        {!t.deleted_at && <DropdownMenuSeparator />}
+
+                        {permissions.includes('tenants.invite') && !t.deleted_at && !t.user_id && (
+                            <DropdownMenuItem
+                                onClick={() => setInviteTenant(t)}
+                            >
+                                <MailPlus className="size-4" />
+                                Invite to App
+                            </DropdownMenuItem>
+                        )}
+                        {permissions.includes('tenants.invite') && !t.deleted_at &&
+                            inviteActionLabel(appAccessStatus(t.user)) && (
+                                <DropdownMenuItem
+                                    onClick={() => resendInvitation(t)}
+                                >
+                                    <Send className="size-4" />
+                                    {inviteActionLabel(appAccessStatus(t.user))}
+                                </DropdownMenuItem>
+                            )}
+                        {permissions.includes('tenants.invite') && !t.deleted_at &&
+                            ['invited', 'active'].includes(
+                                appAccessStatus(t.user),
+                            ) && (
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => setDisableConfirm(t)}
+                                >
+                                    <UserX className="size-4" />
+                                    Disable Access
+                                </DropdownMenuItem>
+                            )}
+
+                        <DropdownMenuSeparator />
+
                         {t.deleted_at ? (
                             <DropdownMenuItem onClick={() => restore(t)}>
                                 <RotateCcw className="size-4" />
@@ -353,12 +416,25 @@ export default function Index({
                 onMoveOut={openMoveOut}
                 onDocuments={openDocuments}
                 onInvite={
-                    viewingTenant?.user_id ? undefined : () => {
+                    viewingTenant?.user_id || !permissions.includes('tenants.invite') ? undefined : () => {
                         if (viewingTenant) {
                             setDetailOpen(false);
                             setInviteTenant(viewingTenant);
                         }
                     }
+                }
+                onResend={
+                    viewingTenant && permissions.includes('tenants.invite')
+                        ? () => resendInvitation(viewingTenant)
+                        : undefined
+                }
+                onDisableAccess={
+                    viewingTenant && permissions.includes('tenants.invite')
+                        ? () => {
+                              setDetailOpen(false);
+                              setDisableConfirm(viewingTenant);
+                          }
+                        : undefined
                 }
             />
 
@@ -451,6 +527,37 @@ export default function Index({
                         </Button>
                         <Button variant="destructive" onClick={confirmArchive}>
                             Archive
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={disableConfirm !== null}
+                onOpenChange={() => setDisableConfirm(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Disable app access</DialogTitle>
+                        <DialogDescription>
+                            This signs{' '}
+                            <span className="font-medium">
+                                {disableConfirm?.name}
+                            </span>{' '}
+                            out and revokes their portal access. They'll still
+                            receive notifications, and you can re-invite them
+                            later.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDisableConfirm(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDisable}>
+                            Disable Access
                         </Button>
                     </DialogFooter>
                 </DialogContent>

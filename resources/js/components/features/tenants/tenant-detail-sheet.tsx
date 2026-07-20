@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { MailPlus } from 'lucide-react';
+import { MailPlus, Send, UserX } from 'lucide-react';
 import { useState } from 'react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { appAccessStatus, inviteActionLabel } from '@/lib/app-access';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import tenants from '@/routes/tenants';
 import type { Lease, TenantDocument, WorkspaceTenant } from '@/types';
@@ -31,6 +32,8 @@ export default function TenantDetailSheet({
     onAssignToUnit,
     onMoveOut,
     onInvite,
+    onResend,
+    onDisableAccess,
 }: {
     tenant?:
         | (WorkspaceTenant & { leases?: Lease[]; documents?: TenantDocument[] })
@@ -42,6 +45,8 @@ export default function TenantDetailSheet({
     onAssignToUnit?: () => void;
     onMoveOut?: () => void;
     onInvite?: () => void;
+    onResend?: () => void;
+    onDisableAccess?: () => void;
 }) {
     const [archiveConfirm, setArchiveConfirm] = useState(false);
 
@@ -81,7 +86,7 @@ export default function TenantDetailSheet({
                 {tenant && (
                     <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-5">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <span>Status:</span>
                                 {(() => {
                                     const status = isArchived
@@ -97,6 +102,11 @@ export default function TenantDetailSheet({
                                         />
                                     );
                                 })()}
+                                <span className="ml-2">App access:</span>
+                                <StatusBadge
+                                    domain="app_access"
+                                    value={appAccessStatus(tenant.user)}
+                                />
                             </div>
 
                             <div className="rounded-lg border bg-muted/30 p-4">
@@ -290,6 +300,32 @@ export default function TenantDetailSheet({
                                             Invite to App
                                         </Button>
                                     )}
+                                    {inviteActionLabel(
+                                        appAccessStatus(tenant.user),
+                                    ) &&
+                                        onResend && (
+                                            <Button
+                                                variant="outline"
+                                                onClick={onResend}
+                                            >
+                                                <Send className="size-4" />
+                                                {inviteActionLabel(
+                                                    appAccessStatus(tenant.user),
+                                                )}
+                                            </Button>
+                                        )}
+                                    {['invited', 'active'].includes(
+                                        appAccessStatus(tenant.user),
+                                    ) &&
+                                        onDisableAccess && (
+                                            <Button
+                                                variant="outline"
+                                                onClick={onDisableAccess}
+                                            >
+                                                <UserX className="size-4" />
+                                                Disable Access
+                                            </Button>
+                                        )}
                                     {!activeLease && onAssignToUnit && (
                                         <Button onClick={onAssignToUnit}>
                                             Assign to Unit

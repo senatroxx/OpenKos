@@ -33,7 +33,16 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'setting' => fn () => Setting::get(),
+            // Integration configs (mail_config, whatsapp_config) hold secrets — SMTP
+            // password, API tokens — so they never go into the app-wide share. Their
+            // own settings pages load them (masked) separately.
+            'setting' => fn () => collect(Setting::get())
+                ->except(['mail_config', 'whatsapp_config'])
+                ->all(),
+            'notificationChannels' => fn () => [
+                'mail' => filled(data_get(Setting::get('mail_config'), 'host')),
+                'whatsapp' => filled(Setting::get('whatsapp_driver')),
+            ],
             'auth' => [
                 'user' => $request->user(),
                 'role' => $request->user()?->getRoleNames()->first(),

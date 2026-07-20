@@ -227,11 +227,11 @@ describe('invitation acceptance', function () {
         $token = Password::broker()->createToken($user);
 
         $this->post(route('tenants.invitations.complete'), [
-                'email' => 'tenant@example.com',
-                'token' => $token,
-                'password' => 'NewPassword123!',
-                'password_confirmation' => 'NewPassword123!',
-            ])
+            'email' => 'tenant@example.com',
+            'token' => $token,
+            'password' => 'NewPassword123!',
+            'password_confirmation' => 'NewPassword123!',
+        ])
             ->assertRedirect('/login')
             ->assertSessionHas('status');
 
@@ -323,5 +323,200 @@ describe('invitation acceptance', function () {
             ->assertSessionHasErrors(['email']);
 
         expect($user->fresh()->is_active)->toBeFalse();
+    });
+});
+
+describe('email via tenant form', function () {
+    it('links a user and sends invite from the create form', function () {
+        Notification::fake();
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)->post(route('tenants.store'), [
+            'name' => 'Budi',
+            'email' => 'budi@example.com',
+            'send_invite' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $tenant = Tenant::where('name', 'Budi')->first();
+
+        expect($tenant->user)->not->toBeNull();
+        expect($tenant->user->email)->toBe('budi@example.com');
+        expect($tenant->user->invited_at)->not->toBeNull();
+        Notification::assertSentTo($tenant->user, TenantInvitation::class);
+    });
+
+    it('saves email without inviting from the create form', function () {
+        Notification::fake();
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)->post(route('tenants.store'), [
+            'name' => 'Budi',
+            'email' => 'budi@example.com',
+            'send_invite' => '0',
+        ])->assertSessionHasNoErrors();
+
+        $tenant = Tenant::where('name', 'Budi')->first();
+
+        expect($tenant->user->email)->toBe('budi@example.com');
+        expect($tenant->user->invited_at)->toBeNull();
+        Notification::assertNotSentTo($tenant->user, TenantInvitation::class);
+    });
+
+    it('creates no user when the create form omits email', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)->post(route('tenants.store'), [
+            'name' => 'Budi',
+        ])->assertSessionHasNoErrors();
+
+        expect(Tenant::where('name', 'Budi')->first()->user_id)->toBeNull();
+    });
+
+    it('rejects a create-form email already in use', function () {
+        $owner = User::factory()->owner()->create();
+        User::factory()->create(['email' => 'taken@example.com']);
+
+        $this->actingAs($owner)->post(route('tenants.store'), [
+            'name' => 'Budi',
+            'email' => 'taken@example.com',
+        ])->assertSessionHasErrors('email');
+    });
+
+    it('links a user when editing a tenant that has none', function () {
+        Notification::fake();
+        $owner = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($owner)->put(route('tenants.update', $tenant), [
+            'name' => $tenant->name,
+            'email' => 'new@example.com',
+            'send_invite' => '1',
+        ])->assertSessionHasNoErrors();
+
+        $tenant->refresh();
+
+        expect($tenant->user->email)->toBe('new@example.com');
+        Notification::assertSentTo($tenant->user, TenantInvitation::class);
+    });
+
+    it('updates the email of a non-active linked user', function () {
+        $owner = User::factory()->owner()->create();
+        $user = User::factory()->create([
+            'email' => 'old@example.com',
+            'is_active' => false,
+            'invited_at' => now(),
+        ]);
+        $tenant = Tenant::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($owner)->put(route('tenants.update', $tenant), [
+            'name' => $tenant->name,
+            'email' => 'changed@example.com',
+        ])->assertSessionHasNoErrors();
+
+        expect($user->fresh()->email)->toBe('changed@example.com');
+    });
+
+    it('ignores an email change for an active linked user', function () {
+        $owner = User::factory()->owner()->create();
+        $user = User::factory()->create([
+            'email' => 'login@example.com',
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+        $tenant = Tenant::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($owner)->put(route('tenants.update', $tenant), [
+            'name' => $tenant->name,
+            'email' => 'hacker@example.com',
+        ])->assertSessionHasNoErrors();
+
+        expect($user->fresh()->email)->toBe('login@example.com');
+    });
+
+    it('lets a tenant edit keep its own linked email', function () {
+        $owner = User::factory()->owner()->create();
+        $user = User::factory()->create([
+            'email' => 'me@example.com',
+            'is_active' => false,
+            'invited_at' => now(),
+        ]);
+        $tenant = Tenant::factory()->create(['user_id' => $user->id]);
+
+        $this->actingAs($owner)->put(route('tenants.update', $tenant), [
+            'name' => 'Renamed',
+            'email' => 'me@example.com',
+        ])->assertSessionHasNoErrors();
+
+        expect($tenant->fresh()->name)->toBe('Renamed');
+    });
+});
+
+describe('app access filter', function () {
+    function tenantWithAccess(string $state): Tenant
+    {
+        $attrs = match ($state) {
+            'active' => ['is_active' => true, 'email_verified_at' => now(), 'invited_at' => null],
+            'invited' => ['is_active' => false, 'email_verified_at' => null, 'invited_at' => now()],
+            'disabled' => ['is_active' => false, 'email_verified_at' => now(), 'invited_at' => null],
+            'email_only' => ['is_active' => false, 'email_verified_at' => null, 'invited_at' => null],
+        };
+
+        return Tenant::factory()->create(['user_id' => User::factory()->create($attrs)->id]);
+    }
+
+    it('filters tenants by each app access bucket', function (string $filter, string $matching) {
+        $owner = User::factory()->owner()->create();
+
+        $expected = $filter === 'none'
+            ? Tenant::factory()->create()
+            : tenantWithAccess($matching);
+
+        // A tenant in a different bucket that must be excluded.
+        tenantWithAccess('active');
+        Tenant::factory()->create(); // a 'none' tenant
+
+        $ids = collect(
+            $this->actingAs($owner)
+                ->get(route('tenants.index', ['app_access' => $filter]))
+                ->viewData('page')['props']['tenants']['data']
+        )->pluck('id');
+
+        expect($ids)->toContain($expected->id);
+        expect($ids->count())->toBeGreaterThan(0);
+        // Every returned tenant is actually in the requested bucket.
+        Tenant::whereIn('id', $ids)->with('user')->get()->each(function (Tenant $t) use ($filter) {
+            $u = $t->user;
+            $bucket = match (true) {
+                ! $u => 'none',
+                $u->is_active && $u->email_verified_at => 'active',
+                (bool) $u->invited_at => 'invited',
+                (bool) $u->email_verified_at => 'disabled',
+                default => 'email_only',
+            };
+            expect($bucket)->toBe($filter);
+        });
+    })->with([
+        ['none', 'none'],
+        ['active', 'active'],
+        ['invited', 'invited'],
+        ['disabled', 'disabled'],
+        ['email_only', 'email_only'],
+    ]);
+
+    it('filters by multiple app access buckets at once', function () {
+        $owner = User::factory()->owner()->create();
+        $active = tenantWithAccess('active');
+        $none = Tenant::factory()->create();
+        $invited = tenantWithAccess('invited');
+
+        $ids = collect(
+            $this->actingAs($owner)
+                ->get(route('tenants.index', ['app_access' => 'active,none']))
+                ->viewData('page')['props']['tenants']['data']
+        )->pluck('id');
+
+        expect($ids)->toContain($active->id);
+        expect($ids)->toContain($none->id);
+        expect($ids)->not->toContain($invited->id);
     });
 });
