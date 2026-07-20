@@ -254,7 +254,7 @@ class TenantController extends Controller
                 // Non-active account: email is editable here. Active accounts are
                 // read-only in the form and their login email is ignored server-side.
                 if ($user->email !== $email) {
-                    $user->update(['email' => $email]);
+                    $user->update(['email' => $email, 'invited_at' => null]);
                 }
 
                 if ($sendInvite) {
