@@ -127,9 +127,12 @@ app/
 │   │   └── RenewLease.php
 │   ├── Payments/
 │   │   └── RecordPayment.php
-│   └── Reminders/
-│       ├── ForceSendReminder.php
-│       └── SendRentReminders.php
+│   ├── Reminders/
+│   │   ├── ForceSendReminder.php
+│   │   └── SendRentReminders.php
+│   └── Tenants/
+│       ├── DisableTenantAccess.php
+│       └── InviteTenant.php
 ├── Business/
 │   ├── Leases/
 │   │   ├── OccupancyCalculator.php
@@ -167,7 +170,9 @@ app/
 | Record Payment      | `PaymentController::store()`                            | `RecordPayment`     | `RecordPaymentData` | `RecordPaymentResult` | —                                                    |
 | Generate Invoices   | Console Command (`invoices:generate`, daily 01:00)      | `GenerateInvoices`  | —                   | —                     | —                                                    |
 | Force Reminder      | `LeaseController::sendReminder()`                       | `ForceSendReminder` | —                   | —                     | —                                                    |
-| Scheduled Reminders | Console Command                                         | `SendRentReminders` | —                   | —                     | `PaymentReminderScheduler`                           |
+| Scheduled Reminders | Console Command                                      | `SendRentReminders` | —                   | —                     | `PaymentReminderScheduler`                           |
+| Invite Tenant       | `TenantController::invite()`                            | `InviteTenant`      | —                   | —                     | —                                                    |
+| Disable Tenant Access | `TenantController::disableAccess()`                   | `DisableTenantAccess` | —                 | —                     | —                                                    |
 
 ## Invoice-Centric Billing (ADR-007)
 
