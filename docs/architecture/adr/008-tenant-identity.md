@@ -34,7 +34,7 @@ The `tenants.email` column was dropped irreversibly in migration `2026_07_18_000
 ## Consequences
 
 - The Tenant domain stays free of auth concerns. `Tenant` is a renters record; `User` is an identity. The only coupling is one nullable FK.
-- The Users page stays Owner/Admin/Staff-only by construction — no filters, no special-case exclusion, because tenants are simply not in that table's domain.
+- The Users page stays Owner/Admin/Staff-only via an **explicit `whereDoesntHave('tenant')` filter** in `UserController::index()`. Tenant-linked accounts are rows in `users` like any other, so this filter is load-bearing — removing it would surface tenant accounts on the staff Users page. The filter must not be dropped without replacing it with an equivalent exclusion.
 - Notifications and contact resolution require a null-check on `tenant->user` (was previously a null-check on `tenant->email`). Code that assumed `email` always exists on a Tenant now must traverse `user`.
 - A tenant cannot have a contact email distinct from their login email. This is deliberate: one identity per person. If a future case needs a separate billing-only email, that becomes a new column with a new purpose — not a revival of `tenants.email`.
 - Joining tenant data to auth data is a `tenants.user_id → users.id` join. Reporting/auth flows that need both pay one indexed FK lookup.
