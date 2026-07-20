@@ -32,3 +32,13 @@ testing
 /database/database.sqlite
 testing_test_*
 /.ai-work
+
+# Local developer tooling
+/AGENTS.md
+/GEMINI.md
+/.agents/
+/.gemini/
+/.opencode/
+/opencode.json
+/skills-lock.json
+/prompts/create-fonnte-package.md
