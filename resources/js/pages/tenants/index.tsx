@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
@@ -47,6 +47,7 @@ import { useTable } from '@/hooks/use-table';
 import { appAccessStatus, inviteActionLabel } from '@/lib/app-access';
 import tenants from '@/routes/tenants';
 import type {
+    Auth,
     AvailableUnit,
     Lease,
     PaginatedData,
@@ -73,6 +74,8 @@ export default function Index({
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const permissions = auth.permissions;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingTenant, setEditingTenant] = useState<WorkspaceTenant | null>(
         null,
@@ -303,7 +306,7 @@ export default function Index({
 
                         {!t.deleted_at && <DropdownMenuSeparator />}
 
-                        {!t.deleted_at && !t.user_id && (
+                        {permissions.includes('tenants.invite') && !t.deleted_at && !t.user_id && (
                             <DropdownMenuItem
                                 onClick={() => setInviteTenant(t)}
                             >
@@ -311,7 +314,7 @@ export default function Index({
                                 Invite to App
                             </DropdownMenuItem>
                         )}
-                        {!t.deleted_at &&
+                        {permissions.includes('tenants.invite') && !t.deleted_at &&
                             inviteActionLabel(appAccessStatus(t.user)) && (
                                 <DropdownMenuItem
                                     onClick={() => resendInvitation(t)}
@@ -320,7 +323,7 @@ export default function Index({
                                     {inviteActionLabel(appAccessStatus(t.user))}
                                 </DropdownMenuItem>
                             )}
-                        {!t.deleted_at &&
+                        {permissions.includes('tenants.invite') && !t.deleted_at &&
                             ['invited', 'active'].includes(
                                 appAccessStatus(t.user),
                             ) && (
@@ -413,7 +416,7 @@ export default function Index({
                 onMoveOut={openMoveOut}
                 onDocuments={openDocuments}
                 onInvite={
-                    viewingTenant?.user_id ? undefined : () => {
+                    viewingTenant?.user_id || !permissions.includes('tenants.invite') ? undefined : () => {
                         if (viewingTenant) {
                             setDetailOpen(false);
                             setInviteTenant(viewingTenant);
@@ -421,12 +424,12 @@ export default function Index({
                     }
                 }
                 onResend={
-                    viewingTenant
+                    viewingTenant && permissions.includes('tenants.invite')
                         ? () => resendInvitation(viewingTenant)
                         : undefined
                 }
                 onDisableAccess={
-                    viewingTenant
+                    viewingTenant && permissions.includes('tenants.invite')
                         ? () => {
                               setDetailOpen(false);
                               setDisableConfirm(viewingTenant);

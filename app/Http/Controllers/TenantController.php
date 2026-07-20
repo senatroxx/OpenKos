@@ -221,11 +221,15 @@ class TenantController extends Controller
 
     public function store(StoreTenantRequest $request, InviteTenant $invite): RedirectResponse
     {
-        $tenant = Tenant::create($request->safe()->except(['email', 'send_invite']));
+        $tenant = DB::transaction(function () use ($request, $invite) {
+            $tenant = Tenant::create($request->safe()->except(['email', 'send_invite']));
 
-        if ($email = $request->validated('email')) {
-            $invite->execute($tenant, $email, $request->boolean('send_invite'));
-        }
+            if ($email = $request->validated('email')) {
+                $invite->execute($tenant, $email, $request->boolean('send_invite'));
+            }
+
+            return $tenant;
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant created.')]);
 

@@ -13,13 +13,13 @@ export function useNotificationBanner() {
         notificationChannels: { mail: boolean; whatsapp: boolean };
     }>().props;
 
-    const [hidden, setHidden] = useState(
-        () =>
-            localStorage.getItem(PERMANENT_KEY) === '1' ||
-            sessionStorage.getItem(SESSION_KEY) === '1',
+    const [hidden, setHidden] = useState(() =>
+        typeof window === 'undefined'
+            ? false
+            : localStorage.getItem(PERMANENT_KEY) === '1' ||
+              sessionStorage.getItem(SESSION_KEY) === '1',
     );
 
-    // Only owners can reach the mail/WhatsApp settings, so only they see the nudge.
     const visible =
         auth.role === 'owner' &&
         !notificationChannels?.mail &&
@@ -27,11 +27,19 @@ export function useNotificationBanner() {
         !hidden;
 
     function dismiss() {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
         sessionStorage.setItem(SESSION_KEY, '1');
         setHidden(true);
     }
 
     function dontShowAgain() {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
         localStorage.setItem(PERMANENT_KEY, '1');
         setHidden(true);
     }
