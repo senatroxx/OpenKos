@@ -130,11 +130,12 @@ Property (has a type — see below)
 
 Tenant
   ├── Documents
-  └── Leases (pivot: lease_tenant)
+  ├── Leases (pivot: lease_tenant)
+  └── User (1:1 optional, via tenants.user_id — grants app access)
 
-User (staff / owner)
-  ├── Properties (pivot: property_user)
-  └── Roles / Permissions
+User (identity — backs owner, staff, and tenant accounts)
+  ├── Properties (pivot: property_user — owner/staff scope)
+  └── Roles / Permissions (owner / admin / staff; tenants are NOT a role — see [ADR-008](architecture/adr/008-tenant-identity.md))
 
 ActivityLog (records user-triggered activity across entities)
 AuditLog (records setting changes and sensitive operations)
@@ -161,6 +162,10 @@ Reminders are scheduled by `SendRentRemindersCommand` (daily at 08:00), which ca
 **Fortify** handles the auth backend (login, registration, password reset, 2FA, passkeys). The app is an Inertia SPA — Fortify actions are configured but the frontend renders React pages.
 
 **Authorization** uses Spatie Permission. A `Gate::before` in `AuthServiceProvider` fully bypasses all policy checks for users with the `owner` role. Non-owner users are checked against individual permissions and policies. Every model has a corresponding Policy class. Frontend permission checks reference a seeded `getAllPermissions()` list.
+
+### Tenant app access
+
+Tenants are domain records, not auth identities — but a tenant can be invited into the app to pay rent, file maintenance tickets, and view their lease. The Tenant↔User relationship is a 1:1 optional link via `tenants.user_id` (nullable, unique). `users.email` is the single source of truth for both authentication and notifications; the legacy `tenants.email` column was dropped (see [ADR-008](architecture/adr/008-tenant-identity.md)). The owner invites from the Tenant detail page; Fortify's password broker issues an activation token, delivered via `TenantInvitation` notification, and the tenant completes signup on a dedicated acceptance route. Tenant accounts are **not** a role — they are invisible on the Users page and managed entirely from the Tenant module.
 
 ### Permission Convention
 
