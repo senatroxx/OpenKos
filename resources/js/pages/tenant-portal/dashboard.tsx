@@ -16,6 +16,7 @@ type Invoice = {
     period_end: string;
     due_date: string;
     status: string;
+    display_status: string;
     total: string;
     amount_paid: string;
     outstanding: string;
@@ -219,7 +220,9 @@ export default function Dashboard({
                                                     )}
                                                 </p>
                                                 <p className="text-muted-foreground">
-                                                    {invoice.status}
+                                                    {rentStatusLabel(
+                                                        invoice.display_status,
+                                                    )}
                                                 </p>
                                             </div>
                                         </div>

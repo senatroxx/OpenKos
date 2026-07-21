@@ -39,6 +39,25 @@ test('tenant sees their portal dashboard', function () {
             ->has('notifications', 1));
 });
 
+test('portal displays overdue for past payable invoices', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'due_date' => now()->subDay(),
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('portal.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('rent.status', 'overdue')
+            ->where('rent.upcoming_invoices.0.status', 'pending')
+            ->where('rent.upcoming_invoices.0.display_status', 'overdue'));
+});
+
 test('portal only exposes the authenticated tenants lease data', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
