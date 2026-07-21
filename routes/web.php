@@ -14,6 +14,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantDocumentController;
 use App\Http\Controllers\TenantInvitationController;
+use App\Http\Controllers\TenantPortal\DashboardController as TenantPortalDashboardController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,11 @@ Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->g
 Route::prefix('tenants/invitations')->name('tenants.invitations.')->middleware('guest')->group(function () {
     Route::get('{token}', [TenantInvitationController::class, 'acceptInvitation'])->name('accept');
     Route::post('accept', [TenantInvitationController::class, 'completeInvitation'])->name('complete');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->group(function () {
+    Route::redirect('/', '/portal/dashboard');
+    Route::get('dashboard', TenantPortalDashboardController::class)->name('dashboard');
 });
 
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {
