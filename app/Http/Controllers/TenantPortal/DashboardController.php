@@ -6,6 +6,7 @@ use App\Enums\InvoiceStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Lease;
+use App\Models\Payment;
 use App\Models\ReminderLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -33,6 +34,21 @@ class DashboardController extends Controller
                 ->get()
             : collect();
 
+        $outstandingBalance = $lease
+            ? (string) $lease->invoices()
+                ->payable()
+                ->selectRaw('COALESCE(SUM(total - amount_paid), 0) as outstanding_balance')
+                ->value('outstanding_balance')
+            : '0';
+
+        $payments = $lease
+            ? $lease->payments()
+                ->with('invoice:id,reference,period_start')
+                ->latest('payment_date')
+                ->limit(3)
+                ->get()
+            : collect();
+
         $reminders = $lease
             ? ReminderLog::query()
                 ->where('lease_id', $lease->id)
@@ -49,6 +65,7 @@ class DashboardController extends Controller
             'lease' => $lease ? $this->leasePayload($lease) : null,
             'rent' => [
                 'status' => $this->rentStatus($lease, $invoices->first()),
+                'outstanding_balance' => $outstandingBalance,
                 'upcoming_invoices' => $invoices->map(fn (Invoice $invoice) => [
                     'id' => $invoice->id,
                     'lease_id' => $invoice->lease_id,
@@ -61,6 +78,16 @@ class DashboardController extends Controller
                     'total' => (string) $invoice->total,
                     'amount_paid' => (string) $invoice->amount_paid,
                     'outstanding' => $invoice->outstanding,
+                ])->values(),
+                'recent_payments' => $payments->map(fn (Payment $payment) => [
+                    'id' => $payment->id,
+                    'invoice_id' => $payment->invoice_id,
+                    'invoice_reference' => $payment->invoice?->reference,
+                    'period_start' => $payment->invoice?->period_start?->toDateString(),
+                    'amount' => (string) $payment->amount,
+                    'payment_date' => $payment->payment_date->toDateString(),
+                    'payment_method' => $payment->payment_method,
+                    'status' => $payment->status->value,
                 ])->values(),
             ],
             'notifications' => $reminders->map(fn (ReminderLog $reminder) => [

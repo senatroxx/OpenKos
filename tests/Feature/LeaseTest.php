@@ -166,6 +166,26 @@ describe('CRUD', function () {
             ->assertStatus(422);
     });
 
+    it('prevents assigning a tenant to a second active lease', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $otherUnit = Unit::factory()->for($property)->create();
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $unit->id,
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $otherUnit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+            ])
+            ->assertStatus(422);
+    });
+
     it('updates a lease', function () {
         [$property, $unit] = createPropertyWithUnit();
         $user = User::factory()->owner()->create();

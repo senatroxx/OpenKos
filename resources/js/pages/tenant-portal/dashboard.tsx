@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import {
     Card,
@@ -7,6 +8,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import { dashboard } from '@/routes/portal';
 
 type Invoice = {
     id: number;
@@ -51,12 +53,25 @@ type Notification = {
     overdue_days: number | null;
 };
 
+type Payment = {
+    id: number;
+    invoice_id: number;
+    invoice_reference: string | null;
+    period_start: string | null;
+    amount: string;
+    payment_date: string;
+    payment_method: string;
+    status: string;
+};
+
 type Props = {
     tenant: { id: number; name: string };
     lease: Lease | null;
     rent: {
         status: string;
+        outstanding_balance: string;
         upcoming_invoices: Invoice[];
+        recent_payments: Payment[];
     };
     notifications: Notification[];
 };
@@ -72,16 +87,13 @@ export default function Dashboard({
             <Head title="Tenant Portal" />
 
             <div className="flex flex-1 flex-col gap-6 p-4">
-                <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <p className="text-sm text-muted-foreground">
-                            Tenant Portal
-                        </p>
-                        <h1 className="text-2xl font-semibold">
-                            Hi, {tenant.name}
-                        </h1>
-                    </div>
-
+                <div>
+                    <p className="text-sm text-muted-foreground">
+                        Tenant Portal
+                    </p>
+                    <h1 className="text-2xl font-semibold">
+                        Hi, {tenant.name}
+                    </h1>
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-3">
@@ -172,7 +184,15 @@ export default function Dashboard({
                             <CardTitle>Rent Status</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            <Badge>{rentStatusLabel(rent.status)}</Badge>
+                            <StatusBadge domain="rent" value={rent.status} />
+                            <div className="flex items-center justify-between gap-4 text-sm">
+                                <span className="text-muted-foreground">
+                                    Outstanding balance
+                                </span>
+                                <span className="font-medium tabular-nums">
+                                    {formatPrice(rent.outstanding_balance)}
+                                </span>
+                            </div>
                             {rent.upcoming_invoices[0] && (
                                 <p className="text-sm text-muted-foreground">
                                     Next due{' '}
@@ -189,7 +209,7 @@ export default function Dashboard({
                     </Card>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-3">
                     <Card>
                         <CardHeader>
                             <CardTitle>Upcoming Payments</CardTitle>
@@ -269,6 +289,49 @@ export default function Dashboard({
                             )}
                         </CardContent>
                     </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Payments</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {rent.recent_payments.length > 0 ? (
+                                <div className="space-y-3">
+                                    {rent.recent_payments.map((payment) => (
+                                        <div
+                                            key={payment.id}
+                                            className="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm"
+                                        >
+                                            <div>
+                                                <p className="font-medium">
+                                                    {payment.invoice_reference ??
+                                                        'Payment'}
+                                                </p>
+                                                <p className="text-muted-foreground">
+                                                    {formatDate(
+                                                        payment.payment_date,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-medium tabular-nums">
+                                                    {formatPrice(payment.amount)}
+                                                </p>
+                                                <StatusBadge
+                                                    domain="payment"
+                                                    value={payment.status}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">
+                                    No payments recorded yet.
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </>
@@ -295,5 +358,5 @@ function notificationLabel(notification: Notification): string {
 }
 
 Dashboard.layout = {
-    breadcrumbs: [{ title: 'Tenant Portal', href: '/portal/dashboard' }],
+    breadcrumbs: [{ title: 'Tenant Portal', href: dashboard() }],
 };
