@@ -89,6 +89,11 @@ class Invoice extends Model
         return number_format((float) $this->total - (float) $this->amount_paid, 2, '.', '');
     }
 
+    public function getDisplayStatusAttribute(): string
+    {
+        return $this->isOverdue() ? 'overdue' : $this->status->value;
+    }
+
     public function isOverdue(): bool
     {
         return in_array($this->status, [InvoiceStatus::Pending, InvoiceStatus::Partial], true)

@@ -58,7 +58,12 @@ const columns: TableColumn<Invoice>[] = [
         key: 'status',
         label: 'Status',
         sortable: true,
-        render: (inv) => <StatusBadge domain="invoice" value={inv.status} />,
+        render: (inv) => (
+            <StatusBadge
+                domain="invoice"
+                value={inv.display_status ?? inv.status}
+            />
+        ),
     },
 ];
 

@@ -233,6 +233,7 @@ export type Invoice = {
     period_end: string;
     due_date: string;
     status: string;
+    display_status?: string;
     total: string;
     amount_paid: string;
     outstanding?: string;

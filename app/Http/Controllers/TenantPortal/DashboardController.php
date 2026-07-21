@@ -57,7 +57,7 @@ class DashboardController extends Controller
                     'period_end' => $invoice->period_end->toDateString(),
                     'due_date' => $invoice->due_date->toDateString(),
                     'status' => $invoice->status->value,
-                    'display_status' => $this->invoiceDisplayStatus($invoice),
+                    'display_status' => $invoice->display_status,
                     'total' => (string) $invoice->total,
                     'amount_paid' => (string) $invoice->amount_paid,
                     'outstanding' => $invoice->outstanding,
@@ -119,18 +119,5 @@ class DashboardController extends Controller
         }
 
         return $invoice->due_date->isPast() ? 'overdue' : 'upcoming';
-    }
-
-    private function invoiceDisplayStatus(Invoice $invoice): string
-    {
-        if ($invoice->due_date->isPast()) {
-            return 'overdue';
-        }
-
-        if ($invoice->due_date->isToday()) {
-            return 'due_today';
-        }
-
-        return $invoice->status->value;
     }
 }

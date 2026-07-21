@@ -40,6 +40,8 @@ class LeaseInvoiceController extends Controller
             'invoices',
         );
 
+        $result['invoices']->getCollection()->each->append('display_status');
+
         return Inertia::render('leases/invoices', [
             ...$result,
             'lease' => $lease->only('id', 'reference', 'status'),
@@ -53,7 +55,7 @@ class LeaseInvoiceController extends Controller
         $this->authorize('view', $lease);
 
         $invoice->load(['lineItems', 'payments']);
-        $invoice->append('outstanding');
+        $invoice->append(['outstanding', 'display_status']);
 
         return Inertia::render('leases/invoice-detail', [
             'lease' => $lease->only('id', 'reference', 'status'),

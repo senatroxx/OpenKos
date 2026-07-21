@@ -35,7 +35,10 @@ export default function InvoiceDetail({
                                 {formatPeriod(invoice.period_start, 'id-ID')}
                             </p>
                         </div>
-                        <StatusBadge domain="invoice" value={invoice.status} />
+                        <StatusBadge
+                            domain="invoice"
+                            value={invoice.display_status ?? invoice.status}
+                        />
                     </div>
 
                     <div className="mt-6 grid grid-cols-3 gap-4 text-sm">
