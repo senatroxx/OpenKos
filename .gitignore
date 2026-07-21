@@ -39,6 +39,10 @@ testing_test_*
 /.agents/
 /.gemini/
 /.opencode/
+/.codex/
 /opencode.json
 /skills-lock.json
 /prompts/create-fonnte-package.md
+/graphify-out
+/boost.json
+/data/
