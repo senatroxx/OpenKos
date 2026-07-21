@@ -110,14 +110,14 @@ class DashboardController extends Controller
             return 'paid';
         }
 
-        if ($invoice->status === InvoiceStatus::Partial) {
-            return 'partial';
+        if ($invoice->isOverdue()) {
+            return 'overdue';
         }
 
         if ($invoice->due_date->isToday()) {
             return 'due_today';
         }
 
-        return $invoice->due_date->isPast() ? 'overdue' : 'upcoming';
+        return $invoice->status === InvoiceStatus::Partial ? 'partial' : 'upcoming';
     }
 }
