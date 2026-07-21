@@ -30,6 +30,7 @@ import leases from '@/routes/leases';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import { dashboard as portalDashboard } from '@/routes/portal';
 import { index as portalLease } from '@/routes/portal/lease';
+import { index as portalPayments } from '@/routes/portal/payments';
 import properties from '@/routes/properties';
 import roles from '@/routes/roles';
 import tenants from '@/routes/tenants';
@@ -57,6 +58,11 @@ export function AppSidebar() {
                       title: 'Lease',
                       icon: FileText,
                       href: portalLease(),
+                  },
+                  {
+                      title: 'Billing',
+                      icon: Receipt,
+                      href: portalPayments(),
                   },
               ]
             : []),

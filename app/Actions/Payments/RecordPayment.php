@@ -18,12 +18,12 @@ class RecordPayment
         private AllocatePayment $allocatePayment,
     ) {}
 
-    public function execute(Invoice $invoice, RecordPaymentData $data, User $user): RecordPaymentResult
+    public function execute(Invoice $invoice, RecordPaymentData $data, User $user, bool $forcePending = false): RecordPaymentResult
     {
         $hasProof = $data->proof !== null;
-        $canAutoVerify = $hasProof && $user->can('payments.verify');
+        $canAutoVerify = ! $forcePending && $hasProof && $user->can('payments.verify');
 
-        $payment = DB::transaction(function () use ($invoice, $data, $user, $hasProof, $canAutoVerify) {
+        $payment = DB::transaction(function () use ($invoice, $data, $user, $hasProof, $canAutoVerify, $forcePending) {
             // Ponytail: lock the invoice so concurrent payments see the
             // correct outstanding balance and cannot overpay.
             $locked = Invoice::lockForUpdate()->findOrFail($invoice->id);
@@ -37,8 +37,8 @@ class RecordPayment
                 'payment_date' => $data->paymentDate,
                 'payment_method' => $data->paymentMethod,
                 'notes' => $data->notes,
-                'status' => $hasProof && ! $canAutoVerify ? PaymentStatus::Pending : PaymentStatus::Confirmed,
-                'confirmed_by' => $canAutoVerify || ! $hasProof ? $user->id : null,
+                'status' => $forcePending || ($hasProof && ! $canAutoVerify) ? PaymentStatus::Pending : PaymentStatus::Confirmed,
+                'confirmed_by' => ! $forcePending && ($canAutoVerify || ! $hasProof) ? $user->id : null,
                 'recorded_by' => $user->id,
                 'verified_by' => $canAutoVerify ? $user->id : null,
                 'verified_at' => $canAutoVerify ? now() : null,

@@ -27,6 +27,16 @@ class StorePaymentRequest extends FormRequest
                 'integer',
                 Rule::exists('invoices', 'id')->where('lease_id', $lease instanceof Lease ? $lease->id : null),
             ],
+            ...$this->paymentRules(),
+        ];
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    protected function paymentRules(): array
+    {
+        return [
             'amount' => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', 'string', Rule::in(PaymentMethod::values())],
             'paid_at' => ['required', 'date'],
@@ -35,9 +45,9 @@ class StorePaymentRequest extends FormRequest
         ];
     }
 
-    public function ensureLeaseIsActive(): void
+    public function ensureLeaseIsActive(?Lease $lease = null): void
     {
-        $lease = $this->route('lease');
+        $lease ??= $this->route('lease');
 
         if (! $lease instanceof Lease || $lease->status !== LeaseStatus::Active) {
             throw ValidationException::withMessages([
