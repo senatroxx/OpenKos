@@ -16,6 +16,7 @@ use App\Http\Controllers\TenantDocumentController;
 use App\Http\Controllers\TenantInvitationController;
 use App\Http\Controllers\TenantPortal\DashboardController as TenantPortalDashboardController;
 use App\Http\Controllers\TenantPortal\LeaseController as TenantPortalLeaseController;
+use App\Http\Controllers\TenantPortal\PaymentController as TenantPortalPaymentController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,8 @@ Route::prefix('tenants/invitations')->name('tenants.invitations.')->middleware('
 Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->group(function () {
     Route::redirect('/', '/portal/dashboard');
     Route::get('dashboard', TenantPortalDashboardController::class)->name('dashboard');
+    Route::get('payments', [TenantPortalPaymentController::class, 'index'])->name('payments.index');
+    Route::post('payments', [TenantPortalPaymentController::class, 'store'])->name('payments.store');
 
     Route::prefix('lease')->name('lease.')->group(function () {
         Route::get('/', [TenantPortalLeaseController::class, 'index'])->name('index');

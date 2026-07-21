@@ -46,3 +46,6 @@ testing_test_*
 /graphify-out
 /boost.json
 /data/
+DESIGN.md
+PRODUCT.md
+/.impeccable/

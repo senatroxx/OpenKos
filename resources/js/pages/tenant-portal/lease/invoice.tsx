@@ -1,6 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
+import SubmitPortalPaymentSheet from '@/components/features/payments/submit-portal-payment-sheet';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { invoices } from '@/routes/portal/lease';
 import type { Invoice, Lease } from '@/types';
@@ -12,6 +15,9 @@ export default function InvoiceDetail({
     lease: Lease;
     invoice: Invoice;
 }) {
+    const [paymentOpen, setPaymentOpen] = useState(false);
+    const isPayable = ['pending', 'partial'].includes(invoice.status);
+
     return (
         <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
             <Head title={`Invoice ${invoice.reference ?? ''}`} />
@@ -35,10 +41,10 @@ export default function InvoiceDetail({
                                 {formatPeriod(invoice.period_start, 'id-ID')}
                             </p>
                         </div>
-                        <StatusBadge
-                            domain="invoice"
-                            value={invoice.display_status ?? invoice.status}
-                        />
+                        <div className="flex items-center gap-2">
+                            <StatusBadge domain="invoice" value={invoice.display_status ?? invoice.status} />
+                            {isPayable && <Button size="sm" onClick={() => setPaymentOpen(true)}>Add payment</Button>}
+                        </div>
                     </div>
 
                     <div className="mt-6 grid gap-4 text-sm sm:grid-cols-3">
@@ -85,6 +91,12 @@ export default function InvoiceDetail({
                     </section>
                 )}
             </div>
+
+            <SubmitPortalPaymentSheet
+                invoice={invoice}
+                open={paymentOpen}
+                onOpenChange={setPaymentOpen}
+            />
         </div>
     );
 }

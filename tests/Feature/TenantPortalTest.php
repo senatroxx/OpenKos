@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\InvoiceStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
@@ -10,6 +11,8 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -162,6 +165,40 @@ test('tenant sees only their lease invoices', function () {
             ->where('invoice.id', $invoice->id));
 });
 
+test('tenant sees only their payable invoices on the payments page', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $otherLease = Lease::factory()->create();
+    Invoice::factory()->create(['lease_id' => $otherLease->id]);
+
+    $pendingPayment = Payment::factory()->pending()->create([
+        'invoice_id' => $invoice->id,
+    ]);
+    $historyPayment = Payment::factory()->create([
+        'invoice_id' => $invoice->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('portal.payments.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/payments/index')
+            ->has('leases', 1)
+            ->where('leases.0.id', $lease->id)
+            ->where('leases.0.unit.name', $lease->unit->name)
+            ->where('leases.0.invoices.0.id', $invoice->id)
+            ->has('pendingPayments', 1)
+            ->where('pendingPayments.0.id', $pendingPayment->id)
+            ->has('paymentHistory', 1)
+            ->where('paymentHistory.0.id', $historyPayment->id));
+});
+
 test('tenant can open only their own lease workspace', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
@@ -177,6 +214,112 @@ test('tenant can open only their own lease workspace', function () {
 
     $this->get(route('portal.lease.show', $otherLease))
         ->assertNotFound();
+});
+
+test('tenant submits a pending invoice payment for verification', function () {
+    Storage::fake('local');
+
+    $tenantUser = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($tenantUser)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'total' => 1_500_000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $this->actingAs($tenantUser)
+        ->post(route('portal.payments.store'), [
+            'invoice_id' => $invoice->id,
+            'amount' => 1_500_000,
+            'payment_method' => 'transfer',
+            'paid_at' => now()->toDateString(),
+            'notes' => 'Paid by bank transfer.',
+            'proof' => UploadedFile::fake()->image('proof.jpg'),
+        ]);
+
+    $payment = $invoice->payments()->sole();
+
+    expect($payment->status)->toBe(PaymentStatus::Pending)
+        ->and($payment->recorded_by)->toBe($tenantUser->id)
+        ->and($payment->confirmed_by)->toBeNull()
+        ->and($payment->proofs)->toHaveCount(1)
+        ->and($invoice->fresh()->amount_paid)->toBe('0.00')
+        ->and($invoice->fresh()->status)->toBe(InvoiceStatus::Pending);
+
+    Storage::disk('local')->assertExists($payment->proofs->sole()->path);
+
+    $this->actingAs($tenantUser)
+        ->post(route('portal.payments.store'), [
+            'invoice_id' => $invoice->id,
+            'amount' => 1,
+            'payment_method' => 'transfer',
+            'paid_at' => now()->toDateString(),
+        ]);
+
+    $paymentWithoutProof = $invoice->payments()->latest('id')->first();
+
+    expect($paymentWithoutProof->status)->toBe(PaymentStatus::Pending)
+        ->and($paymentWithoutProof->confirmed_by)->toBeNull();
+
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('payments.verify', $payment), ['action' => 'confirm']);
+
+    expect($payment->fresh()->status)->toBe(PaymentStatus::Confirmed)
+        ->and($invoice->fresh()->amount_paid)->toBe('1500000.00')
+        ->and($invoice->fresh()->status)->toBe(InvoiceStatus::Paid);
+});
+
+test('tenant cannot submit a payment for another tenants invoice', function () {
+    $tenantUser = User::factory()->create();
+    Tenant::factory()->withUser($tenantUser)->create();
+    $lease = Lease::factory()->create();
+    $invoice = Invoice::factory()->create(['lease_id' => $lease->id]);
+
+    $this->actingAs($tenantUser)
+        ->post(route('portal.payments.store'), [
+            'invoice_id' => $invoice->id,
+            'amount' => 1_500_000,
+            'payment_method' => 'transfer',
+            'paid_at' => now()->toDateString(),
+        ])
+        ->assertNotFound();
+});
+
+test('tenant cannot overpay or submit to a non-payable invoice', function () {
+    $tenantUser = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($tenantUser)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'total' => 1_500_000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $this->actingAs($tenantUser)
+        ->post(route('portal.payments.store'), [
+            'invoice_id' => $invoice->id,
+            'amount' => 1_500_001,
+            'payment_method' => 'transfer',
+            'paid_at' => now()->toDateString(),
+        ])
+        ->assertSessionHasErrors('amount');
+
+    $invoice->update([
+        'amount_paid' => 1_500_000,
+        'status' => InvoiceStatus::Paid,
+    ]);
+
+    $this->post(route('portal.payments.store'), [
+        'invoice_id' => $invoice->id,
+        'amount' => 1,
+        'payment_method' => 'transfer',
+        'paid_at' => now()->toDateString(),
+    ])->assertSessionHasErrors('invoice_id');
 });
 
 test('tenant sees their lease unit transfer history', function () {
