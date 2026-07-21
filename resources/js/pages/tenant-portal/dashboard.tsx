@@ -273,6 +273,10 @@ export default function Dashboard({
 }
 
 function rentStatusLabel(status: string): string {
+    if (status === 'none') {
+        return 'No active lease';
+    }
+
     return status
         .split('_')
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

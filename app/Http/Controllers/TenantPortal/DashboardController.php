@@ -48,7 +48,7 @@ class DashboardController extends Controller
             ],
             'lease' => $lease ? $this->leasePayload($lease) : null,
             'rent' => [
-                'status' => $this->rentStatus($invoices->first()),
+                'status' => $this->rentStatus($lease, $invoices->first()),
                 'upcoming_invoices' => $invoices->map(fn (Invoice $invoice) => [
                     'id' => $invoice->id,
                     'lease_id' => $invoice->lease_id,
@@ -99,8 +99,12 @@ class DashboardController extends Controller
         ];
     }
 
-    private function rentStatus(?Invoice $invoice): string
+    private function rentStatus(?Lease $lease, ?Invoice $invoice): string
     {
+        if (! $lease) {
+            return 'none';
+        }
+
         if (! $invoice) {
             return 'paid';
         }

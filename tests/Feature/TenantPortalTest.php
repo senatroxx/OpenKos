@@ -64,6 +64,19 @@ test('user without tenant profile cannot access portal', function () {
         ->assertForbidden();
 });
 
+test('tenant without active lease does not show paid rent status', function () {
+    $user = User::factory()->create();
+    Tenant::factory()->withUser($user)->create();
+
+    $this->actingAs($user)
+        ->get(route('portal.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('lease', null)
+            ->where('rent.status', 'none')
+            ->where('rent.upcoming_invoices', []));
+});
+
 test('tenant without dashboard permission cannot access owner dashboard', function () {
     $user = User::factory()->create();
     Tenant::factory()->withUser($user)->create();
