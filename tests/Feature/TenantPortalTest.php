@@ -3,8 +3,11 @@
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
+use App\Models\LeaseUnitHistory;
+use App\Models\Payment;
 use App\Models\ReminderLog;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 
@@ -96,9 +99,120 @@ test('portal only exposes the authenticated tenants lease data', function () {
             ->where('rent.upcoming_invoices.0.lease_id', $lease->id));
 });
 
+test('tenant sees their active and historical leases', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $activeLease = Lease::factory()->create([
+        'primary_tenant_id' => $tenant->id,
+        'start_date' => now(),
+        'rent_amount' => 1_500_000,
+        'rent_due_day' => 5,
+    ]);
+    $historicalLease = Lease::factory()->terminated()->create([
+        'primary_tenant_id' => $tenant->id,
+        'start_date' => now()->subYear(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('portal.lease.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/lease/index')
+            ->has('leases.data', 2)
+            ->where('leases.data.0.id', $activeLease->id)
+            ->where('leases.data.0.rent_due_day', 5)
+            ->where('leases.data.1.id', $historicalLease->id));
+});
+
+test('tenant sees only their lease invoices', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'total' => 1_500_000,
+        'amount_paid' => 500_000,
+        'status' => InvoiceStatus::Partial,
+    ]);
+    $payment = Payment::factory()->pending()->create([
+        'invoice_id' => $invoice->id,
+        'amount' => 500_000,
+        'payment_date' => now(),
+    ]);
+
+    $otherTenant = Tenant::factory()->withUser()->create();
+    $otherLease = Lease::factory()->create(['primary_tenant_id' => $otherTenant->id]);
+    $otherInvoice = Invoice::factory()->create(['lease_id' => $otherLease->id]);
+    Payment::factory()->create(['invoice_id' => $otherInvoice->id]);
+
+    $this->actingAs($user)
+        ->get(route('portal.lease.invoices', $lease))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/lease/invoices')
+            ->where('lease.id', $lease->id)
+            ->has('invoices.data', 1)
+            ->where('invoices.data.0.id', $invoice->id)
+            ->where('invoices.data.0.outstanding', '1000000.00'));
+
+    $this->get(route('portal.lease.invoices.show', [$lease, $invoice]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/lease/invoice')
+            ->where('invoice.id', $invoice->id));
+});
+
+test('tenant can open only their own lease workspace', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $otherLease = Lease::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('portal.lease.show', $lease))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/lease/show')
+            ->where('lease.id', $lease->id));
+
+    $this->get(route('portal.lease.show', $otherLease))
+        ->assertNotFound();
+});
+
+test('tenant sees their lease unit transfer history', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $targetUnit = Unit::factory()->create(['property_id' => $lease->unit->property_id]);
+    $history = LeaseUnitHistory::create([
+        'lease_id' => $lease->id,
+        'from_unit_id' => $lease->unit_id,
+        'to_unit_id' => $targetUnit->id,
+        'reason' => 'maintenance',
+        'effective_date' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('portal.lease.history', $lease))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/lease/history')
+            ->has('history.data', 1)
+            ->where('history.data.0.id', $history->id)
+            ->where('history.data.0.reason', 'maintenance'));
+});
+
 test('user without tenant profile cannot access portal', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('portal.dashboard'))
+        ->assertForbidden();
+});
+
+test('user without tenant profile cannot access portal invoices', function () {
+    $lease = Lease::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('portal.lease.invoices', $lease))
         ->assertForbidden();
 });
 

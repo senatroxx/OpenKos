@@ -15,6 +15,7 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantDocumentController;
 use App\Http\Controllers\TenantInvitationController;
 use App\Http\Controllers\TenantPortal\DashboardController as TenantPortalDashboardController;
+use App\Http\Controllers\TenantPortal\LeaseController as TenantPortalLeaseController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,16 @@ Route::prefix('tenants/invitations')->name('tenants.invitations.')->middleware('
 Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->group(function () {
     Route::redirect('/', '/portal/dashboard');
     Route::get('dashboard', TenantPortalDashboardController::class)->name('dashboard');
+
+    Route::prefix('lease')->name('lease.')->group(function () {
+        Route::get('/', [TenantPortalLeaseController::class, 'index'])->name('index');
+        Route::prefix('{lease}')->whereNumber('lease')->group(function () {
+            Route::get('/', [TenantPortalLeaseController::class, 'show'])->name('show');
+            Route::get('history', [TenantPortalLeaseController::class, 'history'])->name('history');
+            Route::get('invoices', [TenantPortalLeaseController::class, 'invoices'])->name('invoices');
+            Route::get('invoices/{invoice}', [TenantPortalLeaseController::class, 'invoice'])->name('invoices.show');
+        });
+    });
 });
 
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {
