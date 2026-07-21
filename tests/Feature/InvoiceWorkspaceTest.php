@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Models\InvoiceLineItem;
 use App\Models\Lease;
@@ -31,6 +32,22 @@ describe('invoice workspace index', function () {
                 ->component('leases/invoices')
                 ->where('lease.id', $lease->id)
                 ->has('invoices.data', 3));
+    });
+
+    it('derives overdue display status without changing stored status', function () {
+        $lease = Lease::factory()->create();
+        Invoice::factory()->create([
+            'lease_id' => $lease->id,
+            'due_date' => now()->subDay(),
+            'status' => InvoiceStatus::Pending,
+        ]);
+
+        $this->actingAs($this->owner)
+            ->get(route('leases.workspace.invoices', $lease))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('invoices.data.0.status', 'pending')
+                ->where('invoices.data.0.display_status', 'overdue'));
     });
 
     it('returns empty state when lease has no invoices', function () {
@@ -71,6 +88,22 @@ describe('invoice workspace show', function () {
                 ->where('lease.id', $lease->id)
                 ->where('invoice.id', $invoice->id)
                 ->has('invoice.line_items', 1));
+    });
+
+    it('derives overdue display status on invoice detail', function () {
+        $lease = Lease::factory()->create();
+        $invoice = Invoice::factory()->create([
+            'lease_id' => $lease->id,
+            'due_date' => now()->subDay(),
+            'status' => InvoiceStatus::Pending,
+        ]);
+
+        $this->actingAs($this->owner)
+            ->get(route('leases.workspace.invoices.show', [$lease, $invoice]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('invoice.status', 'pending')
+                ->where('invoice.display_status', 'overdue'));
     });
 
     it('denies access to invoice from another lease', function () {
