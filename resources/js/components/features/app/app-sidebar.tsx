@@ -26,6 +26,7 @@ import {
 import { platformNavItems, platformPageNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
+import { dashboard as portalDashboard } from '@/routes/portal';
 import leases from '@/routes/leases';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import properties from '@/routes/properties';
@@ -41,8 +42,12 @@ export function AppSidebar() {
         .props;
     const permissions = auth.permissions;
     const isOwner = auth.role === 'owner';
+    const home = auth.tenant ? portalDashboard() : dashboard();
 
     const mainNavItems: NavItem[] = [
+        ...(auth.tenant
+            ? [{ title: 'Portal', href: portalDashboard(), icon: LayoutGrid }]
+            : []),
         ...(isOwner || permissions.includes('dashboard.view')
             ? [
                   {
@@ -123,7 +128,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={home} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

@@ -14,6 +14,7 @@ export type User = {
 
 export type Auth = {
     user: User;
+    tenant: { id: number; name: string } | null;
     role: string | null;
     roles: string[];
     permissions: string[];

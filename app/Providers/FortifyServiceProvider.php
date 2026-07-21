@@ -13,8 +13,10 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
+use Laravel\Fortify\Contracts\LoginResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Symfony\Component\HttpFoundation\Response;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -23,7 +25,21 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LoginResponse::class, fn () => new class implements LoginResponse
+        {
+            public function toResponse($request): Response
+            {
+                if ($request->wantsJson()) {
+                    return response()->json(['two_factor' => false]);
+                }
+
+                if ($request->user()->hasTenantProfile()) {
+                    return redirect()->route('portal.dashboard');
+                }
+
+                return redirect()->intended(Fortify::redirects('login'));
+            }
+        });
     }
 
     /**
