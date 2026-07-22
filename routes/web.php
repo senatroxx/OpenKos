@@ -39,6 +39,8 @@ Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->grou
     Route::prefix('billing')->name('billing.')->group(function () {
         Route::get('/', [TenantPortalPaymentController::class, 'index'])->name('index');
         Route::post('/', [TenantPortalPaymentController::class, 'store'])->name('store');
+        Route::get('history/invoices', [TenantPortalPaymentController::class, 'invoiceHistory'])->name('history.invoices');
+        Route::get('history/payments', [TenantPortalPaymentController::class, 'paymentHistory'])->name('history.payments');
         Route::get('invoices/{invoice}', [TenantPortalPaymentController::class, 'invoice'])->name('invoices.show');
     });
 

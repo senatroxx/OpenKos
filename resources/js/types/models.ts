@@ -194,6 +194,20 @@ export type Lease = {
     }[];
 };
 
+export type TenantLeaseContextLease = {
+    id: number;
+    start_date: string;
+    end_date: string | null;
+    status: string;
+    unit_name: string | null;
+    property_name: string | null;
+};
+
+export type TenantLeaseContext = {
+    selected: TenantLeaseContextLease | null;
+    leases: TenantLeaseContextLease[];
+};
+
 export type LeaseData = {
     id: number;
     tenants: TenantInfo[];
@@ -237,6 +251,7 @@ export type Invoice = {
     total: string;
     amount_paid: string;
     outstanding?: string;
+    payable_amount?: string;
     line_items?: InvoiceLineItem[];
     payments?: Payment[];
     allocations?: PaymentAllocation[];

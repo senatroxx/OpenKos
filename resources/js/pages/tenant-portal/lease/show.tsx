@@ -1,10 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
+import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import type { Lease } from '@/types';
-import { index } from '@/routes/portal/lease';
+import { index, show } from '@/routes/portal/lease';
+import type { Lease, TenantLeaseContext as LeaseContext } from '@/types';
 
 function Detail({ label, value }: { label: string; value: string }) {
     return (
@@ -15,11 +16,27 @@ function Detail({ label, value }: { label: string; value: string }) {
     );
 }
 
-export default function LeaseWorkspace({ lease }: { lease: Lease }) {
+export default function LeaseWorkspace({
+    lease,
+    leaseContext,
+}: {
+    lease: Lease;
+    leaseContext: LeaseContext;
+}) {
     return (
         <div className="flex flex-1 flex-col gap-6 p-4">
             <Head title="Lease" />
-            <Link href={index()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ChevronLeft className="size-3" />Back to stays</Link>
+            <Link
+                href={index()}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+                <ChevronLeft className="size-3" />
+                Back to stays
+            </Link>
+            <TenantLeaseContext
+                leaseContext={leaseContext}
+                hrefForLease={(leaseId) => show(leaseId).url}
+            />
             <div className="space-y-6">
                 <section>
                     <h2 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
@@ -41,8 +58,18 @@ export default function LeaseWorkspace({ lease }: { lease: Lease }) {
                                     : '—'
                             }
                         />
-                        <Detail label="Start date" value={formatDate(lease.start_date)} />
-                        <Detail label="End date" value={lease.end_date ? formatDate(lease.end_date) : 'Ongoing'} />
+                        <Detail
+                            label="Start date"
+                            value={formatDate(lease.start_date)}
+                        />
+                        <Detail
+                            label="End date"
+                            value={
+                                lease.end_date
+                                    ? formatDate(lease.end_date)
+                                    : 'Ongoing'
+                            }
+                        />
                     </div>
                 </section>
 
@@ -67,9 +94,32 @@ export default function LeaseWorkspace({ lease }: { lease: Lease }) {
 
                 {lease.unit_histories && lease.unit_histories.length > 0 && (
                     <section>
-                        <h2 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">Unit history</h2>
+                        <h2 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                            Unit history
+                        </h2>
                         <div className="divide-y rounded-lg border text-sm">
-                            {lease.unit_histories.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p>{entry.from_unit?.name ?? '—'} to {entry.to_unit?.name ?? '—'}</p><p className="text-muted-foreground">{entry.reason?.replaceAll('_', ' ') ?? 'Unit change'}</p></div><span className="text-muted-foreground">{formatDate(entry.effective_date)}</span></div>)}
+                            {lease.unit_histories.map((entry) => (
+                                <div
+                                    key={entry.id}
+                                    className="flex flex-wrap items-center justify-between gap-3 p-4"
+                                >
+                                    <div>
+                                        <p>
+                                            {entry.from_unit?.name ?? '—'} to{' '}
+                                            {entry.to_unit?.name ?? '—'}
+                                        </p>
+                                        <p className="text-muted-foreground">
+                                            {entry.reason?.replaceAll(
+                                                '_',
+                                                ' ',
+                                            ) ?? 'Unit change'}
+                                        </p>
+                                    </div>
+                                    <span className="text-muted-foreground">
+                                        {formatDate(entry.effective_date)}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </section>
                 )}

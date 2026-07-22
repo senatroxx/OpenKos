@@ -1,14 +1,11 @@
 import { Head } from '@inertiajs/react';
+import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { dashboard } from '@/routes/portal';
+import type { TenantLeaseContext as LeaseContext } from '@/types';
 
 type Invoice = {
     id: number;
@@ -74,6 +71,7 @@ type Props = {
         recent_payments: Payment[];
     };
     notifications: Notification[];
+    leaseContext: LeaseContext;
 };
 
 export default function Dashboard({
@@ -81,6 +79,7 @@ export default function Dashboard({
     lease,
     rent,
     notifications,
+    leaseContext,
 }: Props) {
     return (
         <>
@@ -95,6 +94,13 @@ export default function Dashboard({
                         Hi, {tenant.name}
                     </h1>
                 </div>
+
+                <TenantLeaseContext
+                    leaseContext={leaseContext}
+                    hrefForLease={(leaseId) =>
+                        dashboard({ query: { lease: leaseId } }).url
+                    }
+                />
 
                 <div className="grid gap-4 lg:grid-cols-3">
                     <Card>
@@ -315,7 +321,9 @@ export default function Dashboard({
                                             </div>
                                             <div className="text-right">
                                                 <p className="font-medium tabular-nums">
-                                                    {formatPrice(payment.amount)}
+                                                    {formatPrice(
+                                                        payment.amount,
+                                                    )}
                                                 </p>
                                                 <StatusBadge
                                                     domain="payment"

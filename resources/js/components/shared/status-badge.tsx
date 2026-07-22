@@ -48,6 +48,15 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
         verified: { label: 'Verified', className: 'bg-green-600 text-white' },
     },
+    tenant_payment: {
+        confirmed: { label: 'Confirmed', className: 'bg-green-600 text-white' },
+        pending: {
+            label: 'Awaiting verification',
+            className: 'bg-amber-500 text-white',
+        },
+        cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
+        verified: { label: 'Verified', className: 'bg-green-600 text-white' },
+    },
     maintenance: {
         reported: { label: 'Reported', className: 'bg-blue-100 text-blue-700' },
         in_progress: {
@@ -71,7 +80,10 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     },
     app_access: {
         active: { label: 'App access', className: 'bg-green-600 text-white' },
-        invited: { label: 'Invite pending', className: 'bg-amber-500 text-white' },
+        invited: {
+            label: 'Invite pending',
+            className: 'bg-amber-500 text-white',
+        },
         email_only: { label: 'Email only', variant: 'outline' },
         disabled: { label: 'Access disabled', variant: 'secondary' },
         none: { label: 'No access', variant: 'secondary' },
@@ -93,6 +105,17 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     },
     invoice: {
         pending: { label: 'Pending', className: 'bg-yellow-500 text-white' },
+        partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
+        overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
+        paid: { label: 'Paid', className: 'bg-green-600 text-white' },
+        cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
+        void: { label: 'Void', className: 'bg-gray-300 text-gray-700' },
+    },
+    tenant_invoice: {
+        pending: {
+            label: 'Payment due',
+            className: 'bg-yellow-500 text-white',
+        },
         partial: { label: 'Partial', className: 'bg-blue-600 text-white' },
         overdue: { label: 'Overdue', className: 'bg-red-600 text-white' },
         paid: { label: 'Paid', className: 'bg-green-600 text-white' },

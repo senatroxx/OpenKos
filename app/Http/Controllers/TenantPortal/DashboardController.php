@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\TenantPortal;
 
 use App\Enums\InvoiceStatus;
-use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
@@ -12,19 +11,13 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DashboardController extends Controller
+class DashboardController extends TenantPortalController
 {
     public function __invoke(Request $request): Response
     {
-        $tenant = $request->user()->tenant()->first();
-
-        abort_unless($tenant, 403);
-
-        $lease = $tenant->leases()
-            ->active()
-            ->with(['unit.property'])
-            ->latest('start_date')
-            ->first();
+        $tenant = $this->tenant($request);
+        $leaseContext = $this->leaseContext($request, $tenant);
+        $lease = $leaseContext['selectedLease'];
 
         $invoices = $lease
             ? $lease->invoices()
@@ -62,7 +55,8 @@ class DashboardController extends Controller
                 'id' => $tenant->id,
                 'name' => $tenant->name,
             ],
-            'lease' => $lease ? $this->leasePayload($lease) : null,
+            'lease' => $lease ? $this->dashboardLeasePayload($lease) : null,
+            'leaseContext' => $this->leaseContextPayload($lease, $leaseContext['leases']),
             'rent' => [
                 'status' => $this->rentStatus($lease, $invoices->first()),
                 'outstanding_balance' => $outstandingBalance,
@@ -104,7 +98,7 @@ class DashboardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function leasePayload(Lease $lease): array
+    private function dashboardLeasePayload(Lease $lease): array
     {
         return [
             'id' => $lease->id,

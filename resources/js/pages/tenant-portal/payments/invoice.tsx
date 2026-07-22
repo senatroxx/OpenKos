@@ -2,16 +2,19 @@ import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import SubmitPortalPaymentSheet from '@/components/features/payments/submit-portal-payment-sheet';
+import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { index } from '@/routes/portal/billing';
-import type { Invoice } from '@/types';
+import type { Invoice, TenantLeaseContext as LeaseContext } from '@/types';
 
 export default function InvoiceDetail({
     invoice,
+    leaseContext,
 }: {
     invoice: Invoice;
+    leaseContext: LeaseContext;
 }) {
     const [paymentOpen, setPaymentOpen] = useState(false);
     const isPayable = ['pending', 'partial'].includes(invoice.status);
@@ -21,12 +24,19 @@ export default function InvoiceDetail({
             <Head title={`Invoice ${invoice.reference ?? ''}`} />
 
             <Link
-                href={index()}
+                href={index({ query: { lease: leaseContext.selected?.id } })}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
                 Back to billing
             </Link>
+
+            <TenantLeaseContext
+                leaseContext={leaseContext}
+                hrefForLease={(leaseId) =>
+                    index({ query: { lease: leaseId } }).url
+                }
+            />
 
             <div className="space-y-6">
                 <div className="rounded-lg border p-6">
@@ -40,17 +50,42 @@ export default function InvoiceDetail({
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <StatusBadge domain="invoice" value={invoice.display_status ?? invoice.status} />
-                            {isPayable && <Button size="sm" onClick={() => setPaymentOpen(true)}>Add payment</Button>}
+                            <StatusBadge
+                                domain="tenant_invoice"
+                                value={invoice.display_status ?? invoice.status}
+                            />
+                            {isPayable && (
+                                <Button
+                                    size="sm"
+                                    onClick={() => setPaymentOpen(true)}
+                                >
+                                    Add payment
+                                </Button>
+                            )}
                         </div>
                     </div>
 
                     <div className="mt-6 grid gap-4 text-sm sm:grid-cols-3">
-                        <Detail label="Total" value={formatPrice(invoice.total)} />
-                        <Detail label="Paid" value={formatPrice(invoice.amount_paid)} />
-                        <Detail label="Outstanding" value={formatPrice(invoice.outstanding ?? '0')} />
-                        <Detail label="Period" value={`${formatDate(invoice.period_start)} - ${formatDate(invoice.period_end)}`} />
-                        <Detail label="Due date" value={formatDate(invoice.due_date)} />
+                        <Detail
+                            label="Total"
+                            value={formatPrice(invoice.total)}
+                        />
+                        <Detail
+                            label="Paid"
+                            value={formatPrice(invoice.amount_paid)}
+                        />
+                        <Detail
+                            label="Outstanding"
+                            value={formatPrice(invoice.outstanding ?? '0')}
+                        />
+                        <Detail
+                            label="Period"
+                            value={`${formatDate(invoice.period_start)} - ${formatDate(invoice.period_end)}`}
+                        />
+                        <Detail
+                            label="Due date"
+                            value={formatDate(invoice.due_date)}
+                        />
                     </div>
                 </div>
 
@@ -61,9 +96,14 @@ export default function InvoiceDetail({
                         </h2>
                         <div className="divide-y">
                             {invoice.line_items.map((item) => (
-                                <div key={item.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                                <div
+                                    key={item.id}
+                                    className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                                >
                                     <span>{item.description}</span>
-                                    <span className="tabular-nums">{formatPrice(item.amount)}</span>
+                                    <span className="tabular-nums">
+                                        {formatPrice(item.amount)}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -77,12 +117,22 @@ export default function InvoiceDetail({
                         </h2>
                         <div className="divide-y">
                             {invoice.payments.map((payment) => (
-                                <div key={payment.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
+                                <div
+                                    key={payment.id}
+                                    className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                                >
                                     <div>
-                                        <p className="font-medium tabular-nums">{formatPrice(payment.amount)}</p>
-                                        <p className="text-xs text-muted-foreground">{formatDate(payment.payment_date)}</p>
+                                        <p className="font-medium tabular-nums">
+                                            {formatPrice(payment.amount)}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {formatDate(payment.payment_date)}
+                                        </p>
                                     </div>
-                                    <StatusBadge domain="payment" value={payment.status} />
+                                    <StatusBadge
+                                        domain="tenant_payment"
+                                        value={payment.status}
+                                    />
                                 </div>
                             ))}
                         </div>
