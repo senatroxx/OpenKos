@@ -28,7 +28,15 @@ class RecordPayment
             // correct outstanding balance and cannot overpay.
             $locked = Invoice::lockForUpdate()->findOrFail($invoice->id);
 
-            if ($data->amount > (float) $locked->outstanding) {
+            $availableAmount = (float) $locked->outstanding;
+
+            if ($forcePending) {
+                $availableAmount -= (float) $locked->payments()
+                    ->where('status', PaymentStatus::Pending)
+                    ->sum('amount');
+            }
+
+            if ($data->amount > $availableAmount) {
                 throw new PaymentOverflowException;
             }
 

@@ -28,6 +28,7 @@ export default function SubmitPortalPaymentForm({
     onSuccess?: () => void;
     onCancel?: () => void;
 }) {
+    const payableAmount = invoice.payable_amount ?? invoice.outstanding ?? '0';
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [fileName, setFileName] = useState<string | null>(null);
@@ -69,7 +70,7 @@ export default function SubmitPortalPaymentForm({
                     <p className="font-medium">
                         Outstanding balance:{' '}
                         <span className="tabular-nums">
-                            {formatPrice(invoice.outstanding ?? '0')}
+                            {formatPrice(payableAmount)}
                         </span>
                     </p>
                     <p className="text-muted-foreground">
@@ -87,10 +88,10 @@ export default function SubmitPortalPaymentForm({
                         name="amount"
                         type="number"
                         min={1}
-                        max={invoice.outstanding ?? undefined}
+                        max={payableAmount}
                         step="1"
                         inputMode="numeric"
-                        defaultValue={invoice.outstanding ?? ''}
+                        defaultValue={payableAmount}
                         aria-describedby="amount-help"
                         required
                     />
@@ -98,7 +99,7 @@ export default function SubmitPortalPaymentForm({
                         id="amount-help"
                         className="text-sm text-muted-foreground"
                     >
-                        Enter up to {formatPrice(invoice.outstanding ?? '0')}.
+                        Enter up to {formatPrice(payableAmount)}.
                     </p>
                     <InputError message={errors.amount} />
                 </div>
