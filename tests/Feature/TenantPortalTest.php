@@ -41,6 +41,7 @@ test('tenant sees their portal dashboard', function () {
             ->component('tenant-portal/dashboard')
             ->where('tenant.name', 'Budi')
             ->where('lease.id', $lease->id)
+            ->missing('leaseContext')
             ->has('rent.upcoming_invoices', 1)
             ->has('notifications', 1));
 });
@@ -125,7 +126,8 @@ test('tenant sees their current and previous stays', function () {
             ->where('currentLeases.0.id', $activeLease->id)
             ->where('currentLeases.0.rent_due_day', 5)
             ->has('previousLeases', 1)
-            ->where('previousLeases.0.id', $historicalLease->id));
+            ->where('previousLeases.0.id', $historicalLease->id)
+            ->missing('leaseContext'));
 });
 
 test('tenant sees only their invoices in billing', function () {
@@ -170,7 +172,8 @@ test('tenant sees only their invoices in billing', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('tenant-portal/payments/invoice')
-            ->where('invoice.id', $invoice->id));
+            ->where('invoice.id', $invoice->id)
+            ->missing('leaseContext'));
 
     $this->get(route('portal.billing.invoices.show', $otherInvoice))
         ->assertNotFound();
@@ -343,7 +346,8 @@ test('tenant can open only their own lease workspace', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('tenant-portal/lease/show')
-            ->where('lease.id', $lease->id));
+            ->where('lease.id', $lease->id)
+            ->missing('leaseContext'));
 
     $this->get(route('portal.lease.show', $otherLease))
         ->assertNotFound();

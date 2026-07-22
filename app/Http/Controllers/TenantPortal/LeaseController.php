@@ -14,7 +14,6 @@ class LeaseController extends TenantPortalController
     public function index(Request $request): Response
     {
         $tenant = $this->tenant($request);
-        $leaseContext = $this->leaseContext($request, $tenant);
 
         return Inertia::render('tenant-portal/lease/index', [
             'currentLeases' => $tenant->leases()
@@ -27,17 +26,12 @@ class LeaseController extends TenantPortalController
                 ->with('unit.property')
                 ->latest('start_date')
                 ->get(),
-            'leaseContext' => $this->leaseContextPayload(
-                $leaseContext['selectedLease'],
-                $leaseContext['leases'],
-            ),
         ]);
     }
 
     public function show(Request $request, Lease $lease): Response
     {
         $tenant = $this->tenant($request);
-        $leaseContext = $this->leaseContext($request, $tenant);
         $lease = $this->tenantLease($tenant, $lease);
 
         $lease->load([
@@ -48,7 +42,6 @@ class LeaseController extends TenantPortalController
 
         return Inertia::render('tenant-portal/lease/show', [
             'lease' => $lease,
-            'leaseContext' => $this->leaseContextPayload($lease, $leaseContext['leases']),
         ]);
     }
 

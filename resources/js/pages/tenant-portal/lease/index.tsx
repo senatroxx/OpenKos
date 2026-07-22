@@ -1,19 +1,15 @@
 import { Head, Link } from '@inertiajs/react';
-import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { show } from '@/routes/portal/lease';
-import { index } from '@/routes/portal/lease';
-import type { Lease, TenantLeaseContext as LeaseContext } from '@/types';
+import type { Lease } from '@/types';
 
 export default function LeaseIndex({
     currentLeases,
     previousLeases,
-    leaseContext,
 }: {
     currentLeases: Lease[];
     previousLeases: Lease[];
-    leaseContext: LeaseContext;
 }) {
     return (
         <>
@@ -26,13 +22,6 @@ export default function LeaseIndex({
                         Current and previous stays
                     </p>
                 </div>
-
-                <TenantLeaseContext
-                    leaseContext={leaseContext}
-                    hrefForLease={(leaseId) =>
-                        index({ query: { lease: leaseId } }).url
-                    }
-                />
 
                 <LeaseSection
                     title="Current stay"

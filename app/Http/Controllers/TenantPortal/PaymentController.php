@@ -149,18 +149,13 @@ class PaymentController extends TenantPortalController
     public function invoice(Request $request, Invoice $invoice): Response
     {
         $tenant = $this->tenant($request);
-        $leaseContext = $this->leaseContext($request, $tenant);
-        $lease = $tenant->leases()
-            ->with('unit.property')
-            ->whereKey($invoice->lease_id)
-            ->firstOrFail();
+        abort_unless($tenant->leases()->whereKey($invoice->lease_id)->exists(), 404);
 
         $invoice->load(['lineItems', 'payments']);
         $invoice->append(['outstanding', 'display_status']);
 
         return Inertia::render('tenant-portal/payments/invoice', [
             'invoice' => $invoice,
-            'leaseContext' => $this->leaseContextPayload($lease, $leaseContext['leases']),
         ]);
     }
 

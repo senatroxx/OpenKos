@@ -16,8 +16,11 @@ class DashboardController extends TenantPortalController
     public function __invoke(Request $request): Response
     {
         $tenant = $this->tenant($request);
-        $leaseContext = $this->leaseContext($request, $tenant);
-        $lease = $leaseContext['selectedLease'];
+        $lease = $tenant->leases()
+            ->active()
+            ->with('unit.property')
+            ->latest('start_date')
+            ->first();
 
         $invoices = $lease
             ? $lease->invoices()
@@ -56,7 +59,6 @@ class DashboardController extends TenantPortalController
                 'name' => $tenant->name,
             ],
             'lease' => $lease ? $this->dashboardLeasePayload($lease) : null,
-            'leaseContext' => $this->leaseContextPayload($lease, $leaseContext['leases']),
             'rent' => [
                 'status' => $this->rentStatus($lease, $invoices->first()),
                 'outstanding_balance' => $outstandingBalance,
