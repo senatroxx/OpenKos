@@ -165,7 +165,6 @@ export default function Payments({
                                             key={item.id}
                                             invoice={item}
                                             onPay={() => setInvoiceToPay(item)}
-                                            leaseId={leaseContext.selected?.id}
                                         />
                                     ))}
                                 </div>
@@ -203,7 +202,6 @@ export default function Payments({
                                         key={payment.id}
                                         payment={payment}
                                         showDetails
-                                        leaseId={leaseContext.selected?.id}
                                     />
                                 ))}
                             </div>
@@ -345,11 +343,9 @@ export default function Payments({
 function InvoiceActionItem({
     invoice,
     onPay,
-    leaseId,
 }: {
     invoice: Invoice;
     onPay: () => void;
-    leaseId?: number;
 }) {
     const status = invoice.display_status ?? invoice.status;
     const amount = formatPrice(
@@ -386,11 +382,7 @@ function InvoiceActionItem({
                         className="h-10 w-fit px-0 sm:h-8 sm:px-2"
                         asChild
                     >
-                        <Link
-                            href={showInvoice(invoice, {
-                                query: { lease: leaseId },
-                            })}
-                        >
+                        <Link href={showInvoice(invoice)}>
                             View details <ChevronRight className="sm:hidden" />
                         </Link>
                     </Button>
@@ -465,11 +457,9 @@ function SummaryItem({
 function PaymentRow({
     payment,
     showDetails = false,
-    leaseId,
 }: {
     payment: PortalPayment;
     showDetails?: boolean;
-    leaseId?: number;
 }) {
     return (
         <BillingQueueItem
@@ -500,11 +490,7 @@ function PaymentRow({
                         className="h-10 w-fit px-0 sm:h-8 sm:px-2"
                         asChild
                     >
-                        <Link
-                            href={showInvoice(payment.invoice, {
-                                query: { lease: leaseId },
-                            })}
-                        >
+                        <Link href={showInvoice(payment.invoice)}>
                             View details <ChevronRight className="sm:hidden" />
                         </Link>
                     </Button>

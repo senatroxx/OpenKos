@@ -1,11 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
-import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import { index, show } from '@/routes/portal/lease';
-import type { Lease, TenantLeaseContext as LeaseContext } from '@/types';
+import { index } from '@/routes/portal/lease';
+import type { Lease } from '@/types';
 
 function Detail({ label, value }: { label: string; value: string }) {
     return (
@@ -16,13 +15,7 @@ function Detail({ label, value }: { label: string; value: string }) {
     );
 }
 
-export default function LeaseWorkspace({
-    lease,
-    leaseContext,
-}: {
-    lease: Lease;
-    leaseContext: LeaseContext;
-}) {
+export default function LeaseWorkspace({ lease }: { lease: Lease }) {
     return (
         <div className="flex flex-1 flex-col gap-6 p-4">
             <Head title="Lease" />
@@ -33,10 +26,6 @@ export default function LeaseWorkspace({
                 <ChevronLeft className="size-3" />
                 Back to stays
             </Link>
-            <TenantLeaseContext
-                leaseContext={leaseContext}
-                hrefForLease={(leaseId) => show(leaseId).url}
-            />
             <div className="space-y-6">
                 <section>
                     <h2 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">

@@ -57,9 +57,7 @@ export default function InvoiceHistory({
                     {invoices.data.map((invoice) => (
                         <Link
                             key={invoice.id}
-                            href={showInvoice(invoice, {
-                                query: { lease: leaseContext.selected?.id },
-                            })}
+                            href={showInvoice(invoice)}
                             className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"
                         >
                             <div>

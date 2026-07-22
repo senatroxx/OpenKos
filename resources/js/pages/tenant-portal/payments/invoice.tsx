@@ -2,20 +2,13 @@ import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import SubmitPortalPaymentSheet from '@/components/features/payments/submit-portal-payment-sheet';
-import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { index } from '@/routes/portal/billing';
-import type { Invoice, TenantLeaseContext as LeaseContext } from '@/types';
+import type { Invoice } from '@/types';
 
-export default function InvoiceDetail({
-    invoice,
-    leaseContext,
-}: {
-    invoice: Invoice;
-    leaseContext: LeaseContext;
-}) {
+export default function InvoiceDetail({ invoice }: { invoice: Invoice }) {
     const [paymentOpen, setPaymentOpen] = useState(false);
     const isPayable = ['pending', 'partial'].includes(invoice.status);
 
@@ -24,19 +17,12 @@ export default function InvoiceDetail({
             <Head title={`Invoice ${invoice.reference ?? ''}`} />
 
             <Link
-                href={index({ query: { lease: leaseContext.selected?.id } })}
+                href={index()}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
                 Back to billing
             </Link>
-
-            <TenantLeaseContext
-                leaseContext={leaseContext}
-                hrefForLease={(leaseId) =>
-                    index({ query: { lease: leaseId } }).url
-                }
-            />
 
             <div className="space-y-6">
                 <div className="rounded-lg border p-6">
