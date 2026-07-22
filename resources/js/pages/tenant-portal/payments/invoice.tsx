@@ -113,7 +113,7 @@ export default function InvoiceDetail({
                         )}
                     </div>
 
-                    <aside className="order-first rounded-lg border p-5 lg:sticky lg:top-4 lg:order-none">
+                    <aside className="order-first rounded-lg border p-5 lg:sticky lg:top-16 lg:order-none">
                         <p className="text-sm text-muted-foreground">
                             Outstanding balance
                         </p>
