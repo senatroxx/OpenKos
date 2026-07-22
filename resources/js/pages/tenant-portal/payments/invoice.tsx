@@ -5,14 +5,12 @@ import SubmitPortalPaymentSheet from '@/components/features/payments/submit-port
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
-import { invoices } from '@/routes/portal/lease';
-import type { Invoice, Lease } from '@/types';
+import { index } from '@/routes/portal/billing';
+import type { Invoice } from '@/types';
 
 export default function InvoiceDetail({
-    lease,
     invoice,
 }: {
-    lease: Lease;
     invoice: Invoice;
 }) {
     const [paymentOpen, setPaymentOpen] = useState(false);
@@ -23,11 +21,11 @@ export default function InvoiceDetail({
             <Head title={`Invoice ${invoice.reference ?? ''}`} />
 
             <Link
-                href={invoices(lease)}
+                href={index()}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
-                Back to invoices
+                Back to billing
             </Link>
 
             <div className="space-y-6">

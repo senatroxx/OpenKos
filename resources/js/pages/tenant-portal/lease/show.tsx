@@ -1,8 +1,10 @@
+import { Head, Link } from '@inertiajs/react';
+import { ChevronLeft } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import type { Lease } from '@/types';
-import { TenantLeaseLayout } from './layout';
+import { index } from '@/routes/portal/lease';
 
 function Detail({ label, value }: { label: string; value: string }) {
     return (
@@ -15,7 +17,9 @@ function Detail({ label, value }: { label: string; value: string }) {
 
 export default function LeaseWorkspace({ lease }: { lease: Lease }) {
     return (
-        <TenantLeaseLayout lease={lease} activeTab="overview">
+        <div className="flex flex-1 flex-col gap-6 p-4">
+            <Head title="Lease" />
+            <Link href={index()} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ChevronLeft className="size-3" />Back to stays</Link>
             <div className="space-y-6">
                 <section>
                     <h2 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
@@ -60,7 +64,16 @@ export default function LeaseWorkspace({ lease }: { lease: Lease }) {
                         />
                     </div>
                 </section>
+
+                {lease.unit_histories && lease.unit_histories.length > 0 && (
+                    <section>
+                        <h2 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">Unit history</h2>
+                        <div className="divide-y rounded-lg border text-sm">
+                            {lease.unit_histories.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p>{entry.from_unit?.name ?? '—'} to {entry.to_unit?.name ?? '—'}</p><p className="text-muted-foreground">{entry.reason?.replaceAll('_', ' ') ?? 'Unit change'}</p></div><span className="text-muted-foreground">{formatDate(entry.effective_date)}</span></div>)}
+                        </div>
+                    </section>
+                )}
             </div>
-        </TenantLeaseLayout>
+        </div>
     );
 }

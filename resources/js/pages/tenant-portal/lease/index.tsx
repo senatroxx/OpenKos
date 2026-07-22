@@ -1,100 +1,15 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Eye, EllipsisVertical } from 'lucide-react';
-import type { TableColumn } from '@/components/data-table';
+import { Head, Link } from '@inertiajs/react';
 import { StatusBadge } from '@/components/shared/status-badge';
-import { WorkspaceTable } from '@/components/shared/workspace-table';
-import { Button } from '@/components/ui/button';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { formatDate, formatPrice } from '@/lib/formatters';
-import { index, show } from '@/routes/portal/lease';
-import type { Lease, PaginatedData, TableMeta } from '@/types';
-
-const columns: TableColumn<Lease>[] = [
-    {
-        key: 'reference',
-        label: 'Reference',
-        sortable: true,
-        className: 'font-mono text-xs',
-        render: (lease) => lease.reference ?? `#${lease.id}`,
-    },
-    {
-        key: '_unit',
-        label: 'Unit',
-        className: 'font-medium',
-        render: (lease) =>
-            lease.unit
-                ? `${lease.unit.name}${lease.unit.property ? ` - ${lease.unit.property.name}` : ''}`
-                : '—',
-    },
-    {
-        key: 'start_date',
-        label: 'Start',
-        sortable: true,
-        className: 'text-muted-foreground tabular-nums',
-        render: (lease) => formatDate(lease.start_date),
-    },
-    {
-        key: 'end_date',
-        label: 'End',
-        sortable: true,
-        className: 'text-muted-foreground tabular-nums',
-        render: (lease) => (lease.end_date ? formatDate(lease.end_date) : 'Ongoing'),
-    },
-    {
-        key: 'rent_amount',
-        label: 'Rent',
-        sortable: true,
-        className: 'tabular-nums',
-        render: (lease) => formatPrice(lease.rent_amount),
-    },
-    {
-        key: 'status',
-        label: 'Status',
-        sortable: true,
-        render: (lease) => <StatusBadge domain="lease" value={lease.status} />,
-    },
-        {
-            key: '_actions',
-            label: '',
-            render: (lease) => (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="size-8">
-                            <EllipsisVertical className="size-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                        <DropdownMenuItem asChild>
-                            <Link href={show(lease)}>
-                                <Eye className="size-4" />
-                                View details
-                            </Link>
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ),
-        },
-];
+import { show } from '@/routes/portal/lease';
+import type { Lease } from '@/types';
 
 export default function LeaseIndex({
-    leases,
-    sort = '-start_date',
-    search = '',
-    status = '',
-    per_page = 15,
-    table,
+    currentLeases,
+    previousLeases,
 }: {
-    leases: PaginatedData<Lease>;
-    sort?: string;
-    search?: string;
-    status?: string;
-    per_page?: number;
-    table: TableMeta;
+    currentLeases: Lease[];
+    previousLeases: Lease[];
 }) {
     return (
         <>
@@ -108,26 +23,33 @@ export default function LeaseIndex({
                     </p>
                 </div>
 
-                <WorkspaceTable
-                    url={index.url()}
-                    noun="leases"
-                    rows={leases}
-                    columns={columns}
-                    tableMeta={table}
-                    sort={sort}
-                    search={search}
-                    perPage={per_page}
-                    filterValues={{ status }}
-                    defaultSort="-start_date"
-                    searchPlaceholder="Search by reference..."
-                    emptyMessage="No leases found."
-                    onRowClick={(lease) => router.get(show.url(lease))}
-                />
+                <LeaseSection title="Current stay" leases={currentLeases} emptyMessage="You do not have an active lease." />
+                <LeaseSection title="Previous stays" leases={previousLeases} emptyMessage="No previous stays." />
             </div>
         </>
     );
 }
 
-LeaseIndex.layout = {
-    breadcrumbs: [{ title: 'Leases', href: index() }],
-};
+function LeaseSection({ title, leases, emptyMessage }: { title: string; leases: Lease[]; emptyMessage: string }) {
+    return (
+        <section className="space-y-3">
+            <h2 className="font-semibold">{title}</h2>
+            {leases.length === 0 ? <p className="rounded-lg border p-4 text-sm text-muted-foreground">{emptyMessage}</p> : (
+                <div className="space-y-3">
+                    {leases.map((lease) => (
+                        <Link key={lease.id} href={show(lease)} className="block rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p className="font-medium">{lease.unit?.name ?? 'Unit'}{lease.unit?.property ? ` · ${lease.unit.property.name}` : ''}</p>
+                                    <p className="text-sm text-muted-foreground">{formatDate(lease.start_date)} – {lease.end_date ? formatDate(lease.end_date) : 'Ongoing'}</p>
+                                </div>
+                                <StatusBadge domain="lease" value={lease.status} />
+                            </div>
+                            <p className="mt-3 text-sm tabular-nums">{lease.rent_amount ? `${formatPrice(lease.rent_amount)} ${lease.billing_label}` : '—'}</p>
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </section>
+    );
+}
