@@ -84,7 +84,7 @@ export default function PaymentHistory({
                                     {formatPrice(payment.amount)}
                                 </span>
                                 <StatusBadge
-                                    domain="payment"
+                                    domain="tenant_payment"
                                     value={payment.status}
                                 />
                             </div>

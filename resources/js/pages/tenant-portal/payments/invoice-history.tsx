@@ -76,7 +76,7 @@ export default function InvoiceHistory({
                                     {formatPrice(invoice.total)}
                                 </span>
                                 <StatusBadge
-                                    domain="invoice"
+                                    domain="tenant_invoice"
                                     value={
                                         invoice.display_status ?? invoice.status
                                     }
