@@ -1,12 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
+import InvoiceActionItem from '@/components/features/payments/invoice-action-item';
 import PortalHistoryPagination from '@/components/features/payments/portal-history-pagination';
 import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
-import { StatusBadge } from '@/components/shared/status-badge';
-import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { index as billingIndex } from '@/routes/portal/billing';
 import { invoices as invoiceHistory } from '@/routes/portal/billing/history';
-import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import type {
     Invoice,
     PaginatedData,
@@ -55,32 +53,11 @@ export default function InvoiceHistory({
             ) : (
                 <div className="divide-y rounded-lg border">
                     {invoices.data.map((invoice) => (
-                        <Link
+                        <InvoiceActionItem
                             key={invoice.id}
-                            href={showInvoice(invoice)}
-                            className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"
-                        >
-                            <div>
-                                <p className="font-medium">
-                                    {invoice.reference ??
-                                        formatPeriod(invoice.period_start)}
-                                </p>
-                                <p className="text-muted-foreground">
-                                    Due {formatDate(invoice.due_date)}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="tabular-nums">
-                                    {formatPrice(invoice.total)}
-                                </span>
-                                <StatusBadge
-                                    domain="tenant_invoice"
-                                    value={
-                                        invoice.display_status ?? invoice.status
-                                    }
-                                />
-                            </div>
-                        </Link>
+                            invoice={invoice}
+                            amount={invoice.total}
+                        />
                     ))}
                 </div>
             )}
