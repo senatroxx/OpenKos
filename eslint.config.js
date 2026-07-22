@@ -104,6 +104,7 @@ export default [
     },
     {
         ignores: [
+            '.agents/skills/**',
             'vendor',
             'node_modules',
             'public',

@@ -151,11 +151,16 @@ class PaymentController extends TenantPortalController
         $tenant = $this->tenant($request);
         abort_unless($tenant->leases()->whereKey($invoice->lease_id)->exists(), 404);
 
-        $invoice->load(['lineItems', 'payments']);
+        $invoice->load(['lease.unit.property', 'lineItems', 'payments']);
         $invoice->append(['outstanding', 'display_status']);
 
         return Inertia::render('tenant-portal/payments/invoice', [
             'invoice' => $invoice,
+            'lease' => [
+                'reference' => $invoice->lease->reference,
+                'unit_name' => $invoice->lease->unit?->name,
+                'property_name' => $invoice->lease->unit?->property?->name,
+            ],
         ]);
     }
 

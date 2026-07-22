@@ -38,7 +38,7 @@ export default function TenantPortalLayout({ children }: AppLayoutProps) {
 
     return (
         <div className="flex min-h-svh flex-col bg-background">
-            <header className="border-b">
+            <header>
                 <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center gap-4 px-4">
                     <Sheet
                         open={mobileNavigationOpen}
@@ -137,34 +137,33 @@ export default function TenantPortalLayout({ children }: AppLayoutProps) {
                         </DropdownMenu>
                     )}
                 </div>
-
-                <div className="hidden border-t md:block">
-                    <nav
-                        className="mx-auto flex min-h-12 w-full max-w-6xl items-center gap-5 px-4"
-                        aria-label="Tenant portal"
-                    >
-                        {navigationItems.map((item) => {
-                            const active = item.exact
-                                ? isCurrentUrl(item.href)
-                                : isCurrentOrParentUrl(item.href);
-
-                            return (
-                                <Link
-                                    key={item.title}
-                                    href={item.href}
-                                    className={cn(
-                                        'flex min-h-12 items-center border-b-2 border-transparent text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-                                        active &&
-                                            'border-primary text-foreground',
-                                    )}
-                                >
-                                    {item.title}
-                                </Link>
-                            );
-                        })}
-                    </nav>
-                </div>
             </header>
+
+            <div className="sticky top-0 z-20 hidden border-y bg-background/70 backdrop-blur md:block">
+                <nav
+                    className="mx-auto flex min-h-12 w-full max-w-6xl items-center gap-5 px-4"
+                    aria-label="Tenant portal"
+                >
+                    {navigationItems.map((item) => {
+                        const active = item.exact
+                            ? isCurrentUrl(item.href)
+                            : isCurrentOrParentUrl(item.href);
+
+                        return (
+                            <Link
+                                key={item.title}
+                                href={item.href}
+                                className={cn(
+                                    'flex min-h-12 items-center border-b-2 border-transparent text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
+                                    active && 'border-primary text-foreground',
+                                )}
+                            >
+                                {item.title}
+                            </Link>
+                        );
+                    })}
+                </nav>
+            </div>
 
             <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col">
                 {children}

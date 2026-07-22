@@ -2,6 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
+import InvoiceActionItem from '@/components/features/payments/invoice-action-item';
 import SubmitPortalPaymentSheet from '@/components/features/payments/submit-portal-payment-sheet';
 import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -124,7 +125,7 @@ export default function Payments({
             />
 
             <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-                <aside className="order-1 space-y-3 lg:sticky lg:top-6 lg:order-2 lg:self-start">
+                <aside className="order-1 space-y-3 lg:sticky lg:top-20 lg:order-2 lg:self-start">
                     <div>
                         <h2 className="text-lg font-semibold">
                             Account summary
@@ -231,40 +232,11 @@ export default function Payments({
                                 ) : (
                                     <div className="divide-y">
                                         {historicalInvoices.map((invoice) => (
-                                            <Link
+                                            <InvoiceActionItem
                                                 key={invoice.id}
-                                                href={showInvoice(invoice)}
-                                                className="flex flex-wrap items-center justify-between gap-3 p-4"
-                                            >
-                                                <div>
-                                                    <p className="font-medium">
-                                                        {invoice.reference ??
-                                                            formatPeriod(
-                                                                invoice.period_start,
-                                                            )}
-                                                    </p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        Due{' '}
-                                                        {formatDate(
-                                                            invoice.due_date,
-                                                        )}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="font-medium tabular-nums">
-                                                        {formatPrice(
-                                                            invoice.total,
-                                                        )}
-                                                    </span>
-                                                    <StatusBadge
-                                                        domain="invoice"
-                                                        value={
-                                                            invoice.display_status ??
-                                                            invoice.status
-                                                        }
-                                                    />
-                                                </div>
-                                            </Link>
+                                                invoice={invoice}
+                                                amount={invoice.total}
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -337,58 +309,6 @@ export default function Payments({
                 />
             )}
         </div>
-    );
-}
-
-function InvoiceActionItem({
-    invoice,
-    onPay,
-}: {
-    invoice: Invoice;
-    onPay: () => void;
-}) {
-    const status = invoice.display_status ?? invoice.status;
-    const amount = formatPrice(
-        invoice.payable_amount ?? invoice.outstanding ?? '0',
-    );
-
-    return (
-        <BillingQueueItem
-            title={`${formatPeriod(invoice.period_start)} Rent`}
-            statusDomain="tenant_invoice"
-            status={status}
-            amount={amount}
-            description={
-                <>
-                    Due {formatDate(invoice.due_date)}
-                    {invoice.reference && (
-                        <span className="hidden sm:inline">
-                            {' '}
-                            · Invoice {invoice.reference}
-                        </span>
-                    )}
-                </>
-            }
-            mobileDescription={
-                invoice.reference ? `Invoice ${invoice.reference}` : undefined
-            }
-            actions={
-                <>
-                    <Button className="w-full sm:h-8 sm:w-auto" onClick={onPay}>
-                        Pay invoice
-                    </Button>
-                    <Button
-                        variant="link"
-                        className="h-10 w-fit px-0 sm:h-8 sm:px-2"
-                        asChild
-                    >
-                        <Link href={showInvoice(invoice)}>
-                            View details <ChevronRight className="sm:hidden" />
-                        </Link>
-                    </Button>
-                </>
-            }
-        />
     );
 }
 
