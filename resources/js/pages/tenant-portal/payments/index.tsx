@@ -125,7 +125,7 @@ export default function Payments({
             />
 
             <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-                <aside className="order-1 space-y-3 lg:sticky lg:top-6 lg:order-2 lg:self-start">
+                <aside className="order-1 space-y-3 lg:sticky lg:top-18 lg:order-2 lg:self-start">
                     <div>
                         <h2 className="text-lg font-semibold">
                             Account summary
