@@ -173,6 +173,9 @@ test('tenant sees only their invoices in billing', function () {
         ->assertInertia(fn ($page) => $page
             ->component('tenant-portal/payments/invoice')
             ->where('invoice.id', $invoice->id)
+            ->where('lease.reference', $lease->reference)
+            ->where('lease.unit_name', $lease->unit->name)
+            ->where('lease.property_name', $lease->unit->property->name)
             ->missing('leaseContext'));
 
     $this->get(route('portal.billing.invoices.show', $otherInvoice))
