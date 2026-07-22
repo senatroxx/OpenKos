@@ -102,7 +102,7 @@ test('portal only exposes the authenticated tenants lease data', function () {
             ->where('rent.upcoming_invoices.0.lease_id', $lease->id));
 });
 
-test('tenant sees their active and historical leases', function () {
+test('tenant sees their current and previous stays', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $activeLease = Lease::factory()->create([
@@ -121,13 +121,14 @@ test('tenant sees their active and historical leases', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('tenant-portal/lease/index')
-            ->has('leases.data', 2)
-            ->where('leases.data.0.id', $activeLease->id)
-            ->where('leases.data.0.rent_due_day', 5)
-            ->where('leases.data.1.id', $historicalLease->id));
+            ->has('currentLeases', 1)
+            ->where('currentLeases.0.id', $activeLease->id)
+            ->where('currentLeases.0.rent_due_day', 5)
+            ->has('previousLeases', 1)
+            ->where('previousLeases.0.id', $historicalLease->id));
 });
 
-test('tenant sees only their lease invoices', function () {
+test('tenant sees only their invoices in billing', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
@@ -149,23 +150,25 @@ test('tenant sees only their lease invoices', function () {
     Payment::factory()->create(['invoice_id' => $otherInvoice->id]);
 
     $this->actingAs($user)
-        ->get(route('portal.lease.invoices', $lease))
+        ->get(route('portal.billing.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('tenant-portal/lease/invoices')
-            ->where('lease.id', $lease->id)
-            ->has('invoices.data', 1)
-            ->where('invoices.data.0.id', $invoice->id)
-            ->where('invoices.data.0.outstanding', '1000000.00'));
+            ->component('tenant-portal/payments/index')
+            ->has('invoiceHistory', 1)
+            ->where('invoiceHistory.0.id', $invoice->id)
+            ->where('invoiceHistory.0.outstanding', '1000000.00'));
 
-    $this->get(route('portal.lease.invoices.show', [$lease, $invoice]))
+    $this->get(route('portal.billing.invoices.show', $invoice))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('tenant-portal/lease/invoice')
+            ->component('tenant-portal/payments/invoice')
             ->where('invoice.id', $invoice->id));
+
+    $this->get(route('portal.billing.invoices.show', $otherInvoice))
+        ->assertNotFound();
 });
 
-test('tenant sees only their payable invoices on the payments page', function () {
+test('tenant sees only their billing data', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
@@ -185,18 +188,20 @@ test('tenant sees only their payable invoices on the payments page', function ()
     ]);
 
     $this->actingAs($user)
-        ->get(route('portal.payments.index'))
+        ->get(route('portal.billing.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('tenant-portal/payments/index')
-            ->has('leases', 1)
-            ->where('leases.0.id', $lease->id)
-            ->where('leases.0.unit.name', $lease->unit->name)
-            ->where('leases.0.invoices.0.id', $invoice->id)
+            ->has('outstandingInvoices', 1)
+            ->where('outstandingInvoices.0.id', $invoice->id)
+            ->has('invoiceHistory', 1)
+            ->where('invoiceHistory.0.id', $invoice->id)
             ->has('pendingPayments', 1)
             ->where('pendingPayments.0.id', $pendingPayment->id)
             ->has('paymentHistory', 1)
             ->where('paymentHistory.0.id', $historyPayment->id));
+
+    $this->get('/portal/payments')->assertNotFound();
 });
 
 test('tenant can open only their own lease workspace', function () {
@@ -230,7 +235,7 @@ test('tenant submits a pending invoice payment for verification', function () {
     ]);
 
     $this->actingAs($tenantUser)
-        ->post(route('portal.payments.store'), [
+        ->post(route('portal.billing.store'), [
             'invoice_id' => $invoice->id,
             'amount' => 1_500_000,
             'payment_method' => 'transfer',
@@ -251,7 +256,7 @@ test('tenant submits a pending invoice payment for verification', function () {
     Storage::disk('local')->assertExists($payment->proofs->sole()->path);
 
     $this->actingAs($tenantUser)
-        ->post(route('portal.payments.store'), [
+        ->post(route('portal.billing.store'), [
             'invoice_id' => $invoice->id,
             'amount' => 1,
             'payment_method' => 'transfer',
@@ -280,7 +285,7 @@ test('tenant cannot submit a payment for another tenants invoice', function () {
     $invoice = Invoice::factory()->create(['lease_id' => $lease->id]);
 
     $this->actingAs($tenantUser)
-        ->post(route('portal.payments.store'), [
+        ->post(route('portal.billing.store'), [
             'invoice_id' => $invoice->id,
             'amount' => 1_500_000,
             'payment_method' => 'transfer',
@@ -301,7 +306,7 @@ test('tenant cannot overpay or submit to a non-payable invoice', function () {
     ]);
 
     $this->actingAs($tenantUser)
-        ->post(route('portal.payments.store'), [
+        ->post(route('portal.billing.store'), [
             'invoice_id' => $invoice->id,
             'amount' => 1_500_001,
             'payment_method' => 'transfer',
@@ -314,7 +319,7 @@ test('tenant cannot overpay or submit to a non-payable invoice', function () {
         'status' => InvoiceStatus::Paid,
     ]);
 
-    $this->post(route('portal.payments.store'), [
+    $this->post(route('portal.billing.store'), [
         'invoice_id' => $invoice->id,
         'amount' => 1,
         'payment_method' => 'transfer',
@@ -322,7 +327,7 @@ test('tenant cannot overpay or submit to a non-payable invoice', function () {
     ])->assertSessionHasErrors('invoice_id');
 });
 
-test('tenant sees their lease unit transfer history', function () {
+test('tenant sees their lease unit transfer history on the reference page', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
@@ -336,13 +341,13 @@ test('tenant sees their lease unit transfer history', function () {
     ]);
 
     $this->actingAs($user)
-        ->get(route('portal.lease.history', $lease))
+        ->get(route('portal.lease.show', $lease))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('tenant-portal/lease/history')
-            ->has('history.data', 1)
-            ->where('history.data.0.id', $history->id)
-            ->where('history.data.0.reason', 'maintenance'));
+            ->component('tenant-portal/lease/show')
+            ->has('lease.unit_histories', 1)
+            ->where('lease.unit_histories.0.id', $history->id)
+            ->where('lease.unit_histories.0.reason', 'maintenance'));
 });
 
 test('user without tenant profile cannot access portal', function () {
@@ -351,11 +356,11 @@ test('user without tenant profile cannot access portal', function () {
         ->assertForbidden();
 });
 
-test('user without tenant profile cannot access portal invoices', function () {
-    $lease = Lease::factory()->create();
+test('user without tenant profile cannot access portal billing', function () {
+    $invoice = Invoice::factory()->create();
 
     $this->actingAs(User::factory()->create())
-        ->get(route('portal.lease.invoices', $lease))
+        ->get(route('portal.billing.invoices.show', $invoice))
         ->assertForbidden();
 });
 

@@ -1,14 +1,11 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import SubmitPortalPaymentSheet from '@/components/features/payments/submit-portal-payment-sheet';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import type { Invoice } from '@/types';
-
-type PaymentLease = {
-    invoices: Invoice[];
-};
 
 type PortalPayment = {
     id: number;
@@ -20,17 +17,17 @@ type PortalPayment = {
 };
 
 export default function Payments({
-    leases,
+    outstandingInvoices,
+    invoiceHistory,
     pendingPayments,
     paymentHistory,
 }: {
-    leases: PaymentLease[];
+    outstandingInvoices: Invoice[];
+    invoiceHistory: Invoice[];
     pendingPayments: PortalPayment[];
     paymentHistory: PortalPayment[];
 }) {
     const [invoiceToPay, setInvoiceToPay] = useState<Invoice | null>(null);
-    const outstandingInvoices = leases.flatMap((item) => item.invoices);
-
     return (
         <div className="flex flex-1 flex-col gap-6 p-4">
             <Head title="Billing" />
@@ -57,8 +54,9 @@ export default function Payments({
                 ) : (
                     <div className="divide-y rounded-lg border">
                         {outstandingInvoices.map((item) => (
-                            <div
+                            <Link
                                 key={item.id}
+                                href={showInvoice(item)}
                                 className="flex flex-wrap items-center justify-between gap-3 p-4"
                             >
                                 <div className="min-w-0">
@@ -81,8 +79,20 @@ export default function Payments({
                                 >
                                     Pay Invoice
                                 </Button>
-                            </div>
+                            </Link>
                         ))}
+                    </div>
+                )}
+            </section>
+
+            <section className="space-y-3">
+                <div>
+                    <h2 className="font-semibold">Invoice History</h2>
+                    <p className="text-sm text-muted-foreground">All invoices for your stays.</p>
+                </div>
+                {invoiceHistory.length === 0 ? <p className="rounded-lg border p-4 text-sm text-muted-foreground">No invoices generated yet.</p> : (
+                    <div className="divide-y rounded-lg border">
+                        {invoiceHistory.map((invoice) => <Link key={invoice.id} href={showInvoice(invoice)} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"><div><p className="font-medium">{invoice.reference ?? formatPeriod(invoice.period_start)}</p><p className="text-muted-foreground">Due {formatDate(invoice.due_date)}</p></div><div className="flex items-center gap-3"><span className="tabular-nums">{formatPrice(invoice.total)}</span><StatusBadge domain="invoice" value={invoice.display_status ?? invoice.status} /></div></Link>)}
                     </div>
                 )}
             </section>

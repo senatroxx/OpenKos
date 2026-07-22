@@ -16,7 +16,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PAYMENT_METHODS } from '@/lib/constants/billing';
 import { formatDate, formatPrice, todayISO } from '@/lib/formatters';
-import { store } from '@/routes/portal/payments';
+import { store } from '@/routes/portal/billing';
 import type { Invoice } from '@/types';
 
 export default function SubmitPortalPaymentForm({

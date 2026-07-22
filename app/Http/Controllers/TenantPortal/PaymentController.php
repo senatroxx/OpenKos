@@ -25,18 +25,24 @@ class PaymentController extends Controller
     {
         $tenant = $this->tenant($request);
 
-        $leases = $tenant->leases()
+        $outstandingInvoices = $tenant->leases()
             ->active()
             ->with([
                 'invoices' => fn ($query) => $query->payable()->orderBy('due_date'),
-                'unit.property',
             ])
             ->latest('start_date')
-            ->get();
-
-        $leases->each(fn (Lease $lease) => $lease->invoices->each->append('outstanding'));
+            ->get()
+            ->pluck('invoices')
+            ->flatten()
+            ->each->append(['outstanding', 'display_status']);
 
         $leaseIds = $tenant->leases()->select((new Lease)->qualifyColumn('id'));
+
+        $invoiceHistory = Invoice::query()
+            ->whereIn('lease_id', $leaseIds)
+            ->latest('period_start')
+            ->get()
+            ->each->append(['outstanding', 'display_status']);
 
         $paymentQuery = Payment::query()
             ->whereHas('invoice', fn (Builder $query) => $query->whereIn(
@@ -46,7 +52,8 @@ class PaymentController extends Controller
             ->with('invoice.lease.unit.property');
 
         return Inertia::render('tenant-portal/payments/index', [
-            'leases' => $leases,
+            'outstandingInvoices' => $outstandingInvoices,
+            'invoiceHistory' => $invoiceHistory,
             'pendingPayments' => (clone $paymentQuery)
                 ->where('status', PaymentStatus::Pending)
                 ->latest('payment_date')
@@ -58,6 +65,20 @@ class PaymentController extends Controller
                 ->latest('id')
                 ->limit(10)
                 ->get(),
+        ]);
+    }
+
+    public function invoice(Request $request, Invoice $invoice): Response
+    {
+        $tenant = $this->tenant($request);
+
+        abort_unless($tenant->leases()->whereKey($invoice->lease_id)->exists(), 404);
+
+        $invoice->load(['lineItems', 'payments']);
+        $invoice->append(['outstanding', 'display_status']);
+
+        return Inertia::render('tenant-portal/payments/invoice', [
+            'invoice' => $invoice,
         ]);
     }
 
