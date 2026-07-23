@@ -23,6 +23,14 @@ export function canSee(permission: string | null, auth: Auth): boolean {
     );
 }
 
+export function canSeePlatformPage(page: PlatformPage, auth: Auth): boolean {
+    if (page.ownerOnly && auth.role !== 'owner') {
+        return false;
+    }
+
+    return canSee(page.permission, auth);
+}
+
 export function platformNavItems(
     items: PlatformNavigationItem[] | undefined,
     auth: Auth,
@@ -52,7 +60,7 @@ export function platformPageNavItems(
     pages: PlatformPage[],
     auth: Auth,
 ): NavItem[] {
-    const visible = pages.filter((page) => canSee(page.permission, auth));
+    const visible = pages.filter((page) => canSeePlatformPage(page, auth));
     const groups: Record<string, NavItem[]> = Object.create(null);
     const ungrouped: NavItem[] = [];
 

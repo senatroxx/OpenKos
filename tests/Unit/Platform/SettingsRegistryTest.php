@@ -15,6 +15,7 @@ it('registers pages keyed by page key', function () {
             'title' => 'Billing',
             'href' => '/settings/billing',
             'permission' => null,
+            'ownerOnly' => true,
             'group' => null,
         ]]);
 });

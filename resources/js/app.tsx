@@ -38,11 +38,21 @@ const appName = resolveAppName();
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    layout: (name) => {
+    layout: (name, page) => {
+        const auth = page.props as {
+            auth?: {
+                tenant?: unknown;
+            };
+        };
+
         switch (true) {
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):
+                if (auth.auth?.tenant) {
+                    return [TenantPortalLayout, SettingsLayout];
+                }
+
                 return [AppLayout, SettingsLayout];
             case name.startsWith('tenant-portal/'):
                 return TenantPortalLayout;

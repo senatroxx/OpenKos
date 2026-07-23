@@ -29,13 +29,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('throttle:6,1')
         ->name('user-password.update');
 
-    Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');
-    Route::patch('settings/general', [GeneralController::class, 'update'])->name('settings.general.update');
-
-    Route::get('settings/reminders', [ReminderController::class, 'edit'])->name('settings.reminders.edit');
-    Route::patch('settings/reminders', [ReminderController::class, 'update'])->name('settings.reminders.update');
-
     Route::middleware('role:owner')->group(function () {
+        Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');
+        Route::patch('settings/general', [GeneralController::class, 'update'])->name('settings.general.update');
+
+        Route::get('settings/reminders', [ReminderController::class, 'edit'])->name('settings.reminders.edit');
+        Route::patch('settings/reminders', [ReminderController::class, 'update'])->name('settings.reminders.update');
+
         Route::post('settings/values', [SettingValuesController::class, 'upsert'])->name('settings.values.upsert');
         Route::get('settings/mail', [MailController::class, 'edit'])->name('settings.mail.edit');
         Route::patch('settings/mail', [MailController::class, 'update'])->name('settings.mail.update');
@@ -53,8 +53,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/property-types', [PropertyTypeController::class, 'store'])->name('settings.property-types.store');
         Route::patch('settings/property-types/{propertyType}', [PropertyTypeController::class, 'update'])->name('settings.property-types.update');
         Route::delete('settings/property-types/{propertyType}', [PropertyTypeController::class, 'destroy'])->name('settings.property-types.destroy');
-    });
 
-    // Catch-all for plugin-defined settings pages — must be last so explicit routes match first.
-    Route::get('settings/{page}', [SettingValuesController::class, 'edit'])->name('settings.dynamic.edit');
+        // Catch-all for plugin-defined settings pages — must be last so explicit routes match first.
+        Route::get('settings/{page}', [SettingValuesController::class, 'edit'])->name('settings.dynamic.edit');
+    });
 });

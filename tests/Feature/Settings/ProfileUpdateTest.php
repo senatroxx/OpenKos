@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Tenant;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('profile page is displayed', function () {
     $user = User::factory()->create();
@@ -10,6 +12,24 @@ test('profile page is displayed', function () {
         ->get(route('profile.edit'));
 
     $response->assertOk();
+});
+
+test('tenant profile page only shares account settings pages', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+
+    $this->actingAs($user)
+        ->get(route('profile.edit'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.tenant.id', $tenant->id)
+            ->where('auth.tenant.name', $tenant->name)
+            ->has('platform.settings', 2)
+            ->where('platform.settings.0.key', 'profile')
+            ->where('platform.settings.0.ownerOnly', false)
+            ->where('platform.settings.1.key', 'security')
+            ->where('platform.settings.1.ownerOnly', false)
+            ->missing('platform.settings.2'));
 });
 
 test('profile information can be updated', function () {

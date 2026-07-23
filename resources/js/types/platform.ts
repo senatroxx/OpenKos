@@ -21,6 +21,7 @@ export type PlatformPage = {
     title: string;
     href: string;
     permission: string | null;
+    ownerOnly: boolean;
     group?: string | null;
 };
 
