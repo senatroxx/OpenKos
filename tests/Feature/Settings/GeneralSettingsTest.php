@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Models\Tenant;
 use App\Models\User;
 
 uses()->beforeEach(function () {
@@ -9,6 +10,32 @@ uses()->beforeEach(function () {
 });
 
 describe('General settings page', function () {
+    it('forbids tenant-linked users from viewing the page', function () {
+        $tenantUser = User::factory()->create();
+        Tenant::factory()->withUser($tenantUser)->create();
+
+        $this->actingAs($tenantUser)
+            ->get(route('settings.general.edit'))
+            ->assertForbidden();
+    });
+
+    it('forbids tenant-linked users from updating settings', function () {
+        $tenantUser = User::factory()->create();
+        Tenant::factory()->withUser($tenantUser)->create();
+
+        $this->actingAs($tenantUser)
+            ->patch(route('settings.general.update'), [
+                'site_name' => 'Tenant Attempt',
+                'country_code' => 'ID',
+                'locale' => 'id',
+                'currency' => 'IDR',
+                'timezone' => 'Asia/Jakarta',
+                'lease_id_prefix' => 'TEN',
+                'invoice_id_prefix' => 'INV',
+            ])
+            ->assertForbidden();
+    });
+
     it('renders the form with all settings', function () {
         $owner = User::factory()->owner()->create();
 

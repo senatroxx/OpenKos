@@ -30,6 +30,11 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $settingsPages = array_values(array_filter(
+            OpenKOS::settings()->toArray(),
+            fn (array $page) => $this->canSeeSettingsPage($request, $page),
+        ));
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -56,9 +61,29 @@ class HandleInertiaRequests extends Middleware
             'platform' => fn () => [
                 'navigation' => OpenKOS::navigation()->toArray(),
                 'workspaces' => OpenKOS::workspaces()->toArray(),
-                'settings' => OpenKOS::settings()->toArray(),
+                'settings' => $settingsPages,
                 'dashboard' => OpenKOS::dashboard()->toArray(),
             ],
         ];
+    }
+
+    /**
+     * @param  array{permission?: string|null, ownerOnly?: bool}  $page
+     */
+    private function canSeeSettingsPage(Request $request, array $page): bool
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if (($page['ownerOnly'] ?? true) && ! $user->isOwner()) {
+            return false;
+        }
+
+        $permission = $page['permission'] ?? null;
+
+        return $permission === null || $user->isOwner() || $user->can($permission);
     }
 }

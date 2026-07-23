@@ -11,6 +11,7 @@ final readonly class SettingsPage implements Arrayable
         public string $title,
         public string $href,
         public ?string $permission = null,
+        public bool $ownerOnly = true,
         public ?string $group = null,
         public ?string $routeName = null,
         public int $order = 500,
@@ -23,6 +24,7 @@ final readonly class SettingsPage implements Arrayable
             'title' => $this->title,
             'href' => $this->routeName ? route($this->routeName) : $this->href,
             'permission' => $this->permission,
+            'ownerOnly' => $this->ownerOnly,
             'group' => $this->group,
         ];
     }

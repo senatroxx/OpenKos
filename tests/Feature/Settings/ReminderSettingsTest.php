@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Models\Tenant;
 use App\Models\User;
 
 uses()->beforeEach(function () {
@@ -8,6 +9,29 @@ uses()->beforeEach(function () {
 });
 
 describe('Reminder settings page', function () {
+    it('forbids tenant-linked users from viewing the page', function () {
+        $tenantUser = User::factory()->create();
+        Tenant::factory()->withUser($tenantUser)->create();
+
+        $this->actingAs($tenantUser)
+            ->get(route('settings.reminders.edit'))
+            ->assertForbidden();
+    });
+
+    it('forbids tenant-linked users from updating settings', function () {
+        $tenantUser = User::factory()->create();
+        Tenant::factory()->withUser($tenantUser)->create();
+
+        $this->actingAs($tenantUser)
+            ->patch(route('settings.reminders.update'), [
+                'reminder_enabled' => true,
+                'reminder_days_before' => 3,
+                'reminder_overdue_intervals' => '1, 3, 7',
+                'reminder_channels' => ['log'],
+            ])
+            ->assertForbidden();
+    });
+
     it('renders the form', function () {
         $owner = User::factory()->owner()->create();
 
