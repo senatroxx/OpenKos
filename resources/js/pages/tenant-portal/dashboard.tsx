@@ -1,357 +1,387 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { ChevronRight, CreditCard, House, ReceiptText } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { dashboard } from '@/routes/portal';
-
-type Invoice = {
-    id: number;
-    lease_id: number;
-    reference: string | null;
-    period_start: string;
-    period_end: string;
-    due_date: string;
-    status: string;
-    display_status: string;
-    total: string;
-    amount_paid: string;
-    outstanding: string;
-};
+import { index as billingIndex } from '@/routes/portal/billing';
+import { payments as paymentHistory } from '@/routes/portal/billing/history';
+import { show as showInvoice } from '@/routes/portal/billing/invoices';
+import { show as showLease } from '@/routes/portal/lease';
 
 type Lease = {
     id: number;
-    reference: string | null;
     start_date: string;
     end_date: string | null;
-    rent_amount: string | null;
-    billing_label: string;
     status: string;
     unit: {
-        id: number;
         name: string;
-        status: string;
-        property: {
-            id: number;
-            name: string;
-            address: string | null;
-        } | null;
+        property: { name: string } | null;
     } | null;
 };
 
-type Notification = {
-    id: number;
-    type: string;
-    channel: string;
-    scheduled_for: string | null;
-    sent_at: string | null;
-    overdue_days: number | null;
-};
-
-type Payment = {
-    id: number;
-    invoice_id: number;
-    invoice_reference: string | null;
-    period_start: string | null;
+type PendingPayment = {
     amount: string;
     payment_date: string;
-    payment_method: string;
-    status: string;
+};
+
+type NextAction =
+    | { type: 'no_active_stay' }
+    | { type: 'no_payment_required' }
+    | { type: 'payment_verification'; pending_payment: PendingPayment }
+    | {
+          type: 'payment_required';
+          invoice: {
+              id: number;
+              due_date: string;
+              display_status: string;
+              amount: string;
+          };
+          pending_payment: PendingPayment | null;
+      };
+
+type AccountSummary = {
+    outstanding_balance: string;
+    payable_invoice_count: number;
+    pending_verification_count: number;
+    next_due_date: string | null;
+};
+
+type Activity = {
+    type:
+        | 'payment_submitted'
+        | 'payment_confirmed'
+        | 'payment_cancelled'
+        | 'invoice_issued'
+        | 'lease_started';
+    date: string;
+    amount: string | null;
+    reference: string | null;
 };
 
 type Props = {
-    tenant: { id: number; name: string };
     lease: Lease | null;
-    rent: {
-        status: string;
-        outstanding_balance: string;
-        upcoming_invoices: Invoice[];
-        recent_payments: Payment[];
-    };
-    notifications: Notification[];
+    nextAction: NextAction;
+    accountSummary: AccountSummary;
+    recentActivity: Activity[];
 };
 
 export default function Dashboard({
-    tenant,
     lease,
-    rent,
-    notifications,
+    nextAction,
+    accountSummary,
+    recentActivity,
 }: Props) {
     return (
         <>
             <Head title="Tenant Portal" />
 
-            <div className="flex flex-1 flex-col gap-6 p-4">
+            <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 p-4">
                 <div>
-                    <p className="text-sm text-muted-foreground">
-                        Tenant Portal
+                    <h1 className="text-xl font-semibold text-balance">Dashboard</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Overview of your stay and billing.
                     </p>
-                    <h1 className="text-2xl font-semibold">
-                        Hi, {tenant.name}
-                    </h1>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Lease</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
-                            {lease ? (
-                                <>
-                                    <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">
-                                            Reference
-                                        </span>
-                                        <span>{lease.reference ?? '—'}</span>
-                                    </div>
-                                    <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">
-                                            Period
-                                        </span>
-                                        <span>
-                                            {formatDate(lease.start_date)} –{' '}
-                                            {lease.end_date
-                                                ? formatDate(lease.end_date)
-                                                : 'ongoing'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">
-                                            Rent
-                                        </span>
-                                        <span>
-                                            {lease.rent_amount
-                                                ? formatPrice(lease.rent_amount)
-                                                : '—'}{' '}
-                                            {lease.billing_label}
-                                        </span>
-                                    </div>
-                                    <Badge variant="outline">
-                                        {lease.status}
-                                    </Badge>
-                                </>
-                            ) : (
-                                <p className="text-muted-foreground">
-                                    No active lease found.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Room</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-sm">
-                            {lease?.unit ? (
-                                <>
-                                    <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">
-                                            Unit
-                                        </span>
-                                        <span>{lease.unit.name}</span>
-                                    </div>
-                                    <div className="flex justify-between gap-4">
-                                        <span className="text-muted-foreground">
-                                            Property
-                                        </span>
-                                        <span>
-                                            {lease.unit.property?.name ?? '—'}
-                                        </span>
-                                    </div>
-                                    {lease.unit.property?.address && (
-                                        <p className="text-muted-foreground">
-                                            {lease.unit.property.address}
-                                        </p>
-                                    )}
-                                </>
-                            ) : (
-                                <p className="text-muted-foreground">
-                                    No room assigned.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Rent Status</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <StatusBadge domain="rent" value={rent.status} />
-                            <div className="flex items-center justify-between gap-4 text-sm">
-                                <span className="text-muted-foreground">
-                                    Outstanding balance
-                                </span>
-                                <span className="font-medium tabular-nums">
-                                    {formatPrice(rent.outstanding_balance)}
-                                </span>
-                            </div>
-                            {rent.upcoming_invoices[0] && (
-                                <p className="text-sm text-muted-foreground">
-                                    Next due{' '}
-                                    {formatDate(
-                                        rent.upcoming_invoices[0].due_date,
-                                    )}
-                                    :{' '}
-                                    {formatPrice(
-                                        rent.upcoming_invoices[0].outstanding,
-                                    )}
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Upcoming Payments</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {rent.upcoming_invoices.length > 0 ? (
-                                <div className="space-y-3">
-                                    {rent.upcoming_invoices.map((invoice) => (
-                                        <div
-                                            key={invoice.id}
-                                            className="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm"
-                                        >
-                                            <div>
-                                                <p className="font-medium">
-                                                    {invoice.reference ?? '—'}
-                                                </p>
-                                                <p className="text-muted-foreground">
-                                                    Due{' '}
-                                                    {formatDate(
-                                                        invoice.due_date,
-                                                    )}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-medium">
-                                                    {formatPrice(
-                                                        invoice.outstanding,
-                                                    )}
-                                                </p>
-                                                <p className="text-muted-foreground">
-                                                    {rentStatusLabel(
-                                                        invoice.display_status,
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">
-                                    No payable invoices.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Notifications</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {notifications.length > 0 ? (
-                                <div className="space-y-3">
-                                    {notifications.map((notification) => (
-                                        <div
-                                            key={notification.id}
-                                            className="rounded-lg border p-3 text-sm"
-                                        >
-                                            <p className="font-medium">
-                                                {notificationLabel(
-                                                    notification,
-                                                )}
-                                            </p>
-                                            <p className="text-muted-foreground">
-                                                {notification.channel}
-                                                {notification.sent_at
-                                                    ? ` · ${formatDate(notification.sent_at)}`
-                                                    : ''}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">
-                                    No notifications yet.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Payments</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {rent.recent_payments.length > 0 ? (
-                                <div className="space-y-3">
-                                    {rent.recent_payments.map((payment) => (
-                                        <div
-                                            key={payment.id}
-                                            className="flex items-center justify-between gap-4 rounded-lg border p-3 text-sm"
-                                        >
-                                            <div>
-                                                <p className="font-medium">
-                                                    {payment.invoice_reference ??
-                                                        'Payment'}
-                                                </p>
-                                                <p className="text-muted-foreground">
-                                                    {formatDate(
-                                                        payment.payment_date,
-                                                    )}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-medium tabular-nums">
-                                                    {formatPrice(
-                                                        payment.amount,
-                                                    )}
-                                                </p>
-                                                <StatusBadge
-                                                    domain="payment"
-                                                    value={payment.status}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">
-                                    No payments recorded yet.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
+                <div className="grid gap-4 lg:grid-cols-12">
+                    <CurrentPaymentCard
+                        nextAction={nextAction}
+                        className="lg:col-span-7"
+                    />
+                    <AccountSummaryCard
+                        summary={accountSummary}
+                        className="lg:col-span-5"
+                    />
+                    {lease && (
+                        <ActiveStayCard
+                            lease={lease}
+                            className="lg:order-4 lg:col-span-5"
+                        />
+                    )}
+                    <RecentActivityCard
+                        activity={recentActivity}
+                        className="lg:order-3 lg:col-span-7"
+                    />
                 </div>
             </div>
         </>
     );
 }
 
-function rentStatusLabel(status: string): string {
-    if (status === 'none') {
-        return 'No active lease';
+function CurrentPaymentCard({
+    nextAction,
+    className,
+}: {
+    nextAction: NextAction;
+    className: string;
+}) {
+    if (nextAction.type === 'payment_required') {
+        return (
+            <Card className={`gap-4 py-5 ${className}`}>
+                <CardHeader className="px-5 pb-0">
+                    <CardTitle>Payment required</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 px-5">
+                    <StatusBadge
+                        domain="tenant_invoice"
+                        value={nextAction.invoice.display_status}
+                    />
+                    <div>
+                        <p className="text-3xl font-semibold tracking-tight tabular-nums">
+                            {formatPrice(nextAction.invoice.amount)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            Due {formatDate(nextAction.invoice.due_date)}
+                        </p>
+                    </div>
+                    {nextAction.pending_payment && (
+                        <p className="text-sm text-muted-foreground">
+                            A payment of {formatPrice(nextAction.pending_payment.amount)}
+                            {' '}submitted {formatDate(nextAction.pending_payment.payment_date)}
+                            {' '}is awaiting verification.
+                        </p>
+                    )}
+                    <Button asChild size="sm">
+                        <Link href={showInvoice(nextAction.invoice.id)}>
+                            View invoice
+                            <ChevronRight />
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        );
     }
 
-    return status
-        .split('_')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+    if (nextAction.type === 'payment_verification') {
+        return (
+            <Card className={`gap-4 py-5 ${className}`}>
+                <CardHeader className="px-5 pb-0">
+                    <CardTitle>Payment awaiting verification</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 px-5">
+                    <StatusBadge domain="tenant_payment" value="pending" />
+                    <p className="text-sm text-muted-foreground">
+                        Your payment of {formatPrice(nextAction.pending_payment.amount)}
+                        {' '}submitted {formatDate(nextAction.pending_payment.payment_date)}
+                        {' '}is being reviewed. You do not need to do anything right now.
+                    </p>
+                    <Button asChild size="sm" variant="outline">
+                        <Link href={billingIndex()}>
+                            View billing
+                            <ChevronRight />
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className={`gap-4 py-5 ${className}`}>
+            <CardHeader className="px-5 pb-0">
+                <CardTitle>
+                    {nextAction.type === 'no_active_stay'
+                        ? 'No active lease'
+                        : 'All caught up'}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5">
+                <Badge variant="secondary">
+                    {nextAction.type === 'no_active_stay'
+                        ? 'No active stay'
+                        : 'No payment required'}
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                    {nextAction.type === 'no_active_stay'
+                        ? 'There is no active lease associated with your account.'
+                        : 'You do not need to make a payment right now.'}
+                </p>
+                {nextAction.type === 'no_payment_required' && (
+                    <Button asChild size="sm" variant="outline">
+                        <Link href={billingIndex()}>
+                            View billing
+                            <ChevronRight />
+                        </Link>
+                    </Button>
+                )}
+            </CardContent>
+        </Card>
+    );
 }
 
-function notificationLabel(notification: Notification): string {
-    const label = rentStatusLabel(notification.type);
+function AccountSummaryCard({
+    summary,
+    className,
+}: {
+    summary: AccountSummary;
+    className: string;
+}) {
+    return (
+        <Card className={`gap-4 py-5 ${className}`}>
+            <CardHeader className="flex-row items-center justify-between gap-3 px-5 pb-0">
+                <CardTitle>Account summary</CardTitle>
+                <Button asChild size="sm" variant="ghost">
+                    <Link href={billingIndex()}>
+                        View billing
+                        <ChevronRight />
+                    </Link>
+                </Button>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5 text-sm">
+                <div>
+                    <p className="text-sm text-muted-foreground">
+                        Outstanding balance
+                    </p>
+                    <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">
+                        {formatPrice(summary.outstanding_balance)}
+                    </p>
+                </div>
+                <div className="space-y-2 border-t pt-3">
+                    <SummaryItem
+                        label="Payable invoices"
+                        value={String(summary.payable_invoice_count)}
+                    />
+                    <SummaryItem
+                        label="Awaiting verification"
+                        value={String(summary.pending_verification_count)}
+                    />
+                    {summary.next_due_date && (
+                        <SummaryItem
+                            label="Next due date"
+                            value={formatDate(summary.next_due_date)}
+                        />
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
 
-    return notification.overdue_days
-        ? `${label} · ${notification.overdue_days} days overdue`
-        : label;
+function ActiveStayCard({ lease, className }: { lease: Lease; className: string }) {
+    return (
+        <Card className={`gap-4 py-5 ${className}`}>
+            <CardHeader className="px-5 pb-0">
+                <CardTitle>Active stay</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5">
+                <div className="flex items-start justify-between gap-3">
+                    <p className="font-medium">
+                        {lease.unit?.name ?? '—'} · {lease.unit?.property?.name ?? '—'}
+                    </p>
+                    <StatusBadge domain="lease" value={lease.status} />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                    {formatDate(lease.start_date)} —{' '}
+                    {lease.end_date ? formatDate(lease.end_date) : 'Ongoing'}
+                </p>
+                <Button asChild size="sm" variant="outline">
+                    <Link href={showLease(lease.id)}>
+                        View lease
+                        <ChevronRight />
+                    </Link>
+                </Button>
+            </CardContent>
+        </Card>
+    );
+}
+
+function RecentActivityCard({
+    activity,
+    className,
+}: {
+    activity: Activity[];
+    className: string;
+}) {
+    return (
+        <Card className={`gap-4 py-5 ${className}`}>
+            <CardHeader className="flex-row items-center justify-between gap-3 px-5 pb-0">
+                <CardTitle>Recent activity</CardTitle>
+                <Button asChild size="sm" variant="ghost">
+                    <Link href={paymentHistory()}>
+                        View history
+                        <ChevronRight />
+                    </Link>
+                </Button>
+            </CardHeader>
+            <CardContent className="px-5">
+                {activity.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                        No recent activity yet.
+                    </p>
+                ) : (
+                    <div className="divide-y">
+                        {activity.map((item, index) => (
+                            <div
+                                key={`${item.type}-${item.date}-${index}`}
+                                className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0"
+                            >
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                                        <ActivityIcon type={item.type} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium">
+                                            {activityLabel(item.type)}
+                                        </p>
+                                        {activitySupport(item) && (
+                                            <p className="truncate text-sm text-muted-foreground">
+                                                {activitySupport(item)}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <span className="shrink-0 text-sm text-muted-foreground">
+                                    {formatDate(item.date)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">{label}</span>
+            <span className="font-medium tabular-nums">{value}</span>
+        </div>
+    );
+}
+
+function activityLabel(type: Activity['type']): string {
+    return {
+        payment_submitted: 'Payment submitted',
+        payment_confirmed: 'Payment confirmed',
+        payment_cancelled: 'Payment cancelled',
+        invoice_issued: 'Invoice issued',
+        lease_started: 'Lease started',
+    }[type];
+}
+
+function ActivityIcon({ type }: { type: Activity['type'] }) {
+    const Icon =
+        type === 'invoice_issued'
+            ? ReceiptText
+            : type === 'lease_started'
+              ? House
+              : CreditCard;
+
+    return <Icon className="size-4" aria-hidden="true" />;
+}
+
+function activitySupport(item: Activity): string | null {
+    const support = [
+        item.amount && formatPrice(item.amount),
+        item.reference,
+    ].filter(Boolean);
+
+    return support.length > 0 ? support.join(' · ') : null;
 }
 
 Dashboard.layout = {

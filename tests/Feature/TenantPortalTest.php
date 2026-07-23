@@ -6,7 +6,6 @@ use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\Payment;
-use App\Models\ReminderLog;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
@@ -18,22 +17,20 @@ uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
 });
 
-test('tenant sees their portal dashboard', function () {
+test('tenant sees a payment-required dashboard action', function () {
     $user = User::factory()->create(['email' => 'tenant@example.com']);
     $tenant = Tenant::factory()->withUser($user)->create(['name' => 'Budi']);
     $lease = Lease::factory()->create([
         'primary_tenant_id' => $tenant->id,
         'rent_amount' => 1_500_000,
     ]);
-    Invoice::factory()->create([
+    $invoice = Invoice::factory()->create([
         'lease_id' => $lease->id,
         'due_date' => now()->addDays(3),
         'total' => 1_500_000,
         'amount_paid' => 0,
         'status' => InvoiceStatus::Pending,
     ]);
-    ReminderLog::factory()->create(['lease_id' => $lease->id]);
-
     $this->actingAs($user)
         ->get(route('portal.dashboard'))
         ->assertOk()
@@ -42,15 +39,106 @@ test('tenant sees their portal dashboard', function () {
             ->where('tenant.name', 'Budi')
             ->where('lease.id', $lease->id)
             ->missing('leaseContext')
-            ->has('rent.upcoming_invoices', 1)
-            ->has('notifications', 1));
+            ->where('nextAction.type', 'payment_required')
+            ->where('nextAction.invoice.id', $invoice->id)
+            ->where('nextAction.invoice.amount', '1500000')
+            ->where('accountSummary.outstanding_balance', '1500000')
+            ->where('accountSummary.payable_invoice_count', 1)
+            ->where('accountSummary.pending_verification_count', 0)
+            ->has('recentActivity', 2)
+            ->where('recentActivity.0.type', 'invoice_issued'));
+});
+
+test('tenant sees payment verification when no invoice needs another payment', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'total' => 1_500_000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+    Payment::factory()->pending()->create([
+        'invoice_id' => $invoice->id,
+        'amount' => 1_500_000,
+        'payment_date' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('portal.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('nextAction.type', 'payment_verification')
+            ->where('nextAction.pending_payment.amount', '1500000.00')
+            ->where('accountSummary.pending_verification_count', 1));
+});
+
+test('tenant sees payment required with verification as supporting context', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $verifiedInvoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'period_start' => now()->startOfMonth(),
+        'period_end' => now()->endOfMonth(),
+        'total' => 1_500_000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+    $actionableInvoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'period_start' => now()->addMonth()->startOfMonth(),
+        'period_end' => now()->addMonth()->endOfMonth(),
+        'total' => 1_500_000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+    Payment::factory()->pending()->create([
+        'invoice_id' => $verifiedInvoice->id,
+        'amount' => 1_500_000,
+        'payment_date' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('portal.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('nextAction.type', 'payment_required')
+            ->where('nextAction.invoice.id', $actionableInvoice->id)
+            ->where('nextAction.pending_payment.amount', '1500000.00'));
+});
+
+test('tenant sees no payment required without a payable invoice', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+
+    $this->actingAs($user)
+        ->get(route('portal.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('nextAction.type', 'no_payment_required'));
+});
+
+test('tenant sees no active stay without an active lease', function () {
+    $user = User::factory()->create();
+    Tenant::factory()->withUser($user)->create();
+
+    $this->actingAs($user)
+        ->get(route('portal.dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('nextAction.type', 'no_active_stay')
+            ->where('lease', null)
+            ->where('recentActivity', []));
 });
 
 test('portal displays overdue for past payable invoices', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
-    Invoice::factory()->create([
+    $invoice = Invoice::factory()->create([
         'lease_id' => $lease->id,
         'due_date' => now()->subDay(),
         'status' => InvoiceStatus::Pending,
@@ -60,16 +148,16 @@ test('portal displays overdue for past payable invoices', function () {
         ->get(route('portal.dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('rent.status', 'overdue')
-            ->where('rent.upcoming_invoices.0.status', 'pending')
-            ->where('rent.upcoming_invoices.0.display_status', 'overdue'));
+            ->where('nextAction.type', 'payment_required')
+            ->where('nextAction.invoice.id', $invoice->id)
+            ->where('nextAction.invoice.display_status', 'overdue'));
 });
 
 test('portal displays overdue for past partial invoices', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
-    Invoice::factory()->create([
+    $invoice = Invoice::factory()->create([
         'lease_id' => $lease->id,
         'due_date' => now()->subDay(),
         'status' => InvoiceStatus::Partial,
@@ -79,16 +167,16 @@ test('portal displays overdue for past partial invoices', function () {
         ->get(route('portal.dashboard'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->where('rent.status', 'overdue')
-            ->where('rent.upcoming_invoices.0.status', 'partial')
-            ->where('rent.upcoming_invoices.0.display_status', 'overdue'));
+            ->where('nextAction.type', 'payment_required')
+            ->where('nextAction.invoice.id', $invoice->id)
+            ->where('nextAction.invoice.display_status', 'overdue'));
 });
 
 test('portal only exposes the authenticated tenants lease data', function () {
     $user = User::factory()->create();
     $tenant = Tenant::factory()->withUser($user)->create();
     $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
-    Invoice::factory()->create(['lease_id' => $lease->id]);
+    $invoice = Invoice::factory()->create(['lease_id' => $lease->id]);
 
     $otherTenant = Tenant::factory()->withUser()->create();
     $otherLease = Lease::factory()->create(['primary_tenant_id' => $otherTenant->id]);
@@ -99,8 +187,8 @@ test('portal only exposes the authenticated tenants lease data', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('lease.id', $lease->id)
-            ->has('rent.upcoming_invoices', 1)
-            ->where('rent.upcoming_invoices.0.lease_id', $lease->id));
+            ->where('nextAction.type', 'payment_required')
+            ->where('nextAction.invoice.id', $invoice->id));
 });
 
 test('tenant sees their current and previous stays', function () {
@@ -511,7 +599,7 @@ test('user without tenant profile cannot access portal billing', function () {
         ->assertForbidden();
 });
 
-test('tenant without active lease does not show paid rent status', function () {
+test('tenant without active lease sees no active stay', function () {
     $user = User::factory()->create();
     Tenant::factory()->withUser($user)->create();
 
@@ -520,8 +608,7 @@ test('tenant without active lease does not show paid rent status', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('lease', null)
-            ->where('rent.status', 'none')
-            ->where('rent.upcoming_invoices', []));
+            ->where('nextAction.type', 'no_active_stay'));
 });
 
 test('tenant without dashboard permission cannot access owner dashboard', function () {
