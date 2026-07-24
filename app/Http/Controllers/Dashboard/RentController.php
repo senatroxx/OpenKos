@@ -7,6 +7,7 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\ReminderLog;
 use App\Tables\Column;
@@ -51,11 +52,17 @@ class RentController extends Controller
                 ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
                 ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
                 ->count(),
+            'pending_review' => Invoice::query()
+                ->whereHas('payments', fn (Builder $q) => $q->where('status', PaymentStatus::Pending->value))
+                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
+                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
+                ->count(),
         ];
 
         // --- Outstanding card ---
 
         $outstandingCount = $tabCounts['overdue'] + $tabCounts['due_today'] + $tabCounts['upcoming'];
+        $tabCounts['all'] = $outstandingCount;
 
         $outstandingAmount = (int) Invoice::query()
             ->payable()
@@ -84,13 +91,25 @@ class RentController extends Controller
 
         $isPaidTab = $urgency === 'paid';
         $isPartialTab = $urgency === 'partial';
+        $isPendingReviewTab = $urgency === 'pending_review';
 
         $queueQuery = Invoice::query()
-            ->with(['lease.primaryTenant', 'lease.tenants', 'lease.unit.property'])
+            ->with([
+                'lease.primaryTenant',
+                'lease.tenants',
+                'lease.unit.property',
+                'lineItems',
+                'payments' => fn ($q) => $q
+                    ->with(['confirmedBy:id,name', 'proofs'])
+                    ->latest('payment_date')
+                    ->latest('id'),
+            ])
             ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
             ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
 
-        if (! $isPaidTab && ! $isPartialTab) {
+        if ($isPendingReviewTab) {
+            $queueQuery->whereHas('payments', fn (Builder $q) => $q->where('status', PaymentStatus::Pending->value));
+        } elseif (! $isPaidTab && ! $isPartialTab) {
             $queueQuery->payable();
         } elseif ($isPartialTab) {
             $queueQuery->where('status', InvoiceStatus::Partial->value);
@@ -120,11 +139,12 @@ class RentController extends Controller
                     ['value' => 'overdue', 'label' => 'Overdue'],
                     ['value' => 'due_today', 'label' => 'Due Today'],
                     ['value' => 'upcoming', 'label' => 'Upcoming'],
+                    ['value' => 'pending_review', 'label' => 'Pending Review'],
                     ['value' => 'partial', 'label' => 'Partial'],
                     ['value' => 'paid', 'label' => 'Paid'],
                 ])
-                    ->query(function (Builder $q, string $value) use ($now, $isPaidTab, $isPartialTab): void {
-                        if ($isPaidTab || $isPartialTab) {
+                    ->query(function (Builder $q, string $value) use ($now, $isPaidTab, $isPartialTab, $isPendingReviewTab): void {
+                        if ($isPaidTab || $isPartialTab || $isPendingReviewTab) {
                             return;
                         }
 
@@ -234,9 +254,9 @@ class RentController extends Controller
             ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $propertyIds));
 
         match ($operator) {
-            '<' => $query->where('due_date', '<', $now->toDateString()),
+            '<' => $query->whereDate('due_date', '<', $now->toDateString()),
             '=' => $query->whereDate('due_date', '=', $now->toDateString()),
-            '>' => $query->where('due_date', '>', $now->toDateString()),
+            '>' => $query->whereDate('due_date', '>', $now->toDateString()),
             default => null,
         };
 
@@ -280,6 +300,44 @@ class RentController extends Controller
             'days_overdue' => $daysOverdue,
             'urgency' => $urgency,
             'status' => $invoice->status->value,
+            'pending_payment_review_count' => $invoice->payments
+                ->filter(fn (Payment $payment) => $payment->status === PaymentStatus::Pending)
+                ->count(),
+            'line_items' => $invoice->lineItems->map(fn ($item) => [
+                'id' => $item->id,
+                'invoice_id' => $item->invoice_id,
+                'type' => $item->type,
+                'description' => $item->description,
+                'amount' => (string) $item->amount,
+            ])->values()->all(),
+            'payments' => $invoice->payments->map(fn (Payment $payment) => [
+                'id' => $payment->id,
+                'invoice_id' => $payment->invoice_id,
+                'amount' => (string) $payment->amount,
+                'payment_date' => $payment->payment_date->toDateString(),
+                'payment_method' => $payment->payment_method,
+                'reference' => $payment->reference_number,
+                'notes' => $payment->notes,
+                'status' => $payment->status->value,
+                'confirmed_by' => $payment->confirmed_by,
+                'confirmed_by_user' => $payment->confirmedBy ? [
+                    'id' => $payment->confirmedBy->id,
+                    'name' => $payment->confirmedBy->name,
+                ] : null,
+                'recorded_by' => $payment->recorded_by,
+                'recorded_by_user' => null,
+                'verified_by' => $payment->verified_by,
+                'verified_by_user' => null,
+                'verified_at' => $payment->verified_at?->toDateTimeString(),
+                'proofs' => $payment->proofs->map(fn (PaymentProof $proof) => [
+                    'id' => $proof->id,
+                    'payment_id' => $proof->payment_id,
+                    'path' => $proof->path,
+                    'original_name' => $proof->original_name,
+                    'mime_type' => $proof->mime_type,
+                    'created_at' => $proof->created_at->toDateTimeString(),
+                ])->values()->all(),
+            ])->values()->all(),
         ];
     }
 }

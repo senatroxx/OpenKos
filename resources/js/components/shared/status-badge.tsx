@@ -45,7 +45,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
     payment: {
         confirmed: { label: 'Confirmed', className: 'bg-green-600 text-white' },
         pending: { label: 'Pending', className: 'bg-amber-500 text-white' },
-        cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
+        cancelled: { label: 'Rejected', className: 'bg-gray-400 text-white' },
         verified: { label: 'Verified', className: 'bg-green-600 text-white' },
     },
     tenant_payment: {
@@ -54,7 +54,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
             label: 'Awaiting verification',
             className: 'bg-amber-500 text-white',
         },
-        cancelled: { label: 'Cancelled', className: 'bg-gray-400 text-white' },
+        cancelled: { label: 'Rejected', className: 'bg-gray-400 text-white' },
         verified: { label: 'Verified', className: 'bg-green-600 text-white' },
     },
     maintenance: {

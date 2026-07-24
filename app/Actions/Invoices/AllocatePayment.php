@@ -3,7 +3,6 @@
 namespace App\Actions\Invoices;
 
 use App\Enums\InvoiceStatus;
-use App\Enums\PaymentStatus;
 use App\Events\Invoice\InvoiceFullyPaid;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -24,82 +23,34 @@ class AllocatePayment
             // Lock payment row so concurrent execute() calls serialize
             $payment = Payment::lockForUpdate()->findOrFail($payment->id);
 
-            // Track invoices previously affected so we can reset their
-            // amount_paid before re-computing from new allocations.
-            $previousIds = $payment->allocations()->pluck('invoice_id');
-            $priorStatuses = Invoice::whereIn('id', $previousIds)
+            $affectedIds = $payment->allocations()->pluck('invoice_id')
+                ->push($payment->invoice_id)
+                ->unique()
+                ->values();
+            $priorStatuses = Invoice::whereIn('id', $affectedIds)
                 ->pluck('status', 'id');
-            Invoice::whereIn('id', $previousIds)->update([
-                'amount_paid' => 0,
-                'status' => InvoiceStatus::Pending,
-            ]);
 
             $payment->allocations()->delete();
+            PaymentAllocation::create([
+                'payment_id' => $payment->id,
+                'invoice_id' => $payment->invoice_id,
+                'amount' => $payment->amount,
+            ]);
 
-            $remaining = (float) $payment->amount;
-            $affected = collect();
-
-            // ponytail: orderBy('id') ensures consistent lock ordering and
-            // reduces deadlock risk with concurrent payments on the same
-            // lease. The caller (RecordPayment) already holds a lock on the
-            // primary invoice, which creates an implicit lock outside this
-            // ordered set — a true fix would move all locking into this query.
-            $invoices = Invoice::where('lease_id', $payment->invoice->lease_id)
-                ->payable()
-                ->orderBy('due_date')
+            // A payment settles the invoice it was recorded against. Keep
+            // allocations aligned with invoice_id, then recompute any invoice
+            // this payment used to affect.
+            $invoices = Invoice::whereIn('id', $affectedIds)
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
 
             foreach ($invoices as $invoice) {
-                if ($remaining <= 0) {
-                    break;
-                }
+                $invoice->recalculateStatus();
 
-                $outstanding = (float) $invoice->total - (float) $invoice->amount_paid;
-                $allocated = min($remaining, $outstanding);
-
-                if ($allocated <= 0) {
-                    continue;
-                }
-
-                PaymentAllocation::create([
-                    'payment_id' => $payment->id,
-                    'invoice_id' => $invoice->id,
-                    'amount' => $allocated,
-                ]);
-
-                $remaining -= $allocated;
-                $affected->push($invoice);
-            }
-
-            // ponytail: if $remaining > 0 after allocating all payable
-            // invoices, the excess is unallocated overpayment. Credit
-            // balance/refund handling is a future enhancement.
-
-            // Update invoice balances from allocations (not from payments
-            // by invoice_id, which would miss cross-invoice allocations).
-            foreach ($affected as $invoice) {
-                $paid = (float) $invoice->allocations()
-                    ->whereHas('payment', fn ($q) => $q->where('status', PaymentStatus::Confirmed->value))
-                    ->sum('amount');
-
-                $status = match (true) {
-                    $paid >= (float) $invoice->total => InvoiceStatus::Paid,
-                    $paid > 0 => InvoiceStatus::Partial,
-                    default => InvoiceStatus::Pending,
-                };
-
-                $invoice->update([
-                    'amount_paid' => $paid,
-                    'status' => $status,
-                ]);
-
-                if ($status === InvoiceStatus::Paid
-                    && ($priorStatuses[$invoice->id] ?? null) !== InvoiceStatus::Paid
+                if ($invoice->status === InvoiceStatus::Paid
+                    && ($priorStatuses[$invoice->id] ?? null) !== InvoiceStatus::Paid->value
                 ) {
-                    // ponytail: dispatched via afterCommit so listeners
-                    // never see uncommitted data.
                     DB::afterCommit(fn () => InvoiceFullyPaid::dispatch($invoice));
                 }
             }

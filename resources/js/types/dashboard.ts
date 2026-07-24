@@ -1,3 +1,5 @@
+import type { InvoiceLineItem, Payment } from './models';
+
 export type PropertyStats = {
     id: number;
     name: string;
@@ -64,6 +66,9 @@ export type NeedsAttentionInvoice = {
     days_overdue: number | null;
     urgency: 'overdue' | 'due_today' | 'due_tomorrow' | 'due_soon' | 'upcoming';
     status: string;
+    pending_payment_review_count?: number;
+    line_items?: InvoiceLineItem[];
+    payments?: Payment[];
 };
 
 export type RecentPaymentEntry = {

@@ -2,9 +2,11 @@
 
 use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
+use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
@@ -301,6 +303,52 @@ test('dashboard shows leases ending soon count in attention', function () {
     Carbon::setTestNow();
 });
 
+test('dashboard shows pending payment verification count in attention', function () {
+    $user = User::factory()->owner()->create();
+
+    $lease = Lease::factory()->create();
+    $invoice = Invoice::factory()->create(['lease_id' => $lease->id]);
+    Payment::factory()->pending()->create(['invoice_id' => $invoice->id]);
+    Payment::factory()->create([
+        'invoice_id' => $invoice->id,
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    $otherLease = Lease::factory()->create();
+    $otherInvoice = Invoice::factory()->create(['lease_id' => $otherLease->id]);
+    Payment::factory()->pending()->create(['invoice_id' => $otherInvoice->id]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.pending_payment_verification', 2)
+        );
+});
+
+test('dashboard scopes pending payment verification count to accessible properties', function () {
+    $user = User::factory()->admin()->create();
+
+    $accessibleProperty = Property::factory()->create();
+    $user->properties()->sync([$accessibleProperty->id]);
+    $accessibleLease = Lease::factory()->create([
+        'unit_id' => Unit::factory()->for($accessibleProperty)->create()->id,
+    ]);
+    $accessibleInvoice = Invoice::factory()->create(['lease_id' => $accessibleLease->id]);
+    Payment::factory()->pending()->create(['invoice_id' => $accessibleInvoice->id]);
+
+    $hiddenLease = Lease::factory()->create();
+    $hiddenInvoice = Invoice::factory()->create(['lease_id' => $hiddenLease->id]);
+    Payment::factory()->pending()->create(['invoice_id' => $hiddenInvoice->id]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('attention.pending_payment_verification', 1)
+        );
+});
+
 test('dashboard includes recent activity from audit log', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-10'));
 
@@ -328,6 +376,7 @@ test('dashboard attention shows zeros when no actionable items exist', function 
             ->where('attention.due_today', 0)
             ->where('attention.open_maintenance', 0)
             ->where('attention.leases_ending_soon', 0)
+            ->where('attention.pending_payment_verification', 0)
         );
 });
 

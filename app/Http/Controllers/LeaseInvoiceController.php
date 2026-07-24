@@ -54,7 +54,7 @@ class LeaseInvoiceController extends Controller
 
         $this->authorize('view', $lease);
 
-        $invoice->load(['lineItems', 'payments']);
+        $invoice->load(['lineItems', 'payments.confirmedBy:id,name', 'payments.proofs']);
         $invoice->append(['outstanding', 'display_status']);
 
         return Inertia::render('leases/invoice-detail', [

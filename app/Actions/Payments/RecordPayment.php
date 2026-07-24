@@ -48,8 +48,8 @@ class RecordPayment
                 'status' => $forcePending || ($hasProof && ! $canAutoVerify) ? PaymentStatus::Pending : PaymentStatus::Confirmed,
                 'confirmed_by' => ! $forcePending && ($canAutoVerify || ! $hasProof) ? $user->id : null,
                 'recorded_by' => $user->id,
-                'verified_by' => $canAutoVerify ? $user->id : null,
-                'verified_at' => $canAutoVerify ? now() : null,
+                'verified_by' => ! $forcePending && ($canAutoVerify || ! $hasProof) ? $user->id : null,
+                'verified_at' => ! $forcePending && ($canAutoVerify || ! $hasProof) ? now() : null,
             ]);
 
             if ($hasProof) {

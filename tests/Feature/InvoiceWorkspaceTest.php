@@ -4,6 +4,8 @@ use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Models\InvoiceLineItem;
 use App\Models\Lease;
+use App\Models\Payment;
+use App\Models\PaymentProof;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -79,6 +81,11 @@ describe('invoice workspace show', function () {
             'description' => 'Monthly rent',
             'amount' => $invoice->total,
         ]);
+        $payment = Payment::factory()->create([
+            'invoice_id' => $invoice->id,
+            'confirmed_by' => $this->owner->id,
+        ]);
+        PaymentProof::factory()->create(['payment_id' => $payment->id]);
 
         $this->actingAs($this->owner)
             ->get(route('leases.workspace.invoices.show', [$lease, $invoice]))
@@ -87,7 +94,10 @@ describe('invoice workspace show', function () {
                 ->component('leases/invoice-detail')
                 ->where('lease.id', $lease->id)
                 ->where('invoice.id', $invoice->id)
-                ->has('invoice.line_items', 1));
+                ->has('invoice.line_items', 1)
+                ->has('invoice.payments', 1)
+                ->where('invoice.payments.0.confirmed_by.name', $this->owner->name)
+                ->has('invoice.payments.0.proofs', 1));
     });
 
     it('derives overdue display status on invoice detail', function () {

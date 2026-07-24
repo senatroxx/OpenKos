@@ -1,11 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import PortalHistoryPagination from '@/components/features/payments/portal-history-pagination';
 import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
+import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { index as billingIndex } from '@/routes/portal/billing';
 import { payments as paymentHistory } from '@/routes/portal/billing/history';
+import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import type {
     Invoice,
     PaginatedData,
@@ -45,7 +48,7 @@ export default function PaymentHistory({
             <div>
                 <h1 className="text-2xl font-semibold">Payment history</h1>
                 <p className="text-sm text-muted-foreground">
-                    Confirmed and cancelled payment submissions.
+                    Confirmed and cancelled payment records.
                 </p>
             </div>
 
@@ -58,7 +61,7 @@ export default function PaymentHistory({
 
             {payments.data.length === 0 ? (
                 <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                    No finalized payments yet.
+                    No payment records yet.
                 </p>
             ) : (
                 <div className="divide-y rounded-lg border">
@@ -69,14 +72,20 @@ export default function PaymentHistory({
                         >
                             <div className="min-w-0">
                                 <p className="truncate font-medium">
-                                    {payment.invoice.reference ??
-                                        formatPeriod(
-                                            payment.invoice.period_start,
-                                        )}
+                                    {(PAYMENT_METHOD_LABELS[
+                                        payment.payment_method
+                                    ] ?? payment.payment_method) + ' payment'}
                                 </p>
                                 <p className="text-muted-foreground">
-                                    {formatDate(payment.payment_date)} ·{' '}
-                                    {payment.payment_method}
+                                    Paid on {formatDate(payment.payment_date)}{' '}
+                                    · {formatPeriod(payment.invoice.period_start)}{' '}
+                                    rent
+                                    {payment.invoice.reference && (
+                                        <>
+                                            {' · '}
+                                            Invoice {payment.invoice.reference}
+                                        </>
+                                    )}
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
@@ -87,6 +96,12 @@ export default function PaymentHistory({
                                     domain="tenant_payment"
                                     value={payment.status}
                                 />
+                                <Button variant="link" className="h-8 px-2" asChild>
+                                    <Link href={showInvoice(payment.invoice)}>
+                                        View invoice
+                                        <ChevronRight className="size-4 sm:hidden" />
+                                    </Link>
+                                </Button>
                             </div>
                         </div>
                     ))}

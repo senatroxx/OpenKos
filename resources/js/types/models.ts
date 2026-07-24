@@ -158,6 +158,7 @@ export type Lease = {
     id: number;
     reference: string | null;
     payment_status?: string | null;
+    pending_payment_review_count?: number;
     start_date: string;
     end_date: string | null;
     rent_amount: string | null;

@@ -126,16 +126,26 @@ class PaymentController extends Controller
 
                 $this->allocatePayment->execute($lockedPayment);
             } else {
-                $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
+                $affectedInvoiceIds = $lockedPayment->allocations()
+                    ->pluck('invoice_id')
+                    ->push($lockedPayment->invoice_id)
+                    ->unique()
+                    ->values();
+
+                $lockedPayment->allocations()->delete();
 
                 $lockedPayment->update([
                     'status' => $newStatus,
-                    'confirmed_by' => $request->user()->id,
+                    'confirmed_by' => null,
                     'verified_by' => $request->user()->id,
                     'verified_at' => now(),
                 ]);
 
-                $invoice->recalculateStatus();
+                Invoice::whereIn('id', $affectedInvoiceIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->each
+                    ->recalculateStatus();
             }
         });
 

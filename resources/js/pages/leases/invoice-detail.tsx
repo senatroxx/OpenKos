@@ -1,8 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
+import { PaymentDetailSheet } from '@/components/features';
+import { DocumentPreview } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
-import type { Invoice, WorkspaceLease } from '@/types';
+import paymentRoutes from '@/routes/payments';
+import type { Invoice, Payment, PaymentProof, WorkspaceLease } from '@/types';
 
 export default function InvoiceDetail({
     lease,
@@ -11,6 +15,56 @@ export default function InvoiceDetail({
     lease: WorkspaceLease;
     invoice: Invoice;
 }) {
+    const { auth } = usePage<{ auth: { permissions: string[] } }>().props;
+    const [verifyingId, setVerifyingId] = useState<number | null>(null);
+    const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
+        null,
+    );
+    const [previewProof, setPreviewProof] = useState<{
+        src: string;
+        mimeType: string;
+        name: string;
+    } | null>(null);
+    const canVerify = auth.permissions.includes('payments.verify');
+    const selectedPayment = (
+        invoice.payments?.find((payment) => payment.id === selectedPaymentId)
+            ? {
+                  ...invoice.payments.find(
+                      (payment) => payment.id === selectedPaymentId,
+                  )!,
+                  invoice: {
+                      id: invoice.id,
+                      reference: invoice.reference,
+                      period_start: invoice.period_start,
+                      period_end: invoice.period_end,
+                      status: invoice.status,
+                  },
+              }
+            : null
+    ) as Payment | null;
+    const detailOpen = selectedPaymentId !== null && selectedPayment !== null;
+
+    function handlePreview(payment: Payment, proof: PaymentProof) {
+        setPreviewProof({
+            src: paymentRoutes.proof.url([payment, proof]),
+            mimeType: proof.mime_type,
+            name: proof.original_name,
+        });
+    }
+
+    function handleVerify(payment: Payment, action: 'confirm' | 'reject') {
+        setVerifyingId(payment.id);
+        router.post(
+            paymentRoutes.verify.url(payment),
+            { action },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onFinish: () => setVerifyingId(null),
+            },
+        );
+    }
+
     return (
         <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
             <Head title={`Invoice ${invoice.reference} — Lease #${lease.id}`} />
@@ -121,7 +175,10 @@ export default function InvoiceDetail({
                             {invoice.payments.map((payment) => (
                                 <div
                                     key={payment.id}
-                                    className="flex items-center justify-between px-4 py-3 text-sm"
+                                    className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm hover:bg-muted/30"
+                                    onClick={() => {
+                                        setSelectedPaymentId(payment.id);
+                                    }}
                                 >
                                     <div>
                                         <p className="font-medium tabular-nums">
@@ -146,6 +203,30 @@ export default function InvoiceDetail({
                     Activity timeline, reminders, and PDF download coming soon.
                 </div>
             </div>
+
+            <PaymentDetailSheet
+                payment={selectedPayment}
+                open={detailOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedPaymentId(null);
+                    }
+                }}
+                verifyingId={verifyingId}
+                canVerify={canVerify}
+                onPreview={handlePreview}
+                onVerify={handleVerify}
+            />
+
+            {previewProof && (
+                <DocumentPreview
+                    src={previewProof.src}
+                    mimeType={previewProof.mimeType}
+                    title={previewProof.name}
+                    subtitle="Payment Proof"
+                    onClose={() => setPreviewProof(null)}
+                />
+            )}
         </div>
     );
 }

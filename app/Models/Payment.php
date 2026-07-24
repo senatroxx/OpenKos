@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'confirmed_by',
     'recorded_by',
     'verified_by',
+    'verified_at',
 ])]
 class Payment extends Model
 {
