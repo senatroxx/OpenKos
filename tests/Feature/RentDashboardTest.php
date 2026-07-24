@@ -3,8 +3,10 @@
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use App\Models\Invoice;
+use App\Models\InvoiceLineItem;
 use App\Models\Lease;
 use App\Models\Payment;
+use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\ReminderLog;
 use App\Models\Tenant;
@@ -40,6 +42,62 @@ test('collection queue loads with data for owner', function () {
             ->has('tab_counts')
             ->has('recent_payments')
             ->has('recent_reminders')
+        );
+
+    Carbon::setTestNow();
+});
+
+test('collection queue includes invoice detail payload', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $tenant = Tenant::factory()->create(['name' => 'Rina Putri']);
+    $lease = Lease::factory()->create([
+        'primary_tenant_id' => $tenant->id,
+        'start_date' => now()->subMonths(2),
+        'status' => 'active',
+    ]);
+    $lease->tenants()->sync([$tenant->id => ['is_primary' => true]]);
+
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'reference' => 'INV-QUEUE-001',
+        'period_start' => '2026-07-01',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'total' => 500000,
+        'amount_paid' => 250000,
+        'status' => InvoiceStatus::Partial,
+    ]);
+
+    InvoiceLineItem::factory()->create([
+        'invoice_id' => $invoice->id,
+        'description' => 'Monthly Rent',
+        'amount' => 500000,
+    ]);
+
+    $payment = Payment::factory()->create([
+        'invoice_id' => $invoice->id,
+        'amount' => 250000,
+        'payment_date' => '2026-07-08',
+        'payment_method' => 'transfer',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    PaymentProof::factory()->create([
+        'payment_id' => $payment->id,
+        'original_name' => 'receipt.png',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.rent'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('entries.data.0.reference', 'INV-QUEUE-001')
+            ->where('entries.data.0.line_items.0.description', 'Monthly Rent')
+            ->where('entries.data.0.payments.0.amount', '250000.00')
+            ->where('entries.data.0.payments.0.proofs.0.original_name', 'receipt.png')
         );
 
     Carbon::setTestNow();
@@ -119,11 +177,21 @@ test('collection queue tab counts are correct', function () {
         'status' => InvoiceStatus::Paid,
     ]);
 
+    Payment::factory()->create([
+        'invoice_id' => $lease1->invoices()->first()->id,
+        'amount' => 100000,
+        'payment_date' => '2026-07-09',
+        'payment_method' => 'transfer',
+        'status' => PaymentStatus::Pending,
+    ]);
+
     $this->actingAs($user)
         ->get(route('dashboard.rent'))
         ->assertInertia(fn ($page) => $page
+            ->where('tab_counts.all', 4)
             ->where('tab_counts.overdue', 1)
             ->where('tab_counts.due_today', 1)
+            ->where('tab_counts.pending_review', 1)
             ->where('tab_counts.paid', 1)
         );
 
@@ -158,6 +226,52 @@ test('collection queue overdue tab is selected', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('entries.data', 1)
+            ->where('entries.total', 1)
+            ->where('tab_counts.all', 3)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('collection queue pending review tab lists invoices with pending payments', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $reviewLease = Lease::factory()->create(['status' => 'active', 'start_date' => now()->subMonths(2)]);
+    $reviewInvoice = Invoice::factory()->create([
+        'lease_id' => $reviewLease->id,
+        'due_date' => '2026-07-12',
+        'total' => 200000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $reviewInvoice->id,
+        'amount' => 200000,
+        'payment_date' => '2026-07-09',
+        'payment_method' => 'transfer',
+        'status' => PaymentStatus::Pending,
+    ]);
+
+    $otherLease = Lease::factory()->create(['status' => 'active', 'start_date' => now()->subMonths(2)]);
+    Invoice::factory()->create([
+        'lease_id' => $otherLease->id,
+        'due_date' => '2026-07-05',
+        'total' => 100000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.rent', ['urgency' => 'pending_review']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('entries.data', 1)
+            ->where('entries.data.0.id', $reviewInvoice->id)
+            ->where('entries.data.0.pending_payment_review_count', 1)
+            ->where('tab_counts.pending_review', 1)
+            ->where('tab_counts.all', 2)
         );
 
     Carbon::setTestNow();

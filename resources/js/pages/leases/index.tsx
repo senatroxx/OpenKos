@@ -8,6 +8,7 @@ import {
     Building2,
     Banknote,
     AlertTriangle,
+    Clock3,
 } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
@@ -52,6 +53,7 @@ type PageProps = {
         active_leases: number;
         collected_this_month: number;
         overdue_amount: number;
+        pending_payment_verification: number;
     };
 };
 
@@ -104,7 +106,20 @@ export default function Index({
             key: 'reference',
             label: 'Reference',
             className: 'font-mono text-xs',
-            render: (lease) => lease.reference ?? '\u2014',
+            render: (lease) => (
+                <div className="flex items-center gap-2">
+                    <span>{lease.reference ?? '\u2014'}</span>
+                    {lease.pending_payment_review_count ? (
+                        <span
+                            className="relative inline-flex size-2"
+                            title={`${lease.pending_payment_review_count} payment review pending`}
+                        >
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-600 opacity-75" />
+                            <span className="relative inline-flex size-2 rounded-full bg-violet-600" />
+                        </span>
+                    ) : null}
+                </div>
+            ),
         },
         {
             key: '_tenant',
@@ -278,7 +293,7 @@ export default function Index({
                 </div>
 
                 {stats && (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
                         <Card>
                             <CardContent className="flex items-center gap-4 px-6">
                                 <Building2 className="size-10 shrink-0 text-blue-600" />
@@ -320,6 +335,20 @@ export default function Index({
                                         {formatPrice(
                                             String(stats.overdue_amount),
                                         )}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardContent className="flex items-center gap-4 px-6">
+                                <Clock3 className="size-10 shrink-0 text-violet-600" />
+                                <div className="min-w-0">
+                                    <p className="text-sm text-muted-foreground">
+                                        Pending Review
+                                    </p>
+                                    <p className="truncate text-2xl font-bold tabular-nums">
+                                        {stats.pending_payment_verification}
                                     </p>
                                 </div>
                             </CardContent>

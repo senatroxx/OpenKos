@@ -13,10 +13,11 @@ import {
     Square,
     TrendingUp,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { SearchInput } from '@/components/data-table/search-input';
+import InvoiceDetailSheet from '@/components/features/payments/invoice-detail-sheet';
 import QueuePaymentSheet from '@/components/features/payments/queue-payment-sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,9 +43,11 @@ import type {
 } from '@/types';
 
 type TabCounts = {
+    all: number;
     overdue: number;
     due_today: number;
     upcoming: number;
+    pending_review: number;
     partial: number;
     paid: number;
 };
@@ -81,6 +84,7 @@ const TABS = [
     { key: 'overdue', label: 'Overdue' },
     { key: 'due_today', label: 'Due Today' },
     { key: 'upcoming', label: 'Upcoming' },
+    { key: 'pending_review', label: 'Pending Review' },
     { key: 'partial', label: 'Partial' },
     { key: 'paid', label: 'Paid' },
 ] as const;
@@ -120,6 +124,14 @@ return { text: 'Due tomorrow', color: 'text-amber-500' };
 }
 
     return { text: 'Upcoming', color: 'text-muted-foreground' };
+}
+
+function pendingReviewLabel(count: number | undefined): string {
+    if (!count || count < 1) {
+        return 'Pending review';
+    }
+
+    return `Pending review · ${count}`;
 }
 
 function timeAgo(dateStr: string | null): string | null {
@@ -202,10 +214,30 @@ export default function CollectionQueue({
 
     const [paymentSheetInvoice, setPaymentSheetInvoice] =
         useState<NeedsAttentionInvoice | null>(null);
+    const [detailInvoice, setDetailInvoice] =
+        useState<NeedsAttentionInvoice | null>(null);
+    const [queuedPaymentInvoice, setQueuedPaymentInvoice] =
+        useState<NeedsAttentionInvoice | null>(null);
 
     const openPaymentSheet = (entry: NeedsAttentionInvoice) => {
         setPaymentSheetInvoice(entry);
     };
+
+    const openInvoiceDetail = (entry: NeedsAttentionInvoice) => {
+        setDetailInvoice(entry);
+    };
+
+    const handleRecordPaymentFromDetail = (entry: NeedsAttentionInvoice) => {
+        setQueuedPaymentInvoice(entry);
+        setDetailInvoice(null);
+    };
+
+    useEffect(() => {
+        if (detailInvoice === null && queuedPaymentInvoice !== null) {
+            setPaymentSheetInvoice(queuedPaymentInvoice);
+            setQueuedPaymentInvoice(null);
+        }
+    }, [detailInvoice, queuedPaymentInvoice]);
 
     const applyTab = (tab: string) => {
         router.get(
@@ -290,6 +322,14 @@ export default function CollectionQueue({
             key: 'urgency',
             label: 'Status',
             render: (entry) => {
+                if (currentUrgency === 'pending_review') {
+                    return (
+                        <span className="text-sm text-violet-600">
+                            {pendingReviewLabel(entry.pending_payment_review_count)}
+                        </span>
+                    );
+                }
+
                 const { text, color } = urgencyLabel(
                     entry.urgency,
                     entry.days_overdue,
@@ -366,9 +406,7 @@ export default function CollectionQueue({
     ];
 
     const onRowClick = (entry: NeedsAttentionInvoice) => {
-        if (entry.status !== 'paid') {
-            openPaymentSheet(entry);
-        }
+        openInvoiceDetail(entry);
     };
 
     const progressPercent =
@@ -384,7 +422,7 @@ export default function CollectionQueue({
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
                 {/* Header cards */}
                 <h1 className="text-lg font-semibold">Collection Queue</h1>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                     <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
                         <AlertTriangle className="size-8 shrink-0 text-red-500" />
                         <div className="min-w-0">
@@ -409,6 +447,15 @@ export default function CollectionQueue({
                             <p className="text-xs text-muted-foreground">Upcoming</p>
                             <p className="text-xl font-bold tabular-nums">
                                 {tabCounts.upcoming}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-lg border px-4 py-3">
+                        <Bell className="size-8 shrink-0 text-violet-600" />
+                        <div className="min-w-0">
+                            <p className="text-xs text-muted-foreground">Pending Review</p>
+                            <p className="text-xl font-bold tabular-nums">
+                                {tabCounts.pending_review}
                             </p>
                         </div>
                     </div>
@@ -510,7 +557,7 @@ export default function CollectionQueue({
                     {TABS.map((tab) => {
                         const count =
                             tab.key === ''
-                                ? data.total
+                                ? tabCounts.all
                                 : tabCounts[tab.key as keyof TabCounts] ?? 0;
                         const active =
                             currentUrgency === tab.key ||
@@ -655,6 +702,17 @@ export default function CollectionQueue({
                 </Collapsible>
                 )}
             </div>
+
+            <InvoiceDetailSheet
+                invoice={detailInvoice}
+                open={detailInvoice !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDetailInvoice(null);
+                    }
+                }}
+                onRecordPayment={handleRecordPaymentFromDetail}
+            />
 
             <QueuePaymentSheet
                 key={paymentSheetInvoice?.id}

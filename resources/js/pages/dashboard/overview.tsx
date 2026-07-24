@@ -10,6 +10,7 @@ interface Attention {
     due_today: number;
     open_maintenance: number;
     leases_ending_soon: number;
+    pending_payment_verification: number;
 }
 
 type MaintenanceProperty = { id: number; name: string };
@@ -52,7 +53,7 @@ export default function Overview({
                     <h2 className="mb-4 text-sm font-medium tracking-wider text-muted-foreground uppercase">
                         Today&apos;s Attention
                     </h2>
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                         <AttentionCard
                             label="Overdue Invoices"
                             count={attention.overdue_invoices.count}
@@ -77,6 +78,12 @@ export default function Overview({
                             count={attention.leases_ending_soon}
                             bgColor="bg-sky-50 dark:bg-sky-950/20"
                             textColor="text-sky-600 dark:text-sky-400"
+                        />
+                        <AttentionCard
+                            label="Pending Payment Review"
+                            count={attention.pending_payment_verification}
+                            bgColor="bg-violet-50 dark:bg-violet-950/20"
+                            textColor="text-violet-600 dark:text-violet-400"
                         />
                     </div>
                 </section>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Business\Dashboard\OverviewStatsCalculator;
 use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
@@ -12,6 +13,7 @@ use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
+use App\Models\Payment;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
@@ -88,6 +90,11 @@ class OverviewController extends Controller
             ->whereDate('end_date', '>', Carbon::today())
             ->count();
 
+        $pendingPaymentVerification = Payment::query()
+            ->where('status', PaymentStatus::Pending->value)
+            ->whereHas('invoice.lease.unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties))
+            ->count();
+
         $attention = [
             'overdue_invoices' => [
                 'count' => (int) ($overdueInvoices->count ?? 0),
@@ -96,6 +103,7 @@ class OverviewController extends Controller
             'due_today' => $dueTodayInvoices,
             'open_maintenance' => $openMaintenance,
             'leases_ending_soon' => $leasesEndingSoon,
+            'pending_payment_verification' => $pendingPaymentVerification,
         ];
 
         $recentActivity = AuditLog::query()

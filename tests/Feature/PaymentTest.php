@@ -6,6 +6,7 @@ use App\Enums\Permission;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
+use App\Models\PaymentAllocation;
 use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -244,6 +245,8 @@ describe('payment recording', function () {
 
         expect((int) $payment->recorded_by)->toBe((int) $user->id);
         expect((int) $payment->confirmed_by)->toBe((int) $user->id);
+        expect((int) $payment->verified_by)->toBe((int) $user->id);
+        expect($payment->verified_at)->not->toBeNull();
         expect($payment->status)->toBe(PaymentStatus::Confirmed);
     });
 });
@@ -319,6 +322,44 @@ describe('invoice settlement', function () {
 
         expect($payment2->fresh()->status)->toBe(PaymentStatus::Cancelled)
             ->and($payment2->invoice->fresh()->status)->toBe(InvoiceStatus::Pending);
+    });
+
+    it('clears stale allocations and confirmed_by when rejecting a pending payment', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $olderInvoice = createInvoiceFor($lease);
+        $invoice = createInvoiceFor($lease, [
+            'period_start' => now()->addMonth()->startOfMonth(),
+            'period_end' => now()->addMonth()->endOfMonth(),
+            'due_date' => now()->addMonth()->startOfMonth()->addDays(4),
+        ]);
+
+        $payment = Payment::factory()->pending()->create([
+            'invoice_id' => $invoice->id,
+            'amount' => 500_000,
+            'confirmed_by' => $user->id,
+        ]);
+
+        PaymentAllocation::create([
+            'payment_id' => $payment->id,
+            'invoice_id' => $olderInvoice->id,
+            'amount' => 500_000,
+        ]);
+
+        $olderInvoice->update([
+            'status' => InvoiceStatus::Partial,
+            'amount_paid' => 500_000,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('payments.verify', $payment), ['action' => 'reject']);
+
+        expect($payment->fresh()->status)->toBe(PaymentStatus::Cancelled)
+            ->and($payment->fresh()->confirmed_by)->toBeNull()
+            ->and((int) $payment->allocations()->count())->toBe(0)
+            ->and($olderInvoice->fresh()->status)->toBe(InvoiceStatus::Pending)
+            ->and((float) $olderInvoice->fresh()->amount_paid)->toBe(0.0)
+            ->and($invoice->fresh()->status)->toBe(InvoiceStatus::Pending);
     });
 });
 

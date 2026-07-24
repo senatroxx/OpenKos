@@ -228,6 +228,10 @@ class LeaseController extends Controller
                 ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
                 ->whereDate('due_date', '<', now()),
             ])
+            ->withCount([
+                'payments as pending_payment_review_count' => fn (Builder $q) => $q
+                    ->where('payments.status', PaymentStatus::Pending->value),
+            ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
                 'unit.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
@@ -274,6 +278,13 @@ class LeaseController extends Controller
             ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
             ->sum(DB::raw('total - amount_paid'));
 
+        $pendingPaymentVerification = Payment::query()
+            ->where('status', PaymentStatus::Pending->value)
+            ->whereHas('invoice.lease.unit.property', fn (Builder $q) => $request->user()->isOwner()
+                ? $q
+                : $q->whereHas('users', fn (Builder $q) => $q->whereKey($request->user()->id)))
+            ->count();
+
         return Inertia::render('leases/index', [
             ...$result,
             'availableUnits' => $availableUnits,
@@ -281,6 +292,7 @@ class LeaseController extends Controller
                 'active_leases' => $activeLeases,
                 'collected_this_month' => $collectedThisMonth,
                 'overdue_amount' => $overdueAmount,
+                'pending_payment_verification' => $pendingPaymentVerification,
             ],
         ]);
     }

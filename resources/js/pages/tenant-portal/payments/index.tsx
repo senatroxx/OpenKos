@@ -8,6 +8,7 @@ import TenantLeaseContext from '@/components/features/tenant-portal/lease-contex
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { index as billingIndex } from '@/routes/portal/billing';
 import {
@@ -376,32 +377,36 @@ function SummaryItem({
 
 function PaymentRow({
     payment,
-    showDetails = false,
+    showDetails = true,
 }: {
     payment: PortalPayment;
     showDetails?: boolean;
 }) {
+    const paymentMethodLabel =
+        PAYMENT_METHOD_LABELS[payment.payment_method] ?? payment.payment_method;
+
     return (
         <BillingQueueItem
-            title={`${formatPeriod(payment.invoice.period_start)} Rent`}
+            title={`${paymentMethodLabel} payment`}
             statusDomain="tenant_payment"
             status={payment.status}
             amount={formatPrice(payment.amount)}
             description={
                 <>
-                    Due {formatDate(payment.invoice.due_date)}
+                    Paid on {formatDate(payment.payment_date)} for{' '}
+                    {formatPeriod(payment.invoice.period_start)} rent
                     {payment.invoice.reference && (
                         <span className="hidden sm:inline">
-                            {' '}
-                            · Invoice {payment.invoice.reference}
+                            {' · '}
+                            Invoice {payment.invoice.reference}
                         </span>
                     )}
                 </>
             }
             mobileDescription={
                 payment.invoice.reference
-                    ? `Invoice ${payment.invoice.reference}`
-                    : undefined
+                    ? `${formatPeriod(payment.invoice.period_start)} rent · Invoice ${payment.invoice.reference}`
+                    : `${formatPeriod(payment.invoice.period_start)} rent`
             }
             actions={
                 showDetails ? (
@@ -411,7 +416,7 @@ function PaymentRow({
                         asChild
                     >
                         <Link href={showInvoice(payment.invoice)}>
-                            View details <ChevronRight className="sm:hidden" />
+                            View invoice <ChevronRight className="sm:hidden" />
                         </Link>
                     </Button>
                 ) : undefined
