@@ -188,7 +188,7 @@ test('collection queue tab counts are correct', function () {
     $this->actingAs($user)
         ->get(route('dashboard.rent'))
         ->assertInertia(fn ($page) => $page
-            ->where('tab_counts.all', 4)
+            ->where('tab_counts.all', 3)
             ->where('tab_counts.overdue', 1)
             ->where('tab_counts.due_today', 1)
             ->where('tab_counts.pending_review', 1)
@@ -227,7 +227,7 @@ test('collection queue overdue tab is selected', function () {
         ->assertInertia(fn ($page) => $page
             ->has('entries.data', 1)
             ->where('entries.total', 1)
-            ->where('tab_counts.all', 3)
+            ->where('tab_counts.all', 2)
         );
 
     Carbon::setTestNow();

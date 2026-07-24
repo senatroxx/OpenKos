@@ -377,7 +377,7 @@ function SummaryItem({
 
 function PaymentRow({
     payment,
-    showDetails = true,
+    showDetails = false,
 }: {
     payment: PortalPayment;
     showDetails?: boolean;

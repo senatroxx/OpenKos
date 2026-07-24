@@ -254,9 +254,9 @@ class RentController extends Controller
             ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $propertyIds));
 
         match ($operator) {
-            '<' => $query->where('due_date', '<', $now->toDateString()),
+            '<' => $query->whereDate('due_date', '<', $now->toDateString()),
             '=' => $query->whereDate('due_date', '=', $now->toDateString()),
-            '>' => $query->where('due_date', '>', $now->toDateString()),
+            '>' => $query->whereDate('due_date', '>', $now->toDateString()),
             default => null,
         };
 

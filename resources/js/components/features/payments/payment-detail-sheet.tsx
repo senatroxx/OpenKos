@@ -28,19 +28,8 @@ export default function PaymentDetailSheet({
     onPreview: (payment: Payment, proof: PaymentProof) => void;
     onVerify: (payment: Payment, action: 'confirm' | 'reject') => void;
 }) {
-    const paymentUsers = payment as (Payment & {
-        confirmed_by?: { id: number; name: string } | null;
-        confirmedBy?: { id: number; name: string } | null;
-    }) | null;
-    const verifiedDate =
-        payment?.status === 'confirmed'
-            ? (payment.verified_at ?? payment.payment_date)
-            : payment?.verified_at ?? null;
-    const confirmedByName =
-        payment?.confirmed_by_user?.name ??
-        paymentUsers?.confirmed_by?.name ??
-        paymentUsers?.confirmedBy?.name ??
-        '—';
+    const verifiedDate = payment?.verified_at ?? null;
+    const confirmedByName = payment?.confirmed_by_user?.name ?? '—';
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>

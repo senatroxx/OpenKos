@@ -23,8 +23,7 @@ class AllocatePayment
             // Lock payment row so concurrent execute() calls serialize
             $payment = Payment::lockForUpdate()->findOrFail($payment->id);
 
-            $previousIds = $payment->allocations()->pluck('invoice_id');
-            $affectedIds = $previousIds
+            $affectedIds = $payment->allocations()->pluck('invoice_id')
                 ->push($payment->invoice_id)
                 ->unique()
                 ->values();

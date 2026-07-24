@@ -43,22 +43,19 @@ export default function InvoiceDetailSheet({
         name: string;
     } | null>(null);
     const canVerify = auth.permissions.includes('payments.verify');
-    const selectedPayment = (
-        invoice?.payments?.find((payment) => payment.id === selectedPaymentId)
-            ? {
-                  ...invoice.payments.find(
-                      (payment) => payment.id === selectedPaymentId,
-                  )!,
-                  invoice: {
-                      id: invoice.id,
-                      reference: invoice.reference,
-                      period_start: invoice.period_start,
-                      period_end: invoice.period_end,
-                      status: invoice.status,
-                  },
-              }
-            : null
-    ) as Payment | null;
+    const selectedPaymentData = invoice?.payments?.find((payment) => payment.id === selectedPaymentId);
+    const selectedPayment = (selectedPaymentData && invoice
+        ? {
+              ...selectedPaymentData,
+              invoice: {
+                  id: invoice.id,
+                  reference: invoice.reference,
+                  period_start: invoice.period_start,
+                  period_end: invoice.period_end,
+                  status: invoice.status,
+              },
+          }
+        : null) as Payment | null;
     const paymentDetailOpen =
         selectedPaymentId !== null && selectedPayment !== null;
 
