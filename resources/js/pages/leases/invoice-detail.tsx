@@ -1,6 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PaymentDetailSheet } from '@/components/features';
 import { DocumentPreview } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -20,7 +20,6 @@ export default function InvoiceDetail({
     const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
         null,
     );
-    const [detailOpen, setDetailOpen] = useState(false);
     const [previewProof, setPreviewProof] = useState<{
         src: string;
         mimeType: string;
@@ -43,13 +42,7 @@ export default function InvoiceDetail({
               }
             : null
     ) as Payment | null;
-
-    useEffect(() => {
-        if (detailOpen && selectedPaymentId !== null && selectedPayment === null) {
-            setDetailOpen(false);
-            setSelectedPaymentId(null);
-        }
-    }, [detailOpen, selectedPayment, selectedPaymentId]);
+    const detailOpen = selectedPaymentId !== null && selectedPayment !== null;
 
     function handlePreview(payment: Payment, proof: PaymentProof) {
         setPreviewProof({
@@ -185,7 +178,6 @@ export default function InvoiceDetail({
                                     className="flex cursor-pointer items-center justify-between px-4 py-3 text-sm hover:bg-muted/30"
                                     onClick={() => {
                                         setSelectedPaymentId(payment.id);
-                                        setDetailOpen(true);
                                     }}
                                 >
                                     <div>
@@ -216,7 +208,6 @@ export default function InvoiceDetail({
                 payment={selectedPayment}
                 open={detailOpen}
                 onOpenChange={(open) => {
-                    setDetailOpen(open);
                     if (!open) {
                         setSelectedPaymentId(null);
                     }

@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { ArrowUpRight, Banknote } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DocumentPreview } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,6 @@ export default function InvoiceDetailSheet({
     const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
         null,
     );
-    const [paymentDetailOpen, setPaymentDetailOpen] = useState(false);
     const [previewProof, setPreviewProof] = useState<{
         src: string;
         mimeType: string;
@@ -60,17 +59,8 @@ export default function InvoiceDetailSheet({
               }
             : null
     ) as Payment | null;
-
-    useEffect(() => {
-        if (
-            paymentDetailOpen &&
-            selectedPaymentId !== null &&
-            selectedPayment === null
-        ) {
-            setPaymentDetailOpen(false);
-            setSelectedPaymentId(null);
-        }
-    }, [paymentDetailOpen, selectedPayment, selectedPaymentId]);
+    const paymentDetailOpen =
+        selectedPaymentId !== null && selectedPayment !== null;
 
     function handlePreview(payment: Payment, proof: PaymentProof) {
         setPreviewProof({
@@ -95,7 +85,10 @@ export default function InvoiceDetailSheet({
 
     return (
         <>
-            <Sheet open={open && !paymentDetailOpen} onOpenChange={onOpenChange}>
+            <Sheet
+                open={open && !paymentDetailOpen}
+                onOpenChange={onOpenChange}
+            >
                 <SheetContent className="sm:max-w-lg">
                     <SheetHeader>
                         <SheetTitle>
@@ -216,9 +209,6 @@ export default function InvoiceDetailSheet({
                                                         setSelectedPaymentId(
                                                             payment.id,
                                                         );
-                                                        setPaymentDetailOpen(
-                                                            true,
-                                                        );
                                                     }}
                                                 >
                                                     <div>
@@ -296,7 +286,6 @@ export default function InvoiceDetailSheet({
                 payment={selectedPayment}
                 open={paymentDetailOpen}
                 onOpenChange={(next) => {
-                    setPaymentDetailOpen(next);
                     if (!next) {
                         setSelectedPaymentId(null);
                     }

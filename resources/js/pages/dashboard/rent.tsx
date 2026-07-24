@@ -13,7 +13,7 @@ import {
     Square,
     TrendingUp,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { SearchInput } from '@/components/data-table/search-input';
@@ -216,8 +216,6 @@ export default function CollectionQueue({
         useState<NeedsAttentionInvoice | null>(null);
     const [detailInvoice, setDetailInvoice] =
         useState<NeedsAttentionInvoice | null>(null);
-    const [queuedPaymentInvoice, setQueuedPaymentInvoice] =
-        useState<NeedsAttentionInvoice | null>(null);
 
     const openPaymentSheet = (entry: NeedsAttentionInvoice) => {
         setPaymentSheetInvoice(entry);
@@ -228,16 +226,9 @@ export default function CollectionQueue({
     };
 
     const handleRecordPaymentFromDetail = (entry: NeedsAttentionInvoice) => {
-        setQueuedPaymentInvoice(entry);
         setDetailInvoice(null);
+        setPaymentSheetInvoice(entry);
     };
-
-    useEffect(() => {
-        if (detailInvoice === null && queuedPaymentInvoice !== null) {
-            setPaymentSheetInvoice(queuedPaymentInvoice);
-            setQueuedPaymentInvoice(null);
-        }
-    }, [detailInvoice, queuedPaymentInvoice]);
 
     const applyTab = (tab: string) => {
         router.get(

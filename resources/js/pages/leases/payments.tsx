@@ -1,6 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { Check, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { TableColumn } from '@/components/data-table';
 import { PaymentDetailSheet } from '@/components/features';
 import { DocumentPreview } from '@/components/shared';
@@ -45,7 +45,6 @@ export default function LeasePayments({
     const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(
         null,
     );
-    const [detailOpen, setDetailOpen] = useState(false);
     const [previewProof, setPreviewProof] = useState<{
         src: string;
         mimeType: string;
@@ -55,13 +54,7 @@ export default function LeasePayments({
     const selectedPayment =
         payments.data.find((payment) => payment.id === selectedPaymentId) ??
         null;
-
-    useEffect(() => {
-        if (detailOpen && selectedPaymentId !== null && selectedPayment === null) {
-            setDetailOpen(false);
-            setSelectedPaymentId(null);
-        }
-    }, [detailOpen, selectedPayment, selectedPaymentId]);
+    const detailOpen = selectedPaymentId !== null && selectedPayment !== null;
 
     function handlePreview(payment: Payment, proof: PaymentProof) {
         setPreviewProof({
@@ -86,7 +79,6 @@ export default function LeasePayments({
 
     function openDetail(payment: Payment) {
         setSelectedPaymentId(payment.id);
-        setDetailOpen(true);
     }
 
     const columns: TableColumn<Payment>[] = [
@@ -219,7 +211,6 @@ export default function LeasePayments({
                 payment={selectedPayment}
                 open={detailOpen}
                 onOpenChange={(open) => {
-                    setDetailOpen(open);
                     if (!open) {
                         setSelectedPaymentId(null);
                     }
