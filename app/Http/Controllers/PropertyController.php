@@ -96,7 +96,10 @@ class PropertyController extends Controller
 
     public function store(StorePropertyRequest $request): RedirectResponse
     {
-        $property = Property::create($request->validated());
+        DB::transaction(function () use ($request): void {
+            $property = Property::create($request->validated());
+            $property->users()->attach($request->user());
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property created.')]);
 

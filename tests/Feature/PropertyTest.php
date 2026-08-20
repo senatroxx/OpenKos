@@ -122,6 +122,35 @@ describe('CRUD', function () {
         expect($property->city->name)->toBe('Kota Jakarta Selatan');
     });
 
+    it('assigns a created property to a non-owner creator', function () {
+        $user = User::factory()->admin()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.store'), [
+                'name' => 'Kos Melati',
+            ])
+            ->assertRedirect();
+
+        $property = Property::firstOrFail();
+
+        $this->assertDatabaseHas('property_user', [
+            'user_id' => $user->id,
+            'property_id' => $property->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('properties.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/index')
+                ->has('properties.data', 1)
+                ->where('properties.data.0.id', $property->id));
+
+        $this->actingAs($user)
+            ->get(route('properties.show', $property))
+            ->assertOk();
+    });
+
     it('validates required fields on create', function () {
         $user = User::factory()->owner()->create();
 
