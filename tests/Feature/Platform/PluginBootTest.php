@@ -1,49 +1,10 @@
 <?php
 
 use OpenKOS\Platform\Facades\OpenKOS;
-use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\PlatformServiceProvider;
-use OpenKOS\Platform\Plugin\Plugin;
-use OpenKOS\Platform\Plugin\PluginManifest;
 use OpenKOS\Plugins\Example\ExamplePlugin;
-
-class OrderProbePluginA extends Plugin
-{
-    public static array $calls = [];
-
-    public function manifest(): PluginManifest
-    {
-        return new PluginManifest(id: 'test/a', name: 'A', version: '1.0.0');
-    }
-
-    public function register(OpenKOSManager $platform): void
-    {
-        static::$calls[] = 'register:a';
-    }
-
-    public function boot(OpenKOSManager $platform): void
-    {
-        static::$calls[] = 'boot:a';
-    }
-}
-
-class OrderProbePluginB extends Plugin
-{
-    public function manifest(): PluginManifest
-    {
-        return new PluginManifest(id: 'test/b', name: 'B', version: '1.0.0');
-    }
-
-    public function register(OpenKOSManager $platform): void
-    {
-        OrderProbePluginA::$calls[] = 'register:b';
-    }
-
-    public function boot(OpenKOSManager $platform): void
-    {
-        OrderProbePluginA::$calls[] = 'boot:b';
-    }
-}
+use Tests\Support\Fixtures\OrderProbePluginA;
+use Tests\Support\Fixtures\OrderProbePluginB;
 
 // ExamplePlugin is disabled by default, so enable it explicitly to prove the
 // registration path. Registries are singletons, so assert "contains".

@@ -3,10 +3,9 @@
 use App\Exceptions\WhatsAppDriverNotFoundException;
 use App\Services\WhatsAppManager;
 use OpenKOS\Core\Contracts\WhatsAppDriver;
-use OpenKOS\Core\Data\WhatsApp\DriverHealthResult;
-use OpenKOS\Core\Data\WhatsApp\WhatsAppMessage;
 use OpenKOS\Platform\Notification\NotificationDriverRegistration;
 use OpenKOS\Platform\Notification\NotificationRegistry;
+use Tests\Support\Fakes\TestWhatsAppDriver;
 
 beforeEach(function () {
     // Bundled drivers are registered by WhatsAppPlugin at boot from config;
@@ -70,44 +69,3 @@ it('getPairingQrCode delegates to resolved driver', function () {
 
     expect($result)->toBeNull();
 });
-
-class TestWhatsAppDriver implements WhatsAppDriver
-{
-    public static array $sentMessages = [];
-
-    public function __construct(private array $config = []) {}
-
-    public function send(WhatsAppMessage $message): void
-    {
-        self::$sentMessages[] = $message->phone;
-    }
-
-    public function supportsAttachments(): bool
-    {
-        return true;
-    }
-
-    public function health(): DriverHealthResult
-    {
-        return new DriverHealthResult(true);
-    }
-
-    public function supportsPairing(): bool
-    {
-        return false;
-    }
-
-    public function configurationSchema(): array
-    {
-        return [];
-    }
-
-    public function getPairingQrCode(): ?string
-    {
-        return null;
-    }
-
-    public function pair(): void {}
-
-    public function disconnect(): void {}
-}

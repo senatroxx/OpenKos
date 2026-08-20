@@ -3,6 +3,7 @@
 use App\Composer\PaymentGatewayRemovalGuard;
 use App\Models\Invoice;
 use App\Models\PaymentAttempt;
+use Tests\Support\Fixtures\PackageUninstallEvent;
 
 it('blocks package removal while an active payment attempt remains', function () {
     PaymentAttempt::factory()->for(Invoice::factory())->create([
@@ -45,34 +46,3 @@ it('ignores packages without payment gateway capabilities', function () {
     expect(fn () => PaymentGatewayRemovalGuard::beforePackageUninstall(new PackageUninstallEvent))
         ->not->toThrow(Throwable::class);
 });
-
-final class PackageUninstallEvent
-{
-    public function __construct(private readonly array $extra = []) {}
-
-    public function getOperation(): object
-    {
-        return new class($this->extra)
-        {
-            public function __construct(private readonly array $extra) {}
-
-            public function getPackage(): object
-            {
-                return new class($this->extra)
-                {
-                    public function __construct(private readonly array $extra) {}
-
-                    public function getName(): string
-                    {
-                        return 'vendor/payment-package';
-                    }
-
-                    public function getExtra(): array
-                    {
-                        return $this->extra;
-                    }
-                };
-            }
-        };
-    }
-}

@@ -3,43 +3,9 @@
 use App\Services\Platform\ComposerPluginDiscovery;
 use Composer\InstalledVersions;
 use OpenKOS\Core\Contracts\PluginDiscovery;
-use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\PlatformServiceProvider;
-use OpenKOS\Platform\Plugin\Plugin;
-use OpenKOS\Platform\Plugin\PluginManifest;
-
-class ComposerDiscoveryFixturePlugin extends Plugin
-{
-    public static int $registerCalls = 0;
-
-    public function manifest(): PluginManifest
-    {
-        return new PluginManifest(
-            id: 'fixture/composer-plugin',
-            name: 'Composer Fixture',
-            version: '1.0.0',
-        );
-    }
-
-    public function register(OpenKOSManager $platform): void
-    {
-        self::$registerCalls++;
-    }
-}
-
-class ComposerDiscoverySecondFixturePlugin extends Plugin
-{
-    public function manifest(): PluginManifest
-    {
-        return new PluginManifest(
-            id: 'fixture/composer-plugin-second',
-            name: 'Composer Second Fixture',
-            version: '1.0.0',
-        );
-    }
-
-    public function register(OpenKOSManager $platform): void {}
-}
+use Tests\Support\Fixtures\ComposerDiscoveryFixturePlugin;
+use Tests\Support\Fixtures\ComposerDiscoverySecondFixturePlugin;
 
 /**
  * @param  array<string, array<string, mixed>>  $packages
