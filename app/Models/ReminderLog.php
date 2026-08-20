@@ -10,6 +10,12 @@ class ReminderLog extends Model
 {
     use HasFactory;
 
+    public const NON_OVERDUE_DAYS = -1;
+
+    protected $attributes = [
+        'overdue_days' => self::NON_OVERDUE_DAYS,
+    ];
+
     protected $fillable = [
         'lease_id',
         'period_start',

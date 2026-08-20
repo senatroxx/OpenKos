@@ -20,7 +20,7 @@ class ReminderLogFactory extends Factory
             'period_start' => now()->startOfMonth()->toDateString(),
             'period_end' => now()->endOfMonth()->toDateString(),
             'reminder_type' => fake()->randomElement(['upcoming', 'due_today', 'overdue']),
-            'overdue_days' => null,
+            'overdue_days' => ReminderLog::NON_OVERDUE_DAYS,
             'notification_class' => 'App\Notifications\RentReminder',
             'channel' => 'whatsapp',
             'scheduled_for' => now()->toDateString(),

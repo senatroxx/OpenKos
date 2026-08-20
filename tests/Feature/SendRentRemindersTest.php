@@ -3,8 +3,10 @@
 use App\Actions\Invoices\GenerateInvoices;
 use App\Actions\Reminders\SendRentReminders;
 use App\Business\Reminders\PaymentReminderScheduler;
+use App\Data\Reminder\ReminderEvent;
 use App\Data\Reminder\ReminderSettings;
 use App\Enums\InvoiceStatus;
+use App\Enums\ReminderType;
 use App\Jobs\GenerateInvoicePdfArtifact;
 use App\Models\Invoice;
 use App\Models\Lease;
@@ -15,9 +17,16 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use App\Notifications\RentReminder;
+use App\Repositories\ReminderRepository;
 use App\Services\Invoices\InvoicePdfArtifact;
 use Carbon\Carbon;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 uses()->beforeEach(function () {
@@ -56,6 +65,19 @@ function createLeaseWithTenant(array $overrides = []): Lease
     app(GenerateInvoices::class)->execute($lease);
 
     return $lease;
+}
+
+function reminderEventFor(Lease $lease, ReminderType $type, ?int $overdueDays = null): ReminderEvent
+{
+    return new ReminderEvent(
+        lease: $lease,
+        type: $type,
+        periodStart: '2026-07-01',
+        periodEnd: '2026-07-31',
+        dueDate: '2026-07-01',
+        amount: 1_500_000,
+        overdueDays: $overdueDays,
+    );
 }
 
 describe('PaymentReminderScheduler', function () {
@@ -165,6 +187,96 @@ describe('PaymentReminderScheduler', function () {
         expect($queuedReminder->shouldSend($lease->primaryTenant, 'mail'))->toBeFalse();
 
         Carbon::setTestNow();
+    });
+});
+
+describe('ReminderRepository', function () {
+    it('records a new reminder with one insert attempt', function () {
+        $lease = createLeaseWithTenant();
+        $queries = [];
+
+        DB::listen(function (QueryExecuted $query) use (&$queries): void {
+            if (str_contains(strtolower($query->sql), 'reminder_logs')) {
+                $queries[] = $query->sql;
+            }
+        });
+
+        $log = app(ReminderRepository::class)->recordIfAbsent(
+            reminderEventFor($lease, ReminderType::Upcoming),
+        );
+
+        expect($log)->toBeInstanceOf(ReminderLog::class)
+            ->and($log?->overdue_days)->toBe(ReminderLog::NON_OVERDUE_DAYS)
+            ->and($queries)->toHaveCount(1)
+            ->and(strtolower($queries[0]))->toContain('insert');
+    });
+
+    it('ignores duplicate reminder keys', function (ReminderType $type, ?int $overdueDays) {
+        $lease = createLeaseWithTenant();
+        $repository = app(ReminderRepository::class);
+        $event = reminderEventFor($lease, $type, $overdueDays);
+
+        expect($repository->recordIfAbsent($event))->toBeInstanceOf(ReminderLog::class)
+            ->and($repository->recordIfAbsent($event))->toBeNull()
+            ->and(ReminderLog::count())->toBe(1);
+    })->with([
+        'upcoming' => [ReminderType::Upcoming, null],
+        'due today' => [ReminderType::DueToday, null],
+        'overdue' => [ReminderType::Overdue, 1],
+    ]);
+
+    it('keeps upcoming and due-today reminder keys distinct', function () {
+        $lease = createLeaseWithTenant();
+        $repository = app(ReminderRepository::class);
+
+        $upcoming = $repository->recordIfAbsent(
+            reminderEventFor($lease, ReminderType::Upcoming),
+        );
+        $dueToday = $repository->recordIfAbsent(
+            reminderEventFor($lease, ReminderType::DueToday),
+        );
+
+        expect($upcoming)->toBeInstanceOf(ReminderLog::class)
+            ->and($dueToday)->toBeInstanceOf(ReminderLog::class)
+            ->and(ReminderLog::count())->toBe(2);
+    });
+
+    it('preserves zero overdue days', function () {
+        $lease = createLeaseWithTenant();
+
+        $log = app(ReminderRepository::class)->recordIfAbsent(
+            reminderEventFor($lease, ReminderType::Overdue, 0),
+        );
+
+        expect($log?->overdue_days)->toBe(0);
+    });
+
+    it('rethrows foreign-key violations', function () {
+        $lease = createLeaseWithTenant();
+        $lease->id = PHP_INT_MAX;
+
+        expect(fn () => app(ReminderRepository::class)->recordIfAbsent(
+            reminderEventFor($lease, ReminderType::Upcoming),
+        ))->toThrow(QueryException::class);
+    });
+
+    it('rethrows unrelated unique constraint violations', function () {
+        Schema::table('reminder_logs', function (Blueprint $table): void {
+            $table->unique('channel', 'reminder_logs_channel_unique');
+        });
+
+        try {
+            ReminderLog::factory()->create(['channel' => 'whatsapp']);
+            $lease = createLeaseWithTenant();
+
+            expect(fn () => app(ReminderRepository::class)->recordIfAbsent(
+                reminderEventFor($lease, ReminderType::Upcoming),
+            ))->toThrow(UniqueConstraintViolationException::class);
+        } finally {
+            Schema::table('reminder_logs', function (Blueprint $table): void {
+                $table->dropUnique('reminder_logs_channel_unique');
+            });
+        }
     });
 });
 
