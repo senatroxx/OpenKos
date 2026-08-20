@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\SerializesDatesWithTimezone;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,7 +34,7 @@ use OpenKOS\Core\Enums\PaymentStatus;
 ])]
 class PaymentAttempt extends Model
 {
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, SerializesDatesWithTimezone;
 
     protected static function booted(): void
     {

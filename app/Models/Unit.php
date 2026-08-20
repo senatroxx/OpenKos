@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\UnitStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,7 +28,7 @@ use Illuminate\Support\Str;
 ])]
 class Unit extends Model
 {
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SerializesDatesWithTimezone, SoftDeletes;
 
     protected function casts(): array
     {

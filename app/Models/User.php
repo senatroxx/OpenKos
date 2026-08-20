@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\Role;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -23,7 +24,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable {
+    use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, SerializesDatesWithTimezone, TwoFactorAuthenticatable {
         HasRoles::hasRole as protected traitHasRole;
     }
 

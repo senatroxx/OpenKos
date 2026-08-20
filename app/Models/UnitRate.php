@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\BillingUnit;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class UnitRate extends Model
 {
-    use HasFactory;
+    use HasFactory, SerializesDatesWithTimezone;
 
     protected $table = 'unit_rates';
 
@@ -30,8 +31,8 @@ class UnitRate extends Model
             'billing_unit' => BillingUnit::class,
             'amount' => 'decimal:2',
             'is_active' => 'boolean',
-            'effective_from' => 'date',
-            'effective_until' => 'date',
+            'effective_from' => 'date:Y-m-d',
+            'effective_until' => 'date:Y-m-d',
         ];
     }
 
