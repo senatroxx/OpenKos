@@ -4,9 +4,10 @@ namespace App\Events\Lease;
 
 use App\Enums\LeaseStatus;
 use App\Models\Lease;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class LeaseStatusChanged
+class LeaseStatusChanged implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 

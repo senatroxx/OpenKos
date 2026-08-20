@@ -1,6 +1,9 @@
 <?php
 
+use App\Actions\Leases\MoveOutLease;
+use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\LeaseStatus;
+use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -8,6 +11,7 @@ use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -268,6 +272,51 @@ describe('move unit', function () {
         expect($newLease->deposit_amount)->toBe('500000.00');
     });
 
+    it('returns authoritative transition state from a move', function () {
+        $property = Property::factory()->create();
+        $targetUnit = Unit::factory()->withRate(1_200_000)->for($property)->create();
+        $sourceUnit = Unit::factory()->withRate(1_000_000)->for($property)->occupied()->create();
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $sourceUnit->id,
+            'status' => LeaseStatus::Active,
+        ]);
+
+        $result = app(MoveOutLease::class)->execute($lease, new MoveOutLeaseData(
+            terminationDate: now()->toDateString(),
+            endDate: now()->toDateString(),
+            reason: 'Moved to target unit',
+            moveToAnotherUnit: true,
+            targetUnitId: $targetUnit->id,
+        ));
+
+        expect($result->oldLeaseStatus)->toBe(LeaseStatus::Active)
+            ->and($result->oldSourceStatus)->toBe(UnitStatus::Occupied)
+            ->and($result->newSourceStatus)->toBe(UnitStatus::Available)
+            ->and($result->oldTargetStatus)->toBe(UnitStatus::Available)
+            ->and($result->newTargetStatus)->toBe(UnitStatus::Occupied);
+    });
+
+    it('rejects moving a lease to its current unit', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $unit->id,
+            'status' => LeaseStatus::Active,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.move', [$property, $unit, $lease]), [
+                'target_unit_id' => $unit->id,
+            ])
+            ->assertSessionHasErrors('target_unit_id');
+
+        expect($lease->fresh()->status)->toBe(LeaseStatus::Active);
+    });
+
     it('denies admin from accessing leases of a property they are not assigned to', function () {
         $admin = User::factory()->admin()->create();
         [$propertyA] = createPropertyWithUnit();
@@ -395,6 +444,42 @@ describe('move unit', function () {
                 'target_unit_id' => $unitB->id,
             ])
             ->assertStatus(422);
+    });
+
+    it('locks reverse-direction move units in ascending id order', function () {
+        $property = Property::factory()->create();
+        $targetUnit = Unit::factory()->withRate(1_200_000)->for($property)->create();
+        $sourceUnit = Unit::factory()->withRate(1_000_000)->for($property)->create();
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $sourceUnit->id,
+            'status' => LeaseStatus::Active,
+        ]);
+
+        DB::connection()->flushQueryLog();
+        DB::connection()->enableQueryLog();
+
+        app(MoveOutLease::class)->execute($lease, new MoveOutLeaseData(
+            terminationDate: now()->toDateString(),
+            endDate: now()->toDateString(),
+            reason: 'Moved to target unit',
+            moveToAnotherUnit: true,
+            targetUnitId: $targetUnit->id,
+        ));
+
+        $lockQueries = collect(DB::connection()->getQueryLog())
+            ->filter(fn (array $query): bool => str_contains($query['query'], 'from "units"') && str_contains($query['query'], 'order by "id" asc'));
+
+        expect($lockQueries)->not->toBeEmpty();
+
+        $lockQuery = $lockQueries->last();
+
+        if ($lockQuery['bindings'] !== []) {
+            expect(array_map('intval', $lockQuery['bindings']))->toBe([$targetUnit->id, $sourceUnit->id]);
+        } else {
+            expect($lockQuery['query'])->toContain(sprintf('in (%d, %d)', $targetUnit->id, $sourceUnit->id));
+        }
     });
 });
 

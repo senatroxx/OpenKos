@@ -4,6 +4,9 @@ use App\Enums\LeaseStatus;
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Enums\UnitStatus;
+use App\Events\Maintenance\MaintenanceTicketCreated;
+use App\Events\Unit\UnitStatusChanged;
+use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
@@ -11,6 +14,8 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role as SpatieRole;
 
@@ -221,6 +226,129 @@ it('moves tenant and blocks unit when move_tenant_to_unit_id provided', function
     expect($targetUnit->fresh()->status)->toBe(UnitStatus::Occupied);
     expect($targetUnit->leases()->where('status', LeaseStatus::Active->value)->count())->toBe(1);
     expect($lease->fresh()->unitHistories()->count())->toBe(1);
+});
+
+it('rolls back maintenance ticket and occupancy changes when a transfer fails', function () {
+    $owner = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $sourceUnit = Unit::factory()->for($property)->occupied()->create();
+    $targetUnit = Unit::factory()->for($property)->occupied()->create();
+    $sourceLease = Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'status' => LeaseStatus::Active,
+    ]);
+    Lease::factory()->create([
+        'unit_id' => $targetUnit->id,
+        'status' => LeaseStatus::Active,
+    ]);
+
+    Event::fake([MaintenanceTicketCreated::class, UnitStatusChanged::class]);
+
+    $this->actingAs($owner)
+        ->post(route('maintenance-tickets.store'), [
+            'property_id' => $property->id,
+            'unit_id' => $sourceUnit->id,
+            'title' => 'Broken ceiling',
+            'priority' => MaintenancePriority::Urgent->value,
+            'block_unit' => true,
+            'move_tenant_to_unit_id' => $targetUnit->id,
+        ])
+        ->assertUnprocessable();
+
+    expect(MaintenanceTicket::query()->count())->toBe(0)
+        ->and(LeaseUnitHistory::query()->count())->toBe(0)
+        ->and($sourceLease->fresh()->unit_id)->toBe($sourceUnit->id)
+        ->and($sourceUnit->fresh()->status)->toBe(UnitStatus::Occupied)
+        ->and($targetUnit->fresh()->status)->toBe(UnitStatus::Occupied);
+
+    Event::assertNotDispatched(MaintenanceTicketCreated::class);
+    Event::assertNotDispatched(UnitStatusChanged::class);
+});
+
+it('locks reverse-direction maintenance transfer units in ascending id order', function () {
+    $owner = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $targetUnit = Unit::factory()->for($property)->create();
+    $sourceUnit = Unit::factory()->for($property)->occupied()->create();
+    Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'status' => LeaseStatus::Active,
+    ]);
+
+    DB::connection()->flushQueryLog();
+    DB::connection()->enableQueryLog();
+
+    $this->actingAs($owner)
+        ->post(route('maintenance-tickets.store'), [
+            'property_id' => $property->id,
+            'unit_id' => $sourceUnit->id,
+            'title' => 'Broken ceiling',
+            'priority' => MaintenancePriority::Urgent->value,
+            'block_unit' => true,
+            'move_tenant_to_unit_id' => $targetUnit->id,
+        ])
+        ->assertRedirect();
+
+    $lockQueries = collect(DB::connection()->getQueryLog())
+        ->filter(fn (array $query): bool => str_contains($query['query'], 'from "units"') && str_contains($query['query'], 'order by "id" asc'));
+
+    expect($lockQueries)->not->toBeEmpty();
+
+    $lockQuery = $lockQueries->last();
+
+    if ($lockQuery['bindings'] !== []) {
+        expect(array_map('intval', $lockQuery['bindings']))->toBe([$targetUnit->id, $sourceUnit->id]);
+    } else {
+        expect($lockQuery['query'])->toContain(sprintf('in (%d, %d)', $targetUnit->id, $sourceUnit->id));
+    }
+});
+
+it('locks reverse-direction maintenance restore units in ascending id order', function () {
+    $owner = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $targetUnit = Unit::factory()->for($property)->occupied()->create();
+    $sourceUnit = Unit::factory()->for($property)->create(['status' => UnitStatus::Maintenance]);
+    $lease = Lease::factory()->create([
+        'unit_id' => $targetUnit->id,
+        'status' => LeaseStatus::Active,
+    ]);
+
+    LeaseUnitHistory::create([
+        'lease_id' => $lease->id,
+        'from_unit_id' => $sourceUnit->id,
+        'to_unit_id' => $targetUnit->id,
+        'reason' => 'maintenance',
+        'effective_date' => now(),
+    ]);
+
+    $ticket = MaintenanceTicket::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'status' => MaintenanceStatus::InProgress->value,
+    ]);
+
+    DB::connection()->flushQueryLog();
+    DB::connection()->enableQueryLog();
+
+    $this->actingAs($owner)
+        ->put(route('maintenance-tickets.update', $ticket), [
+            'status' => MaintenanceStatus::Resolved->value,
+            'restore_unit' => true,
+            'move_back' => true,
+        ])
+        ->assertRedirect();
+
+    $lockQueries = collect(DB::connection()->getQueryLog())
+        ->filter(fn (array $query): bool => str_contains($query['query'], 'from "units"') && str_contains($query['query'], 'order by "id" asc'));
+
+    expect($lockQueries)->not->toBeEmpty();
+
+    $lockQuery = $lockQueries->last();
+
+    if ($lockQuery['bindings'] !== []) {
+        expect(array_map('intval', $lockQuery['bindings']))->toBe([$targetUnit->id, $sourceUnit->id]);
+    } else {
+        expect($lockQuery['query'])->toContain(sprintf('in (%d, %d)', $targetUnit->id, $sourceUnit->id));
+    }
 });
 
 it('keeps the tenant on the same unit when blocking without a move target', function () {
