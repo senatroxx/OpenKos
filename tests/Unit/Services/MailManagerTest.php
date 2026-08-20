@@ -9,36 +9,14 @@ use App\Notifications\Drivers\SmtpMailDriver;
 use App\Services\MailManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use OpenKOS\Core\Contracts\MailDriver;
-use OpenKOS\Core\Data\Mail\DriverHealthResult;
 use OpenKOS\Core\Data\Mail\MailAddress;
 use OpenKOS\Core\Data\Mail\MailMessage;
-use OpenKOS\Core\Data\Mail\MailSendResult;
 use OpenKOS\Platform\Notification\NotificationDriverRegistration;
 use OpenKOS\Platform\Notification\NotificationRegistry;
+use Tests\Support\Fakes\MailManagerConfigProbeDriver;
 use Tests\TestCase;
 
 uses(TestCase::class, RefreshDatabase::class);
-
-class MailManagerConfigProbeDriver implements MailDriver
-{
-    public static array $configs = [];
-
-    public function __construct(private array $config = [])
-    {
-        self::$configs[] = $config;
-    }
-
-    public function send(MailMessage $message): MailSendResult
-    {
-        return new MailSendResult;
-    }
-
-    public function health(): DriverHealthResult
-    {
-        return new DriverHealthResult(true);
-    }
-}
 
 function registerMailManagerConfigProbe(array $config = []): void
 {
