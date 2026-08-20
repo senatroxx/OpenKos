@@ -13,7 +13,9 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -169,12 +171,21 @@ test('collection queue tab counts are correct', function () {
     ]);
 
     $lease4 = Lease::factory()->create(['status' => 'active', 'start_date' => now()->subMonths(2)]);
-    Invoice::factory()->create([
+    $paidInvoice = Invoice::factory()->create([
         'lease_id' => $lease4->id,
         'due_date' => '2026-07-01',
         'total' => 500000,
         'amount_paid' => 500000,
         'status' => InvoiceStatus::Paid,
+    ]);
+
+    $lease5 = Lease::factory()->create(['status' => 'active', 'start_date' => now()->subMonths(2)]);
+    $partialInvoice = Invoice::factory()->create([
+        'lease_id' => $lease5->id,
+        'due_date' => '2026-07-20',
+        'total' => 300000,
+        'amount_paid' => 100000,
+        'status' => InvoiceStatus::Partial,
     ]);
 
     Payment::factory()->create([
@@ -185,15 +196,56 @@ test('collection queue tab counts are correct', function () {
         'status' => PaymentStatus::Pending,
     ]);
 
+    Payment::factory()->create([
+        'invoice_id' => $paidInvoice->id,
+        'amount' => 500000,
+        'payment_date' => '2026-07-08',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $partialInvoice->id,
+        'amount' => 100000,
+        'payment_date' => '2026-07-09',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    $invoiceAggregateQueries = 0;
+    $paymentAggregateQueries = 0;
+    DB::listen(function (QueryExecuted $query) use (&$invoiceAggregateQueries, &$paymentAggregateQueries): void {
+        $sql = strtolower($query->sql);
+
+        if (str_contains($sql, 'sum(case') && str_contains($sql, 'invoices')) {
+            $invoiceAggregateQueries++;
+        }
+
+        if (str_contains($sql, 'sum(amount)')
+            && str_contains($sql, 'max(payment_date)')
+            && str_contains($sql, 'payments')
+        ) {
+            $paymentAggregateQueries++;
+        }
+    });
+
     $this->actingAs($user)
         ->get(route('dashboard.rent'))
         ->assertInertia(fn ($page) => $page
-            ->where('tab_counts.all', 3)
+            ->where('tab_counts.all', 4)
             ->where('tab_counts.overdue', 1)
             ->where('tab_counts.due_today', 1)
+            ->where('tab_counts.upcoming', 2)
+            ->where('tab_counts.partial', 1)
             ->where('tab_counts.pending_review', 1)
             ->where('tab_counts.paid', 1)
+            ->where('outstanding.count', 4)
+            ->where('outstanding.amount', 650000)
+            ->where('progress.processed', 1)
+            ->where('progress.total', 5)
+            ->where('progress.amount_collected', 600000)
+            ->where('progress.last_payment_at', '2026-07-09 00:00:00')
         );
+
+    expect($invoiceAggregateQueries)->toBe(1)
+        ->and($paymentAggregateQueries)->toBe(1);
 
     Carbon::setTestNow();
 });
@@ -467,10 +519,16 @@ test('collection queue scopes to user properties for non-owner', function () {
         'status' => 'active',
     ]);
     $leaseB->tenants()->sync([$tenantB->id => ['is_primary' => true]]);
-    Invoice::factory()->create([
+    $invoiceB = Invoice::factory()->create([
         'lease_id' => $leaseB->id,
         'due_date' => '2026-07-05',
         'status' => InvoiceStatus::Pending,
+    ]);
+
+    Payment::factory()->create([
+        'invoice_id' => $invoiceB->id,
+        'amount' => 100000,
+        'status' => PaymentStatus::Confirmed,
     ]);
 
     $propertyA->users()->attach($user->id);
@@ -481,6 +539,9 @@ test('collection queue scopes to user properties for non-owner', function () {
         ->assertInertia(fn ($page) => $page
             ->has('entries.data', 1)
             ->where('entries.data.0.tenant_name', 'Budi Property A')
+            ->where('tab_counts.all', 1)
+            ->where('outstanding.count', 1)
+            ->where('progress.amount_collected', 0)
         );
 
     Carbon::setTestNow();
@@ -496,6 +557,10 @@ test('collection queue shows empty state when no data', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->has('entries.data', 0)
+            ->where('tab_counts.all', 0)
+            ->where('outstanding.amount', 0)
+            ->where('progress.amount_collected', 0)
+            ->where('progress.last_payment_at', null)
             ->has('recent_payments', 0)
             ->has('recent_reminders', 0)
         );

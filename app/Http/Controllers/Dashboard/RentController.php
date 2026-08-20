@@ -13,10 +13,10 @@ use App\Models\ReminderLog;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -35,28 +35,80 @@ class RentController extends Controller
             ->pluck('id');
 
         $urgency = $request->query('urgency', '');
+        $today = $now->toDateString();
+        $tomorrow = $now->copy()->addDay()->toDateString();
+        $payableStatuses = [
+            InvoiceStatus::Pending->value,
+            InvoiceStatus::Partial->value,
+        ];
+
+        $invoiceScope = Invoice::query()
+            ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
+            ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
+
+        $invoiceTable = DB::getQueryGrammar()->wrap((new Invoice)->getTable());
+        $paymentTable = DB::getQueryGrammar()->wrap((new Payment)->getTable());
+        $pendingPaymentsAlias = DB::getQueryGrammar()->wrap('pending_payments');
 
         // --- Tab counts ---
 
+        $invoiceStats = (clone $invoiceScope)->selectRaw(
+            <<<SQL
+            COALESCE(SUM(CASE
+                WHEN {$invoiceTable}.due_date < ? AND {$invoiceTable}.status IN (?, ?)
+                THEN 1 ELSE 0
+            END), 0) AS overdue,
+            COALESCE(SUM(CASE
+                WHEN {$invoiceTable}.due_date >= ?
+                    AND {$invoiceTable}.due_date < ?
+                    AND {$invoiceTable}.status IN (?, ?)
+                THEN 1 ELSE 0
+            END), 0) AS due_today,
+            COALESCE(SUM(CASE
+                WHEN {$invoiceTable}.due_date >= ? AND {$invoiceTable}.status IN (?, ?)
+                THEN 1 ELSE 0
+            END), 0) AS upcoming,
+            COALESCE(SUM(CASE
+                WHEN {$invoiceTable}.status = ?
+                THEN 1 ELSE 0
+            END), 0) AS partial,
+            COALESCE(SUM(CASE
+                WHEN {$invoiceTable}.status = ?
+                THEN 1 ELSE 0
+            END), 0) AS paid,
+            COALESCE(SUM(CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM {$paymentTable} AS {$pendingPaymentsAlias}
+                    WHERE {$pendingPaymentsAlias}.invoice_id = {$invoiceTable}.id
+                        AND {$pendingPaymentsAlias}.status = ?
+                )
+                THEN 1 ELSE 0
+            END), 0) AS pending_review,
+            COALESCE(SUM(CASE
+                WHEN {$invoiceTable}.status IN (?, ?)
+                THEN {$invoiceTable}.total - {$invoiceTable}.amount_paid
+                ELSE 0
+            END), 0) AS outstanding_amount
+            SQL,
+            [
+                $today, ...$payableStatuses,
+                $today, $tomorrow, ...$payableStatuses,
+                $tomorrow, ...$payableStatuses,
+                InvoiceStatus::Partial->value,
+                InvoiceStatus::Paid->value,
+                PaymentStatus::Pending->value,
+                ...$payableStatuses,
+            ],
+        )->first();
+
         $tabCounts = [
-            'overdue' => $this->countPayable($accessiblePropertyIds, $now, '<'),
-            'due_today' => $this->countPayable($accessiblePropertyIds, $now, '='),
-            'upcoming' => $this->countPayable($accessiblePropertyIds, $now, '>'),
-            'partial' => Invoice::query()
-                ->where('status', InvoiceStatus::Partial->value)
-                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
-                ->count(),
-            'paid' => Invoice::query()
-                ->where('status', InvoiceStatus::Paid->value)
-                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
-                ->count(),
-            'pending_review' => Invoice::query()
-                ->whereHas('payments', fn (Builder $q) => $q->where('status', PaymentStatus::Pending->value))
-                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
-                ->count(),
+            'overdue' => (int) ($invoiceStats?->overdue ?? 0),
+            'due_today' => (int) ($invoiceStats?->due_today ?? 0),
+            'upcoming' => (int) ($invoiceStats?->upcoming ?? 0),
+            'partial' => (int) ($invoiceStats?->partial ?? 0),
+            'paid' => (int) ($invoiceStats?->paid ?? 0),
+            'pending_review' => (int) ($invoiceStats?->pending_review ?? 0),
         ];
 
         // --- Outstanding card ---
@@ -64,28 +116,25 @@ class RentController extends Controller
         $outstandingCount = $tabCounts['overdue'] + $tabCounts['due_today'] + $tabCounts['upcoming'];
         $tabCounts['all'] = $outstandingCount;
 
-        $outstandingAmount = (int) Invoice::query()
-            ->payable()
-            ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-            ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
-            ->sum(DB::raw('total - amount_paid'));
+        $outstandingAmount = (int) ($invoiceStats?->outstanding_amount ?? 0);
 
         // --- Progress ---
 
         $progressTotal = $outstandingCount + $tabCounts['paid'];
 
-        $collectedAmount = (int) Payment::where('status', PaymentStatus::Confirmed->value)
+        $paymentStats = Payment::query()
+            ->selectRaw('COALESCE(SUM(amount), 0) AS collected_amount, MAX(payment_date) AS last_payment_date')
+            ->where('status', PaymentStatus::Confirmed->value)
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
                 ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
-            ->sum('amount');
-
-        $lastPayment = Payment::where('status', PaymentStatus::Confirmed->value)
-            ->whereHas('invoice', fn (Builder $q) => $q
-                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
-            ->latest('payment_date')
             ->first();
+
+        $collectedAmount = (int) ($paymentStats?->collected_amount ?? 0);
+        $lastPaymentDate = $paymentStats?->last_payment_date;
+        $lastPaymentAt = $lastPaymentDate
+            ? Carbon::parse((string) $lastPaymentDate)->toDateTimeString()
+            : null;
 
         // --- Queue table ---
 
@@ -93,7 +142,7 @@ class RentController extends Controller
         $isPartialTab = $urgency === 'partial';
         $isPendingReviewTab = $urgency === 'pending_review';
 
-        $queueQuery = Invoice::query()
+        $queueQuery = (clone $invoiceScope)
             ->with([
                 'lease.primaryTenant',
                 'lease.tenants',
@@ -103,9 +152,7 @@ class RentController extends Controller
                     ->with(['confirmedBy:id,name', 'proofs'])
                     ->latest('payment_date')
                     ->latest('id'),
-            ])
-            ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-            ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
+            ]);
 
         if ($isPendingReviewTab) {
             $queueQuery->whereHas('payments', fn (Builder $q) => $q->where('status', PaymentStatus::Pending->value));
@@ -239,28 +286,11 @@ class RentController extends Controller
                 'processed' => $tabCounts['paid'],
                 'total' => $progressTotal,
                 'amount_collected' => $collectedAmount,
-                'last_payment_at' => $lastPayment?->payment_date?->toDateTimeString() ?? null,
+                'last_payment_at' => $lastPaymentAt,
             ],
             'recent_payments' => $recentPayments,
             'recent_reminders' => $recentReminders,
         ]);
-    }
-
-    private function countPayable(Collection $propertyIds, CarbonInterface $now, string $operator): int
-    {
-        $query = Invoice::query()
-            ->payable()
-            ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
-            ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $propertyIds));
-
-        match ($operator) {
-            '<' => $query->whereDate('due_date', '<', $now->toDateString()),
-            '=' => $query->whereDate('due_date', '=', $now->toDateString()),
-            '>' => $query->whereDate('due_date', '>', $now->toDateString()),
-            default => null,
-        };
-
-        return $query->count();
     }
 
     private function transformInvoice(Invoice $invoice, CarbonInterface $now): array
