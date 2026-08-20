@@ -24,7 +24,11 @@ class StoreLeaseRequest extends FormRequest
             'billing_interval' => ['nullable', 'integer', 'min:1', 'max:255'],
             'billing_unit' => ['nullable', 'string', Rule::in(BillingUnit::values())],
             'billing_strategy' => ['nullable', 'string', Rule::in(BillingStrategy::values())],
-            'unit_rate_id' => ['nullable', 'integer', 'exists:unit_rates,id'],
+            'unit_rate_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('unit_rates', 'id')->where('unit_id', $this->route('unit')->id),
+            ],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'deposit_paid_at' => ['nullable', 'date'],
             'deposit_refund_amount' => ['nullable', 'numeric', 'min:0'],

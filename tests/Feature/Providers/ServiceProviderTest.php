@@ -4,6 +4,7 @@ use App\Exceptions\MailDriverNotFoundException;
 use App\Models\Setting;
 use App\Notifications\Drivers\LogMailDriver;
 use App\Notifications\UserInvitation;
+use App\Providers\AppServiceProvider;
 use App\Providers\NotificationServiceProvider;
 use App\Services\MailManager;
 use App\Services\Platform\ComposerPluginDiscovery;
@@ -12,12 +13,41 @@ use App\Services\Settings\SettingManager;
 use App\Services\WhatsAppManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use OpenKOS\Core\Contracts\PluginDiscovery;
 use OpenKOS\Core\Contracts\SettingsStore;
 use OpenKOS\Core\Data\Mail\MailAddress;
 use OpenKOS\Core\Data\Mail\MailMessage;
 use OpenKOS\Platform\Notification\NotificationDriverRegistration;
 use OpenKOS\Platform\Notification\NotificationRegistry;
+
+it('configures a valid display timezone without changing the application timezone', function () {
+    Setting::set('timezone', 'America/New_York');
+    app()->forgetScopedInstances();
+
+    (new AppServiceProvider(app()))->boot();
+
+    expect(config('app.display_timezone'))->toBe('America/New_York')
+        ->and(config('app.timezone'))->toBe('UTC');
+});
+
+it('falls back to UTC for an invalid persisted display timezone', function () {
+    Setting::set('timezone', 'invalid/timezone');
+    app()->forgetScopedInstances();
+
+    (new AppServiceProvider(app()))->boot();
+
+    expect(config('app.display_timezone'))->toBe('UTC');
+});
+
+it('boots with UTC when the settings table is unavailable', function () {
+    Schema::dropIfExists('settings');
+    app()->forgetScopedInstances();
+
+    (new AppServiceProvider(app()))->boot();
+
+    expect(config('app.display_timezone'))->toBe('UTC');
+});
 
 it('registers application services through dedicated providers', function () {
     expect(app(SettingManager::class))

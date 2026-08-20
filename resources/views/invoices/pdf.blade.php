@@ -55,7 +55,7 @@
 <body>
 @php
     $formatDate = static fn ($date): string => $date?->copy()->locale($locale)->translatedFormat('d M Y') ?? '-';
-    $formatDateTime = static fn ($date): string => $date?->copy()->timezone('Asia/Jakarta')->locale($locale)->translatedFormat('d M Y, H:i') ?? '-';
+    $formatDateTime = static fn ($date, string $format = 'd M Y, H:i'): string => App\Support\DateTimeFormatter::inDisplayTimezone($date)?->locale($locale)->translatedFormat($format) ?? '-';
     $formatMoney = static fn (string $amount): string => (string) Illuminate\Support\Number::currency(
         (float) $amount,
         in: $currency,
@@ -77,7 +77,7 @@
     };
     $tenant = $invoice->lease?->primaryTenant;
     $payments = $invoice->payments ?? collect();
-    $generatedAt = now()->timezone('Asia/Jakarta')->locale($locale)->translatedFormat('d M Y, H:i');
+    $generatedAt = App\Support\DateTimeFormatter::inDisplayTimezone(now())->locale($locale)->translatedFormat('d M Y, H:i T');
 @endphp
 
 <table class="header">
@@ -98,7 +98,7 @@
     <tr>
         <td>
             <p class="label">Issue date</p>
-            <p class="value">{{ $formatDate($invoice->created_at) }}</p>
+            <p class="value">{{ $formatDateTime($invoice->created_at, 'd M Y') }}</p>
         </td>
         <td>
             <p class="label">Billing period</p>
@@ -199,7 +199,7 @@
     </section>
 @endif
 
-<p class="footer">Generated on {{ $generatedAt }} WIB. This document reflects the invoice status at the time it was generated.</p>
+<p class="footer">Generated on {{ $generatedAt }}. This document reflects the invoice status at the time it was generated.</p>
 @if ($autoPrint ?? false)
     <script>
         window.addEventListener('load', () => window.print());

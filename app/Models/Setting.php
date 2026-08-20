@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Services\Settings\SettingCaster;
 use App\Services\Settings\SettingManager;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
 {
-    use HasFactory;
+    use HasFactory, SerializesDatesWithTimezone;
 
     protected $fillable = ['key', 'value', 'type'];
 

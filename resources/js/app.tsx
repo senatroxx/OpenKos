@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
@@ -7,7 +7,20 @@ import AuthLayout from '@/layouts/auth-layout';
 import PublicPaymentLayout from '@/layouts/public-payment-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import TenantPortalLayout from '@/layouts/tenant-portal-layout';
+import { setDisplayTimezone } from '@/lib/formatters';
 import '@/plugins';
+
+type PageWithTimezone = {
+    props?: {
+        app?: {
+            timezone?: string;
+        };
+    };
+};
+
+function syncDisplayTimezone(page: PageWithTimezone): void {
+    setDisplayTimezone(page.props?.app?.timezone);
+}
 
 // The server drives the display name from the settings table (site_name),
 // shared as the `name` prop on the initial page. Read it here so the title
@@ -64,7 +77,17 @@ createInertiaApp({
         }
     },
     strictMode: true,
-    withApp(app) {
+    withApp(app, { ssr }) {
+        syncDisplayTimezone(
+            (app.props as { initialPage?: PageWithTimezone }).initialPage ?? {},
+        );
+
+        if (!ssr) {
+            router.on('navigate', ({ detail }) => {
+                syncDisplayTimezone(detail.page);
+            });
+        }
+
         return (
             <TooltipProvider delayDuration={0}>
                 {app}

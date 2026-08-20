@@ -11,7 +11,6 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Tenant;
 use App\Models\Unit;
-use App\Models\UnitRate;
 use Illuminate\Support\Facades\DB;
 
 class CreateLease
@@ -28,6 +27,16 @@ class CreateLease
 
         return DB::transaction(function () use ($unit, $data, $tenantIds) {
             $unit = Unit::lockForUpdate()->findOrFail($unit->id);
+            $unitRate = $data->unitRateId === null
+                ? null
+                : $unit->rates()->find($data->unitRateId);
+
+            abort_if(
+                $data->unitRateId !== null && $unitRate === null,
+                422,
+                __('The selected rate does not belong to this unit.'),
+            );
+
             Tenant::query()->whereKey($tenantIds)->lockForUpdate()->get();
 
             abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('This unit is not available for lease.'));
@@ -56,7 +65,6 @@ class CreateLease
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
-            $unitRate = $data->unitRateId ? UnitRate::find($data->unitRateId) : null;
             $rentAmount = $data->rentAmount ?? $unitRate?->amount ?? $unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
             $isCustomPrice = $data->rentAmount !== null && $unitRate && (float) $data->rentAmount !== (float) $unitRate->amount;
 

@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Setting;
 use Carbon\CarbonImmutable;
+use DateTimeZone;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
@@ -15,7 +18,29 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDisplayTimezone();
         $this->configureAuthEvents();
+    }
+
+    protected function configureDisplayTimezone(): void
+    {
+        try {
+            $timezone = Setting::get('timezone');
+        } catch (QueryException) {
+            $timezone = null;
+        }
+
+        if (! is_string($timezone) || $timezone === '') {
+            $timezone = 'UTC';
+        }
+
+        try {
+            new DateTimeZone($timezone);
+        } catch (\Exception) {
+            $timezone = 'UTC';
+        }
+
+        config(['app.display_timezone' => $timezone]);
     }
 
     protected function configureDefaults(): void

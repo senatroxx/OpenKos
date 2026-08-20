@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AuditLog extends Model
 {
+    use SerializesDatesWithTimezone;
+
     const UPDATED_AT = null;
 
     protected $fillable = [

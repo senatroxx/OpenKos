@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
 use App\Enums\LeaseStatus;
@@ -44,7 +45,7 @@ use Illuminate\Support\Collection;
 ])]
 class Lease extends Model
 {
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SerializesDatesWithTimezone, SoftDeletes;
 
     protected static function boot(): void
     {
@@ -72,8 +73,8 @@ class Lease extends Model
     protected function casts(): array
     {
         return [
-            'start_date' => 'date',
-            'end_date' => 'date',
+            'start_date' => 'date:Y-m-d',
+            'end_date' => 'date:Y-m-d',
             'rent_amount' => 'decimal:2',
             'billing_interval' => 'integer',
             'billing_unit' => BillingUnit::class,
@@ -85,7 +86,7 @@ class Lease extends Model
             'deposit_paid_at' => 'datetime',
             'deposit_refunded_at' => 'datetime',
             'rent_due_day' => 'integer',
-            'termination_date' => 'date',
+            'termination_date' => 'date:Y-m-d',
         ];
     }
 

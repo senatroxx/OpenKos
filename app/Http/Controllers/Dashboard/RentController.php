@@ -10,10 +10,10 @@ use App\Models\Payment;
 use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\ReminderLog;
+use App\Support\DateTimeFormatter;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
-use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -132,9 +132,7 @@ class RentController extends Controller
 
         $collectedAmount = (int) ($paymentStats?->collected_amount ?? 0);
         $lastPaymentDate = $paymentStats?->last_payment_date;
-        $lastPaymentAt = $lastPaymentDate
-            ? Carbon::parse((string) $lastPaymentDate)->toDateTimeString()
-            : null;
+        $lastPaymentAt = $lastPaymentDate ? (string) $lastPaymentDate : null;
 
         // --- Queue table ---
 
@@ -271,7 +269,7 @@ class RentController extends Controller
                 'reminder_type' => $r->reminder_type,
                 'channel' => $r->channel,
                 'scheduled_for' => $r->scheduled_for?->toDateString(),
-                'sent_at' => $r->sent_at?->toDateTimeString() ?? null,
+                'sent_at' => DateTimeFormatter::nullableIso($r->sent_at),
                 'overdue_days' => $r->overdue_days,
             ]);
 
@@ -358,14 +356,14 @@ class RentController extends Controller
                 'recorded_by_user' => null,
                 'verified_by' => $payment->verified_by,
                 'verified_by_user' => null,
-                'verified_at' => $payment->verified_at?->toDateTimeString(),
+                'verified_at' => DateTimeFormatter::nullableIso($payment->verified_at),
                 'proofs' => $payment->proofs->map(fn (PaymentProof $proof) => [
                     'id' => $proof->id,
                     'payment_id' => $proof->payment_id,
                     'path' => $proof->path,
                     'original_name' => $proof->original_name,
                     'mime_type' => $proof->mime_type,
-                    'created_at' => $proof->created_at->toDateTimeString(),
+                    'created_at' => DateTimeFormatter::iso($proof->created_at),
                 ])->values()->all(),
             ])->values()->all(),
         ];

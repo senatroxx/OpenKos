@@ -19,6 +19,7 @@ use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
 use App\Models\Unit;
+use App\Support\DateTimeFormatter;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -139,7 +140,7 @@ class OverviewController extends Controller
             ->map(fn (AuditLog $log) => [
                 'id' => $log->id,
                 'description' => $this->describeAudit($log),
-                'created_at' => $log->created_at->toISOString(),
+                'created_at' => DateTimeFormatter::iso($log->created_at),
                 'subject_type' => $log->auditable_type,
                 'subject_id' => $log->auditable_id,
                 'actor_name' => $log->actor?->name ?? 'System',

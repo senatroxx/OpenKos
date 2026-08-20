@@ -2,13 +2,20 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ReminderLog extends Model
 {
-    use HasFactory;
+    use HasFactory, SerializesDatesWithTimezone;
+
+    public const NON_OVERDUE_DAYS = -1;
+
+    protected $attributes = [
+        'overdue_days' => self::NON_OVERDUE_DAYS,
+    ];
 
     protected $fillable = [
         'lease_id',

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -26,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class Invoice extends Model
 {
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, SerializesDatesWithTimezone;
 
     protected static function boot(): void
     {
@@ -75,9 +76,9 @@ class Invoice extends Model
     protected function casts(): array
     {
         return [
-            'period_start' => 'date',
-            'period_end' => 'date',
-            'due_date' => 'date',
+            'period_start' => 'date:Y-m-d',
+            'period_end' => 'date:Y-m-d',
+            'due_date' => 'date:Y-m-d',
             'status' => InvoiceStatus::class,
             'total' => 'decimal:2',
             'amount_paid' => 'decimal:2',

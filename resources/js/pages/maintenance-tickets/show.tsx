@@ -3,6 +3,7 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
+import { formatDate } from '@/lib/formatters';
 import type { MaintenanceTicket } from '@/types';
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -58,15 +59,13 @@ export default function MaintenanceTicketWorkspace({
                     <Field label="Cost" value={ticket.cost} />
                     <Field
                         label="Created"
-                        value={new Date(ticket.created_at).toLocaleDateString()}
+                        value={formatDate(ticket.created_at)}
                     />
                     <Field
                         label="Resolved"
                         value={
                             ticket.resolved_at
-                                ? new Date(
-                                      ticket.resolved_at,
-                                  ).toLocaleDateString()
+                                ? formatDate(ticket.resolved_at)
                                 : '—'
                         }
                     />

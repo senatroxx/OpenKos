@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -26,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class MaintenanceTicket extends Model
 {
-    use HasFactory;
+    use HasFactory, SerializesDatesWithTimezone;
 
     protected static function boot(): void
     {

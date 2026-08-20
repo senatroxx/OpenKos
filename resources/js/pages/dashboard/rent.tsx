@@ -146,28 +146,6 @@ function pendingReviewLabel(count: number | undefined): string {
     return `Pending review · ${count}`;
 }
 
-function timeAgo(dateStr: string | null): string | null {
-    if (!dateStr) {
-        return null;
-    }
-
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-
-    if (diff < 60) {
-        return 'just now';
-    }
-
-    if (diff < 3600) {
-        return `${Math.floor(diff / 60)}m ago`;
-    }
-
-    if (diff < 86400) {
-        return `${Math.floor(diff / 3600)}h ago`;
-    }
-
-    return `${Math.floor(diff / 86400)}d ago`;
-}
-
 export default function CollectionQueue({
     entries: data,
     sort: currentSort = 'due_date',
@@ -420,7 +398,7 @@ export default function CollectionQueue({
         progress.total > 0
             ? Math.round((progress.processed / progress.total) * 100)
             : 0;
-    const lastPaymentAgo = timeAgo(progress.last_payment_at);
+    const lastPaymentDate = formatDate(progress.last_payment_at);
 
     return (
         <>
@@ -474,7 +452,7 @@ export default function CollectionQueue({
                     />
                     <MetricCard
                         label="Last Payment Recorded"
-                        value={lastPaymentAgo ?? '—'}
+                        value={lastPaymentDate}
                         variant="neutral"
                         icon={Clock}
                     />

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PaymentAllocation extends Model
 {
+    use SerializesDatesWithTimezone;
+
     protected $fillable = [
         'payment_id',
         'invoice_id',

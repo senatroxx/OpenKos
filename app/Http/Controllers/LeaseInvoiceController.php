@@ -10,6 +10,7 @@ use App\Models\PaymentAttempt;
 use App\Models\Setting;
 use App\Services\Invoices\InvoicePdfArtifact;
 use App\Services\Payments\SignedInvoicePaymentLink;
+use App\Support\DateTimeFormatter;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -97,10 +98,10 @@ class LeaseInvoiceController extends Controller
                 'amount' => $attempt->amount,
                 'currency' => $attempt->currency,
                 'status' => $attempt->status->value,
-                'expires_at' => $attempt->expires_at,
-                'initiated_at' => $attempt->initiated_at,
-                'created_at' => $attempt->created_at,
-                'updated_at' => $attempt->updated_at,
+                'expires_at' => DateTimeFormatter::nullableIso($attempt->expires_at),
+                'initiated_at' => DateTimeFormatter::iso($attempt->initiated_at),
+                'created_at' => DateTimeFormatter::iso($attempt->created_at),
+                'updated_at' => DateTimeFormatter::iso($attempt->updated_at),
                 'failure_code' => $this->failureCode($attempt),
                 'failure_message' => $this->failureMessage($attempt),
                 'recheckable' => $attempt->status === GatewayPaymentStatus::Pending

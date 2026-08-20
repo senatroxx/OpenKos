@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,13 +27,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 ])]
 class Payment extends Model
 {
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, SerializesDatesWithTimezone;
 
     protected function casts(): array
     {
         return [
             'amount' => 'decimal:2',
-            'payment_date' => 'date',
+            'payment_date' => 'date:Y-m-d',
             'status' => PaymentStatus::class,
             'verified_at' => 'datetime',
         ];

@@ -38,6 +38,9 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'app' => [
+                'timezone' => config('app.display_timezone', 'UTC'),
+            ],
             // Integration configs (mail_config, whatsapp_config, payment_gateway_config) hold secrets — SMTP
             // password, API tokens — so they never go into the app-wide share. Their
             // own settings pages load them (masked) separately.
