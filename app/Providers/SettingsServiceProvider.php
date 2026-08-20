@@ -11,7 +11,7 @@ class SettingsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(SettingManager::class);
+        $this->app->scoped(SettingManager::class);
         $this->app->singleton(SettingsStore::class, PlatformSettingsStore::class);
     }
 }

@@ -6,6 +6,18 @@ use App\Models\Setting;
 
 class SettingManager
 {
+    /**
+     * @var array<string, array{value: mixed, type: string}>
+     */
+    private array $storedSettings = [];
+
+    /**
+     * @var array<string, mixed>
+     */
+    private array $resolvedSettings = [];
+
+    private bool $snapshotLoaded = false;
+
     public function __construct(
         private SettingRegistry $registry,
         private SettingCaster $caster,
@@ -17,10 +29,10 @@ class SettingManager
             return $this->allWithDefaults();
         }
 
-        $setting = Setting::where('key', $key)->first();
+        $this->loadSnapshot();
 
-        if ($setting) {
-            return $setting->resolveValue();
+        if (array_key_exists($key, $this->storedSettings)) {
+            return $this->resolveStoredSetting($key);
         }
 
         $def = $this->registry->get($key);
@@ -34,10 +46,27 @@ class SettingManager
 
         $stored = $this->caster->serialize($value, $cast);
 
-        return Setting::updateOrCreate(
+        $setting = Setting::updateOrCreate(
             ['key' => $key],
             ['value' => $stored, 'type' => $cast],
         );
+
+        if ($this->snapshotLoaded) {
+            $this->storedSettings[$key] = [
+                'value' => $stored,
+                'type' => $cast,
+            ];
+            unset($this->resolvedSettings[$key]);
+        }
+
+        $connection = $setting->getConnection();
+        if ($connection->transactionLevel() > 0) {
+            $connection->afterRollBack(function (): void {
+                $this->forgetSnapshot();
+            });
+        }
+
+        return $setting;
     }
 
     public function some(array $keys): array
@@ -149,11 +178,51 @@ class SettingManager
 
     private function allWithDefaults(): array
     {
+        $this->loadSnapshot();
+
         $defaults = [];
         foreach ($this->registry->all() as $key => $def) {
             $defaults[$key] = $this->caster->serialize($def['default'], $def['cast']);
         }
 
-        return array_merge($defaults, Setting::pluck('value', 'key')->all());
+        $stored = [];
+        foreach ($this->storedSettings as $key => $setting) {
+            $stored[$key] = $setting['value'];
+        }
+
+        return array_merge($defaults, $stored);
+    }
+
+    private function loadSnapshot(): void
+    {
+        if ($this->snapshotLoaded) {
+            return;
+        }
+
+        foreach (Setting::query()->select(['key', 'value', 'type'])->get() as $setting) {
+            $this->storedSettings[$setting->key] = [
+                'value' => $setting->value,
+                'type' => $setting->type,
+            ];
+        }
+
+        $this->snapshotLoaded = true;
+    }
+
+    private function resolveStoredSetting(string $key): mixed
+    {
+        if (! array_key_exists($key, $this->resolvedSettings)) {
+            $setting = $this->storedSettings[$key];
+            $this->resolvedSettings[$key] = $this->caster->deserialize($setting['value'], $setting['type']);
+        }
+
+        return $this->resolvedSettings[$key];
+    }
+
+    private function forgetSnapshot(): void
+    {
+        $this->storedSettings = [];
+        $this->resolvedSettings = [];
+        $this->snapshotLoaded = false;
     }
 }
