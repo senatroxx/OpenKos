@@ -241,7 +241,7 @@ test('collection queue tab counts are correct', function () {
             ->where('progress.processed', 1)
             ->where('progress.total', 5)
             ->where('progress.amount_collected', 600000)
-            ->where('progress.last_payment_at', '2026-07-09 00:00:00')
+            ->where('progress.last_payment_at', '2026-07-09')
         );
 
     expect($invoiceAggregateQueries)->toBe(1)

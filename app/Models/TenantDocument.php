@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\TenantDocumentType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TenantDocument extends Model
 {
+    use SerializesDatesWithTimezone;
+
     protected $fillable = [
         'tenant_id',
         'type',

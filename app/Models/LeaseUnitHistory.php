@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class LeaseUnitHistory extends Model
 {
+    use SerializesDatesWithTimezone;
+
     protected $table = 'lease_unit_histories';
 
     protected function casts(): array

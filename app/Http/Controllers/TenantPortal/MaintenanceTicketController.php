@@ -6,6 +6,7 @@ use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Events\Maintenance\MaintenanceTicketCreated;
 use App\Models\MaintenanceTicket;
+use App\Support\DateTimeFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -32,7 +33,7 @@ class MaintenanceTicketController extends TenantPortalController
                 'title' => $ticket->title,
                 'status' => $ticket->status->value,
                 'priority' => $ticket->priority->value,
-                'created_at' => $ticket->created_at->toDateString(),
+                'created_at' => DateTimeFormatter::format($ticket->created_at, 'Y-m-d'),
                 'property_name' => $ticket->property?->name,
                 'unit_name' => $ticket->unit?->name,
                 'location' => $ticket->location,
@@ -110,7 +111,7 @@ class MaintenanceTicketController extends TenantPortalController
             'description' => $ticket->description,
             'status' => $ticket->status->value,
             'priority' => $ticket->priority->value,
-            'created_at' => $ticket->created_at->toDateString(),
+            'created_at' => DateTimeFormatter::format($ticket->created_at, 'Y-m-d'),
             'property_name' => $ticket->property?->name,
             'unit_name' => $ticket->unit?->name,
             'location' => $ticket->location,

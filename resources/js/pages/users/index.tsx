@@ -41,6 +41,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { useTable } from '@/hooks/use-table';
+import { formatDateTime } from '@/lib/formatters';
 import users, {
     destroy,
     resendInvitation,
@@ -83,15 +84,12 @@ function StatusBadge({ user }: { user: ManagedUser }) {
     return <SharedStatusBadge domain="user" value={user.status} />;
 }
 
-function formatDate(value: string | null) {
+function formatLastLogin(value: string | null) {
     if (!value) {
         return 'Never';
     }
 
-    return new Intl.DateTimeFormat('en', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
+    return formatDateTime(value, 'en');
 }
 
 export default function Index({
@@ -192,7 +190,7 @@ export default function Index({
             label: 'Last Login',
             sortable: true,
             className: 'text-muted-foreground',
-            render: (u) => formatDate(u.last_login_at),
+            render: (u) => formatLastLogin(u.last_login_at),
         },
         {
             key: '_roles',
@@ -697,7 +695,9 @@ function UserDetailSheet({
                                             Last login
                                         </span>
                                         <span className="text-sm tabular-nums">
-                                            {formatDate(user.last_login_at)}
+                                            {formatLastLogin(
+                                                user.last_login_at,
+                                            )}
                                         </span>
                                     </div>
                                 </div>

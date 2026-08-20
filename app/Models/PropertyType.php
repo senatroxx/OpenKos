@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 ])]
 class PropertyType extends Model
 {
-    use HasFactory;
+    use HasFactory, SerializesDatesWithTimezone;
 
     protected function casts(): array
     {

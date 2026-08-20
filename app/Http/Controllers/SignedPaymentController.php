@@ -11,6 +11,7 @@ use App\Models\Invoice;
 use App\Models\PaymentAttempt;
 use App\Services\Payments\PaymentGatewayManager;
 use App\Services\Payments\SignedInvoicePaymentLink;
+use App\Support\DateTimeFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -65,10 +66,10 @@ class SignedPaymentController extends Controller
                 'amount' => (string) $attempt->amount,
                 'currency' => $attempt->currency,
                 'status' => $attempt->status->value,
-                'expires_at' => $attempt->expires_at?->toISOString(),
+                'expires_at' => DateTimeFormatter::nullableIso($attempt->expires_at),
                 'resumable' => $attempt->resumable,
                 'checkout_instructions' => $attempt->checkout_instructions,
-                'initiated_at' => $attempt->initiated_at->toISOString(),
+                'initiated_at' => DateTimeFormatter::iso($attempt->initiated_at),
             ])->values()->all(),
             'onlinePaymentAvailable' => $this->isPayable($invoice)
                 && ($hasResumableAttempt || $gateways->active() !== null),

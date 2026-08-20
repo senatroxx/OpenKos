@@ -12,6 +12,9 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            app: {
+                timezone: string;
+            };
             auth: Auth;
             setting: {
                 id: number;

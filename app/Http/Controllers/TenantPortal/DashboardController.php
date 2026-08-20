@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
+use App\Support\DateTimeFormatter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -183,9 +184,12 @@ class DashboardController extends TenantPortalController
                     PaymentStatus::Confirmed => 'payment_confirmed',
                     PaymentStatus::Cancelled => 'payment_cancelled',
                 },
-                'date' => ($payment->status === PaymentStatus::Pending
-                    ? $payment->payment_date
-                    : $payment->verified_at ?? $payment->updated_at)->toDateString(),
+                'date' => DateTimeFormatter::format(
+                    $payment->status === PaymentStatus::Pending
+                        ? $payment->payment_date
+                        : $payment->verified_at ?? $payment->updated_at,
+                    'Y-m-d',
+                ),
                 'amount' => (string) $payment->amount,
                 'reference' => $payment->invoice?->reference,
             ]);
@@ -195,7 +199,7 @@ class DashboardController extends TenantPortalController
             ->get(['id', 'reference', 'created_at'])
             ->map(fn (Invoice $invoice) => [
                 'type' => 'invoice_issued',
-                'date' => $invoice->created_at->toDateString(),
+                'date' => DateTimeFormatter::format($invoice->created_at, 'Y-m-d'),
                 'amount' => null,
                 'reference' => $invoice->reference,
             ]);
