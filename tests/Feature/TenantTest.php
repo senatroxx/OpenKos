@@ -326,4 +326,37 @@ describe('unit assignment pricing', function () {
             ->and((float) $lease->rent_amount)->toBe(1_750_000.0)
             ->and($lease->is_custom_price)->toBeFalse();
     });
+
+    it('rejects a rate from another unit during assignment', function () {
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $unit = Unit::factory()->create();
+        $otherUnit = Unit::factory()->withRate(1_750_000)->create();
+
+        $this->actingAs($user)
+            ->post(route('tenants.assign-unit', $tenant), [
+                'unit_id' => $unit->id,
+                'unit_rate_id' => $otherUnit->rates()->firstOrFail()->id,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertSessionHasErrors('unit_rate_id');
+
+        expect(Lease::query()->exists())->toBeFalse();
+    });
+
+    it('rejects a stale rate during assignment', function () {
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $unit = Unit::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('tenants.assign-unit', $tenant), [
+                'unit_id' => $unit->id,
+                'unit_rate_id' => $unit->rates()->max('id') + 1,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertSessionHasErrors('unit_rate_id');
+
+        expect(Lease::query()->exists())->toBeFalse();
+    });
 });

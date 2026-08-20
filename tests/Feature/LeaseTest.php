@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Leases\CreateLease;
+use App\Data\Lease\CreateLeaseData;
 use App\Enums\LeaseStatus;
 use App\Models\Lease;
 use App\Models\Property;
@@ -8,6 +10,7 @@ use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -135,6 +138,93 @@ describe('CRUD', function () {
         $lease = Lease::first();
 
         expect($lease->rent_amount)->toBe($unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount'));
+    });
+
+    it('uses the selected unit rate when creating a lease', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $rate = $unit->rates()->firstOrFail();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $rate->id,
+            ])
+            ->assertRedirect();
+
+        $lease = Lease::firstOrFail();
+
+        expect($lease->unit_rate_id)->toBe($rate->id)
+            ->and($lease->rent_amount)->toBe($rate->amount);
+    });
+
+    it('rejects a rate from another unit when creating a lease', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $otherUnit = Unit::factory()->withRate(1_250_000)->create([
+            'property_id' => $property->id,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $otherUnit->rates()->firstOrFail()->id,
+            ])
+            ->assertSessionHasErrors('unit_rate_id');
+
+        expect(Lease::query()->exists())->toBeFalse();
+    });
+
+    it('rejects a stale rate when creating a lease', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $unit->rates()->max('id') + 1,
+            ])
+            ->assertSessionHasErrors('unit_rate_id');
+
+        expect(Lease::query()->exists())->toBeFalse();
+    });
+
+    it('rejects invalid rates in the lease creation action', function () {
+        [, $unit] = createPropertyWithUnit();
+        $otherUnit = Unit::factory()->withRate(1_250_000)->create();
+        $tenant = Tenant::factory()->create();
+
+        foreach ([$otherUnit->rates()->firstOrFail()->id, $unit->rates()->max('id') + 1] as $unitRateId) {
+            $data = new CreateLeaseData(
+                tenantIds: [$tenant->id],
+                startDate: '2026-06-01',
+                endDate: null,
+                rentAmount: null,
+                billingInterval: null,
+                billingUnit: null,
+                billingStrategy: null,
+                unitRateId: $unitRateId,
+                depositAmount: null,
+                depositPaidAt: null,
+                depositRefundAmount: null,
+                depositRefundedAt: null,
+                rentDueDay: null,
+                notes: null,
+            );
+
+            $this->assertThrows(
+                fn () => app(CreateLease::class)->execute($unit, $data),
+                fn (HttpException $exception): bool => $exception->getStatusCode() === 422,
+            );
+        }
+
+        expect(Lease::query()->exists())->toBeFalse();
     });
 
     it('validates required fields on create', function () {
