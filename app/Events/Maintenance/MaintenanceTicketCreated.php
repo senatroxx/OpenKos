@@ -3,9 +3,10 @@
 namespace App\Events\Maintenance;
 
 use App\Models\MaintenanceTicket;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Foundation\Events\Dispatchable;
 
-class MaintenanceTicketCreated
+class MaintenanceTicketCreated implements ShouldDispatchAfterCommit
 {
     use Dispatchable;
 

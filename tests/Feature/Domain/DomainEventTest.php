@@ -5,6 +5,7 @@ use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Enums\UnitStatus;
 use App\Events\Lease\LeaseCreated;
+use App\Events\Lease\LeaseStatusChanged;
 use App\Events\Maintenance\MaintenanceResolved;
 use App\Events\Maintenance\MaintenanceTicketCreated;
 use App\Events\Payment\PaymentRecorded;
@@ -48,7 +49,7 @@ describe('lease events', function () {
     });
 
     it('dispatches UnitStatusChanged when lease termination frees a unit', function () {
-        Event::fake([UnitStatusChanged::class]);
+        Event::fake([LeaseStatusChanged::class, UnitStatusChanged::class]);
 
         $property = Property::factory()->create();
         $unit = Unit::factory()->withRate(1_000_000)->occupied()->create(['property_id' => $property->id]);
@@ -66,6 +67,7 @@ describe('lease events', function () {
 
         // ponytail: UnitStatusChanged only fires when the status actually changes.
         // The unit starts occupied and termination flips it to available.
+        Event::assertDispatched(LeaseStatusChanged::class);
         Event::assertDispatched(UnitStatusChanged::class);
     });
 });

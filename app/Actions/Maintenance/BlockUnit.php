@@ -4,28 +4,51 @@ namespace App\Actions\Maintenance;
 
 use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
+use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
 class BlockUnit
 {
-    public function execute(int $unitId, ?int $moveToUnitId): void
+    /**
+     * @return array<int, array{unit: Unit, from: UnitStatus}>
+     */
+    public function execute(int $unitId, ?int $moveToUnitId): array
     {
-        $unit = Unit::lockForUpdate()->findOrFail($unitId);
-        $activeLease = $unit->leases()->where('status', LeaseStatus::Active->value)->first();
+        return DB::transaction(function () use ($unitId, $moveToUnitId): array {
+            $unitIds = array_values(array_unique(array_filter([$unitId, $moveToUnitId])));
+            sort($unitIds);
 
-        if ($activeLease && $moveToUnitId) {
-            $this->transferOccupants($unit, $activeLease, $moveToUnitId);
-        } else {
-            $unit->update(['status' => UnitStatus::Maintenance]);
-        }
+            $lockedUnits = Unit::query()
+                ->whereKey($unitIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            abort_unless($lockedUnits->has($unitId), 404);
+
+            $changes = $lockedUnits
+                ->map(fn (Unit $unit): array => ['unit' => $unit, 'from' => $unit->status])
+                ->all();
+
+            $unit = $lockedUnits->get($unitId);
+            $activeLease = $unit->leases()->where('status', LeaseStatus::Active->value)->first();
+
+            if ($activeLease && $moveToUnitId) {
+                abort_unless($lockedUnits->has($moveToUnitId), 404);
+                $this->transferOccupants($unit, $activeLease, $lockedUnits->get($moveToUnitId));
+            } else {
+                $unit->update(['status' => UnitStatus::Maintenance]);
+            }
+
+            return $changes;
+        });
     }
 
-    private function transferOccupants(Unit $unit, mixed $activeLease, int $targetUnitId): void
+    private function transferOccupants(Unit $unit, Lease $activeLease, Unit $targetUnit): void
     {
-        $targetUnit = Unit::lockForUpdate()->findOrFail($targetUnitId);
-
         abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
         abort_if($targetUnit->id === $unit->id, 422, __('Cannot move to the same unit.'));
 
