@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\TenantPortal;
 
+use App\Support\DateTimeFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -24,8 +25,8 @@ class NotificationController extends TenantPortalController
                     'title' => $notification->data['title'] ?? '',
                     'message' => $notification->data['message'] ?? '',
                     'url' => $notification->data['url'] ?? null,
-                    'created_at' => $notification->created_at->toIso8601String(),
-                    'read_at' => $notification->read_at?->toIso8601String(),
+                    'created_at' => DateTimeFormatter::iso($notification->created_at),
+                    'read_at' => DateTimeFormatter::nullableIso($notification->read_at),
                 ]),
             'unreadCount' => $tenant->unreadNotifications()->count(),
         ]);

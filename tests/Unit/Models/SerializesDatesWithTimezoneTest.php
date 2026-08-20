@@ -2,6 +2,8 @@
 
 use App\Models\Invoice;
 use App\Models\User;
+use App\Support\DateTimeFormatter;
+use Carbon\CarbonImmutable;
 use Tests\TestCase;
 
 uses(TestCase::class);
@@ -30,4 +32,14 @@ it('falls back to UTC when the display timezone is invalid', function () {
 
     expect($user->toArray()['created_at'])
         ->toBe('2026-08-20T23:30:00.000000+00:00');
+});
+
+it('uses the configured timezone for explicit date formatting', function () {
+    config(['app.display_timezone' => 'Asia/Jakarta']);
+    $date = CarbonImmutable::parse('2026-08-20T23:30:00Z');
+
+    expect(DateTimeFormatter::iso($date))
+        ->toBe('2026-08-21T06:30:00.000000+07:00')
+        ->and(DateTimeFormatter::format($date, 'Y-m-d'))
+        ->toBe('2026-08-21');
 });

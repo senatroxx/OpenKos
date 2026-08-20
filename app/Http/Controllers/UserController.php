@@ -11,6 +11,7 @@ use App\Models\Property;
 use App\Models\Role as RoleModel;
 use App\Models\User;
 use App\Notifications\UserInvitation;
+use App\Support\DateTimeFormatter;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -57,9 +58,9 @@ class UserController extends Controller
             ])->values(),
             'is_active' => $user->is_active,
             'status' => $user->invited_at ? 'invited' : ($user->is_active ? 'active' : 'disabled'),
-            'invited_at' => $user->invited_at?->toISOString(),
-            'email_verified_at' => $user->email_verified_at?->toISOString(),
-            'last_login_at' => $user->last_login_at?->toISOString(),
+            'invited_at' => DateTimeFormatter::nullableIso($user->invited_at),
+            'email_verified_at' => DateTimeFormatter::nullableIso($user->email_verified_at),
+            'last_login_at' => DateTimeFormatter::nullableIso($user->last_login_at),
         ];
     }
 

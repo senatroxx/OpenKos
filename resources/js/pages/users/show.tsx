@@ -3,6 +3,7 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
+import { formatDate, formatDateTime } from '@/lib/formatters';
 
 import type { WorkspaceUser } from '@/types';
 
@@ -53,7 +54,7 @@ export default function UserWorkspace({ user }: { user: WorkspaceUser }) {
                         label="Last login"
                         value={
                             user.last_login_at
-                                ? new Date(user.last_login_at).toLocaleString()
+                                ? formatDateTime(user.last_login_at)
                                 : 'Never'
                         }
                     />
@@ -61,18 +62,14 @@ export default function UserWorkspace({ user }: { user: WorkspaceUser }) {
                         label="Email verified"
                         value={
                             user.email_verified_at
-                                ? new Date(
-                                      user.email_verified_at,
-                                  ).toLocaleDateString()
+                                ? formatDate(user.email_verified_at)
                                 : 'No'
                         }
                     />
                     <Field
                         label="Invited"
                         value={
-                            user.invited_at
-                                ? new Date(user.invited_at).toLocaleDateString()
-                                : '—'
+                            user.invited_at ? formatDate(user.invited_at) : '—'
                         }
                     />
                 </div>

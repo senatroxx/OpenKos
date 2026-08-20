@@ -278,7 +278,26 @@ test('invoice PDF renders confirmed payment details and history', function () {
         ->toContain('Total paid')
         ->toContain('Outstanding')
         ->toContain('Generated on')
-        ->toContain('WIB');
+        ->toContain('UTC');
+});
+
+test('invoice PDF formats verified timestamps in the configured timezone', function () {
+    config(['app.display_timezone' => 'Asia/Jakarta']);
+
+    $fixture = createTenantInvoicePdfFixture();
+    $invoice = $fixture['invoice'];
+    $invoice->payments()->create([
+        'amount' => '500000.00',
+        'payment_date' => '2026-07-29',
+        'payment_method' => 'bank_transfer',
+        'status' => 'confirmed',
+        'verified_at' => '2026-07-29 23:30:00',
+    ]);
+    $invoice->refresh()->load(['lease.unit.property', 'lineItems', 'payments']);
+    $invoice->append(['outstanding', 'display_status']);
+
+    expect(renderTenantInvoicePdfView($invoice))
+        ->toContain('30 Jul 2026, 06:30');
 });
 
 test('invoice PDF derives overdue status at the end-of-day boundary', function () {

@@ -8,6 +8,7 @@ use App\Http\Requests\Role\CloneRoleRequest;
 use App\Http\Requests\Role\StoreRoleRequest;
 use App\Http\Requests\Role\UpdateRoleRequest;
 use App\Models\Role;
+use App\Support\DateTimeFormatter;
 use App\Support\RecommendedRoles;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -36,7 +37,7 @@ class RoleController extends Controller
                 'is_active' => $role->is_active,
                 'users_count' => $role->users_count,
                 'permissions' => $role->permissions->pluck('name'),
-                'created_at' => $role->created_at?->toISOString(),
+                'created_at' => DateTimeFormatter::nullableIso($role->created_at),
             ],
         ]);
     }
@@ -79,7 +80,7 @@ class RoleController extends Controller
             'users_count' => $role->users_count,
             'permissions_count' => $role->permissions->count(),
             'permissions' => $role->permissions->pluck('name'),
-            'created_at' => $role->created_at?->toISOString(),
+            'created_at' => DateTimeFormatter::nullableIso($role->created_at),
         ]);
 
         return Inertia::render('roles/index', [

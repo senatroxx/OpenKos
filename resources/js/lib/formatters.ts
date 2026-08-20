@@ -1,7 +1,39 @@
-export function todayISO(): string {
-    const d = new Date();
+let displayTimezone = 'UTC';
 
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export function setDisplayTimezone(timezone: string | null | undefined): void {
+    displayTimezone = timezone || 'UTC';
+}
+
+function dateTimeFormatter(
+    locale: string,
+    options: Intl.DateTimeFormatOptions,
+    timeZone = displayTimezone,
+): Intl.DateTimeFormat {
+    try {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone });
+    } catch {
+        return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' });
+    }
+}
+
+function isDateOnly(value: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+export function todayISO(): string {
+    const parts = dateTimeFormatter('en-CA', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    })
+        .formatToParts(new Date())
+        .reduce<Record<string, string>>((result, part) => {
+            result[part.type] = part.value;
+
+            return result;
+        }, {});
+
+    return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 export function formatDate(dateStr: string | null): string {
@@ -9,11 +41,32 @@ export function formatDate(dateStr: string | null): string {
         return '—';
     }
 
-    return new Date(dateStr).toLocaleDateString('id-ID', {
+    return dateTimeFormatter(
+        'id-ID',
+        {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        },
+        isDateOnly(dateStr) ? 'UTC' : displayTimezone,
+    ).format(new Date(dateStr));
+}
+
+export function formatDateTime(
+    dateStr: string | null,
+    locale = 'id-ID',
+): string {
+    if (!dateStr) {
+        return '—';
+    }
+
+    return dateTimeFormatter(locale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-    });
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(dateStr));
 }
 
 export function formatPrice(cents: string | null): string {

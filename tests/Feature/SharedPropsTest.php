@@ -22,6 +22,16 @@ it('does not leak mail or whatsapp secrets in shared props', function () {
     expect(json_encode($props))->not->toContain('wa-token-123');
 });
 
+it('shares the configured display timezone', function () {
+    config(['app.display_timezone' => 'Asia/Jakarta']);
+
+    $props = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('dashboard'))
+        ->viewData('page')['props'];
+
+    expect($props['app']['timezone'])->toBe('Asia/Jakarta');
+});
+
 it('exposes notification channel readiness as booleans only', function () {
     config(['mail.mailers.smtp.host' => null]);
     putenv('MAIL_HOST=');
