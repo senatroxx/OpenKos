@@ -105,6 +105,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                         Route::put('/', [UnitController::class, 'update'])->name('update')->middleware('permission:units.update');
                         Route::delete('/', [UnitController::class, 'destroy'])->name('destroy')->middleware('permission:units.delete');
                         Route::post('restore', [UnitController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:units.update');
+                        Route::get('rates', [UnitController::class, 'rates'])->name('rates')->middleware('permission:units.view');
                         Route::get('maintenance-history', [UnitController::class, 'maintenanceHistory'])
                             ->name('maintenance-history')
                             ->middleware('permission:maintenance-tickets.view');

@@ -120,6 +120,26 @@ describe('CRUD', function () {
             );
     });
 
+    it('shows rates in the unit workspace', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('properties.units.rates', [$property, $unit]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/units/rates')
+                ->where('unit.rates.1.currency', 'USD')
+            );
+    });
+
     it('creates a unit', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();

@@ -1,5 +1,5 @@
 import { StatusBadge } from '@/components/shared/status-badge';
-import { formatPrice } from '@/lib/formatters';
+import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
 import type { Unit } from '@/types';
 
 export default function UnitOverview({ unit }: { unit: Unit }) {
@@ -67,8 +67,10 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
                                 className="flex items-center justify-between text-sm"
                             >
                                 <span className="text-muted-foreground">
-                                    {rate.billing_interval} {rate.billing_unit}
-                                    {rate.billing_interval > 1 ? 's' : ''}
+                                    {formatBillingPeriod(
+                                        rate.billing_interval,
+                                        rate.billing_unit,
+                                    )}
                                 </span>
                                 <span className="font-medium tabular-nums">
                                     {formatPrice(rate.amount, rate.currency)}

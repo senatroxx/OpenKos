@@ -31,16 +31,33 @@ class UnitController extends Controller
     {
         $this->authorize('view', $unit);
 
-        $unit->load(['property.city', 'activeRates', 'rates'])
-            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
-            ->load(['leases' => fn ($q) => $q->where('status', 'active')
-                ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
-            ]);
+        $this->loadWorkspaceUnit($unit);
 
         return Inertia::render('properties/units/show', [
             'property' => $property,
             'unit' => $unit,
         ]);
+    }
+
+    public function rates(Property $property, Unit $unit): Response
+    {
+        $this->authorize('view', $unit);
+
+        $this->loadWorkspaceUnit($unit);
+
+        return Inertia::render('properties/units/rates', [
+            'property' => $property,
+            'unit' => $unit,
+        ]);
+    }
+
+    private function loadWorkspaceUnit(Unit $unit): void
+    {
+        $unit->load(['property.city', 'activeRates', 'rates'])
+            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
+            ->load(['leases' => fn ($q) => $q->where('status', 'active')
+                ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            ]);
     }
 
     public function leaseHistory(Request $request, Property $property, Unit $unit): Response
