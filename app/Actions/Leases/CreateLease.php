@@ -11,6 +11,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\UnitRate;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Support\Facades\DB;
 
@@ -48,6 +49,8 @@ class CreateLease
             $activeTenantsCount = $this->occupancy->activeOccupantCount($unit);
 
             if ($existingLease) {
+                $this->ensureExistingLeaseTermsMatch($existingLease, $unitRate, $data);
+
                 $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
                 $newTenantIds = array_diff($tenantIds, $existingTenantIds->all());
 
@@ -119,6 +122,55 @@ class CreateLease
 
             return $lease;
         });
+    }
+
+    private function ensureExistingLeaseTermsMatch(Lease $lease, ?UnitRate $unitRate, CreateLeaseData $data): void
+    {
+        if ($data->unitRateId !== null) {
+            abort_if(
+                $lease->unit_rate_id !== $data->unitRateId,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+            abort_if(
+                $unitRate?->currency !== $lease->currency,
+                422,
+                __('The selected rate currency does not match the existing lease.'),
+            );
+        }
+
+        if ($data->rentAmount !== null) {
+            abort_if(
+                $lease->rent_amount === null
+                    || $this->money->compare($data->rentAmount, (string) $lease->rent_amount) !== 0,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->billingInterval !== null) {
+            abort_if(
+                $data->billingInterval !== $lease->billing_interval,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->billingUnit !== null) {
+            abort_if(
+                $data->billingUnit !== $lease->billing_unit?->value,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->billingStrategy !== null) {
+            abort_if(
+                $data->billingStrategy !== $lease->billing_strategy?->value,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
     }
 
     /**

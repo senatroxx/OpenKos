@@ -336,6 +336,38 @@ describe('CRUD', function () {
             ->assertStatus(422);
     });
 
+    it('does not allow pricing changes when adding to an existing lease', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $unit->update(['capacity' => 2]);
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $existingLease = Lease::factory()->create([
+            'primary_tenant_id' => $tenantA->id,
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $unit->rates()->firstOrFail()->id,
+            'rent_amount' => '1000000',
+            'currency' => 'IDR',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenantB->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $usdRate->id,
+            ])
+            ->assertStatus(422);
+
+        expect($existingLease->fresh()->tenants)->toHaveCount(1);
+    });
+
     it('prevents assigning a tenant to a second active lease', function () {
         [$property, $unit] = createPropertyWithUnit();
         $otherUnit = Unit::factory()->for($property)->create();
