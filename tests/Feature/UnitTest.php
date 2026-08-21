@@ -628,6 +628,30 @@ describe('currency-specific rates', function () {
         expect($unit->rates()->where('billing_unit', 'year')->exists())->toBeFalse();
     });
 
+    it('deactivates omitted rates without breaking lease lineage', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $rate = $unit->rates()->firstOrFail();
+        $lease = Lease::factory()->create([
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $rate->id,
+            'currency' => $rate->currency,
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => [],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($rate->fresh()->is_active)->toBeFalse()
+            ->and($lease->fresh()->unit_rate_id)->toBe($rate->id);
+    });
+
     it('enforces currency variant uniqueness at the database level', function () {
         $unit = Unit::factory()->create();
 
