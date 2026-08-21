@@ -139,11 +139,33 @@ class UpdateUnitRequest extends FormRequest
 
                 $seen[$key] = $rateId;
 
-                if ($storedRate && isset($rate['currency']) && $storedRate->currency !== $rate['currency']) {
-                    $validator->errors()->add(
-                        "rates.{$index}.currency",
-                        __('An existing unit-rate currency cannot be changed; add a new rate variant instead.'),
-                    );
+                if ($storedRate) {
+                    if (isset($rate['billing_interval'])
+                        && is_numeric($rate['billing_interval'])
+                        && (int) $rate['billing_interval'] !== $storedRate->billing_interval
+                    ) {
+                        $validator->errors()->add(
+                            "rates.{$index}.billing_interval",
+                            __('An existing unit-rate billing interval cannot be changed; add a new rate variant instead.'),
+                        );
+                    }
+
+                    if (isset($rate['billing_unit'])
+                        && is_string($rate['billing_unit'])
+                        && $storedRate->billing_unit->value !== $rate['billing_unit']
+                    ) {
+                        $validator->errors()->add(
+                            "rates.{$index}.billing_unit",
+                            __('An existing unit-rate billing unit cannot be changed; add a new rate variant instead.'),
+                        );
+                    }
+
+                    if (isset($rate['currency']) && $storedRate->currency !== $rate['currency']) {
+                        $validator->errors()->add(
+                            "rates.{$index}.currency",
+                            __('An existing unit-rate currency cannot be changed; add a new rate variant instead.'),
+                        );
+                    }
                 }
             }
         }];

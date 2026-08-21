@@ -198,9 +198,8 @@ class UnitController extends Controller
 
             foreach ($rates as $rate) {
                 if (isset($rate['id'])) {
-                    $unit->rates()->whereKey($rate['id'])->update([
-                        'billing_interval' => $rate['billing_interval'],
-                        'billing_unit' => $rate['billing_unit'],
+                    $unitRate = $unit->rates()->whereKey($rate['id'])->firstOrFail();
+                    $unitRate->update([
                         'amount' => $rate['amount'],
                         'is_active' => $rate['is_active'] ?? true,
                     ]);
