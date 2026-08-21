@@ -42,7 +42,7 @@ class UpdateUnitRequest extends FormRequest
                 'integer',
                 Rule::exists('unit_rates', 'id')->where('unit_id', $this->route('unit')->id),
             ],
-            'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1'],
+            'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1', 'max:255'],
             'rates.*.billing_unit' => ['required_with:rates', 'string', Rule::in(BillingUnit::values())],
             'rates.*.is_active' => ['nullable', 'boolean'],
             'rates.*.currency' => [

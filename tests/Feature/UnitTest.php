@@ -429,6 +429,41 @@ describe('currency-specific rates', function () {
             ->assertSessionHasErrors('rates.0');
     });
 
+    it('rejects rate intervals outside the database range', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => [[
+                    'billing_interval' => 256,
+                    'billing_unit' => 'month',
+                    'amount' => '1000000',
+                    'currency' => 'IDR',
+                ]],
+            ])
+            ->assertSessionHasErrors('rates.0.billing_interval');
+
+        $unit = Unit::factory()->for($property)->create();
+        $rate = $unit->rates()->firstOrFail();
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => [[
+                    'id' => $rate->id,
+                    'billing_interval' => 256,
+                    'billing_unit' => $rate->billing_unit->value,
+                    'amount' => $rate->amount,
+                    'currency' => $rate->currency,
+                ]],
+            ])
+            ->assertSessionHasErrors('rates.0.billing_interval');
+    });
+
     it('enforces currency variant uniqueness at the database level', function () {
         $unit = Unit::factory()->create();
 

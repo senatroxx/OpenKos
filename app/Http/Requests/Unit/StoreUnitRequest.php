@@ -34,7 +34,7 @@ class StoreUnitRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:65535'],
             'rates' => ['nullable', 'array'],
             'rates.*' => ['array'],
-            'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1'],
+            'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1', 'max:255'],
             'rates.*.billing_unit' => ['required_with:rates', 'string', Rule::in(BillingUnit::values())],
             'rates.*.currency' => [
                 'nullable',
