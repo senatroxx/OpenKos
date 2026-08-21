@@ -170,6 +170,12 @@ class MoveOutLease
 
         $newLease = null;
         if ($existingLease) {
+            abort_if(
+                $existingLease->currency !== $lease->currency,
+                422,
+                __('Cannot merge leases with different currencies.'),
+            );
+
             $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
 
             foreach ($lease->tenants as $tenant) {
