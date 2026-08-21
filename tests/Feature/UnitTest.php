@@ -464,6 +464,36 @@ describe('currency-specific rates', function () {
             ->assertSessionHasErrors('rates.0.billing_interval');
     });
 
+    it('rejects duplicate rate IDs in an update', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $rate = $unit->rates()->firstOrFail();
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => [
+                    [
+                        'id' => $rate->id,
+                        'billing_interval' => 1,
+                        'billing_unit' => 'month',
+                        'amount' => $rate->amount,
+                        'currency' => $rate->currency,
+                    ],
+                    [
+                        'id' => $rate->id,
+                        'billing_interval' => 1,
+                        'billing_unit' => 'year',
+                        'amount' => $rate->amount,
+                        'currency' => $rate->currency,
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('rates.1.id');
+    });
+
     it('enforces currency variant uniqueness at the database level', function () {
         $unit = Unit::factory()->create();
 
