@@ -8,6 +8,7 @@ use App\Business\Leases\LeaseStatusValidator;
 use App\Business\Leases\RenewalEligibilityChecker;
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\LeaseStatus;
+use App\Enums\UnitStatus;
 use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
 use App\Models\Unit;
@@ -27,72 +28,88 @@ class RenewLease
 
     public function execute(Lease $lease, RenewLeaseData $data): RenewLeaseResult
     {
-        try {
-            $this->eligibility->ensureCanRenew($lease);
-        } catch (LeaseRenewalException $e) {
-            return RenewLeaseResult::error($e->getMessage());
-        }
-
-        $outstanding = $this->financial->outstandingCheck($lease);
-
-        if ($outstanding['hasOutstanding'] && ! $data->confirmedOutstanding) {
-            return RenewLeaseResult::error(
-                'Lease has an outstanding balance of '.$outstanding['balance'].'. Confirm to proceed.'
-            );
-        }
-
-        $oldStatus = $lease->status;
-
-        $result = DB::transaction(function () use ($lease, $data, $oldStatus) {
+        return DB::transaction(function () use ($lease, $data) {
             $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
+            $lockedLease = Lease::query()
+                ->whereKey($lease->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Renewed);
+            abort_unless(
+                (int) $lockedLease->unit_id === $unit->id,
+                422,
+                __('Lease is no longer assigned to this unit.'),
+            );
+
+            if (in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true)) {
+                return RenewLeaseResult::error('This unit is not available for lease.');
+            }
+
+            try {
+                $this->eligibility->ensureCanRenew($lockedLease);
+            } catch (LeaseRenewalException $e) {
+                return RenewLeaseResult::error($e->getMessage());
+            }
+
+            $outstanding = $this->financial->outstandingCheck($lockedLease);
+
+            if ($outstanding['hasOutstanding'] && ! $data->confirmedOutstanding) {
+                return RenewLeaseResult::error(
+                    'Lease has an outstanding balance of '.$outstanding['balance'].'. Confirm to proceed.'
+                );
+            }
+
+            $this->leaseStatusValidator->validate($lockedLease->status, LeaseStatus::Renewed);
 
             $existingActive = $unit->leases()
                 ->where('status', LeaseStatus::Active->value)
-                ->where('id', '!=', $lease->id)
+                ->where('id', '!=', $lockedLease->id)
                 ->exists();
 
             if ($existingActive) {
                 return RenewLeaseResult::error('Unit already has an active lease.');
             }
 
+            if ($lockedLease->end_date === null || $data->endDate->lessThanOrEqualTo($lockedLease->end_date)) {
+                return RenewLeaseResult::error('The renewal end date must be after the current lease end date.');
+            }
+
             try {
-                $rentAmount = $this->money->normalizeAmount($data->rentAmount, $lease->currency);
-                $depositAmount = $lease->deposit_amount === null
+                $rentAmount = $this->money->normalizeAmount($data->rentAmount, $lockedLease->currency);
+                $depositAmount = $lockedLease->deposit_amount === null
                     ? null
-                    : $this->money->normalizeAmount((string) $lease->deposit_amount, $lease->currency);
+                    : $this->money->normalizeAmount((string) $lockedLease->deposit_amount, $lockedLease->currency);
             } catch (\InvalidArgumentException) {
                 return RenewLeaseResult::error('The existing lease amount is invalid for its currency.');
             }
 
-            $lease->update([
+            $lockedLease->update([
                 'status' => LeaseStatus::Renewed,
             ]);
 
             $newEndDate = $data->endDate;
 
             $newLease = $unit->leases()->create([
-                'previous_lease_id' => $lease->id,
-                'primary_tenant_id' => $lease->primary_tenant_id,
-                'start_date' => $lease->end_date->addDay(),
+                'previous_lease_id' => $lockedLease->id,
+                'primary_tenant_id' => $lockedLease->primary_tenant_id,
+                'start_date' => $lockedLease->end_date->addDay(),
                 'end_date' => $newEndDate,
                 'rent_amount' => $rentAmount,
-                'currency' => $lease->currency,
+                'currency' => $lockedLease->currency,
                 'deposit_amount' => $depositAmount,
-                'deposit_paid_at' => $lease->deposit_paid_at,
-                'billing_interval' => $lease->billing_interval,
-                'billing_unit' => $lease->billing_unit,
-                'billing_strategy' => $lease->billing_strategy,
-                'rent_due_day' => $lease->rent_due_day,
-                'is_custom_price' => $lease->is_custom_price,
-                'unit_rate_id' => $lease->unit_rate_id,
+                'deposit_paid_at' => $lockedLease->deposit_paid_at,
+                'billing_interval' => $lockedLease->billing_interval,
+                'billing_unit' => $lockedLease->billing_unit,
+                'billing_strategy' => $lockedLease->billing_strategy,
+                'rent_due_day' => $lockedLease->rent_due_day,
+                'is_custom_price' => $lockedLease->is_custom_price,
+                'unit_rate_id' => $lockedLease->unit_rate_id,
                 'status' => LeaseStatus::Active,
             ]);
 
-            foreach ($lease->tenants as $tenant) {
+            foreach ($lockedLease->tenants as $tenant) {
                 $newLease->tenants()->attach($tenant->id, [
-                    'is_primary' => $tenant->id === $lease->primary_tenant_id,
+                    'is_primary' => $tenant->id === $lockedLease->primary_tenant_id,
                 ]);
             }
 
@@ -102,7 +119,5 @@ class RenewLease
 
             return RenewLeaseResult::success($newLease);
         });
-
-        return $result;
     }
 }
