@@ -31,3 +31,20 @@ it('exposes the canonical scale map for validation and presentation', function (
     expect(fn () => $converter->normalizeAmount('1.2341', 'KWD'))
         ->toThrow(InvalidArgumentException::class);
 });
+
+it('enforces the decimal storage envelope', function () {
+    $converter = new MoneyConverter;
+
+    expect($converter->normalizeAmount('99999999999999999.999', 'KWD'))
+        ->toBe('99999999999999999.999');
+
+    expect(fn () => $converter->normalizeAmount('100000000000000000.00', 'USD'))
+        ->toThrow(InvalidArgumentException::class);
+});
+
+it('formats large decimal amounts without floating point conversion', function () {
+    $converter = new MoneyConverter;
+
+    expect($converter->format('12345678901234567.89', 'USD', 'en'))
+        ->toBe('$12,345,678,901,234,567.89');
+});

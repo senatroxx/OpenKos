@@ -10,6 +10,8 @@ use OpenKOS\Core\Data\Payment\Money;
 
 final class MoneyConverter
 {
+    private const MAX_INTEGER_DIGITS = 17;
+
     /**
      * Application billing scales for supported ISO 4217 currencies.
      *
@@ -85,9 +87,28 @@ final class MoneyConverter
         $scale = $this->scale($currency);
 
         try {
-            return BigDecimal::of($majorAmount)
+            $amount = BigDecimal::of($majorAmount);
+
+            if ($amount->isNegative()) {
+                throw new InvalidArgumentException('Money amounts cannot be negative.');
+            }
+
+            $normalized = $amount
                 ->toScale($scale, RoundingMode::Unnecessary)
                 ->toString();
+
+            $integerDigits = max(
+                1,
+                strlen($amount->toScale($scale, RoundingMode::Unnecessary)->getUnscaledValue()->abs()->toString()) - $scale,
+            );
+
+            if ($integerDigits > self::MAX_INTEGER_DIGITS) {
+                throw new InvalidArgumentException(
+                    'Amount exceeds the 17-digit integer limit for decimal(20,3) storage.',
+                );
+            }
+
+            return $normalized;
         } catch (InvalidArgumentException $exception) {
             throw $exception;
         } catch (\Throwable $exception) {
@@ -138,5 +159,65 @@ final class MoneyConverter
         }
 
         return new Money($minorUnits, $currency);
+    }
+
+    public function format(string $majorAmount, string $currency, ?string $locale = null): string
+    {
+        $currency = $this->normalizeCurrency($currency);
+        $scale = $this->scale($currency);
+        $amount = BigDecimal::of($majorAmount)->toScale($scale, RoundingMode::HalfEven);
+        $absolute = $amount->abs()->toScale($scale, RoundingMode::Unnecessary)->toString();
+        [$integer, $fraction] = array_pad(explode('.', $absolute, 2), 2, '');
+
+        $formatter = new \NumberFormatter(
+            $locale ?? (string) (Setting::get('locale') ?? 'id'),
+            \NumberFormatter::CURRENCY,
+        );
+        $formatter->setAttribute(\NumberFormatter::FRACTION_DIGITS, $scale);
+
+        $groupingSeparator = $formatter->getSymbol(\NumberFormatter::MONETARY_GROUPING_SEPARATOR_SYMBOL);
+        $decimalSeparator = $formatter->getSymbol(\NumberFormatter::MONETARY_SEPARATOR_SYMBOL);
+        $pattern = (string) $formatter->getPattern();
+        preg_match('/([#,]+0)(?:\.[0#]+)?/', $pattern, $matches);
+        $integerPattern = $matches[1] ?? '#,##0';
+        $groups = explode(',', $integerPattern);
+        $primaryGroupSize = strlen((string) end($groups));
+        $secondaryGroupSize = count($groups) > 2
+            ? strlen((string) $groups[count($groups) - 2])
+            : $primaryGroupSize;
+        $formattedInteger = $this->groupInteger(
+            $integer,
+            $groupingSeparator,
+            $primaryGroupSize,
+            $secondaryGroupSize,
+        );
+        $formattedNumber = $formattedInteger.($scale > 0 ? $decimalSeparator.$fraction : '');
+        $template = $formatter->formatCurrency($amount->isNegative() ? -1.0 : 1.0, $currency);
+        $templateNumber = '1'.($scale > 0 ? $decimalSeparator.str_repeat('0', $scale) : '');
+
+        return is_string($template)
+            ? str_replace($templateNumber, $formattedNumber, $template)
+            : $formattedNumber;
+    }
+
+    private function groupInteger(
+        string $integer,
+        string $separator,
+        int $primaryGroupSize,
+        int $secondaryGroupSize,
+    ): string {
+        if (strlen($integer) <= $primaryGroupSize) {
+            return $integer;
+        }
+
+        $groups = [substr($integer, -$primaryGroupSize)];
+        $integer = substr($integer, 0, -$primaryGroupSize);
+
+        while ($integer !== '') {
+            $groups[] = substr($integer, -$secondaryGroupSize);
+            $integer = substr($integer, 0, -$secondaryGroupSize);
+        }
+
+        return implode($separator, array_reverse($groups));
     }
 }

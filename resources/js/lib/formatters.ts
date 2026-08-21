@@ -108,15 +108,48 @@ export function formatPrice(
     }
 
     const resolvedCurrency = currency?.toUpperCase() || displayCurrency;
-    const num = Number.parseFloat(String(amount));
     const scale = scaleForCurrency(resolvedCurrency);
+    const minor = decimalToMinorRounded(String(amount), scale);
 
-    return new Intl.NumberFormat(displayLocale, {
+    if (minor === null) {
+        return '—';
+    }
+
+    const formatter = new Intl.NumberFormat(displayLocale, {
         style: 'currency',
         currency: resolvedCurrency,
         minimumFractionDigits: scale,
         maximumFractionDigits: scale,
-    }).format(num);
+    });
+    const absoluteMinor = minor < 0n ? -minor : minor;
+    const factor = 10n ** BigInt(scale);
+    const whole = absoluteMinor / factor;
+    const fraction = scale > 0 ? (absoluteMinor % factor).toString().padStart(scale, '0') : '';
+    const groupedWhole = new Intl.NumberFormat(displayLocale, {
+        useGrouping: true,
+        maximumFractionDigits: 0,
+    }).format(whole);
+    const localizedFraction = scale > 0
+        ? new Intl.NumberFormat(displayLocale, {
+              useGrouping: false,
+              minimumIntegerDigits: scale,
+              maximumFractionDigits: 0,
+          }).format(Number(fraction))
+        : '';
+    let integerPartReplaced = false;
+
+    return formatter
+        .formatToParts(minor < 0n ? -1 : 1)
+        .map((part) => {
+            if (part.type === 'integer' && !integerPartReplaced) {
+                integerPartReplaced = true;
+
+                return groupedWhole;
+            }
+
+            return part.type === 'fraction' ? localizedFraction : part.value;
+        })
+        .join('');
 }
 
 export function formatSize(bytes: number): string {
@@ -148,6 +181,24 @@ function decimalToMinor(amount: string, scale: number): bigint | null {
     const padded = fraction.slice(0, scale).padEnd(scale, '0');
 
     return BigInt(`${whole}${padded}` || '0');
+}
+
+function decimalToMinorRounded(amount: string, scale: number): bigint | null {
+    if (!/^-?\d+(?:\.\d+)?$/.test(amount)) {
+        return null;
+    }
+
+    const negative = amount.startsWith('-');
+    const unsigned = negative ? amount.slice(1) : amount;
+    const [whole, fraction = ''] = unsigned.split('.');
+    const retained = fraction.slice(0, scale).padEnd(scale, '0');
+    let minor = BigInt(`${whole}${retained}` || '0');
+
+    if (fraction.length > scale && Number(fraction[scale]) >= 5) {
+        minor += 1n;
+    }
+
+    return negative ? -minor : minor;
 }
 
 function divideRounded(numerator: bigint, denominator: bigint): bigint {

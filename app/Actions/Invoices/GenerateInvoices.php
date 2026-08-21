@@ -7,6 +7,7 @@ use App\Events\Invoice\InvoiceGenerated;
 use App\Models\Invoice;
 use App\Models\InvoiceLineItem;
 use App\Models\Lease;
+use App\Services\Payments\MoneyConverter;
 use Carbon\CarbonInterface;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ use Illuminate\Support\Str;
 class GenerateInvoices
 {
     private const MAX_UNIQUE_RETRIES = 3;
+
+    public function __construct(private MoneyConverter $money) {}
 
     /**
      * Materialize invoices for upcoming billing periods.
@@ -60,13 +63,15 @@ class GenerateInvoices
                     continue;
                 }
 
+                $currency = $lockedLease->currency;
+
                 $candidates[] = [
                     'lease_id' => $lockedLease->getKey(),
                     'period_start' => $period->period_start,
                     'period_end' => $period->period_end,
                     'due_date' => $period->due_date,
-                    'amount' => $period->amount,
-                    'currency' => $lockedLease->currency,
+                    'amount' => $this->money->normalizeAmount((string) $period->amount, $currency),
+                    'currency' => $currency,
                 ];
             }
         }

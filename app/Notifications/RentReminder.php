@@ -16,7 +16,6 @@ use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Number;
 use OpenKOS\Core\Contracts\MailChannelNotification;
 use OpenKOS\Core\Contracts\WhatsAppChannelNotification;
 use OpenKOS\Core\Data\Mail\MailAttachment;
@@ -167,11 +166,10 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
             ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
 
         $currency = app(MoneyConverter::class)->normalizeCurrency($this->event->currency);
-        $amount = Number::currency(
-            (float) $this->event->amount,
-            in: $currency,
-            locale: (string) (Setting::get('locale') ?? 'id'),
-            precision: app(MoneyConverter::class)->scale($currency),
+        $amount = app(MoneyConverter::class)->format(
+            $this->event->amount,
+            $currency,
+            (string) (Setting::get('locale') ?? 'id'),
         );
         $date = Carbon::parse($this->event->dueDate)->format('d M Y');
 

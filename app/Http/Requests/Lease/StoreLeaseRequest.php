@@ -17,7 +17,17 @@ class StoreLeaseRequest extends FormRequest
      */
     public function rules(): array
     {
-        $currency = UnitRate::find($this->integer('unit_rate_id'))?->currency;
+        $rate = $this->integer('unit_rate_id') > 0
+            ? UnitRate::query()
+                ->whereKey($this->integer('unit_rate_id'))
+                ->where('unit_id', $this->route('unit')->id)
+                ->first()
+            : UnitRate::query()
+                ->where('unit_id', $this->route('unit')->id)
+                ->where('billing_unit', 'month')
+                ->where('billing_interval', 1)
+                ->first();
+        $currency = $rate?->currency;
 
         return [
             'tenant_ids' => ['required', 'array', 'min:1'],
