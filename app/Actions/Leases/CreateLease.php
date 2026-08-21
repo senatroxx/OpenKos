@@ -33,7 +33,7 @@ class CreateLease
             $unitRate = $data->unitRateId === null
                 ? null
                 : $unit->activeRates()->whereKey($data->unitRateId)->first();
-            $defaultRate = $unitRate ?? $unit->defaultActiveRate();
+            $effectiveRate = $unitRate ?? $unit->defaultActiveRate();
 
             abort_if(
                 $data->unitRateId !== null && $unitRate === null,
@@ -72,8 +72,8 @@ class CreateLease
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
             try {
-                $rentAmount = $data->rentAmount ?? $defaultRate?->amount;
-                $currency = $defaultRate?->currency ?? $this->money->normalizeCurrency();
+                $rentAmount = $data->rentAmount ?? $effectiveRate?->amount;
+                $currency = $effectiveRate?->currency ?? $this->money->normalizeCurrency();
                 $rentAmount = $rentAmount === null
                     ? null
                     : $this->money->normalizeAmount((string) $rentAmount, $currency);
@@ -87,8 +87,8 @@ class CreateLease
                 abort(422, __('The selected unit rate amount is invalid for its currency.'));
             }
             $isCustomPrice = $data->rentAmount !== null
-                && $unitRate
-                && $this->money->compare($data->rentAmount, (string) $unitRate->amount) !== 0;
+                && $effectiveRate
+                && $this->money->compare($data->rentAmount, (string) $effectiveRate->amount) !== 0;
 
             $primaryTenantId = $tenantIds[0];
 
@@ -98,11 +98,11 @@ class CreateLease
                 'end_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
                 'currency' => $currency,
-                'billing_interval' => $unitRate?->billing_interval ?? $data->billingInterval ?? $defaultRate?->billing_interval ?? 1,
-                'billing_unit' => $unitRate?->billing_unit ?? $data->billingUnit ?? $defaultRate?->billing_unit ?? 'month',
+                'billing_interval' => $effectiveRate?->billing_interval ?? $data->billingInterval ?? 1,
+                'billing_unit' => $effectiveRate?->billing_unit ?? $data->billingUnit ?? 'month',
                 'billing_strategy' => $data->billingStrategy ?? 'advance',
                 'is_custom_price' => $isCustomPrice,
-                'unit_rate_id' => $data->unitRateId,
+                'unit_rate_id' => $effectiveRate?->id,
                 'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $data->depositPaidAt,
                 'deposit_refund_amount' => $depositRefundAmount,

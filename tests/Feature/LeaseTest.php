@@ -216,6 +216,38 @@ describe('CRUD', function () {
             ->and(Lease::firstOrFail()->billing_unit->value)->toBe('month');
     });
 
+    it('uses the complete default rate when no rate is selected', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $unit->rates()->delete();
+        $defaultRate = $unit->rates()->create([
+            'billing_interval' => 3,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'billing_interval' => 1,
+                'billing_unit' => 'year',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $lease = Lease::firstOrFail();
+
+        expect($lease->unit_rate_id)->toBe($defaultRate->id)
+            ->and($lease->rent_amount)->toBe('95.000')
+            ->and($lease->currency)->toBe('USD')
+            ->and($lease->billing_interval)->toBe(3)
+            ->and($lease->billing_unit->value)->toBe('month');
+    });
+
     it('inherits the configured currency from the default rate', function () {
         [$property, $unit] = createPropertyWithUnit();
         Setting::set('currency', 'USD');
