@@ -251,14 +251,16 @@ export default function UnitFormSheet({
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {currencies.map((currency) => (
-                                                        <SelectItem
-                                                            key={currency}
-                                                            value={currency}
-                                                        >
-                                                            {currency}
-                                                        </SelectItem>
-                                                    ))}
+                                                    {currencies.map(
+                                                        (currency) => (
+                                                            <SelectItem
+                                                                key={currency}
+                                                                value={currency}
+                                                            >
+                                                                {currency}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
                                                 </SelectContent>
                                             </Select>
                                             <InputError
@@ -344,7 +346,8 @@ export default function UnitFormSheet({
                                                     updateRate(
                                                         index,
                                                         'is_active',
-                                                        rate.is_active === false,
+                                                        rate.is_active ===
+                                                            false,
                                                     )
                                                 }
                                             >
