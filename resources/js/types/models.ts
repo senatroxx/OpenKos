@@ -80,6 +80,7 @@ export type UnitRate = {
     billing_unit: 'day' | 'week' | 'month' | 'year';
     amount: string;
     currency?: string;
+    is_active?: boolean;
 };
 
 export type Unit = {
@@ -97,6 +98,7 @@ export type Unit = {
     notes: string | null;
     active_leases?: number;
     leases?: LeaseInfo[];
+    rates?: UnitRate[];
     active_rates?: UnitRate[];
     tenants?: TenantInfo[];
     deleted_at?: string | null;
@@ -114,6 +116,7 @@ export type AvailableUnit = {
     capacity: number;
     occupied_count: number;
     active_rates?: UnitRate[];
+    leases?: LeaseInfo[];
     property: {
         id: number;
         name: string;
@@ -126,7 +129,7 @@ export type TenantLease = {
     reference: string | null;
     start_date: string;
     end_date: string | null;
-    rent_amount: string;
+    rent_amount: string | null;
     currency: string;
     unit: Unit | null;
     tenants: TenantInfo[];
@@ -138,8 +141,9 @@ export type LeaseInfo = {
     reference: string | null;
     start_date: string;
     end_date: string | null;
-    rent_amount: string;
+    rent_amount: string | null;
     currency: string;
+    unit_rate_id?: number | null;
     billing_interval: number;
     billing_unit: string;
     billing_strategy?: string;

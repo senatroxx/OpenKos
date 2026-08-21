@@ -53,7 +53,11 @@ export default function UnitFormSheet({
         name: unit?.name ?? '',
         floor: unit?.floor ?? '',
         capacity: String(unit?.capacity ?? 1),
-        rates: unit?.active_rates?.length ? unit.active_rates : [newRate],
+        rates: unit?.rates?.length
+            ? unit.rates
+            : unit?.active_rates?.length
+              ? unit.active_rates
+              : [newRate],
         size_sqm: unit?.size_sqm ?? '',
         status: unit?.status ?? 'available',
         description: unit?.description ?? '',
@@ -84,7 +88,7 @@ export default function UnitFormSheet({
     function updateRate(
         index: number,
         field: keyof UnitRate,
-        value: string | number,
+        value: string | number | boolean,
     ) {
         setData((prev) => {
             const next = [...prev.rates];
@@ -189,8 +193,13 @@ export default function UnitFormSheet({
                                 {data.rates.map((rate, index) => (
                                     <div
                                         key={index}
-                                        className="flex flex-wrap items-end gap-2 rounded-lg border p-3"
+                                        className={`flex flex-wrap items-end gap-2 rounded-lg border p-3 ${rate.is_active === false ? 'border-dashed opacity-75' : ''}`}
                                     >
+                                        {rate.is_active === false && (
+                                            <span className="basis-full text-xs font-medium text-muted-foreground">
+                                                Inactive rate
+                                            </span>
+                                        )}
                                         <div className="grid min-w-44 flex-1 gap-1">
                                             <Label className="text-xs">
                                                 Amount
@@ -210,6 +219,13 @@ export default function UnitFormSheet({
                                                     )
                                                 }
                                                 placeholder="e.g. 1000000"
+                                            />
+                                            <InputError
+                                                message={
+                                                    errors[
+                                                        `rates.${index}.amount`
+                                                    ]
+                                                }
                                             />
                                         </div>
                                         <div className="grid w-24 gap-1">
@@ -244,6 +260,13 @@ export default function UnitFormSheet({
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            <InputError
+                                                message={
+                                                    errors[
+                                                        `rates.${index}.currency`
+                                                    ]
+                                                }
+                                            />
                                         </div>
                                         <div className="grid w-20 gap-1">
                                             <Label className="text-xs">
@@ -252,6 +275,7 @@ export default function UnitFormSheet({
                                             <Input
                                                 type="number"
                                                 min={1}
+                                                disabled={rate.id != null}
                                                 value={rate.billing_interval}
                                                 onChange={(e) =>
                                                     updateRate(
@@ -263,6 +287,13 @@ export default function UnitFormSheet({
                                                     )
                                                 }
                                             />
+                                            <InputError
+                                                message={
+                                                    errors[
+                                                        `rates.${index}.billing_interval`
+                                                    ]
+                                                }
+                                            />
                                         </div>
                                         <div className="grid w-28 gap-1">
                                             <Label className="text-xs">
@@ -270,6 +301,7 @@ export default function UnitFormSheet({
                                             </Label>
                                             <Select
                                                 value={rate.billing_unit}
+                                                disabled={rate.id != null}
                                                 onValueChange={(val) =>
                                                     updateRate(
                                                         index,
@@ -294,7 +326,32 @@ export default function UnitFormSheet({
                                                     )}
                                                 </SelectContent>
                                             </Select>
+                                            <InputError
+                                                message={
+                                                    errors[
+                                                        `rates.${index}.billing_unit`
+                                                    ]
+                                                }
+                                            />
                                         </div>
+                                        {rate.id != null && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                    updateRate(
+                                                        index,
+                                                        'is_active',
+                                                        rate.is_active === false,
+                                                    )
+                                                }
+                                            >
+                                                {rate.is_active === false
+                                                    ? 'Reactivate'
+                                                    : 'Deactivate'}
+                                            </Button>
+                                        )}
                                         {data.rates.length > 1 && (
                                             <Button
                                                 type="button"

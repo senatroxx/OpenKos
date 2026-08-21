@@ -100,7 +100,6 @@ class UpdateUnitRequest extends FormRequest
             $seen = [];
             UnitRate::query()
                 ->where('unit_id', $this->route('unit')->id)
-                ->where('is_active', false)
                 ->when($submittedIds !== [], fn ($query) => $query->whereNotIn('id', $submittedIds))
                 ->get()
                 ->each(function (UnitRate $rate) use (&$seen): void {

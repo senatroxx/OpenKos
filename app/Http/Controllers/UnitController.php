@@ -30,7 +30,7 @@ class UnitController extends Controller
     {
         $this->authorize('view', $unit);
 
-        $unit->load(['property.city', 'activeRates'])
+        $unit->load(['property.city', 'activeRates', 'rates'])
             ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
             ->load(['leases' => fn ($q) => $q->where('status', 'active')
                 ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
@@ -108,7 +108,11 @@ class UnitController extends Controller
                 ->withCount([
                     'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
                 ])
-                ->with(['leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']), 'activeRates']);
+                ->with([
+                    'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+                    'activeRates',
+                    'rates',
+                ]);
 
         $result = $table->paginate($query, $request, 'units');
 
