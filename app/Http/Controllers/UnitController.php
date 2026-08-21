@@ -15,10 +15,12 @@ use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -174,50 +176,74 @@ class UnitController extends Controller
         $rates = $validated['rates'] ?? [];
         unset($validated['rates']);
 
-        DB::transaction(function () use ($unit, $validated, $rates, $request): void {
-            $unit->update($validated);
+        try {
+            DB::transaction(function () use ($unit, $validated, $rates, $request): void {
+                $unit->update($validated);
 
-            if (! $request->has('rates')) {
-                return;
-            }
-
-            $keepIds = collect($rates)
-                ->pluck('id')
-                ->filter()
-                ->map(fn (mixed $id): int => (int) $id)
-                ->all();
-
-            if ($keepIds === []) {
-                $unit->rates()->where('is_active', true)->delete();
-            } else {
-                $unit->rates()
-                    ->where('is_active', true)
-                    ->whereNotIn('id', $keepIds)
-                    ->delete();
-            }
-
-            foreach ($rates as $rate) {
-                if (isset($rate['id'])) {
-                    $unitRate = $unit->rates()->whereKey($rate['id'])->firstOrFail();
-                    $unitRate->update([
-                        'amount' => $rate['amount'],
-                        'is_active' => $rate['is_active'] ?? true,
-                    ]);
-                } else {
-                    $unit->rates()->create([
-                        'billing_interval' => $rate['billing_interval'],
-                        'billing_unit' => $rate['billing_unit'],
-                        'amount' => $rate['amount'],
-                        'currency' => $rate['currency'] ?? null,
-                        'is_active' => $rate['is_active'] ?? true,
-                    ]);
+                if (! $request->has('rates')) {
+                    return;
                 }
+
+                $keepIds = collect($rates)
+                    ->pluck('id')
+                    ->filter()
+                    ->map(fn (mixed $id): int => (int) $id)
+                    ->all();
+
+                if ($keepIds === []) {
+                    $unit->rates()->where('is_active', true)->delete();
+                } else {
+                    $unit->rates()
+                        ->where('is_active', true)
+                        ->whereNotIn('id', $keepIds)
+                        ->delete();
+                }
+
+                foreach ($rates as $rate) {
+                    if (isset($rate['id'])) {
+                        $unitRate = $unit->rates()->whereKey($rate['id'])->firstOrFail();
+                        $unitRate->update([
+                            'amount' => $rate['amount'],
+                            'is_active' => $rate['is_active'] ?? true,
+                        ]);
+                    } else {
+                        $unit->rates()->create([
+                            'billing_interval' => $rate['billing_interval'],
+                            'billing_unit' => $rate['billing_unit'],
+                            'amount' => $rate['amount'],
+                            'currency' => $rate['currency'] ?? null,
+                            'is_active' => $rate['is_active'] ?? true,
+                        ]);
+                    }
+                }
+            });
+        } catch (QueryException $exception) {
+            if (! $this->isUnitRateUniqueViolation($exception)) {
+                throw $exception;
             }
-        });
+
+            throw ValidationException::withMessages([
+                'rates' => __('A rate with the same billing period and currency already exists.'),
+            ]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit updated.')]);
 
         return back();
+    }
+
+    private function isUnitRateUniqueViolation(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'unit_rates_unit_interval_unit_currency_unique')
+            || (
+                str_contains($message, 'unit_rates')
+                && str_contains($message, 'billing_interval')
+                && str_contains($message, 'billing_unit')
+                && str_contains($message, 'currency')
+                && (str_contains($message, 'unique') || str_contains($message, 'duplicate'))
+            );
     }
 
     public function restore(Property $property, Unit $unit): RedirectResponse
