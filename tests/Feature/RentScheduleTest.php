@@ -42,7 +42,7 @@ it('generates schedule from first due date after lease start', function () {
 
     expect($schedule[0]->period_start->format('Y-m-d'))->toBe('2026-06-01');
     expect($schedule[0]->due_date->format('Y-m-d'))->toBe('2026-06-01');
-    expect($schedule[0]->amount)->toBe('1500000.00');
+    expect($schedule[0]->amount)->toBe('1500000.000');
 });
 
 it('includes start month when due day is on or before start date', function () {

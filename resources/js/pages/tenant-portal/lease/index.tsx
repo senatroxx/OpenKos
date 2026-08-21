@@ -84,7 +84,7 @@ function LeaseSection({
                             </div>
                             <p className="mt-3 text-sm tabular-nums">
                                 {lease.rent_amount
-                                    ? `${formatPrice(lease.rent_amount)} ${lease.billing_label}`
+                                    ? `${formatPrice(lease.rent_amount, lease.currency)} ${lease.billing_label}`
                                     : '—'}
                             </p>
                         </Link>

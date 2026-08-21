@@ -15,6 +15,8 @@ use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\PaymentProof;
+use App\Services\Payments\MoneyConverter;
+use Brick\Math\BigDecimal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +37,7 @@ class PaymentController extends Controller
         $request->ensureInvoiceIsPayable($invoice);
 
         $data = new RecordPaymentData(
-            amount: (int) $request->amount,
+            amount: (string) $request->amount,
             paymentDate: $request->paid_at,
             paymentMethod: $request->payment_method,
             notes: $request->notes,
@@ -60,7 +62,7 @@ class PaymentController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __('Payment of :amount recorded for :period.', [
-                'amount' => number_format((float) $payment->amount, 0, ',', '.'),
+                'amount' => $payment->amount.' '.$payment->currency,
                 'period' => $invoice->period_start->format('F Y'),
             ]),
         ]);
@@ -111,11 +113,14 @@ class PaymentController extends Controller
 
             if ($newStatus === PaymentStatus::Confirmed) {
 
-                $confirmedSum = (float) $invoice->payments()
+                $confirmedSum = (string) $invoice->payments()
                     ->where('status', PaymentStatus::Confirmed->value)
                     ->sum('amount');
 
-                if ($confirmedSum + (float) $lockedPayment->amount > (float) $invoice->total) {
+                if (app(MoneyConverter::class)->compare(
+                    BigDecimal::of($confirmedSum)->plus((string) $lockedPayment->amount)->toString(),
+                    (string) $invoice->total,
+                ) > 0) {
                     abort(422, 'Confirming this payment would exceed the invoice total.');
                 }
 

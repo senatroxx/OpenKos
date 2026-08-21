@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState } from 'react';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,8 @@ export default function MoveOutSheet({
     onOpenChange: (open: boolean) => void;
     onClose?: () => void;
 }) {
+    const { setting } = usePage<{ setting: { currency: string } }>().props;
+    const currency = lease?.currency ?? setting.currency;
     const { data, setData, transform, submit, reset, processing, errors } =
         useForm({
             move_out_date: todayISO(),
@@ -283,7 +285,7 @@ export default function MoveOutSheet({
                         {depositReturned === 'yes' && (
                             <div className="grid gap-2">
                                 <Label htmlFor="deposit_refund_amount">
-                                    Refund Amount (IDR)
+                                    Refund Amount ({currency})
                                 </Label>
                                 <Input
                                     id="deposit_refund_amount"

@@ -60,7 +60,7 @@
         (float) $amount,
         in: $currency,
         locale: $locale,
-        precision: 2,
+        precision: app(App\Services\Payments\MoneyConverter::class)->scale($currency),
     );
     $property = $invoice->lease?->unit?->property;
     $propertyAddress = collect([

@@ -11,6 +11,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Support\Facades\DB;
 
 class CreateLease
@@ -19,6 +20,7 @@ class CreateLease
         private OccupancyCalculator $occupancy,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
+        private MoneyConverter $money,
     ) {}
 
     public function execute(Unit $unit, CreateLeaseData $data): mixed
@@ -66,7 +68,10 @@ class CreateLease
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
             $rentAmount = $data->rentAmount ?? $unitRate?->amount ?? $unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
-            $isCustomPrice = $data->rentAmount !== null && $unitRate && (float) $data->rentAmount !== (float) $unitRate->amount;
+            $currency = $unitRate?->currency ?? $this->money->normalizeCurrency();
+            $isCustomPrice = $data->rentAmount !== null
+                && $unitRate
+                && $this->money->compare($data->rentAmount, (string) $unitRate->amount) !== 0;
 
             $primaryTenantId = $tenantIds[0];
 
@@ -75,6 +80,7 @@ class CreateLease
                 'start_date' => $data->startDate,
                 'end_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
+                'currency' => $currency,
                 'billing_interval' => $data->billingInterval ?? $unitRate?->billing_interval ?? 1,
                 'billing_unit' => $data->billingUnit ?? $unitRate?->billing_unit ?? 'month',
                 'billing_strategy' => $data->billingStrategy ?? 'advance',

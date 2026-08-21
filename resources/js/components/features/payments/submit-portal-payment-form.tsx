@@ -70,7 +70,7 @@ export default function SubmitPortalPaymentForm({
                     <p className="font-medium">
                         Outstanding balance:{' '}
                         <span className="tabular-nums">
-                            {formatPrice(payableAmount)}
+                            {formatPrice(payableAmount, invoice.currency)}
                         </span>
                     </p>
                     <p className="text-muted-foreground">
@@ -82,15 +82,15 @@ export default function SubmitPortalPaymentForm({
                 <InputError message={errors.invoice_id} />
 
                 <div className="grid gap-2">
-                    <Label htmlFor="amount">Amount (IDR)</Label>
+                    <Label htmlFor="amount">Amount ({invoice.currency})</Label>
                     <Input
                         id="amount"
                         name="amount"
                         type="number"
-                        min={1}
+                        min={0}
                         max={payableAmount}
-                        step="1"
-                        inputMode="numeric"
+                        step="any"
+                        inputMode="decimal"
                         defaultValue={payableAmount}
                         aria-describedby="amount-help"
                         required
@@ -99,7 +99,7 @@ export default function SubmitPortalPaymentForm({
                         id="amount-help"
                         className="text-sm text-muted-foreground"
                     >
-                        Enter up to {formatPrice(payableAmount)}.
+                        Enter up to {formatPrice(payableAmount, invoice.currency)}.
                     </p>
                     <InputError message={errors.amount} />
                 </div>

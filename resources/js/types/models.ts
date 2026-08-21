@@ -79,6 +79,7 @@ export type UnitRate = {
     billing_interval: number;
     billing_unit: 'day' | 'week' | 'month' | 'year';
     amount: string;
+    currency?: string;
 };
 
 export type Unit = {
@@ -126,6 +127,7 @@ export type TenantLease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
+    currency: string;
     unit: Unit | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
@@ -137,6 +139,7 @@ export type LeaseInfo = {
     start_date: string;
     end_date: string | null;
     rent_amount: string;
+    currency: string;
     billing_interval: number;
     billing_unit: string;
     billing_strategy?: string;
@@ -162,6 +165,7 @@ export type Lease = {
     start_date: string;
     end_date: string | null;
     rent_amount: string | null;
+    currency: string;
     billing_interval: number;
     billing_unit: string;
     billing_strategy?: string;
@@ -211,6 +215,7 @@ export type TenantLeaseContext = {
 
 export type LeaseData = {
     id: number;
+    currency?: string;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
     unit: { id: number; name: string } | null;
@@ -278,6 +283,7 @@ export type Invoice = {
     display_status?: string;
     total: string;
     amount_paid: string;
+    currency: string;
     outstanding?: string;
     payable_amount?: string;
     line_items?: InvoiceLineItem[];
@@ -293,6 +299,7 @@ export type Payment = {
         'id' | 'reference' | 'period_start' | 'period_end' | 'status'
     > | null;
     amount: string;
+    currency: string;
     payment_date: string;
     payment_method: string;
     reference: string | null;
@@ -314,6 +321,7 @@ export type RentScheduleEntry = {
     period_end: string;
     due_date: string;
     amount: string;
+    currency: string;
     amount_paid: string;
     outstanding: string;
     status: 'paid' | 'partial' | 'overdue' | 'due' | 'upcoming' | 'cancelled';

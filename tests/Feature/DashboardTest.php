@@ -213,7 +213,10 @@ test('dashboard shows overdue invoice count and amount in attention', function (
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('attention.overdue_invoices.count', 2)
-            ->where('attention.overdue_invoices.amount', 600000)
+            ->where('attention.overdue_invoices.amounts', [[
+                'currency' => 'IDR',
+                'amount' => '600000.000',
+            ]])
         );
 
     Carbon::setTestNow();
@@ -372,7 +375,7 @@ test('dashboard attention shows zeros when no actionable items exist', function 
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('attention.overdue_invoices.count', 0)
-            ->where('attention.overdue_invoices.amount', 0)
+            ->where('attention.overdue_invoices.amounts', [])
             ->where('attention.due_today', 0)
             ->where('attention.open_maintenance', 0)
             ->where('attention.leases_ending_soon', 0)

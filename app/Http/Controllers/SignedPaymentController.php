@@ -48,6 +48,7 @@ class SignedPaymentController extends Controller
                 'total' => (string) $invoice->total,
                 'amount_paid' => (string) $invoice->amount_paid,
                 'outstanding' => $invoice->outstanding,
+                'currency' => $invoice->currency,
                 'context' => [
                     'property_name' => $invoice->lease?->unit?->property?->name,
                     'unit_name' => $invoice->lease?->unit?->name,

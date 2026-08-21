@@ -4,6 +4,7 @@ namespace App\Http\Requests\Unit;
 
 use App\Enums\BillingUnit;
 use App\Enums\UnitStatus;
+use App\Rules\MoneyAmount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,7 @@ class StoreUnitRequest extends FormRequest
             'rates' => ['nullable', 'array'],
             'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1'],
             'rates.*.billing_unit' => ['required_with:rates', 'string', Rule::in(BillingUnit::values())],
-            'rates.*.amount' => ['required_with:rates', 'numeric', 'min:0'],
+            'rates.*.amount' => ['required_with:rates', new MoneyAmount],
         ];
     }
 }

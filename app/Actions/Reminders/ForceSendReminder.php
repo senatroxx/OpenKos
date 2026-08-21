@@ -72,7 +72,8 @@ class ForceSendReminder
             periodStart: $invoice->period_start->toDateString(),
             periodEnd: $invoice->period_end->toDateString(),
             dueDate: $invoice->due_date->toDateString(),
-            amount: (int) round((float) $invoice->outstanding * 100),
+            amount: $invoice->outstanding,
+            currency: $invoice->currency,
             overdueDays: $overdueDays,
             invoice: $invoice,
         );

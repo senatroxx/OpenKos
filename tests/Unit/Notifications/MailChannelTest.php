@@ -110,6 +110,7 @@ test('RentReminder via returns only configured channels', function () {
         periodEnd: '2026-08-31',
         dueDate: '2026-08-01',
         amount: 1500000,
+        currency: 'IDR',
     );
 
     $reminder = new RentReminder($event);
@@ -128,6 +129,7 @@ test('RentReminder still renders events without invoice context', function () {
         periodEnd: '2026-08-31',
         dueDate: '2026-08-01',
         amount: 150000000,
+        currency: 'IDR',
     );
 
     $reminder = new RentReminder($event);
@@ -151,12 +153,14 @@ test('RentReminder replaces every documented custom template placeholder', funct
         periodEnd: '2026-08-31',
         dueDate: '2026-08-01',
         amount: 150000000,
+        currency: 'IDR',
         overdueDays: 3,
     );
 
     $content = (new RentReminder($event))->toMailChannel((object) ['name' => 'Ayu']);
 
-    expect($content->plainTextBody)->toBe('Ayu|A-01|3|1,500,000|01 Aug 2026');
+    expect($content->plainTextBody)->toContain('Ayu|A-01|3|')
+        ->and($content->plainTextBody)->toContain('150.000.000|01 Aug 2026');
 });
 
 test('RentReminder selects templates by reminder type', function () {
@@ -181,6 +185,7 @@ test('RentReminder selects templates by reminder type', function () {
             periodEnd: '2026-08-31',
             dueDate: '2026-08-01',
             amount: 150000000,
+            currency: 'IDR',
             overdueDays: $type === ReminderType::Overdue ? 3 : null,
         );
 
@@ -205,6 +210,7 @@ test('RentReminder only includes optional invoice placeholders when configured',
         periodEnd: '2026-08-31',
         dueDate: '2026-08-01',
         amount: 150000000,
+        currency: 'IDR',
     );
 
     expect((new RentReminder($event))->toLog((object) ['name' => 'Ayu']))

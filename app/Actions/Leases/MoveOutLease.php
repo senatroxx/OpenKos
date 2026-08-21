@@ -189,6 +189,7 @@ class MoveOutLease
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $data->endDate,
                 'rent_amount' => $lease->rent_amount,
+                'currency' => $lease->currency,
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
                 'billing_strategy' => $lease->billing_strategy,

@@ -200,7 +200,7 @@ describe('renewal', function () {
         expect($newLease)->not->toBeNull();
         expect($newLease->previous_lease_id)->toBe($lease->id);
         expect($newLease->status)->toBe(LeaseStatus::Active);
-        expect($newLease->rent_amount)->toBe('1500000.00');
+        expect($newLease->rent_amount)->toBe('1500000.000');
         expect($newLease->start_date->format('Y-m-d'))->toBe('2026-07-01');
         expect($newLease->end_date->format('Y-m-d'))->toBe('2027-06-30');
         expect($newLease->unit_id)->toBe($lease->unit_id);
@@ -259,7 +259,7 @@ describe('renewal', function () {
 
         $newLease = $lease->fresh()->renewedLease;
 
-        expect($newLease->deposit_amount)->toBe('500000.00');
+        expect($newLease->deposit_amount)->toBe('500000.000');
         expect($newLease->deposit_paid_at)->not->toBeNull();
     });
 
@@ -526,7 +526,7 @@ describe('RenewLeaseData', function () {
             confirmedOutstanding: true,
         );
 
-        expect($data->rentAmount)->toBe(1_200_000);
+        expect($data->rentAmount)->toBe('1200000');
         expect($data->confirmedOutstanding)->toBeTrue();
     });
 });

@@ -30,7 +30,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatRupiah } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 import { dashboard } from '@/routes';
 import type {
     AttentionData,
@@ -147,10 +147,15 @@ export default function Overview({
                             label="Overdue Invoices"
                             value={attention.overdue_invoices.count}
                             subtext={
-                                attention.overdue_invoices.amount > 0
-                                    ? formatRupiah(
-                                          attention.overdue_invoices.amount,
-                                      )
+                                attention.overdue_invoices.amounts.length > 0
+                                    ? attention.overdue_invoices.amounts
+                                          .map((amount) =>
+                                              formatPrice(
+                                                  amount.amount,
+                                                  amount.currency,
+                                              ),
+                                          )
+                                          .join(' · ')
                                     : undefined
                             }
                             variant="red"

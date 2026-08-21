@@ -4,6 +4,8 @@ namespace App\Http\Requests\Unit;
 
 use App\Enums\BillingUnit;
 use App\Enums\UnitStatus;
+use App\Models\UnitRate;
+use App\Rules\MoneyAmount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -16,7 +18,7 @@ class UpdateUnitRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => [
                 'required',
                 'string',
@@ -35,8 +37,17 @@ class UpdateUnitRequest extends FormRequest
             'rates.*.id' => ['nullable', 'integer', 'exists:unit_rates,id'],
             'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1'],
             'rates.*.billing_unit' => ['required_with:rates', 'string', Rule::in(BillingUnit::values())],
-            'rates.*.amount' => ['required_with:rates', 'numeric', 'min:0'],
             'rates.*.is_active' => ['nullable', 'boolean'],
         ];
+
+        foreach ($this->input('rates', []) as $index => $rate) {
+            $currency = isset($rate['id'])
+                ? UnitRate::find($rate['id'])?->currency
+                : null;
+
+            $rules["rates.{$index}.amount"] = ['required_with:rates', new MoneyAmount($currency)];
+        }
+
+        return $rules;
     }
 }

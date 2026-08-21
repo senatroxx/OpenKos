@@ -5,15 +5,20 @@ namespace App\Business\Dashboard;
 use App\Enums\InvoiceStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class OverviewStatsCalculator
 {
     public function computeFinance(Builder $activeLeasesQuery): array
     {
-        $monthlyPotential = (clone $activeLeasesQuery)->sum('rent_amount');
+        $monthlyPotential = $this->aggregate(
+            (clone $activeLeasesQuery)->get(['rent_amount', 'currency']),
+            fn ($row): string => (string) $row->rent_amount,
+        );
 
         $now = now();
         $currentMonth = (int) $now->month;
@@ -28,22 +33,58 @@ class OverviewStatsCalculator
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereBetween('period_start', [$periodStart, $periodEnd])
                 ->whereIn('lease_id', $leaseIds))
-            ->sum('amount');
+            ->get(['amount', 'currency']);
 
-        $outstanding = (float) Invoice::whereIn('lease_id', $leaseIds)
+        $outstanding = Invoice::whereIn('lease_id', $leaseIds)
             ->whereBetween('period_start', [$periodStart, $periodEnd])
             ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
-            ->sum(DB::raw('total - amount_paid'));
+            ->get(['total', 'amount_paid', 'currency']);
+        $revenueThisMonth = $this->aggregate($revenueThisMonth, fn ($row): string => (string) $row->amount);
+        $outstanding = $this->aggregate(
+            $outstanding,
+            fn ($row): string => BigDecimal::of((string) $row->total)->minus((string) $row->amount_paid)->toString(),
+        );
 
-        $collectionRate = $monthlyPotential > 0
-            ? round(($revenueThisMonth / $monthlyPotential) * 100)
-            : 0;
+        $potentialByCurrency = collect($monthlyPotential)->keyBy('currency');
+        $revenueByCurrency = collect($revenueThisMonth)->keyBy('currency');
+        $collectionRate = $potentialByCurrency->map(function (array $potential) use ($revenueByCurrency): array {
+            $revenue = $revenueByCurrency->get($potential['currency']);
+            $rate = $revenue && BigDecimal::of($potential['amount'])->isPositive()
+                ? BigDecimal::of($revenue['amount'])
+                    ->dividedBy($potential['amount'], 4, RoundingMode::HalfUp)
+                    ->multipliedBy(100)
+                    ->toScale(0, RoundingMode::HalfUp)
+                    ->toInt()
+                : 0;
+
+            return ['currency' => $potential['currency'], 'rate' => $rate];
+        })->values()->all();
 
         return [
-            'revenue_this_month' => (int) $revenueThisMonth,
-            'monthly_potential' => (int) $monthlyPotential,
-            'outstanding' => (int) $outstanding,
+            'revenue_this_month' => $revenueThisMonth,
+            'monthly_potential' => $monthlyPotential,
+            'outstanding' => $outstanding,
             'collection_rate' => $collectionRate,
         ];
+    }
+
+    /**
+     * @param  Collection<int, object>  $rows
+     * @return array<int, array{currency: string, amount: string}>
+     */
+    private function aggregate(Collection $rows, callable $amount): array
+    {
+        return $rows
+            ->groupBy(fn ($row): string => (string) $row->currency)
+            ->map(function ($rows, string $currency) use ($amount): array {
+                $total = $rows->reduce(
+                    fn (BigDecimal $total, $row): BigDecimal => $total->plus($amount($row) ?: '0'),
+                    BigDecimal::zero(),
+                );
+
+                return ['currency' => $currency, 'amount' => $total->toString()];
+            })
+            ->values()
+            ->all();
     }
 }

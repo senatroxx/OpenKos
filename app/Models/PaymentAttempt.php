@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\Auditable;
 use App\Concerns\SerializesDatesWithTimezone;
+use App\Services\Payments\MoneyConverter;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -52,7 +53,7 @@ class PaymentAttempt extends Model
     protected function casts(): array
     {
         return [
-            'amount' => 'decimal:2',
+            'amount' => 'decimal:3',
             'status' => PaymentStatus::class,
             'expires_at' => 'datetime',
             'checkout_instructions' => 'array',
@@ -121,13 +122,7 @@ class PaymentAttempt extends Model
 
     public function setCurrencyAttribute(string $currency): void
     {
-        $currency = strtoupper($currency);
-
-        if (! preg_match('/\A[A-Z]{3}\z/D', $currency)) {
-            throw new InvalidArgumentException('Currency must be a three-letter ISO 4217 code.');
-        }
-
-        $this->attributes['currency'] = $currency;
+        $this->attributes['currency'] = app(MoneyConverter::class)->normalizeCurrency($currency);
     }
 
     public function setMetadataAttribute(?array $metadata): void

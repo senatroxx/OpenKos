@@ -11,10 +11,12 @@ use App\Notifications\Channels\LogChannel;
 use App\Notifications\Channels\MailChannel;
 use App\Notifications\Channels\WhatsAppChannel;
 use App\Services\Invoices\InvoicePdfArtifact;
+use App\Services\Payments\MoneyConverter;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Number;
 use OpenKOS\Core\Contracts\MailChannelNotification;
 use OpenKOS\Core\Contracts\WhatsAppChannelNotification;
 use OpenKOS\Core\Data\Mail\MailAttachment;
@@ -164,7 +166,13 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
         $days = $this->event->overdueDays
             ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
 
-        $amount = number_format($this->event->amount / 100, 0);
+        $currency = app(MoneyConverter::class)->normalizeCurrency($this->event->currency);
+        $amount = Number::currency(
+            (float) $this->event->amount,
+            in: $currency,
+            locale: (string) (Setting::get('locale') ?? 'id'),
+            precision: app(MoneyConverter::class)->scale($currency),
+        );
         $date = Carbon::parse($this->event->dueDate)->format('d M Y');
 
         $templates = Setting::get('reminder_message_templates');

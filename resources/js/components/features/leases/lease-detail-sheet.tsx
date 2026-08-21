@@ -273,6 +273,7 @@ export default function LeaseDetailSheet({
                                                 <span className="tabular-nums">
                                                     {formatPrice(
                                                         lease.rent_amount,
+                                                        lease.currency,
                                                     )}
                                                     {lease.billing_label}
                                                 </span>
@@ -297,6 +298,7 @@ export default function LeaseDetailSheet({
                                                 <span className="tabular-nums">
                                                     {formatPrice(
                                                         lease.monthly_equivalent,
+                                                        lease.currency,
                                                     )}
                                                     /mo
                                                 </span>
@@ -334,6 +336,7 @@ export default function LeaseDetailSheet({
                                                 <span className="tabular-nums">
                                                     {formatPrice(
                                                         lease.deposit_amount,
+                                                        lease.currency,
                                                     )}
                                                 </span>
                                             </div>
@@ -357,6 +360,7 @@ export default function LeaseDetailSheet({
                                                     <span className="tabular-nums">
                                                         {formatPrice(
                                                             lease.deposit_refund_amount,
+                                                            lease.currency,
                                                         )}
                                                     </span>
                                                 </div>
@@ -424,6 +428,7 @@ export default function LeaseDetailSheet({
                                                                 <p className="font-medium tabular-nums">
                                                                     {formatPrice(
                                                                         payment.amount,
+                                                                        payment.currency,
                                                                     )}
                                                                 </p>
                                                                 <StatusBadge

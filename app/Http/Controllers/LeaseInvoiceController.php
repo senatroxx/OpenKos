@@ -169,7 +169,7 @@ class LeaseInvoiceController extends Controller
 
         return view('invoices.pdf', [
             'autoPrint' => true,
-            'currency' => $settings['currency'] ?? 'IDR',
+            'currency' => $invoice->currency,
             'invoice' => $invoice,
             'locale' => $settings['locale'] ?? 'id',
             'siteName' => $settings['site_name'] ?? config('app.name'),

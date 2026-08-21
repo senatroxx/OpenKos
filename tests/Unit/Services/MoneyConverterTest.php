@@ -20,3 +20,14 @@ it('rejects unsupported currency precision and unknown currencies', function () 
     expect(fn () => $converter->toMoney('15.00', 'ZZZ'))
         ->toThrow(InvalidArgumentException::class);
 });
+
+it('exposes the canonical scale map for validation and presentation', function () {
+    $converter = new MoneyConverter;
+
+    expect($converter->scales()['IDR'])->toBe(0)
+        ->and($converter->scales()['KWD'])->toBe(3)
+        ->and($converter->normalizeAmount('1.234', 'KWD'))->toBe('1.234');
+
+    expect(fn () => $converter->normalizeAmount('1.2341', 'KWD'))
+        ->toThrow(InvalidArgumentException::class);
+});

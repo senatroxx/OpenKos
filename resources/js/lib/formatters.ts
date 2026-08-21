@@ -1,7 +1,37 @@
 let displayTimezone = 'UTC';
+let displayCurrency = 'IDR';
+let displayLocale = 'id-ID';
+let currencyScales: Record<string, number> = { IDR: 0 };
 
 export function setDisplayTimezone(timezone: string | null | undefined): void {
     displayTimezone = timezone || 'UTC';
+}
+
+export function setDisplayCurrency(currency: string | null | undefined): void {
+    displayCurrency = currency?.toUpperCase() || 'IDR';
+}
+
+export function setDisplayLocale(locale: string | null | undefined): void {
+    displayLocale = locale || 'id-ID';
+}
+
+export function setCurrencyScales(scales: Record<string, number> | null | undefined): void {
+    currencyScales = Object.fromEntries(
+        Object.entries(scales || { IDR: 0 }).map(([currency, scale]) => [
+            currency.toUpperCase(),
+            scale,
+        ]),
+    );
+}
+
+function scaleForCurrency(currency: string): number {
+    const scale = currencyScales[currency.toUpperCase()];
+
+    if (scale === undefined) {
+        throw new Error('Unsupported currency: ' + currency);
+    }
+
+    return scale;
 }
 
 function dateTimeFormatter(
@@ -69,18 +99,23 @@ export function formatDateTime(
     }).format(new Date(dateStr));
 }
 
-export function formatPrice(cents: string | null): string {
-    if (!cents) {
+export function formatPrice(
+    amount: string | number | null,
+    currency?: string,
+): string {
+    if (amount === null || amount === '') {
         return '—';
     }
 
-    const num = Number.parseFloat(cents);
+    const resolvedCurrency = currency?.toUpperCase() || displayCurrency;
+    const num = Number.parseFloat(String(amount));
+    const scale = scaleForCurrency(resolvedCurrency);
 
-    return new Intl.NumberFormat('id-ID', {
+    return new Intl.NumberFormat(displayLocale, {
         style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+        currency: resolvedCurrency,
+        minimumFractionDigits: scale,
+        maximumFractionDigits: scale,
     }).format(num);
 }
 
@@ -96,13 +131,40 @@ export function formatSize(bytes: number): string {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-export function formatRupiah(value: number): string {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(value);
+export function formatRupiah(value: number | string | null): string {
+    return formatPrice(value, displayCurrency);
+}
+
+function decimalToMinor(amount: string, scale: number): bigint | null {
+    if (!/^\d+(?:\.\d+)?$/.test(amount)) {
+        return null;
+    }
+
+    const [whole, fraction = ''] = amount.split('.');
+    if (fraction.length > scale && /[1-9]/.test(fraction.slice(scale))) {
+        return null;
+    }
+
+    const padded = fraction.slice(0, scale).padEnd(scale, '0');
+
+    return BigInt(`${whole}${padded}` || '0');
+}
+
+function divideRounded(numerator: bigint, denominator: bigint): bigint {
+    const quotient = numerator / denominator;
+    const remainder = numerator % denominator;
+
+    return remainder * 2n >= denominator ? quotient + 1n : quotient;
+}
+
+function minorToMajor(minor: bigint, scale: number): string {
+    if (scale === 0) {
+        return minor.toString();
+    }
+
+    const value = minor.toString().padStart(scale + 1, '0');
+
+    return `${value.slice(0, -scale)}.${value.slice(-scale)}`;
 }
 
 export function formatPeriod(periodStart: string, locale = 'id-ID'): string {
@@ -120,38 +182,47 @@ export function computeMonthlyEquivalent(
     amount: string | null,
     interval: number | null,
     unit: string | null,
+    currency = displayCurrency,
 ): string {
     if (!amount || !interval || !unit) {
         return '';
     }
 
-    const num = Number.parseFloat(amount);
+    const scale = scaleForCurrency(currency);
+    const minor = decimalToMinor(amount, scale);
 
-    if (isNaN(num)) {
+    if (minor === null) {
         return '';
     }
 
     const int = interval;
-    let monthly: number;
+    let numerator: bigint;
+    let denominator: bigint;
 
     switch (unit) {
         case 'day':
-            monthly = (num * 365) / 12 / int;
+            numerator = 365n;
+            denominator = BigInt(12 * int);
             break;
         case 'week':
-            monthly = (num * 52) / 12 / int;
+            numerator = 52n;
+            denominator = BigInt(12 * int);
             break;
         case 'month':
-            monthly = num / int;
+            numerator = 1n;
+            denominator = BigInt(int);
             break;
         case 'year':
-            monthly = num / 12 / int;
+            numerator = 1n;
+            denominator = BigInt(12 * int);
             break;
         default:
             return '';
     }
 
-    return `≈ ${formatRupiah(Math.round(monthly))}/month`;
+    const monthlyMinor = divideRounded(minor * numerator, denominator);
+
+    return `≈ ${formatPrice(minorToMajor(monthlyMinor, scale), currency)}/month`;
 }
 
 export function formatRelativeTime(iso: string): string {

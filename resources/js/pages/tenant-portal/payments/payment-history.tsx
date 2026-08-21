@@ -18,6 +18,7 @@ import type {
 type PortalPayment = {
     id: number;
     amount: string;
+    currency: string;
     payment_date: string;
     payment_method: string;
     status: string;
@@ -90,7 +91,7 @@ export default function PaymentHistory({
                             </div>
                             <div className="flex items-center gap-3">
                                 <span className="font-medium tabular-nums">
-                                    {formatPrice(payment.amount)}
+                                    {formatPrice(payment.amount, payment.currency)}
                                 </span>
                                 <StatusBadge
                                     domain="tenant_payment"

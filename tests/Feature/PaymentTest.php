@@ -285,6 +285,26 @@ describe('invoice settlement', function () {
             ->and((float) $invoice->outstanding)->toBe(1_000_000.00);
     });
 
+    it('records fractional payments using the invoice currency scale', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease, [
+            'currency' => 'USD',
+            'total' => '12.50',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('leases.payments.store', $lease), paymentPayload($invoice, [
+                'amount' => '0.25',
+            ]));
+
+        $payment = $invoice->payments()->first()->fresh();
+
+        expect($payment->currency)->toBe('USD')
+            ->and($payment->amount)->toBe('0.250')
+            ->and($invoice->fresh()->amount_paid)->toBe('0.250');
+    });
+
     it('marks invoice paid when payments cover the total', function () {
         $user = User::factory()->owner()->create();
         $lease = createLeaseForProperty();

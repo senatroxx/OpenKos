@@ -14,6 +14,7 @@ declare module '@inertiajs/core' {
             name: string;
             app: {
                 timezone: string;
+                currency_scales: Record<string, number>;
             };
             auth: Auth;
             setting: {

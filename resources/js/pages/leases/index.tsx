@@ -36,7 +36,13 @@ import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import leases from '@/routes/leases';
 import units from '@/routes/properties/units';
-import type { AvailableUnit, Lease, PaginatedData, TableMeta } from '@/types';
+import type {
+    AvailableUnit,
+    Lease,
+    MoneyAggregate,
+    PaginatedData,
+    TableMeta,
+} from '@/types';
 
 type PageProps = {
     leases: PaginatedData<Lease>;
@@ -50,11 +56,15 @@ type PageProps = {
     table: TableMeta;
     stats?: {
         active_leases: number;
-        collected_this_month: number;
-        overdue_amount: number;
+        collected_this_month: MoneyAggregate[];
+        overdue_amount: MoneyAggregate[];
         pending_payment_verification: number;
     };
 };
+
+function formatMoneyGroups(groups: MoneyAggregate[]): string {
+    return groups.map((group) => formatPrice(group.amount, group.currency)).join(' · ') || '—';
+}
 
 export default function Index({
     leases: data,
@@ -172,7 +182,7 @@ export default function Index({
             sortable: true,
             className: 'tabular-nums',
             render: (lease) =>
-                `${formatPrice(lease.rent_amount)} ${lease.billing_label ?? ''}`,
+                `${formatPrice(lease.rent_amount, lease.currency)} ${lease.billing_label ?? ''}`,
         },
         {
             key: 'rent_due_day',
@@ -307,9 +317,7 @@ export default function Index({
                                         Collected This Month
                                     </p>
                                     <p className="truncate text-2xl font-bold tabular-nums">
-                                        {formatPrice(
-                                            String(stats.collected_this_month),
-                                        )}
+                                        {formatMoneyGroups(stats.collected_this_month)}
                                     </p>
                                 </div>
                             </CardContent>
@@ -323,9 +331,7 @@ export default function Index({
                                         Overdue
                                     </p>
                                     <p className="truncate text-2xl font-bold tabular-nums">
-                                        {formatPrice(
-                                            String(stats.overdue_amount),
-                                        )}
+                                        {formatMoneyGroups(stats.overdue_amount)}
                                     </p>
                                 </div>
                             </CardContent>

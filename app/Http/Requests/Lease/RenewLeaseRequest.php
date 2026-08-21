@@ -4,6 +4,7 @@ namespace App\Http\Requests\Lease;
 
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\DepositHandling;
+use App\Rules\MoneyAmount;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -17,7 +18,7 @@ class RenewLeaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'rent_amount' => ['required', 'integer', 'min:1'],
+            'rent_amount' => ['required', new MoneyAmount($this->route('lease')?->currency, allowZero: false)],
             'extension_value' => ['required', 'integer', 'min:1', 'max:120'],
             'extension_unit' => ['required', Rule::in(['months', 'years'])],
             'deposit_handling' => ['required', Rule::in(DepositHandling::values())],
@@ -37,7 +38,7 @@ class RenewLeaseRequest extends FormRequest
 
         return new RenewLeaseData(
             endDate: $endDate,
-            rentAmount: (int) $this->rent_amount,
+            rentAmount: (string) $this->rent_amount,
             depositHandling: DepositHandling::from($this->deposit_handling),
             confirmedOutstanding: (bool) $this->confirmed_outstanding,
         );

@@ -6,6 +6,7 @@ use App\Concerns\Auditable;
 use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\InvoiceStatus;
 use App\Enums\PaymentStatus;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
 
 #[Fillable([
     'lease_id',
@@ -23,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'status',
     'total',
     'amount_paid',
+    'currency',
     'invoice_pdf_fingerprint',
 ])]
 class Invoice extends Model
@@ -36,6 +39,20 @@ class Invoice extends Model
         static::creating(function (Invoice $invoice) {
             if ($invoice->reference === null) {
                 $invoice->reference = static::nextReferences(1)[0];
+            }
+
+            $currency = $invoice->getAttributeFromArray('currency');
+
+            if ($currency === null && $invoice->lease_id !== null) {
+                $currency = Lease::query()->whereKey($invoice->lease_id)->value('currency');
+            }
+
+            $invoice->currency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        });
+
+        static::updating(function (Invoice $invoice): void {
+            if ($invoice->isDirty('currency')) {
+                throw new LogicException('Invoice currency cannot be changed after creation.');
             }
         });
     }
@@ -80,8 +97,8 @@ class Invoice extends Model
             'period_end' => 'date:Y-m-d',
             'due_date' => 'date:Y-m-d',
             'status' => InvoiceStatus::class,
-            'total' => 'decimal:2',
-            'amount_paid' => 'decimal:2',
+            'total' => 'decimal:3',
+            'amount_paid' => 'decimal:3',
         ];
     }
 
@@ -112,7 +129,16 @@ class Invoice extends Model
 
     public function getOutstandingAttribute(): string
     {
-        return number_format((float) $this->total - (float) $this->amount_paid, 2, '.', '');
+        return app(MoneyConverter::class)->subtract(
+            (string) $this->total,
+            (string) $this->amount_paid,
+            $this->currency,
+        );
+    }
+
+    public function getCurrencyAttribute(?string $value): string
+    {
+        return app(MoneyConverter::class)->normalizeCurrency($value);
     }
 
     public function getDisplayStatusAttribute(): string
@@ -155,25 +181,25 @@ class Invoice extends Model
             ->pluck('total', 'invoice_id');
 
         foreach ($invoices as $invoice) {
-            $invoice->recalculateStatus((float) ($confirmedTotals[$invoice->getKey()] ?? 0));
+            $invoice->recalculateStatus((string) ($confirmedTotals[$invoice->getKey()] ?? '0'));
         }
     }
 
-    public function recalculateStatus(?float $confirmedPaymentTotal = null): void
+    public function recalculateStatus(?string $confirmedPaymentTotal = null): void
     {
         if (in_array($this->status, [InvoiceStatus::Cancelled, InvoiceStatus::Void], true)) {
             return;
         }
 
-        $paid = $confirmedPaymentTotal ?? (float) $this->payments()
+        $paid = $confirmedPaymentTotal ?? (string) $this->payments()
             ->where('status', PaymentStatus::Confirmed->value)
             ->sum('amount');
 
         $this->update([
             'amount_paid' => $paid,
             'status' => match (true) {
-                $paid >= (float) $this->total => InvoiceStatus::Paid,
-                $paid > 0 => InvoiceStatus::Partial,
+                app(MoneyConverter::class)->compare($paid, (string) $this->total) >= 0 => InvoiceStatus::Paid,
+                app(MoneyConverter::class)->compare($paid, '0') > 0 => InvoiceStatus::Partial,
                 default => InvoiceStatus::Pending,
             },
         ]);

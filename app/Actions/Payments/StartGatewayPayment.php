@@ -9,13 +9,11 @@ use App\Exceptions\PaymentGatewayCreationException;
 use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Models\Invoice;
 use App\Models\PaymentAttempt;
-use App\Models\Setting;
 use App\Models\User;
 use App\Results\Payment\StartGatewayPaymentResult;
 use App\Services\Payments\CheckoutInstructionsMapper;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Payments\PaymentGatewayManager;
-use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -50,23 +48,25 @@ class StartGatewayPayment
     private function start(Invoice $invoice): StartGatewayPaymentResult
     {
         $this->reconcileStaleAttempt($invoice);
-        $currency = strtoupper((string) (Setting::get('currency') ?? 'IDR'));
-        $state = DB::transaction(function () use ($invoice, $currency) {
+        $state = DB::transaction(function () use ($invoice) {
             $locked = Invoice::query()->lockForUpdate()->findOrFail($invoice->id);
 
             if (! in_array($locked->status, [InvoiceStatus::Pending, InvoiceStatus::Partial], true)) {
                 throw new InvoiceNotPayableException('Invoice is not payable.');
             }
 
-            $outstanding = BigDecimal::of((string) $locked->total)
-                ->minus((string) $locked->amount_paid)
-                ->toScale(2);
+            $currency = $locked->currency;
+            $outstanding = $this->money->subtract(
+                (string) $locked->total,
+                (string) $locked->amount_paid,
+                $currency,
+            );
 
-            if (! $outstanding->isPositive()) {
+            if ($this->money->compare($outstanding, '0') <= 0) {
                 throw new InvoiceNotPayableException('Invoice has no outstanding balance.');
             }
 
-            $money = $this->money->toMoney($outstanding->toString(), $currency);
+            $money = $this->money->toMoney($outstanding, $currency);
 
             if ($locked->paymentAttempts()
                 ->where('status', PaymentStatus::Settled->value)
@@ -134,7 +134,7 @@ class StartGatewayPayment
             $attempt = $locked->paymentAttempts()->create([
                 'gateway_key' => $gatewayKey,
                 'reference' => (string) str()->uuid(),
-                'amount' => $outstanding->toString(),
+                'amount' => $outstanding,
                 'currency' => $currency,
                 'status' => PaymentStatus::Pending,
                 'metadata' => [

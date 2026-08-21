@@ -2,6 +2,7 @@
 
 namespace App\Services\Payments;
 
+use App\Models\Setting;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use InvalidArgumentException;
@@ -48,17 +49,73 @@ final class MoneyConverter
         'YER' => 2, 'ZAR' => 2, 'ZMW' => 2, 'ZWG' => 2,
     ];
 
-    public function toMoney(string $majorAmount, string $currency): Money
+    /**
+     * @return array<string, int>
+     */
+    public function scales(): array
     {
-        $currency = strtoupper($currency);
+        return self::MINOR_UNITS;
+    }
+
+    public function normalizeCurrency(?string $currency = null): string
+    {
+        $currency = strtoupper(trim($currency ?? (string) (Setting::get('currency') ?? 'IDR')));
 
         if (! preg_match('/\A[A-Z]{3}\z/D', $currency)) {
             throw new InvalidArgumentException('Currency must be a three-letter ISO 4217 code.');
         }
 
-        $scale = self::MINOR_UNITS[$currency] ?? throw new InvalidArgumentException(
-            "Minor-unit scale is not configured for currency [{$currency}].",
-        );
+        if (! array_key_exists($currency, self::MINOR_UNITS)) {
+            throw new InvalidArgumentException(
+                "Minor-unit scale is not configured for currency [{$currency}].",
+            );
+        }
+
+        return $currency;
+    }
+
+    public function scale(string $currency): int
+    {
+        return self::MINOR_UNITS[$this->normalizeCurrency($currency)];
+    }
+
+    public function normalizeAmount(string $majorAmount, string $currency): string
+    {
+        $currency = $this->normalizeCurrency($currency);
+        $scale = $this->scale($currency);
+
+        try {
+            return BigDecimal::of($majorAmount)
+                ->toScale($scale, RoundingMode::Unnecessary)
+                ->toString();
+        } catch (InvalidArgumentException $exception) {
+            throw $exception;
+        } catch (\Throwable $exception) {
+            throw new InvalidArgumentException(
+                'Amount has more precision than the configured currency supports.',
+                previous: $exception,
+            );
+        }
+    }
+
+    public function compare(string $left, string $right): int
+    {
+        return BigDecimal::of($left)->compareTo(BigDecimal::of($right));
+    }
+
+    public function subtract(string $left, string $right, string $currency): string
+    {
+        $this->normalizeCurrency($currency);
+
+        return BigDecimal::of($left)
+            ->minus($right)
+            ->toString();
+    }
+
+    public function toMoney(string $majorAmount, string $currency): Money
+    {
+        $currency = $this->normalizeCurrency($currency);
+        $scale = $this->scale($currency);
 
         try {
             $amount = BigDecimal::of($majorAmount);

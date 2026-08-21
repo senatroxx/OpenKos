@@ -71,7 +71,7 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
                                     {rate.billing_interval > 1 ? 's' : ''}
                                 </span>
                                 <span className="font-medium tabular-nums">
-                                    {formatPrice(rate.amount)}
+                                    {formatPrice(rate.amount, rate.currency)}
                                 </span>
                             </div>
                         ))}

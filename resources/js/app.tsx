@@ -7,19 +7,29 @@ import AuthLayout from '@/layouts/auth-layout';
 import PublicPaymentLayout from '@/layouts/public-payment-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import TenantPortalLayout from '@/layouts/tenant-portal-layout';
-import { setDisplayTimezone } from '@/lib/formatters';
+import {
+    setCurrencyScales,
+    setDisplayCurrency,
+    setDisplayLocale,
+    setDisplayTimezone,
+} from '@/lib/formatters';
 import '@/plugins';
 
 type PageWithTimezone = {
     props?: {
         app?: {
             timezone?: string;
+            currency_scales?: Record<string, number>;
         };
+        setting?: { currency?: string; locale?: string };
     };
 };
 
-function syncDisplayTimezone(page: PageWithTimezone): void {
+function syncDisplaySettings(page: PageWithTimezone): void {
     setDisplayTimezone(page.props?.app?.timezone);
+    setCurrencyScales(page.props?.app?.currency_scales);
+    setDisplayCurrency(page.props?.setting?.currency);
+    setDisplayLocale(page.props?.setting?.locale);
 }
 
 // The server drives the display name from the settings table (site_name),
@@ -78,13 +88,13 @@ createInertiaApp({
     },
     strictMode: true,
     withApp(app, { ssr }) {
-        syncDisplayTimezone(
+        syncDisplaySettings(
             (app.props as { initialPage?: PageWithTimezone }).initialPage ?? {},
         );
 
         if (!ssr) {
             router.on('navigate', ({ detail }) => {
-                syncDisplayTimezone(detail.page);
+                syncDisplaySettings(detail.page);
             });
         }
 

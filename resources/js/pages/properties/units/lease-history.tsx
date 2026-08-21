@@ -55,7 +55,7 @@ const columns: TableColumn<LeaseInfo>[] = [
         label: 'Rent',
         sortable: true,
         className: 'tabular-nums',
-        render: (l) => formatPrice(l.rent_amount),
+        render: (l) => formatPrice(l.rent_amount, l.currency),
     },
     {
         key: 'status',

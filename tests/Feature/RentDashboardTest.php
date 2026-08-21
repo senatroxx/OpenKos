@@ -98,7 +98,7 @@ test('collection queue includes invoice detail payload', function () {
         ->assertInertia(fn ($page) => $page
             ->where('entries.data.0.reference', 'INV-QUEUE-001')
             ->where('entries.data.0.line_items.0.description', 'Monthly Rent')
-            ->where('entries.data.0.payments.0.amount', '250000.00')
+            ->where('entries.data.0.payments.0.amount', '250000.000')
             ->where('entries.data.0.payments.0.proofs.0.original_name', 'receipt.png')
         );
 
@@ -132,7 +132,10 @@ test('collection queue shows correct outstanding count', function () {
         ->get(route('dashboard.rent'))
         ->assertInertia(fn ($page) => $page
             ->where('outstanding.count', 2)
-            ->where('outstanding.amount', 300000)
+            ->where('outstanding.amounts', [[
+                'currency' => 'IDR',
+                'amount' => '300000.000',
+            ]])
         );
 
     Carbon::setTestNow();
@@ -237,10 +240,16 @@ test('collection queue tab counts are correct', function () {
             ->where('tab_counts.pending_review', 1)
             ->where('tab_counts.paid', 1)
             ->where('outstanding.count', 4)
-            ->where('outstanding.amount', 650000)
+            ->where('outstanding.amounts', [[
+                'currency' => 'IDR',
+                'amount' => '650000.000',
+            ]])
             ->where('progress.processed', 1)
             ->where('progress.total', 5)
-            ->where('progress.amount_collected', 600000)
+            ->where('progress.amount_collected', [[
+                'currency' => 'IDR',
+                'amount' => '600000',
+            ]])
             ->where('progress.last_payment_at', '2026-07-09')
         );
 
@@ -541,7 +550,7 @@ test('collection queue scopes to user properties for non-owner', function () {
             ->where('entries.data.0.tenant_name', 'Budi Property A')
             ->where('tab_counts.all', 1)
             ->where('outstanding.count', 1)
-            ->where('progress.amount_collected', 0)
+            ->where('progress.amount_collected', [])
         );
 
     Carbon::setTestNow();
@@ -558,8 +567,8 @@ test('collection queue shows empty state when no data', function () {
         ->assertInertia(fn ($page) => $page
             ->has('entries.data', 0)
             ->where('tab_counts.all', 0)
-            ->where('outstanding.amount', 0)
-            ->where('progress.amount_collected', 0)
+            ->where('outstanding.amounts', [])
+            ->where('progress.amount_collected', [])
             ->where('progress.last_payment_at', null)
             ->has('recent_payments', 0)
             ->has('recent_reminders', 0)

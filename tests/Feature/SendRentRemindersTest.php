@@ -76,6 +76,7 @@ function reminderEventFor(Lease $lease, ReminderType $type, ?int $overdueDays = 
         periodEnd: '2026-07-31',
         dueDate: '2026-07-01',
         amount: 1_500_000,
+        currency: 'IDR',
         overdueDays: $overdueDays,
     );
 }
@@ -110,7 +111,7 @@ describe('PaymentReminderScheduler', function () {
         Carbon::setTestNow();
     });
 
-    it('converts fractional outstanding amounts to cents without truncation', function () {
+    it('preserves fractional outstanding amounts', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
         $lease->invoices()->whereDate('due_date', '2026-07-01')->firstOrFail()->update([
@@ -122,7 +123,7 @@ describe('PaymentReminderScheduler', function () {
         $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
 
         expect($events)->toHaveCount(1);
-        expect($events[0]->amount)->toBe(29);
+        expect($events[0]->amount)->toBe('0.290');
 
         Carbon::setTestNow();
     });
@@ -451,7 +452,7 @@ describe('SendRentRemindersAction', function () {
                     ->toContain($invoice->period_start->format('d M Y'))
                     ->toContain($invoice->period_end->format('d M Y'))
                     ->toContain($invoice->due_date->format('d M Y'))
-                    ->toContain(number_format((float) $invoice->outstanding, 0))
+                    ->toContain('1.500.000')
                     ->toContain($invoiceUrl);
                 expect($content->htmlBody)->toContain($invoiceUrl);
                 expect($content->attachments)->toHaveCount(1);
@@ -490,7 +491,7 @@ describe('SendRentRemindersAction', function () {
                     ->toContain($invoice->period_start->format('d M Y'))
                     ->toContain($invoice->period_end->format('d M Y'))
                     ->toContain($invoice->due_date->format('d M Y'))
-                    ->toContain(number_format((float) $invoice->outstanding, 0))
+                    ->toContain('1.500.000')
                     ->not->toContain(route('portal.billing.invoices.show', $invoice));
 
                 $attachment = $content->attachment;

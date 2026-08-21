@@ -83,10 +83,10 @@ export default function QueuePaymentSheet({
                             <>
                                 {invoice.tenant_name} — {invoice.reference}
                                 <br />
-                                {formatPrice(invoice.total)} · Due{' '}
+                                {formatPrice(invoice.total, invoice.currency)} · Due{' '}
                                 {formatDate(invoice.due_date)} ·{' '}
                                 <span className="text-red-600">
-                                    {formatPrice(invoice.outstanding)}{' '}
+                                    {formatPrice(invoice.outstanding, invoice.currency)}{' '}
                                     outstanding
                                 </span>
                             </>
@@ -104,12 +104,16 @@ export default function QueuePaymentSheet({
                     <div className="grid gap-4">
                         <InputError message={errors.invoice_id} />
                         <div className="grid gap-2">
-                            <Label htmlFor="amount">Amount (IDR)</Label>
+                            <Label htmlFor="amount">
+                                Amount ({invoice?.currency ?? '—'})
+                            </Label>
                             <Input
                                 id="amount"
                                 name="amount"
                                 type="number"
-                                min={1}
+                                min={0}
+                                step="any"
+                                inputMode="decimal"
                                 key={invoice?.id}
                                 defaultValue={invoice?.outstanding ?? ''}
                                 required

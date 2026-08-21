@@ -5,16 +5,19 @@ namespace App\Models;
 use App\Concerns\Auditable;
 use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\PaymentStatus;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use LogicException;
 
 #[Fillable([
     'invoice_id',
     'amount',
+    'currency',
     'payment_date',
     'payment_method',
     'reference_number',
@@ -32,11 +35,35 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
-            'amount' => 'decimal:2',
+            'amount' => 'decimal:3',
             'payment_date' => 'date:Y-m-d',
             'status' => PaymentStatus::class,
             'verified_at' => 'datetime',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Payment $payment): void {
+            $currency = $payment->getAttributeFromArray('currency');
+
+            if ($currency === null && $payment->invoice_id !== null) {
+                $currency = Invoice::query()->whereKey($payment->invoice_id)->value('currency');
+            }
+
+            $payment->currency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        });
+
+        static::updating(function (Payment $payment): void {
+            if ($payment->isDirty('currency')) {
+                throw new LogicException('Payment currency cannot be changed after creation.');
+            }
+        });
+    }
+
+    public function getCurrencyAttribute(?string $value): string
+    {
+        return app(MoneyConverter::class)->normalizeCurrency($value);
     }
 
     public function invoice(): BelongsTo

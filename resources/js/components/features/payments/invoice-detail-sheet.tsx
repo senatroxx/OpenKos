@@ -122,18 +122,20 @@ export default function InvoiceDetailSheet({
                                     <div className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                                         <DetailRow
                                             label="Total"
-                                            value={formatPrice(invoice.total)}
+                                            value={formatPrice(invoice.total, invoice.currency)}
                                         />
                                         <DetailRow
                                             label="Paid"
                                             value={formatPrice(
                                                 invoice.amount_paid,
+                                                invoice.currency,
                                             )}
                                         />
                                         <DetailRow
                                             label="Outstanding"
                                             value={formatPrice(
                                                 invoice.outstanding,
+                                                invoice.currency,
                                             )}
                                         />
                                         <DetailRow
@@ -178,6 +180,7 @@ export default function InvoiceDetailSheet({
                                                             <p className="tabular-nums">
                                                                 {formatPrice(
                                                                     item.amount,
+                                                                    invoice.currency,
                                                                 )}
                                                             </p>
                                                         </div>
@@ -210,6 +213,7 @@ export default function InvoiceDetailSheet({
                                                         <p className="font-medium tabular-nums">
                                                             {formatPrice(
                                                                 payment.amount,
+                                                                payment.currency,
                                                             )}
                                                         </p>
                                                         <p className="text-xs text-muted-foreground">

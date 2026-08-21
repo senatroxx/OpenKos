@@ -7,6 +7,8 @@ use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
 use App\Models\Invoice;
 use App\Models\Lease;
+use App\Rules\MoneyAmount;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,7 +39,10 @@ class StorePaymentRequest extends FormRequest
     protected function paymentRules(): array
     {
         return [
-            'amount' => ['required', 'numeric', 'min:1'],
+            'amount' => [
+                'required',
+                new MoneyAmount(Invoice::find($this->integer('invoice_id'))?->currency, allowZero: false),
+            ],
             'payment_method' => ['required', 'string', Rule::in(PaymentMethod::manualValues())],
             'paid_at' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:65535'],
@@ -64,10 +69,10 @@ class StorePaymentRequest extends FormRequest
             ]);
         }
 
-        if ((float) $this->amount > (float) $invoice->outstanding) {
+        if (app(MoneyConverter::class)->compare((string) $this->amount, $invoice->outstanding) > 0) {
             throw ValidationException::withMessages([
                 'amount' => __('Amount exceeds the invoice outstanding balance of :outstanding.', [
-                    'outstanding' => number_format((float) $invoice->outstanding, 0, ',', '.'),
+                    'outstanding' => $invoice->outstanding,
                 ]),
             ]);
         }

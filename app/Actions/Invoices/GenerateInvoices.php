@@ -66,6 +66,7 @@ class GenerateInvoices
                     'period_end' => $period->period_end,
                     'due_date' => $period->due_date,
                     'amount' => $period->amount,
+                    'currency' => $lockedLease->currency,
                 ];
             }
         }
@@ -105,6 +106,7 @@ class GenerateInvoices
             'status' => InvoiceStatus::Pending->value,
             'total' => $candidate['amount'],
             'amount_paid' => 0,
+            'currency' => $candidate['currency'],
             'created_at' => $timestamp,
             'updated_at' => $timestamp,
         ])->all();

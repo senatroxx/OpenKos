@@ -182,7 +182,7 @@ describe('invoice workspace show', function () {
             ->assertRedirect(route('leases.workspace.invoices.show', [$lease, $invoice]));
 
         expect($attempt->fresh()->status)->toBe(GatewayPaymentStatus::Settled)
-            ->and($invoice->fresh()->amount_paid)->toBe('1500000.00');
+            ->and($invoice->fresh()->amount_paid)->toBe('1500000.000');
     });
 
     it('derives overdue display status on invoice detail', function () {

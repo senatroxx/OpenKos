@@ -18,6 +18,7 @@ import {
 import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import type {
     Invoice,
+    MoneyAggregate,
     PaginatedData,
     TenantLeaseContext as LeaseContext,
 } from '@/types';
@@ -48,7 +49,7 @@ export default function Payments({
     finalizedPayments: PortalPayment[];
     finalizedPaymentCount: number;
     outstandingSummary: {
-        amount: string;
+        amounts: MoneyAggregate[];
         count: number;
         next_due_date: string | null;
         pending_payment_count: number;
@@ -318,7 +319,7 @@ function AccountSummary({
     lease,
 }: {
     outstandingSummary: {
-        amount: string;
+        amounts: MoneyAggregate[];
         count: number;
         next_due_date: string | null;
         pending_payment_count: number;
@@ -334,7 +335,11 @@ function AccountSummary({
             <CardContent className="grid gap-4 px-5">
                 <SummaryItem label="Outstanding balance">
                     <span className="font-semibold tabular-nums">
-                        {formatPrice(outstandingSummary.amount)}
+                        {outstandingSummary.amounts
+                            .map((amount) =>
+                                formatPrice(amount.amount, amount.currency),
+                            )
+                            .join(' · ') || formatPrice('0')}
                     </span>
                 </SummaryItem>
                 <SummaryItem label="Payable invoices">
@@ -390,7 +395,7 @@ function PaymentRow({
             title={`${paymentMethodLabel} payment`}
             statusDomain="tenant_payment"
             status={payment.status}
-            amount={formatPrice(payment.amount)}
+            amount={formatPrice(payment.amount, payment.invoice.currency)}
             description={
                 <>
                     Paid on {formatDate(payment.payment_date)} for{' '}

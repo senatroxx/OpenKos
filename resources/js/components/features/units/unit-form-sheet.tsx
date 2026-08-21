@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ export default function UnitFormSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const isEdit = Boolean(unit);
+    const { setting } = usePage<{ setting: { currency: string } }>().props;
 
     const { data, setData, submit, reset, processing, errors } = useForm({
         name: unit?.name ?? '',
@@ -186,12 +187,13 @@ export default function UnitFormSheet({
                                     >
                                         <div className="grid flex-1 gap-1">
                                             <Label className="text-xs">
-                                                Amount (IDR)
+                                                Amount ({setting.currency})
                                             </Label>
                                             <Input
                                                 type="number"
                                                 min={0}
-                                                step="0.01"
+                                                step="any"
+                                                inputMode="decimal"
                                                 required
                                                 value={rate.amount}
                                                 onChange={(e) =>

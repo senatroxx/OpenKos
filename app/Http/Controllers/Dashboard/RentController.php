@@ -10,20 +10,24 @@ use App\Models\Payment;
 use App\Models\PaymentProof;
 use App\Models\Property;
 use App\Models\ReminderLog;
+use App\Services\Payments\MoneyConverter;
 use App\Support\DateTimeFormatter;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Brick\Math\BigDecimal;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class RentController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __invoke(Request $request, MoneyConverter $money): Response
     {
         $now = now();
 
@@ -84,12 +88,7 @@ class RentController extends Controller
                         AND {$pendingPaymentsAlias}.status = ?
                 )
                 THEN 1 ELSE 0
-            END), 0) AS pending_review,
-            COALESCE(SUM(CASE
-                WHEN {$invoiceTable}.status IN (?, ?)
-                THEN {$invoiceTable}.total - {$invoiceTable}.amount_paid
-                ELSE 0
-            END), 0) AS outstanding_amount
+            END), 0) AS pending_review
             SQL,
             [
                 $today, ...$payableStatuses,
@@ -98,7 +97,6 @@ class RentController extends Controller
                 InvoiceStatus::Partial->value,
                 InvoiceStatus::Paid->value,
                 PaymentStatus::Pending->value,
-                ...$payableStatuses,
             ],
         )->first();
 
@@ -116,23 +114,41 @@ class RentController extends Controller
         $outstandingCount = $tabCounts['overdue'] + $tabCounts['due_today'] + $tabCounts['upcoming'];
         $tabCounts['all'] = $outstandingCount;
 
-        $outstandingAmount = (int) ($invoiceStats?->outstanding_amount ?? 0);
+        $outstandingInvoices = (clone $invoiceScope)
+            ->whereIn('status', $payableStatuses)
+            ->get(['currency', 'total', 'amount_paid']);
+        $outstandingAmounts = $this->aggregateMoney(
+            $outstandingInvoices,
+            fn (Invoice $invoice): string => BigDecimal::of((string) $invoice->total)
+                ->minus((string) $invoice->amount_paid)
+                ->toString(),
+        );
 
         // --- Progress ---
 
         $progressTotal = $outstandingCount + $tabCounts['paid'];
 
         $paymentStats = Payment::query()
-            ->selectRaw('COALESCE(SUM(amount), 0) AS collected_amount, MAX(payment_date) AS last_payment_date')
             ->where('status', PaymentStatus::Confirmed->value)
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
                 ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
-            ->first();
-
-        $collectedAmount = (int) ($paymentStats?->collected_amount ?? 0);
-        $lastPaymentDate = $paymentStats?->last_payment_date;
-        $lastPaymentAt = $lastPaymentDate ? (string) $lastPaymentDate : null;
+            ->selectRaw(
+                'COALESCE(currency, ?) as currency, COALESCE(SUM(amount), 0) as amount, MAX(payment_date) as last_payment_at',
+                [$money->normalizeCurrency()],
+            )
+            ->groupByRaw('COALESCE(currency, ?)', [$money->normalizeCurrency()])
+            ->toBase()
+            ->get();
+        $collectedAmounts = $paymentStats
+            ->map(fn (object $payment): array => [
+                'currency' => (string) $payment->currency,
+                'amount' => (string) $payment->amount,
+            ])
+            ->values()
+            ->all();
+        $lastPaymentDate = $paymentStats->pluck('last_payment_at')->filter()->max();
+        $lastPaymentAt = $lastPaymentDate ? Carbon::parse($lastPaymentDate)->toDateString() : null;
 
         // --- Queue table ---
 
@@ -240,6 +256,7 @@ class RentController extends Controller
             ->map(fn (Payment $p) => [
                 'id' => $p->id,
                 'amount' => (string) $p->amount,
+                'currency' => $p->currency,
                 'payment_date' => $p->payment_date->toDateString(),
                 'payment_method' => $p->payment_method,
                 'tenant_name' => $p->invoice?->lease?->tenants?->pluck('name')->join(', ')
@@ -277,13 +294,13 @@ class RentController extends Controller
             ...$needsAttention,
             'outstanding' => [
                 'count' => $outstandingCount,
-                'amount' => $outstandingAmount,
+                'amounts' => $outstandingAmounts,
             ],
             'tab_counts' => $tabCounts,
             'progress' => [
                 'processed' => $tabCounts['paid'],
                 'total' => $progressTotal,
-                'amount_collected' => $collectedAmount,
+                'amount_collected' => $collectedAmounts,
                 'last_payment_at' => $lastPaymentAt,
             ],
             'recent_payments' => $recentPayments,
@@ -325,6 +342,7 @@ class RentController extends Controller
             'total' => (string) $invoice->total,
             'amount_paid' => (string) $invoice->amount_paid,
             'outstanding' => $invoice->outstanding,
+            'currency' => $invoice->currency,
             'days_overdue' => $daysOverdue,
             'urgency' => $urgency,
             'status' => $invoice->status->value,
@@ -342,6 +360,7 @@ class RentController extends Controller
                 'id' => $payment->id,
                 'invoice_id' => $payment->invoice_id,
                 'amount' => (string) $payment->amount,
+                'currency' => $payment->currency,
                 'payment_date' => $payment->payment_date->toDateString(),
                 'payment_method' => $payment->payment_method,
                 'reference' => $payment->reference_number,
@@ -367,5 +386,25 @@ class RentController extends Controller
                 ])->values()->all(),
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * @param  Collection<int, Invoice|Payment>  $rows
+     * @return array<int, array{currency: string, amount: string}>
+     */
+    private function aggregateMoney(Collection $rows, callable $amount): array
+    {
+        return $rows
+            ->groupBy(fn (Invoice|Payment $row): string => $row->currency)
+            ->map(function ($rows, string $currency) use ($amount): array {
+                $total = $rows->reduce(
+                    fn (BigDecimal $total, Invoice|Payment $row): BigDecimal => $total->plus($amount($row)),
+                    BigDecimal::zero(),
+                );
+
+                return ['currency' => $currency, 'amount' => $total->toString()];
+            })
+            ->values()
+            ->all();
     }
 }

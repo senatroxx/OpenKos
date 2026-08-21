@@ -143,6 +143,7 @@ export default function TenantDetailSheet({
                                             <span className="font-medium tabular-nums">
                                                 {formatPrice(
                                                     activeLease.rent_amount,
+                                                    activeLease.currency,
                                                 )}
                                                 /mo
                                             </span>
