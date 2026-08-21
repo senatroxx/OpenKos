@@ -36,6 +36,7 @@ class StoreUnitRequest extends FormRequest
             'rates.*' => ['array'],
             'rates.*.billing_interval' => ['required_with:rates', 'integer', 'min:1', 'max:255'],
             'rates.*.billing_unit' => ['required_with:rates', 'string', Rule::in(BillingUnit::values())],
+            'rates.*.is_active' => ['nullable', 'boolean'],
             'rates.*.currency' => [
                 'nullable',
                 'string',

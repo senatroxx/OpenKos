@@ -139,6 +139,28 @@ describe('CRUD', function () {
         expect($unit->property_id)->toBe($property->id);
     });
 
+    it('preserves the active flag for new rates during creation', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => [[
+                    'billing_interval' => 1,
+                    'billing_unit' => 'year',
+                    'amount' => '120.00',
+                    'currency' => 'USD',
+                    'is_active' => false,
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect(Unit::query()->firstOrFail()->rates()->value('is_active'))->toBeFalse();
+    });
+
     it('validates required fields on create', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
