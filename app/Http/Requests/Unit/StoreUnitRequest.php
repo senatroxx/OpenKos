@@ -44,14 +44,20 @@ class StoreUnitRequest extends FormRequest
             ],
         ];
 
-        foreach ($this->input('rates', []) as $index => $rate) {
+        $rates = $this->input('rates', []);
+        if (! is_array($rates)) {
+            return $rules;
+        }
+
+        foreach ($rates as $index => $rate) {
             if (! is_array($rate)) {
                 continue;
             }
 
+            $currency = $rate['currency'] ?? null;
             $rules["rates.{$index}.amount"] = [
                 'required_with:rates',
-                new MoneyAmount($rate['currency'] ?? null),
+                new MoneyAmount(is_string($currency) ? $currency : null),
             ];
         }
 
@@ -65,8 +71,13 @@ class StoreUnitRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $seen = [];
+            $rates = $this->input('rates', []);
 
-            foreach ($this->input('rates', []) as $index => $rate) {
+            if (! is_array($rates)) {
+                return;
+            }
+
+            foreach ($rates as $index => $rate) {
                 if (! is_array($rate)) {
                     continue;
                 }

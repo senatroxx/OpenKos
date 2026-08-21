@@ -54,7 +54,12 @@ class UpdateUnitRequest extends FormRequest
             ],
         ];
 
-        foreach ($this->input('rates', []) as $index => $rate) {
+        $rates = $this->input('rates', []);
+        if (! is_array($rates)) {
+            return $rules;
+        }
+
+        foreach ($rates as $index => $rate) {
             if (! is_array($rate)) {
                 continue;
             }
@@ -64,7 +69,7 @@ class UpdateUnitRequest extends FormRequest
                 : null;
             $currency = isset($rate['id'])
                 ? $storedRate?->currency
-                : ($rate['currency'] ?? null);
+                : (is_string($rate['currency'] ?? null) ? $rate['currency'] : null);
 
             $rules["rates.{$index}.amount"] = ['required_with:rates', new MoneyAmount($currency)];
         }
@@ -78,7 +83,13 @@ class UpdateUnitRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            $submittedIds = collect($this->input('rates', []))
+            $rates = $this->input('rates', []);
+
+            if (! is_array($rates)) {
+                return;
+            }
+
+            $submittedIds = collect($rates)
                 ->filter(fn (mixed $rate): bool => is_array($rate))
                 ->pluck('id')
                 ->filter(fn (mixed $id): bool => is_scalar($id))
@@ -107,7 +118,7 @@ class UpdateUnitRequest extends FormRequest
                     $seen[$key] = $rate->id;
                 });
 
-            foreach ($this->input('rates', []) as $index => $rate) {
+            foreach ($rates as $index => $rate) {
                 if (! is_array($rate)) {
                     continue;
                 }

@@ -429,6 +429,42 @@ describe('currency-specific rates', function () {
             ->assertSessionHasErrors('rates.0');
     });
 
+    it('rejects malformed rate containers without throwing', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => 'invalid',
+            ])
+            ->assertSessionHasErrors('rates');
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 102',
+                'capacity' => 1,
+                'rates' => [[
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'amount' => '1000000',
+                    'currency' => ['IDR'],
+                ]],
+            ])
+            ->assertSessionHasErrors('rates.0.currency');
+
+        $unit = Unit::factory()->for($property)->create();
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => 'invalid',
+            ])
+            ->assertSessionHasErrors('rates');
+    });
+
     it('rejects rate intervals outside the database range', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
