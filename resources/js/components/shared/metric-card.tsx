@@ -13,7 +13,7 @@ export type MetricEmphasis = 'neutral' | 'subtle' | 'attention';
 
 export interface MetricCardProps {
     label: string;
-    value: string | number;
+    value: React.ReactNode;
     subtext?: React.ReactNode;
     variant?: MetricVariant;
     emphasis?: MetricEmphasis;
@@ -245,7 +245,7 @@ export function MetricCard({
                     </p>
                     <p
                         className={cn(
-                            'mt-1.5 text-2xl font-bold tracking-tight tabular-nums sm:text-3xl',
+                            'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
                             styles.value,
                         )}
                     >

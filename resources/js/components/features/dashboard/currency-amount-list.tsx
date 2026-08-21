@@ -26,9 +26,9 @@ export function CurrencyAmountList({
     }
 
     return (
-        <div className={cn('flex flex-col gap-0.5', className)}>
+        <span className={cn('flex flex-col gap-0.5', className)}>
             {groups.map((group) => (
-                <div
+                <span
                     key={group.currency}
                     className="flex min-w-0 items-baseline gap-3 leading-none"
                 >
@@ -43,8 +43,8 @@ export function CurrencyAmountList({
                     >
                         {formatPrice(group.amount, group.currency)}
                     </span>
-                </div>
+                </span>
             ))}
-        </div>
+        </span>
     );
 }
