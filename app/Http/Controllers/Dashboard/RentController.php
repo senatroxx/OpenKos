@@ -424,7 +424,7 @@ class RentController extends Controller
 
         return $currencies->map(fn (string $currency): array => [
             'currency' => $currency,
-            'amount' => $groupsByCurrency->get($currency)['amount'] ?? BigDecimal::zero()->toString(),
+            'amount' => ($groupsByCurrency->get($currency) ?? ['amount' => BigDecimal::zero()->toString()])['amount'],
         ])->all();
     }
 }
