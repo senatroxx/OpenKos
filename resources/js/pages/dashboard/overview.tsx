@@ -15,6 +15,7 @@ import { useState } from 'react';
 import {
     ActivityFeedItem,
     BusinessHealthPanel,
+    CurrencyAmountList,
     getActivitySummaryChips,
     OperationalBriefingCard,
     PropertyFormSheet,
@@ -30,7 +31,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatPrice } from '@/lib/formatters';
 import { dashboard } from '@/routes';
 import type {
     AttentionData,
@@ -147,16 +147,15 @@ export default function Overview({
                             label="Overdue Invoices"
                             value={attention.overdue_invoices.count}
                             subtext={
-                                attention.overdue_invoices.amounts.length > 0
-                                    ? attention.overdue_invoices.amounts
-                                          .map((amount) =>
-                                              formatPrice(
-                                                  amount.amount,
-                                                  amount.currency,
-                                              ),
-                                          )
-                                          .join(' · ')
-                                    : undefined
+                                attention.overdue_invoices.amounts.length >
+                                0 ? (
+                                    <CurrencyAmountList
+                                        groups={
+                                            attention.overdue_invoices.amounts
+                                        }
+                                        amountClassName="text-surface-red-foreground"
+                                    />
+                                ) : undefined
                             }
                             variant="red"
                             emphasis="attention"

@@ -14,7 +14,7 @@ export type MetricEmphasis = 'neutral' | 'subtle' | 'attention';
 export interface MetricCardProps {
     label: string;
     value: string | number;
-    subtext?: string;
+    subtext?: React.ReactNode;
     variant?: MetricVariant;
     emphasis?: MetricEmphasis;
     icon?: React.ComponentType<{ className?: string }>;
@@ -252,9 +252,9 @@ export function MetricCard({
                         {value}
                     </p>
                     {subtext && (
-                        <p className="mt-1 text-xs font-medium text-muted-foreground">
+                        <div className="mt-1 text-xs font-medium text-muted-foreground">
                             {subtext}
-                        </p>
+                        </div>
                     )}
                 </div>
 
