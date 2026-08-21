@@ -60,17 +60,23 @@ export default function AssignTenantSheet({
                 (rate.currency ?? setting.currency).toUpperCase() ===
                 setting.currency.toUpperCase(),
         ) ?? unit?.active_rates?.[0] ?? null;
+    const activeLease = unit?.leases?.[0] ?? null;
 
     const { data, setData, transform, submit, reset, processing, errors } =
         useForm({
             tenant_ids: [] as number[],
-            start_date: todayISO(),
-            unit_rate_id: defaultRate?.id ?? null,
-            rent_amount: defaultRate?.amount ?? '',
-            billing_interval: String(defaultRate?.billing_interval ?? 1),
-            billing_unit: defaultRate?.billing_unit ?? 'month',
-            rent_due_day: '1',
-            billing_strategy: 'advance',
+            start_date: activeLease?.start_date ?? todayISO(),
+            unit_rate_id: activeLease ? null : (defaultRate?.id ?? null),
+            rent_amount: activeLease?.rent_amount ?? defaultRate?.amount ?? '',
+            billing_interval: String(
+                activeLease?.billing_interval ??
+                    defaultRate?.billing_interval ??
+                    1,
+            ),
+            billing_unit:
+                activeLease?.billing_unit ?? defaultRate?.billing_unit ?? 'month',
+            rent_due_day: String(activeLease?.rent_due_day ?? 1),
+            billing_strategy: activeLease?.billing_strategy ?? 'advance',
             deposit_amount: '0',
             deposit_paid_at: '',
             notes: '',
@@ -91,7 +97,7 @@ export default function AssignTenantSheet({
     const hasRates = (unit?.active_rates?.length ?? 0) > 0;
     const rates = useMemo(() => unit?.active_rates ?? [], [unit]);
     const [selectedCurrency, setSelectedCurrency] = useState(
-        (defaultRate?.currency ?? setting.currency).toUpperCase(),
+        (activeLease?.currency ?? defaultRate?.currency ?? setting.currency).toUpperCase(),
     );
     const availableCurrencies = useMemo(
         () =>
@@ -113,7 +119,7 @@ export default function AssignTenantSheet({
     );
     const selectedRate =
         rates.find((r) => r.id === data.unit_rate_id) ?? null;
-    const currency = selectedRate?.currency ?? displayCurrency;
+    const currency = activeLease?.currency ?? selectedRate?.currency ?? displayCurrency;
 
     function handleOverrideToggle(checked: boolean) {
         setOverridePrice(checked);
@@ -203,7 +209,11 @@ export default function AssignTenantSheet({
     }
 
     return (
-        <Sheet open={open} onOpenChange={handleOpenChange}>
+        <Sheet
+            key={unit?.id ?? 'closed'}
+            open={open}
+            onOpenChange={handleOpenChange}
+        >
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
@@ -298,13 +308,33 @@ export default function AssignTenantSheet({
                                     type="date"
                                     value={data.start_date}
                                     onChange={handleStartDateChange}
+                                    disabled={activeLease != null}
                                     required
                                 />
                                 <InputError message={errors.start_date} />
                             </div>
 
-                            {unit?.active_rates &&
-                            unit.active_rates.length > 0 ? (
+                            {activeLease ? (
+                                <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm">
+                                    <p className="font-medium">
+                                        Existing lease terms
+                                    </p>
+                                    <p className="mt-1 text-muted-foreground">
+                                        {activeLease.rent_amount
+                                            ? formatPrice(
+                                                  activeLease.rent_amount,
+                                                  activeLease.currency,
+                                              )
+                                            : 'Custom amount'}{' '}
+                                        {activeLease.billing_label}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Adding a tenant keeps this lease's
+                                        currency and billing terms.
+                                    </p>
+                                </div>
+                            ) : unit?.active_rates &&
+                              unit.active_rates.length > 0 ? (
                                 <div className="mt-4 grid gap-2">
                                     <div className="flex items-center justify-between gap-3">
                                         <Label>Unit Rate Options</Label>
@@ -405,7 +435,7 @@ export default function AssignTenantSheet({
                                 </p>
                             )}
 
-                            <div className="mt-4 grid gap-2">
+                            {!activeLease && <div className="mt-4 grid gap-2">
                                 <Label htmlFor="rent_due_day">
                                     Rent Due Every Month
                                 </Label>
@@ -430,9 +460,9 @@ export default function AssignTenantSheet({
                                     </SelectContent>
                                 </Select>
                                 <InputError message={errors.rent_due_day} />
-                            </div>
+                            </div>}
 
-                            {hasRates && (
+                            {hasRates && !activeLease && (
                                 <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm">
                                     <input
                                         type="checkbox"
@@ -448,7 +478,7 @@ export default function AssignTenantSheet({
                                 </label>
                             )}
 
-                            {(overridePrice || !hasRates) && (
+                            {(overridePrice || !hasRates) && !activeLease && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="rent_amount">
                                         Rent Amount ({currency})
@@ -473,7 +503,7 @@ export default function AssignTenantSheet({
                                     <InputError message={errors.rent_amount} />
                                 </div>
                             )}
-                            <div className="mt-4 grid gap-2">
+                            {!activeLease && <div className="mt-4 grid gap-2">
                                 <Label htmlFor="billing_strategy">
                                     Billing Strategy
                                 </Label>
@@ -498,10 +528,10 @@ export default function AssignTenantSheet({
                                     </SelectContent>
                                 </Select>
                                 <InputError message={errors.billing_strategy} />
-                            </div>
+                            </div>}
                         </section>
 
-                        <section>
+                        {!activeLease && <section>
                             <Collapsible
                                 open={hasDeposit}
                                 onOpenChange={setHasDeposit}
@@ -572,7 +602,7 @@ export default function AssignTenantSheet({
                                     </div>
                                 </CollapsibleContent>
                             </Collapsible>
-                        </section>
+                        </section>}
 
                         <div className="grid gap-2">
                             <Label htmlFor="notes">Notes</Label>

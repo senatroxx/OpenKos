@@ -171,6 +171,20 @@ class CreateLease
                 __('The existing lease terms cannot be changed while adding a tenant.'),
             );
         }
+
+        if ($data->rentDueDay !== null) {
+            abort_if(
+                $data->rentDueDay !== $lease->rent_due_day,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        abort_if(
+            $data->startDate !== $lease->start_date?->toDateString(),
+            422,
+            __('The existing lease terms cannot be changed while adding a tenant.'),
+        );
     }
 
     /**

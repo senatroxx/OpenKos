@@ -74,6 +74,7 @@ export default function AssignUnitSheet({
 
     const selectedUnit =
         availableUnits.find((r) => r.id === data.unit_id) ?? null;
+    const activeLease = selectedUnit?.leases?.[0] ?? null;
     const rates = useMemo(() => selectedUnit?.active_rates ?? [], [selectedUnit]);
     const [selectedCurrency, setSelectedCurrency] = useState<string | null>(
         null,
@@ -118,13 +119,22 @@ export default function AssignUnitSheet({
 
         setData((prev) => ({
             ...prev,
-            unit_rate_id: defaultRate?.id ?? null,
-            rent_amount: defaultRate?.amount ?? '',
-            billing_interval: String(defaultRate?.billing_interval ?? 1),
-            billing_unit: defaultRate?.billing_unit ?? 'month',
+            start_date: activeLease?.start_date ?? prev.start_date,
+            unit_rate_id: activeLease ? null : (defaultRate?.id ?? null),
+            rent_amount: activeLease?.rent_amount ?? defaultRate?.amount ?? '',
+            billing_interval: String(
+                activeLease?.billing_interval ??
+                    defaultRate?.billing_interval ??
+                    1,
+            ),
+            billing_unit:
+                activeLease?.billing_unit ?? defaultRate?.billing_unit ?? 'month',
+            billing_strategy: activeLease?.billing_strategy ?? 'advance',
         }));
         setSelectedCurrency(
-            defaultRate
+            activeLease
+                ? activeLease.currency.toUpperCase()
+                : defaultRate
                 ? (defaultRate.currency ?? setting.currency).toUpperCase()
                 : null,
         );
@@ -133,7 +143,7 @@ export default function AssignUnitSheet({
     }, [data.unit_id]);
 
     const selectedRate = rates.find((r) => r.id === data.unit_rate_id) ?? null;
-    const currency = selectedRate?.currency ?? displayCurrency;
+    const currency = activeLease?.currency ?? selectedRate?.currency ?? displayCurrency;
     const monthlyCurrency = String(currency);
     const hasRates = rates.length > 0;
 
@@ -357,13 +367,33 @@ export default function AssignUnitSheet({
                                     type="date"
                                     value={data.start_date}
                                     onChange={handleStartDateChange}
+                                    disabled={Boolean(activeLease)}
                                     required
                                 />
                                 <InputError message={errors.start_date} />
                             </div>
 
                             {data.unit_id &&
-                                (rates.length > 0 ? (
+                                (activeLease ? (
+                                    <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm">
+                                        <p className="font-medium">
+                                            Existing lease terms
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground">
+                                            {activeLease.rent_amount
+                                                ? formatPrice(
+                                                      activeLease.rent_amount,
+                                                      activeLease.currency,
+                                                  )
+                                                : 'Custom amount'}{' '}
+                                            {activeLease.billing_label}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Adding a tenant keeps this lease's
+                                            currency and billing terms.
+                                        </p>
+                                    </div>
+                                ) : rates.length > 0 ? (
                                     <div className="mt-4 grid gap-2">
                                         <div className="flex items-center justify-between gap-3">
                                             <Label>Unit Rate Options</Label>
@@ -471,7 +501,7 @@ export default function AssignUnitSheet({
                                     </p>
                                 ))}
 
-                            <div className="mt-4 grid gap-2">
+                            {!activeLease && <div className="mt-4 grid gap-2">
                                 <Label htmlFor="rent_due_day">
                                     Rent Due Every Month
                                 </Label>
@@ -498,7 +528,7 @@ export default function AssignUnitSheet({
                                 <InputError message={errors.rent_due_day} />
                             </div>
 
-                            {hasRates && (
+                            {hasRates && !activeLease && (
                                 <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm">
                                     <input
                                         type="checkbox"
@@ -515,6 +545,7 @@ export default function AssignUnitSheet({
                             )}
 
                             {data.unit_id != null &&
+                                !activeLease &&
                                 (overridePrice || !hasRates) && (
                                     <div className="mt-4 grid gap-2">
                                         <Label htmlFor="rent_amount">
@@ -543,7 +574,7 @@ export default function AssignUnitSheet({
                                         />
                                     </div>
                                 )}
-                            <div className="mt-4 grid gap-2">
+                            {!activeLease && <div className="mt-4 grid gap-2">
                                 <Label htmlFor="billing_strategy">
                                     Billing Strategy
                                 </Label>
@@ -568,10 +599,10 @@ export default function AssignUnitSheet({
                                     </SelectContent>
                                 </Select>
                                 <InputError message={errors.billing_strategy} />
-                            </div>
+                            </div>}
                         </section>
 
-                        <section>
+                        {!activeLease && <section>
                             <Collapsible
                                 open={hasDeposit}
                                 onOpenChange={setHasDeposit}
@@ -642,7 +673,7 @@ export default function AssignUnitSheet({
                                     </div>
                                 </CollapsibleContent>
                             </Collapsible>
-                        </section>
+                        </section>}
 
                         <div className="grid gap-2">
                             <Label htmlFor="notes">Notes</Label>

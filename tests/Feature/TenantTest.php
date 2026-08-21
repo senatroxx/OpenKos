@@ -2,6 +2,7 @@
 
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
@@ -349,6 +350,48 @@ describe('unit assignment pricing', function () {
 
         expect(Lease::firstOrFail()->currency)->toBe('USD')
             ->and(Lease::firstOrFail()->rent_amount)->toBe('95.000');
+    });
+
+    it('uses the existing lease currency when adding a tenant', function () {
+        Setting::set('currency', 'IDR');
+        $user = User::factory()->owner()->create();
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $unit = Unit::factory()->withRate(1_750_000)->create();
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $lease = Lease::factory()->create([
+            'primary_tenant_id' => $tenantA->id,
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $usdRate->id,
+            'rent_amount' => '95.00',
+            'currency' => 'USD',
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'billing_strategy' => 'advance',
+            'start_date' => '2026-06-01',
+        ]);
+        $unit->update(['capacity' => 2]);
+
+        $this->actingAs($user)
+            ->post(route('tenants.assign-unit', $tenantB), [
+                'unit_id' => $unit->id,
+                'start_date' => $lease->start_date->toDateString(),
+                'rent_amount' => '95.00',
+                'billing_interval' => 1,
+                'billing_unit' => 'month',
+                'billing_strategy' => $lease->billing_strategy->value,
+                'rent_due_day' => $lease->rent_due_day,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($lease->fresh()->tenants)->toHaveCount(2);
     });
 
     it('rejects a rate from another unit during assignment', function () {

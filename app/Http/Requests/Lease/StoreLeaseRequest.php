@@ -27,7 +27,8 @@ class StoreLeaseRequest extends FormRequest
                 ->where('is_active', true)
                 ->first()
             : $unit->defaultActiveRate();
-        $currency = $rate?->currency;
+        $existingLease = $unit->leases()->where('status', 'active')->first();
+        $currency = $existingLease?->currency ?? $rate?->currency;
 
         return [
             'tenant_ids' => ['required', 'array', 'min:1'],
