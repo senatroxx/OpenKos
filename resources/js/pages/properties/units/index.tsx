@@ -507,6 +507,7 @@ export default function Index({
 
             {assignUnit && (
                 <AssignTenantSheet
+                    key={assignUnit.id}
                     unit={assignUnit}
                     property={property}
                     open={leaseFormOpen}

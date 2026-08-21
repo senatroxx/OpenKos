@@ -124,7 +124,7 @@ class UnitController extends Controller
             ->get(['id', 'name', 'phone']);
 
         $availableUnits = $property->units()
-            ->with('property.city')
+            ->with(['property.city', 'activeRates'])
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
@@ -143,14 +143,19 @@ class UnitController extends Controller
     {
         $this->authorize('create', [Unit::class, $property]);
 
-        $unit = $property->units()->create($request->validated());
+        $validated = $request->validated();
+        $rates = $validated['rates'] ?? [];
+        unset($validated['rates']);
 
-        if ($request->filled('rates')) {
-            foreach ($request->rates as $rate) {
+        $unit = $property->units()->create($validated);
+
+        if ($rates !== []) {
+            foreach ($rates as $rate) {
                 $unit->rates()->create([
                     'billing_interval' => $rate['billing_interval'],
                     'billing_unit' => $rate['billing_unit'],
                     'amount' => $rate['amount'],
+                    'currency' => $rate['currency'] ?? null,
                     'is_active' => true,
                 ]);
             }
@@ -165,31 +170,48 @@ class UnitController extends Controller
     {
         $this->authorize('update', $unit);
 
-        $unit->update($request->validated());
+        $validated = $request->validated();
+        $rates = $validated['rates'] ?? [];
+        unset($validated['rates']);
 
-        if ($request->has('rates')) {
-            $keepIds = [];
-            foreach ($request->rates as $rate) {
+        DB::transaction(function () use ($unit, $validated, $rates, $request): void {
+            $unit->update($validated);
+
+            if (! $request->has('rates')) {
+                return;
+            }
+
+            $keepIds = collect($rates)
+                ->pluck('id')
+                ->filter()
+                ->map(fn (mixed $id): int => (int) $id)
+                ->all();
+
+            if ($keepIds === []) {
+                $unit->rates()->delete();
+            } else {
+                $unit->rates()->whereNotIn('id', $keepIds)->delete();
+            }
+
+            foreach ($rates as $rate) {
                 if (isset($rate['id'])) {
-                    $unit->rates()->where('id', $rate['id'])->update([
+                    $unit->rates()->whereKey($rate['id'])->update([
                         'billing_interval' => $rate['billing_interval'],
                         'billing_unit' => $rate['billing_unit'],
                         'amount' => $rate['amount'],
                         'is_active' => $rate['is_active'] ?? true,
                     ]);
-                    $keepIds[] = $rate['id'];
                 } else {
-                    $new = $unit->rates()->create([
+                    $unit->rates()->create([
                         'billing_interval' => $rate['billing_interval'],
                         'billing_unit' => $rate['billing_unit'],
                         'amount' => $rate['amount'],
+                        'currency' => $rate['currency'] ?? null,
                         'is_active' => true,
                     ]);
-                    $keepIds[] = $new->id;
                 }
             }
-            $unit->rates()->whereNotIn('id', $keepIds)->delete();
-        }
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit updated.')]);
 

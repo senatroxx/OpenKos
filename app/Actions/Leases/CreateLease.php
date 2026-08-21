@@ -31,11 +31,8 @@ class CreateLease
             $unit = Unit::lockForUpdate()->findOrFail($unit->id);
             $unitRate = $data->unitRateId === null
                 ? null
-                : $unit->rates()->find($data->unitRateId);
-            $defaultRate = $unitRate ?? $unit->rates()
-                ->where('billing_unit', 'month')
-                ->where('billing_interval', 1)
-                ->first();
+                : $unit->activeRates()->whereKey($data->unitRateId)->first();
+            $defaultRate = $unitRate ?? $unit->defaultActiveRate();
 
             abort_if(
                 $data->unitRateId !== null && $unitRate === null,
@@ -71,17 +68,21 @@ class CreateLease
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
-            $rentAmount = $data->rentAmount ?? $defaultRate?->amount;
-            $currency = $defaultRate?->currency ?? $this->money->normalizeCurrency();
-            $rentAmount = $rentAmount === null
-                ? null
-                : $this->money->normalizeAmount((string) $rentAmount, $currency);
-            $depositAmount = $data->depositAmount === null
-                ? '0'
-                : $this->money->normalizeAmount($data->depositAmount, $currency);
-            $depositRefundAmount = $data->depositRefundAmount === null
-                ? null
-                : $this->money->normalizeAmount($data->depositRefundAmount, $currency);
+            try {
+                $rentAmount = $data->rentAmount ?? $defaultRate?->amount;
+                $currency = $defaultRate?->currency ?? $this->money->normalizeCurrency();
+                $rentAmount = $rentAmount === null
+                    ? null
+                    : $this->money->normalizeAmount((string) $rentAmount, $currency);
+                $depositAmount = $data->depositAmount === null
+                    ? '0'
+                    : $this->money->normalizeAmount($data->depositAmount, $currency);
+                $depositRefundAmount = $data->depositRefundAmount === null
+                    ? null
+                    : $this->money->normalizeAmount($data->depositRefundAmount, $currency);
+            } catch (\InvalidArgumentException) {
+                abort(422, __('The selected unit rate amount is invalid for its currency.'));
+            }
             $isCustomPrice = $data->rentAmount !== null
                 && $unitRate
                 && $this->money->compare($data->rentAmount, (string) $unitRate->amount) !== 0;
@@ -94,8 +95,8 @@ class CreateLease
                 'end_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
                 'currency' => $currency,
-                'billing_interval' => $data->billingInterval ?? $unitRate?->billing_interval ?? 1,
-                'billing_unit' => $data->billingUnit ?? $unitRate?->billing_unit ?? 'month',
+                'billing_interval' => $data->billingInterval ?? $defaultRate?->billing_interval ?? 1,
+                'billing_unit' => $data->billingUnit ?? $defaultRate?->billing_unit ?? 'month',
                 'billing_strategy' => $data->billingStrategy ?? 'advance',
                 'is_custom_price' => $isCustomPrice,
                 'unit_rate_id' => $data->unitRateId,

@@ -54,7 +54,12 @@ export default function AssignTenantSheet({
     const [overridePrice, setOverridePrice] = useState(false);
     const dueDayInitialized = useRef(false);
 
-    const defaultRate = unit?.active_rates?.[0] ?? null;
+    const defaultRate =
+        unit?.active_rates?.find(
+            (rate) =>
+                (rate.currency ?? setting.currency).toUpperCase() ===
+                setting.currency.toUpperCase(),
+        ) ?? unit?.active_rates?.[0] ?? null;
 
     const { data, setData, transform, submit, reset, processing, errors } =
         useForm({
@@ -84,9 +89,31 @@ export default function AssignTenantSheet({
 
     const capacity = unit?.capacity ?? 1;
     const hasRates = (unit?.active_rates?.length ?? 0) > 0;
+    const rates = useMemo(() => unit?.active_rates ?? [], [unit]);
+    const [selectedCurrency, setSelectedCurrency] = useState(
+        (defaultRate?.currency ?? setting.currency).toUpperCase(),
+    );
+    const availableCurrencies = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    rates.map((rate) =>
+                        (rate.currency ?? setting.currency).toUpperCase(),
+                    ),
+                ),
+            ).sort(),
+        [rates, setting.currency],
+    );
+    const displayCurrency =
+        selectedCurrency || availableCurrencies[0] || setting.currency.toUpperCase();
+    const visibleRates = rates.filter(
+        (rate) =>
+            (rate.currency ?? setting.currency).toUpperCase() ===
+            displayCurrency.toUpperCase(),
+    );
     const selectedRate =
-        unit?.active_rates?.find((r) => r.id === data.unit_rate_id) ?? null;
-    const currency = selectedRate?.currency ?? setting.currency;
+        rates.find((r) => r.id === data.unit_rate_id) ?? null;
+    const currency = selectedRate?.currency ?? displayCurrency;
 
     function handleOverrideToggle(checked: boolean) {
         setOverridePrice(checked);
@@ -129,6 +156,9 @@ export default function AssignTenantSheet({
     }
 
     function handleRateSelect(rate: UnitRate) {
+        setSelectedCurrency(
+            (rate.currency ?? setting.currency).toUpperCase(),
+        );
         setData((prev) => ({
             ...prev,
             unit_rate_id: rate.id ?? null,
@@ -173,7 +203,7 @@ export default function AssignTenantSheet({
     }
 
     return (
-        <Sheet key="assign-tenant" open={open} onOpenChange={handleOpenChange}>
+        <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
@@ -276,11 +306,60 @@ export default function AssignTenantSheet({
                             {unit?.active_rates &&
                             unit.active_rates.length > 0 ? (
                                 <div className="mt-4 grid gap-2">
-                                    <Label>Unit Rate Options</Label>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <Label>Unit Rate Options</Label>
+                                        {availableCurrencies.length > 1 ? (
+                                            <Select
+                                                value={displayCurrency}
+                                                onValueChange={(value) => {
+                                                    const nextRate = rates.find(
+                                                        (rate) =>
+                                                            (
+                                                                rate.currency ??
+                                                                setting.currency
+                                                            ).toUpperCase() ===
+                                                            value,
+                                                    );
+
+                                                    setSelectedCurrency(value);
+
+                                                    if (nextRate) {
+                                                        handleRateSelect(nextRate);
+                                                    }
+                                                }}
+                                            >
+                                                <SelectTrigger className="w-24">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableCurrencies.map(
+                                                        (availableCurrency) => (
+                                                            <SelectItem
+                                                                key={
+                                                                    availableCurrency
+                                                                }
+                                                                value={
+                                                                    availableCurrency
+                                                                }
+                                                            >
+                                                                {
+                                                                    availableCurrency
+                                                                }
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <span className="text-sm font-medium text-muted-foreground">
+                                                {displayCurrency}
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="space-y-1">
-                                        {unit.active_rates.map((rate) => (
+                                        {visibleRates.map((rate) => (
                                             <label
-                                                key={`${rate.billing_interval}-${rate.billing_unit}`}
+                                                key={rate.id}
                                                 className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors ${
                                                     data.unit_rate_id ===
                                                     rate.id

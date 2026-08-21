@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\Auditable;
 use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\UnitStatus;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -93,6 +94,15 @@ class Unit extends Model
             )
             ->orderBy('billing_interval')
             ->orderBy('id');
+    }
+
+    public function defaultActiveRate(?string $currency = null): ?UnitRate
+    {
+        $preferredCurrency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        $rates = $this->activeRates()->get();
+
+        return $rates->first(fn (UnitRate $rate): bool => $rate->currency === $preferredCurrency)
+            ?? $rates->first();
     }
 
     public function scopeAvailableForAssignment(Builder $query): void

@@ -8,6 +8,7 @@ use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
@@ -162,6 +163,54 @@ describe('CRUD', function () {
 
         expect($lease->unit_rate_id)->toBe($rate->id)
             ->and($lease->rent_amount)->toBe($rate->amount);
+    });
+
+    it('snapshots the selected currency-specific rate', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $usdRate->id,
+            ])
+            ->assertRedirect();
+
+        expect(Lease::firstOrFail()->currency)->toBe('USD')
+            ->and(Lease::firstOrFail()->rent_amount)->toBe('95.000');
+    });
+
+    it('inherits the configured currency from the default rate', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        Setting::set('currency', 'USD');
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+            ])
+            ->assertRedirect();
+
+        expect(Lease::firstOrFail()->currency)->toBe('USD')
+            ->and(Lease::firstOrFail()->rent_amount)->toBe('95.000');
     });
 
     it('rejects a rate from another unit when creating a lease', function () {

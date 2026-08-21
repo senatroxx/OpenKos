@@ -454,6 +454,7 @@ export default function Index({
 
             {assignTenant && (
                 <AssignUnitSheet
+                    key={assignTenant.id}
                     tenant={assignTenant}
                     availableUnits={_availableUnits}
                     open={assignUnitOpen}

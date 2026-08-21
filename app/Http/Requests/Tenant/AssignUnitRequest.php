@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenant;
 
 use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
+use App\Models\Unit;
 use App\Models\UnitRate;
 use App\Rules\MoneyAmount;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -17,16 +18,14 @@ class AssignUnitRequest extends FormRequest
      */
     public function rules(): array
     {
+        $unit = Unit::find($this->integer('unit_id'));
         $rate = $this->integer('unit_rate_id') > 0
             ? UnitRate::query()
                 ->whereKey($this->integer('unit_rate_id'))
                 ->where('unit_id', $this->input('unit_id'))
+                ->where('is_active', true)
                 ->first()
-            : UnitRate::query()
-                ->where('unit_id', $this->input('unit_id'))
-                ->where('billing_unit', 'month')
-                ->where('billing_interval', 1)
-                ->first();
+            : $unit?->defaultActiveRate();
         $currency = $rate?->currency;
 
         return [
@@ -42,7 +41,9 @@ class AssignUnitRequest extends FormRequest
             'unit_rate_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('unit_rates', 'id')->where('unit_id', $this->input('unit_id')),
+                Rule::exists('unit_rates', 'id')
+                    ->where('unit_id', $this->input('unit_id'))
+                    ->where('is_active', true),
             ],
             'deposit_amount' => ['nullable', new MoneyAmount($currency)],
             'deposit_paid_at' => ['nullable', 'date'],

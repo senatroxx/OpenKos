@@ -2,9 +2,11 @@
 
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\Setting;
 use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Database\QueryException;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -102,6 +104,7 @@ describe('CRUD', function () {
             ->assertInertia(fn ($page) => $page
                 ->component('properties/units/index')
                 ->has('units.data', 3)
+                ->has('availableUnits.0.active_rates.0.amount')
             );
     });
 
@@ -317,5 +320,110 @@ describe('active rates ordering', function () {
 
         expect($first->billing_unit->value)->toBe('month')
             ->and($first->amount)->toBe('1500000.000');
+    });
+});
+
+describe('currency-specific rates', function () {
+    it('allows independent prices for the same billing period in different currencies', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => [
+                    [
+                        'billing_interval' => 1,
+                        'billing_unit' => 'month',
+                        'amount' => '1500000',
+                        'currency' => 'IDR',
+                    ],
+                    [
+                        'billing_interval' => 1,
+                        'billing_unit' => 'month',
+                        'amount' => '95.00',
+                        'currency' => 'USD',
+                    ],
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $unit = Unit::query()->where('name', 'Unit 101')->firstOrFail();
+
+        expect($unit->rates()->orderBy('currency')->pluck('currency')->all())
+            ->toBe(['IDR', 'USD'])
+            ->and($unit->rates()->where('currency', 'USD')->value('amount'))
+            ->toBe('95.000');
+    });
+
+    it('rejects duplicate currency variants in one request', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => [
+                    [
+                        'billing_interval' => 1,
+                        'billing_unit' => 'month',
+                        'amount' => '1500000',
+                        'currency' => 'IDR',
+                    ],
+                    [
+                        'billing_interval' => 1,
+                        'billing_unit' => 'month',
+                        'amount' => '1600000',
+                        'currency' => 'IDR',
+                    ],
+                ],
+            ])
+            ->assertSessionHasErrors('rates.1.currency');
+    });
+
+    it('rejects malformed rate rows without throwing', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => ['invalid'],
+            ])
+            ->assertSessionHasErrors('rates.0');
+    });
+
+    it('enforces currency variant uniqueness at the database level', function () {
+        $unit = Unit::factory()->create();
+
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+
+        expect(fn () => $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '100.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]))->toThrow(QueryException::class);
+    });
+
+    it('does not reinterpret an existing rate when the default currency changes', function () {
+        Setting::set('currency', 'IDR');
+        $unit = Unit::factory()->withRate(1_500_000)->create();
+        $rate = $unit->rates()->firstOrFail();
+
+        Setting::set('currency', 'USD');
+
+        expect($rate->fresh()->currency)->toBe('IDR');
     });
 });

@@ -41,13 +41,19 @@ export default function UnitFormSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const isEdit = Boolean(unit);
-    const { setting } = usePage<{ setting: { currency: string } }>().props;
+    const { app, setting } = usePage<{
+        app: { currency_scales: Record<string, number> };
+        setting: { currency: string };
+    }>().props;
+    const currencies = Object.keys(app.currency_scales).sort();
+    const defaultCurrency = setting.currency.toUpperCase();
+    const newRate = { ...emptyRate, currency: defaultCurrency };
 
     const { data, setData, submit, reset, processing, errors } = useForm({
         name: unit?.name ?? '',
         floor: unit?.floor ?? '',
         capacity: String(unit?.capacity ?? 1),
-        rates: unit?.active_rates?.length ? unit.active_rates : [emptyRate],
+        rates: unit?.active_rates?.length ? unit.active_rates : [newRate],
         size_sqm: unit?.size_sqm ?? '',
         status: unit?.status ?? 'available',
         description: unit?.description ?? '',
@@ -91,7 +97,7 @@ export default function UnitFormSheet({
     function addRate() {
         setData((prev) => ({
             ...prev,
-            rates: [...prev.rates, { ...emptyRate }],
+            rates: [...prev.rates, { ...newRate }],
         }));
     }
 
@@ -183,11 +189,11 @@ export default function UnitFormSheet({
                                 {data.rates.map((rate, index) => (
                                     <div
                                         key={index}
-                                        className="flex items-end gap-2 rounded-lg border p-3"
+                                        className="flex flex-wrap items-end gap-2 rounded-lg border p-3"
                                     >
-                                        <div className="grid flex-1 gap-1">
+                                        <div className="grid min-w-44 flex-1 gap-1">
                                             <Label className="text-xs">
-                                                Amount ({rate.currency ?? setting.currency})
+                                                Amount
                                             </Label>
                                             <Input
                                                 type="number"
@@ -205,6 +211,39 @@ export default function UnitFormSheet({
                                                 }
                                                 placeholder="e.g. 1000000"
                                             />
+                                        </div>
+                                        <div className="grid w-24 gap-1">
+                                            <Label className="text-xs">
+                                                Currency
+                                            </Label>
+                                            <Select
+                                                value={
+                                                    rate.currency ??
+                                                    defaultCurrency
+                                                }
+                                                onValueChange={(value) =>
+                                                    updateRate(
+                                                        index,
+                                                        'currency',
+                                                        value,
+                                                    )
+                                                }
+                                                disabled={rate.id != null}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {currencies.map((currency) => (
+                                                        <SelectItem
+                                                            key={currency}
+                                                            value={currency}
+                                                        >
+                                                            {currency}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
                                         <div className="grid w-20 gap-1">
                                             <Label className="text-xs">

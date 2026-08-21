@@ -327,6 +327,30 @@ describe('unit assignment pricing', function () {
             ->and($lease->is_custom_price)->toBeFalse();
     });
 
+    it('assigns a lease using the selected currency-specific rate', function () {
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $unit = Unit::factory()->withRate(1_750_000)->create();
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('tenants.assign-unit', $tenant), [
+                'unit_id' => $unit->id,
+                'unit_rate_id' => $usdRate->id,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertRedirect();
+
+        expect(Lease::firstOrFail()->currency)->toBe('USD')
+            ->and(Lease::firstOrFail()->rent_amount)->toBe('95.000');
+    });
+
     it('rejects a rate from another unit during assignment', function () {
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();
