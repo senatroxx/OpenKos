@@ -394,6 +394,32 @@ describe('unit assignment pricing', function () {
         expect($lease->fresh()->tenants)->toHaveCount(2);
     });
 
+    it('does not replace null legacy lease terms when adding a tenant', function () {
+        Setting::set('currency', 'IDR');
+        $user = User::factory()->owner()->create();
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $unit = Unit::factory()->create();
+        $lease = Lease::factory()->create([
+            'primary_tenant_id' => $tenantA->id,
+            'unit_id' => $unit->id,
+            'rent_amount' => null,
+            'currency' => 'IDR',
+            'start_date' => '2026-06-01',
+        ]);
+        $unit->update(['capacity' => 2]);
+
+        $this->actingAs($user)
+            ->post(route('tenants.assign-unit', $tenantB), [
+                'unit_id' => $unit->id,
+                'start_date' => $lease->start_date->toDateString(),
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($lease->fresh()->tenants)->toHaveCount(2);
+    });
+
     it('rejects a rate from another unit during assignment', function () {
         $user = User::factory()->owner()->create();
         $tenant = Tenant::factory()->create();

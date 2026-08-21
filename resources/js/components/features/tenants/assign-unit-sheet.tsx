@@ -126,7 +126,9 @@ export default function AssignUnitSheet({
             ...prev,
             start_date: activeLease?.start_date ?? prev.start_date,
             unit_rate_id: activeLease ? null : (defaultRate?.id ?? null),
-            rent_amount: activeLease?.rent_amount ?? defaultRate?.amount ?? '',
+            rent_amount: activeLease
+                ? (activeLease.rent_amount ?? '')
+                : (defaultRate?.amount ?? ''),
             billing_interval: String(
                 activeLease?.billing_interval ??
                     defaultRate?.billing_interval ??
@@ -136,7 +138,12 @@ export default function AssignUnitSheet({
                 activeLease?.billing_unit ??
                 defaultRate?.billing_unit ??
                 'month',
-            billing_strategy: activeLease?.billing_strategy ?? 'advance',
+            billing_strategy: activeLease
+                ? (activeLease.billing_strategy ?? '')
+                : 'advance',
+            rent_due_day: activeLease
+                ? String(activeLease.rent_due_day ?? '')
+                : prev.rent_due_day,
         }));
         setSelectedCurrency(
             activeLease
