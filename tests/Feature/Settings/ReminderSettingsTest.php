@@ -70,6 +70,16 @@ describe('Reminder settings page', function () {
             );
     });
 
+    it('renders an empty preview amount when currency is unconfigured', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', '');
+
+        $this->actingAs($owner)
+            ->get(route('settings.reminders.edit'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('previewAmount', ''));
+    });
+
     it('updates reminder settings', function () {
         $owner = User::factory()->owner()->create();
 

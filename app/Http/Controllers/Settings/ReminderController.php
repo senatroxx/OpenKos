@@ -40,11 +40,14 @@ class ReminderController extends Controller
             ])
             ->all();
         $settings['reminder_channels'] ??= ['log'];
-        $previewAmount = $this->money->format(
-            '1500000',
-            (string) Setting::get('currency'),
-            (string) (Setting::get('locale') ?? 'id'),
-        );
+        $previewCurrency = Setting::get('currency');
+        $previewAmount = blank($previewCurrency)
+            ? ''
+            : $this->money->format(
+                '1500000',
+                (string) $previewCurrency,
+                (string) (Setting::get('locale') ?? 'id'),
+            );
 
         return Inertia::render('settings/reminders', [
             'settings' => $settings,
