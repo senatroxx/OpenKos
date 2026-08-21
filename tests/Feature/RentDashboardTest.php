@@ -141,6 +141,57 @@ test('collection queue shows correct outstanding count', function () {
     Carbon::setTestNow();
 });
 
+test('outstanding amounts include currencies represented by collected payments', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $idrLease = Lease::factory()->create([
+        'currency' => 'IDR',
+        'status' => 'active',
+        'start_date' => now()->subMonths(2),
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $idrLease->id,
+        'due_date' => '2026-07-05',
+        'total' => 106_951_000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+
+    $usdLease = Lease::factory()->create([
+        'currency' => 'USD',
+        'status' => 'active',
+        'start_date' => now()->subMonths(2),
+    ]);
+    $usdInvoice = Invoice::factory()->create([
+        'lease_id' => $usdLease->id,
+        'currency' => 'USD',
+        'due_date' => '2026-07-05',
+        'total' => 1_200_000,
+        'amount_paid' => 1_200_000,
+        'status' => InvoiceStatus::Paid,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $usdInvoice->id,
+        'amount' => 1_200_000,
+        'currency' => 'USD',
+        'payment_date' => '2026-07-09',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.rent'))
+        ->assertInertia(fn ($page) => $page
+            ->where('outstanding.amounts', [
+                ['currency' => 'IDR', 'amount' => '106951000.000'],
+                ['currency' => 'USD', 'amount' => '0'],
+            ])
+        );
+
+    Carbon::setTestNow();
+});
+
 test('collection queue tab counts are correct', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-10'));
 

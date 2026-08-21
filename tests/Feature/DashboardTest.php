@@ -222,6 +222,78 @@ test('dashboard shows overdue invoice count and amount in attention', function (
     Carbon::setTestNow();
 });
 
+test('dashboard keeps every finance metric aligned to the same currencies', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+
+    $idrLease = Lease::factory()->create([
+        'currency' => 'IDR',
+        'rent_amount' => 1_000_000,
+        'start_date' => now()->subMonths(2),
+        'status' => LeaseStatus::Active->value,
+    ]);
+    $usdLease = Lease::factory()->create([
+        'currency' => 'USD',
+        'rent_amount' => 2_000_000,
+        'start_date' => now()->subMonths(2),
+        'status' => LeaseStatus::Active->value,
+    ]);
+
+    $idrInvoice = Invoice::factory()->create([
+        'lease_id' => $idrLease->id,
+        'currency' => 'IDR',
+        'period_start' => '2026-07-02',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'status' => InvoiceStatus::Paid,
+        'total' => 1_000_000,
+        'amount_paid' => 1_000_000,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $idrInvoice->id,
+        'amount' => 1_000_000,
+        'currency' => 'IDR',
+        'payment_date' => '2026-07-05',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    Invoice::factory()->create([
+        'lease_id' => $usdLease->id,
+        'currency' => 'USD',
+        'period_start' => '2026-07-02',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'status' => InvoiceStatus::Pending,
+        'total' => 2_000_000,
+        'amount_paid' => 0,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('finance.revenue_this_month', [
+                ['currency' => 'IDR', 'amount' => '1000000.000'],
+                ['currency' => 'USD', 'amount' => '0'],
+            ])
+            ->where('finance.monthly_potential', [
+                ['currency' => 'IDR', 'amount' => '1000000.000'],
+                ['currency' => 'USD', 'amount' => '2000000.000'],
+            ])
+            ->where('finance.outstanding', [
+                ['currency' => 'IDR', 'amount' => '0'],
+                ['currency' => 'USD', 'amount' => '2000000.000'],
+            ])
+            ->where('finance.collection_rate', [
+                ['currency' => 'IDR', 'rate' => 100],
+                ['currency' => 'USD', 'rate' => 0],
+            ])
+        );
+
+    Carbon::setTestNow();
+});
+
 test('dashboard shows due today count in attention', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-10'));
 

@@ -147,6 +147,11 @@ class RentController extends Controller
             ])
             ->values()
             ->all();
+        $currencies = collect([
+            ...$outstandingAmounts,
+            ...$collectedAmounts,
+        ])->pluck('currency')->unique()->values();
+        $outstandingAmounts = $this->completeMoneyGroups($outstandingAmounts, $currencies);
         $lastPaymentDate = $paymentStats->pluck('last_payment_at')->filter()->max();
         $lastPaymentAt = $lastPaymentDate ? Carbon::parse($lastPaymentDate)->toDateString() : null;
 
@@ -406,5 +411,20 @@ class RentController extends Controller
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<int, array{currency: string, amount: string}>  $groups
+     * @param  Collection<int, string>  $currencies
+     * @return array<int, array{currency: string, amount: string}>
+     */
+    private function completeMoneyGroups(array $groups, Collection $currencies): array
+    {
+        $groupsByCurrency = collect($groups)->keyBy('currency');
+
+        return $currencies->map(fn (string $currency): array => [
+            'currency' => $currency,
+            'amount' => ($groupsByCurrency->get($currency) ?? ['amount' => BigDecimal::zero()->toString()])['amount'],
+        ])->all();
     }
 }

@@ -15,6 +15,7 @@ import { useState } from 'react';
 import {
     ActivityFeedItem,
     BusinessHealthPanel,
+    CurrencyAmountList,
     getActivitySummaryChips,
     OperationalBriefingCard,
     PropertyFormSheet,
@@ -30,7 +31,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { formatPrice } from '@/lib/formatters';
 import { dashboard } from '@/routes';
 import type {
     AttentionData,
@@ -147,16 +147,15 @@ export default function Overview({
                             label="Overdue Invoices"
                             value={attention.overdue_invoices.count}
                             subtext={
-                                attention.overdue_invoices.amounts.length > 0
-                                    ? attention.overdue_invoices.amounts
-                                          .map((amount) =>
-                                              formatPrice(
-                                                  amount.amount,
-                                                  amount.currency,
-                                              ),
-                                          )
-                                          .join(' · ')
-                                    : undefined
+                                attention.overdue_invoices.amounts.length >
+                                0 ? (
+                                    <CurrencyAmountList
+                                        groups={
+                                            attention.overdue_invoices.amounts
+                                        }
+                                        amountClassName="text-surface-red-foreground"
+                                    />
+                                ) : undefined
                             }
                             variant="red"
                             emphasis="attention"
@@ -197,9 +196,9 @@ export default function Overview({
                 <BusinessHealthPanel finance={finance} />
 
                 {/* 5. Lower Dashboard: Operational Workspace (Two-Column Layout) */}
-                <div className="grid gap-8 lg:grid-cols-12">
+                <div className="grid min-w-0 gap-8 lg:grid-cols-12">
                     {/* Left Column: Property Overview (~65% / lg:col-span-7) */}
-                    <section className="flex flex-col gap-3 lg:col-span-7">
+                    <section className="flex min-w-0 flex-col gap-3 lg:col-span-7">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 Property Overview
@@ -214,7 +213,7 @@ export default function Overview({
                                 </Link>
                             )}
                         </div>
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
                             {stats.properties
                                 .slice(0, 6)
                                 .map((property: PropertyStats) => (
@@ -227,7 +226,7 @@ export default function Overview({
                     </section>
 
                     {/* Right Column: Recent Activity Timeline (~35% / lg:col-span-5) */}
-                    <section className="flex flex-col gap-3 lg:col-span-5">
+                    <section className="flex min-w-0 flex-col gap-3 lg:col-span-5">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 Recent Activity

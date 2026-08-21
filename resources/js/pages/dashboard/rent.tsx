@@ -17,6 +17,7 @@ import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { SearchInput } from '@/components/data-table/search-input';
+import { CurrencyAmountList } from '@/components/features/dashboard/currency-amount-list';
 import InvoiceDetailSheet from '@/components/features/payments/invoice-detail-sheet';
 import QueuePaymentSheet from '@/components/features/payments/queue-payment-sheet';
 import { MetricCard } from '@/components/shared/metric-card';
@@ -148,7 +149,11 @@ function pendingReviewLabel(count: number | undefined): string {
 }
 
 function formatMoneyGroups(groups: MoneyAggregate[]): string {
-    return groups.map((group) => formatPrice(group.amount, group.currency)).join(' · ') || '—';
+    return (
+        groups
+            .map((group) => formatPrice(group.amount, group.currency))
+            .join(' · ') || '—'
+    );
 }
 
 export default function CollectionQueue({
@@ -449,7 +454,12 @@ export default function CollectionQueue({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <MetricCard
                         label="Outstanding Balance"
-                        value={formatMoneyGroups(outstanding.amounts)}
+                        value={
+                            <CurrencyAmountList
+                                groups={outstanding.amounts}
+                                amountClassName="text-surface-amber-foreground"
+                            />
+                        }
                         subtext={`${outstanding.count} invoice${outstanding.count !== 1 ? 's' : ''} unpaid`}
                         variant="amber"
                         emphasis="subtle"

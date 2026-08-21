@@ -45,11 +45,22 @@ class OverviewStatsCalculator
             fn ($row): string => BigDecimal::of((string) $row->total)->minus((string) $row->amount_paid)->toString(),
         );
 
+        $currencies = collect([
+            ...$monthlyPotential,
+            ...$revenueThisMonth,
+            ...$outstanding,
+        ])->pluck('currency')->unique()->values();
+
+        $monthlyPotential = $this->completeAmountGroups($monthlyPotential, $currencies);
+        $revenueThisMonth = $this->completeAmountGroups($revenueThisMonth, $currencies);
+        $outstanding = $this->completeAmountGroups($outstanding, $currencies);
+
         $potentialByCurrency = collect($monthlyPotential)->keyBy('currency');
         $revenueByCurrency = collect($revenueThisMonth)->keyBy('currency');
-        $collectionRate = $potentialByCurrency->map(function (array $potential) use ($revenueByCurrency): array {
-            $revenue = $revenueByCurrency->get($potential['currency']);
-            $rate = $revenue && BigDecimal::of($potential['amount'])->isPositive()
+        $collectionRate = $currencies->map(function (string $currency) use ($potentialByCurrency, $revenueByCurrency): array {
+            $potential = $potentialByCurrency->get($currency);
+            $revenue = $revenueByCurrency->get($currency);
+            $rate = $revenue && $potential && BigDecimal::of($potential['amount'])->isPositive()
                 ? BigDecimal::of($revenue['amount'])
                     ->dividedBy($potential['amount'], 4, RoundingMode::HalfUp)
                     ->multipliedBy(100)
@@ -57,8 +68,8 @@ class OverviewStatsCalculator
                     ->toInt()
                 : 0;
 
-            return ['currency' => $potential['currency'], 'rate' => $rate];
-        })->values()->all();
+            return ['currency' => $currency, 'rate' => $rate];
+        })->all();
 
         return [
             'revenue_this_month' => $revenueThisMonth,
@@ -86,5 +97,20 @@ class OverviewStatsCalculator
             })
             ->values()
             ->all();
+    }
+
+    /**
+     * @param  array<int, array{currency: string, amount: string}>  $groups
+     * @param  Collection<int, string>  $currencies
+     * @return array<int, array{currency: string, amount: string}>
+     */
+    private function completeAmountGroups(array $groups, Collection $currencies): array
+    {
+        $groupsByCurrency = collect($groups)->keyBy('currency');
+
+        return $currencies->map(fn (string $currency): array => [
+            'currency' => $currency,
+            'amount' => ($groupsByCurrency->get($currency) ?? ['amount' => BigDecimal::zero()->toString()])['amount'],
+        ])->all();
     }
 }
