@@ -446,6 +446,14 @@ describe('currency-specific rates', function () {
             ->post(route('properties.units.store', $property), [
                 'name' => 'Unit 102',
                 'capacity' => 1,
+                'rates' => null,
+            ])
+            ->assertSessionHasErrors('rates');
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 103',
+                'capacity' => 1,
                 'rates' => [[
                     'billing_interval' => 1,
                     'billing_unit' => 'month',
@@ -462,6 +470,14 @@ describe('currency-specific rates', function () {
                 'name' => $unit->name,
                 'capacity' => $unit->capacity,
                 'rates' => 'invalid',
+            ])
+            ->assertSessionHasErrors('rates');
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => null,
             ])
             ->assertSessionHasErrors('rates');
     });

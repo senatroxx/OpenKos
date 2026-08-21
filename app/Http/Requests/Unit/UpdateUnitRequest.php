@@ -35,7 +35,7 @@ class UpdateUnitRequest extends FormRequest
             'capacity' => ['required', 'integer', 'min:0', 'max:255'],
             'status' => ['nullable', new Enum(UnitStatus::class)],
             'notes' => ['nullable', 'string', 'max:65535'],
-            'rates' => ['nullable', 'array'],
+            'rates' => ['sometimes', 'array'],
             'rates.*' => ['array'],
             'rates.*.id' => [
                 'nullable',
