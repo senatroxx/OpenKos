@@ -201,6 +201,12 @@ export default function UnitFormSheet({
                                                 Inactive rate
                                             </span>
                                         )}
+                                        <InputError
+                                            className="basis-full"
+                                            message={
+                                                errors[`rates.${index}.id`]
+                                            }
+                                        />
                                         <div className="grid min-w-44 flex-1 gap-1">
                                             <Label className="text-xs">
                                                 Amount
