@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\AboutController;
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\MailController;
 use App\Http\Controllers\Settings\PaymentGatewayController;
@@ -29,6 +30,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('settings/password', [SecurityController::class, 'update'])
         ->middleware('throttle:6,1')
         ->name('user-password.update');
+
+    Route::get('settings/about', [AboutController::class, 'edit'])->name('settings.about.edit');
+    Route::get('settings/about/license', [AboutController::class, 'license'])->name('settings.about.license');
 
     Route::middleware('role:owner')->group(function () {
         Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');

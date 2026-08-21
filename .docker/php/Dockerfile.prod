@@ -1,10 +1,17 @@
 # syntax=docker/dockerfile:1.7
 
 ARG FRANKENPHP_IMAGE=dunglas/frankenphp:1-php8.4-bookworm
+ARG OPENKOS_BUILD_VERSION=
+ARG OPENKOS_BUILD_CHANNEL=
+ARG OPENKOS_BUILD_COMMIT_SHA=
 
 FROM composer:2 AS composer
 
 FROM ${FRANKENPHP_IMAGE} AS dependencies
+
+ARG OPENKOS_BUILD_VERSION
+ARG OPENKOS_BUILD_CHANNEL
+ARG OPENKOS_BUILD_COMMIT_SHA
 
 WORKDIR /app
 
@@ -52,6 +59,10 @@ RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
 
 FROM ${FRANKENPHP_IMAGE} AS runtime
 
+ARG OPENKOS_BUILD_VERSION
+ARG OPENKOS_BUILD_CHANNEL
+ARG OPENKOS_BUILD_COMMIT_SHA
+
 WORKDIR /app
 
 RUN install-php-extensions \
@@ -77,6 +88,7 @@ COPY --from=dependencies /app/src /app/src
 COPY --from=dependencies /app/artisan /app/artisan
 COPY --from=dependencies /app/composer.json /app/composer.json
 COPY --from=dependencies /app/composer.lock /app/composer.lock
+COPY --from=dependencies /app/LICENSE /app/LICENSE
 
 COPY --from=frontend /app/public/build /app/public/build
 
@@ -99,7 +111,10 @@ RUN mkdir -p \
 ENV APP_ENV=production \
     APP_DEBUG=false \
     SERVER_NAME=:8080 \
-    SERVER_ROOT=public
+    SERVER_ROOT=public \
+    OPENKOS_BUILD_VERSION=${OPENKOS_BUILD_VERSION} \
+    OPENKOS_BUILD_CHANNEL=${OPENKOS_BUILD_CHANNEL} \
+    OPENKOS_BUILD_COMMIT_SHA=${OPENKOS_BUILD_COMMIT_SHA}
 
 EXPOSE 8080
 
