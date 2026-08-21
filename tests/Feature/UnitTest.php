@@ -7,6 +7,7 @@ use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -150,6 +151,37 @@ describe('CRUD', function () {
         $unit->refresh();
 
         expect($unit->name)->toBe('Unit 102');
+    });
+
+    it('preserves inactive rates when updating a unit', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $activeRate = $unit->activeRates()->firstOrFail();
+        $inactiveRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'year',
+            'amount' => '12000.00',
+            'currency' => 'USD',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => [[
+                    'id' => $activeRate->id,
+                    'billing_interval' => $activeRate->billing_interval,
+                    'billing_unit' => $activeRate->billing_unit->value,
+                    'amount' => $activeRate->amount,
+                    'currency' => $activeRate->currency,
+                    'is_active' => true,
+                ]],
+            ])
+            ->assertRedirect();
+
+        expect($inactiveRate->fresh())->not->toBeNull();
     });
 
     it('deletes a unit via soft delete', function () {
@@ -415,6 +447,39 @@ describe('currency-specific rates', function () {
             'currency' => 'USD',
             'is_active' => true,
         ]))->toThrow(QueryException::class);
+    });
+
+    it('rejects duplicate effective currencies for legacy null rates', function () {
+        Setting::set('currency', 'IDR');
+        $unit = Unit::factory()->create();
+        $rate = $unit->rates()->firstOrFail();
+
+        DB::table('unit_rates')->where('id', $rate->id)->update(['currency' => null]);
+
+        $user = User::factory()->owner()->create();
+        $response = $this->actingAs($user)
+            ->put(route('properties.units.update', [$unit->property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => [
+                    [
+                        'id' => $rate->id,
+                        'billing_interval' => $rate->billing_interval,
+                        'billing_unit' => $rate->billing_unit->value,
+                        'amount' => $rate->amount,
+                        'currency' => 'IDR',
+                        'is_active' => true,
+                    ],
+                    [
+                        'billing_interval' => $rate->billing_interval,
+                        'billing_unit' => $rate->billing_unit->value,
+                        'amount' => '1000000',
+                        'currency' => 'IDR',
+                    ],
+                ],
+            ]);
+
+        $response->assertSessionHasErrors('rates.1.currency');
     });
 
     it('does not reinterpret an existing rate when the default currency changes', function () {

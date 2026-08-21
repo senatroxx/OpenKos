@@ -188,9 +188,12 @@ class UnitController extends Controller
                 ->all();
 
             if ($keepIds === []) {
-                $unit->rates()->delete();
+                $unit->rates()->where('is_active', true)->delete();
             } else {
-                $unit->rates()->whereNotIn('id', $keepIds)->delete();
+                $unit->rates()
+                    ->where('is_active', true)
+                    ->whereNotIn('id', $keepIds)
+                    ->delete();
             }
 
             foreach ($rates as $rate) {
