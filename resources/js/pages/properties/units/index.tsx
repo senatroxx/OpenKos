@@ -134,6 +134,10 @@ export default function Index({
         },
     });
 
+    const currentEditingUnit = editingUnit
+        ? (data.data.find((item) => item.id === editingUnit.id) ?? editingUnit)
+        : null;
+
     function openCreate() {
         setEditingUnit(null);
         setDialogOpen(true);
@@ -295,7 +299,10 @@ export default function Index({
             className: 'tabular-nums',
             render: (r) =>
                 r.active_rates?.[0]
-                    ? formatPrice(r.active_rates[0].amount, r.active_rates[0].currency)
+                    ? formatPrice(
+                          r.active_rates[0].amount,
+                          r.active_rates[0].currency,
+                      )
                     : '\u2014',
         },
         {
@@ -498,8 +505,8 @@ export default function Index({
             />
 
             <UnitFormSheet
-                key={editingUnit?.id ?? 'new'}
-                unit={editingUnit}
+                key={`${currentEditingUnit?.id ?? 'new'}-${currentEditingUnit?.updated_at ?? ''}`}
+                unit={currentEditingUnit}
                 property={property}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
