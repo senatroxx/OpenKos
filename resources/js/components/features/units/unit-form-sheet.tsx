@@ -187,7 +187,7 @@ export default function UnitFormSheet({
                                     >
                                         <div className="grid flex-1 gap-1">
                                             <Label className="text-xs">
-                                                Amount ({setting.currency})
+                                                Amount ({rate.currency ?? setting.currency})
                                             </Label>
                                             <Input
                                                 type="number"

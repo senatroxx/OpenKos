@@ -196,7 +196,7 @@ export default function General({
                                         }
                                         maxLength={3}
                                         className="font-mono uppercase"
-                                        placeholder="IDR"
+                                        placeholder="ISO 4217"
                                         required
                                     />
                                     {localizationForm.errors.currency && (

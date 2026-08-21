@@ -111,14 +111,11 @@ export default function AssignUnitSheet({
         }
     }
 
-    const monthlyEquivalent = useMemo(
-        () =>
-            computeMonthlyEquivalent(
-                data.rent_amount,
-                Number.parseInt(data.billing_interval) || 1,
-                data.billing_unit,
-            ),
-        [data.rent_amount, data.billing_interval, data.billing_unit],
+    const monthlyEquivalent = computeMonthlyEquivalent(
+        data.rent_amount,
+        Number.parseInt(data.billing_interval) || 1,
+        data.billing_unit,
+        currency,
     );
 
     function handleOpenChange(next: boolean) {

@@ -1,14 +1,14 @@
 let displayTimezone = 'UTC';
-let displayCurrency = 'IDR';
+let displayCurrency: string | null = null;
 let displayLocale = 'id-ID';
-let currencyScales: Record<string, number> = { IDR: 0 };
+let currencyScales: Record<string, number> = {};
 
 export function setDisplayTimezone(timezone: string | null | undefined): void {
     displayTimezone = timezone || 'UTC';
 }
 
 export function setDisplayCurrency(currency: string | null | undefined): void {
-    displayCurrency = currency?.toUpperCase() || 'IDR';
+    displayCurrency = currency?.trim().toUpperCase() || null;
 }
 
 export function setDisplayLocale(locale: string | null | undefined): void {
@@ -17,7 +17,7 @@ export function setDisplayLocale(locale: string | null | undefined): void {
 
 export function setCurrencyScales(scales: Record<string, number> | null | undefined): void {
     currencyScales = Object.fromEntries(
-        Object.entries(scales || { IDR: 0 }).map(([currency, scale]) => [
+        Object.entries(scales || {}).map(([currency, scale]) => [
             currency.toUpperCase(),
             scale,
         ]),
@@ -107,7 +107,12 @@ export function formatPrice(
         return '—';
     }
 
-    const resolvedCurrency = currency?.toUpperCase() || displayCurrency;
+    const resolvedCurrency = currency?.trim().toUpperCase() || displayCurrency;
+
+    if (!resolvedCurrency) {
+        return '';
+    }
+
     const scale = scaleForCurrency(resolvedCurrency);
     const minor = decimalToMinorRounded(String(amount), scale);
 
@@ -164,16 +169,13 @@ export function formatSize(bytes: number): string {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-export function formatRupiah(value: number | string | null): string {
-    return formatPrice(value, displayCurrency);
-}
-
 function decimalToMinor(amount: string, scale: number): bigint | null {
     if (!/^\d+(?:\.\d+)?$/.test(amount)) {
         return null;
     }
 
     const [whole, fraction = ''] = amount.split('.');
+
     if (fraction.length > scale && /[1-9]/.test(fraction.slice(scale))) {
         return null;
     }
@@ -233,13 +235,19 @@ export function computeMonthlyEquivalent(
     amount: string | null,
     interval: number | null,
     unit: string | null,
-    currency = displayCurrency,
+    currency?: string,
 ): string {
     if (!amount || !interval || !unit) {
         return '';
     }
 
-    const scale = scaleForCurrency(currency);
+    const resolvedCurrency = currency?.trim().toUpperCase() || displayCurrency;
+
+    if (!resolvedCurrency) {
+        return '';
+    }
+
+    const scale = scaleForCurrency(resolvedCurrency);
     const minor = decimalToMinor(amount, scale);
 
     if (minor === null) {
@@ -273,7 +281,7 @@ export function computeMonthlyEquivalent(
 
     const monthlyMinor = divideRounded(minor * numerator, denominator);
 
-    return `≈ ${formatPrice(minorToMajor(monthlyMinor, scale), currency)}/month`;
+    return `≈ ${formatPrice(minorToMajor(monthlyMinor, scale), resolvedCurrency)}/month`;
 }
 
 export function formatRelativeTime(iso: string): string {

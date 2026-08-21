@@ -3,7 +3,7 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { StatusBadge } from '@/components/shared/status-badge';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, formatPrice } from '@/lib/formatters';
 import type { MaintenanceTicket } from '@/types';
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -56,7 +56,7 @@ export default function MaintenanceTicketWorkspace({
                     />
                     <Field label="Assigned to" value={ticket.assignee?.name} />
                     <Field label="Reported by" value={ticket.creator?.name} />
-                    <Field label="Cost" value={ticket.cost} />
+                    <Field label="Cost" value={formatPrice(ticket.cost)} />
                     <Field
                         label="Created"
                         value={formatDate(ticket.created_at)}
