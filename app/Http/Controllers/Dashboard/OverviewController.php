@@ -20,6 +20,7 @@ use App\Models\Region;
 use App\Models\Setting;
 use App\Models\Unit;
 use App\Support\DateTimeFormatter;
+use Brick\Math\BigDecimal;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -75,8 +76,7 @@ class OverviewController extends Controller
         $overdueInvoices = (clone $invoiceScope)
             ->payable()
             ->whereDate('due_date', '<', now())
-            ->selectRaw('COUNT(*) as count, COALESCE(SUM(total - amount_paid), 0) as amount')
-            ->first();
+            ->get(['currency', 'total', 'amount_paid']);
 
         $dueTodayInvoices = (clone $invoiceScope)
             ->payable()
@@ -99,8 +99,10 @@ class OverviewController extends Controller
 
         $attention = [
             'overdue_invoices' => [
-                'count' => (int) ($overdueInvoices->count ?? 0),
-                'amount' => (int) ($overdueInvoices->amount ?? 0),
+                'count' => $overdueInvoices->count(),
+                'amounts' => $this->aggregateMoney($overdueInvoices, fn (Invoice $invoice): string => BigDecimal::of((string) $invoice->total)
+                    ->minus((string) $invoice->amount_paid)
+                    ->toString()),
             ],
             'due_today' => $dueTodayInvoices,
             'open_maintenance' => $openMaintenance,
@@ -266,5 +268,25 @@ class OverviewController extends Controller
             'Property' => route('properties.index'),
             default => null,
         };
+    }
+
+    /**
+     * @param  Collection<int, Invoice>  $invoices
+     * @return array<int, array{currency: string, amount: string}>
+     */
+    private function aggregateMoney(Collection $invoices, callable $amount): array
+    {
+        return $invoices
+            ->groupBy(fn (Invoice $invoice): string => $invoice->currency)
+            ->map(function (Collection $invoices, string $currency) use ($amount): array {
+                $total = $invoices->reduce(
+                    fn (BigDecimal $total, Invoice $invoice): BigDecimal => $total->plus($amount($invoice)),
+                    BigDecimal::zero(),
+                );
+
+                return ['currency' => $currency, 'amount' => $total->toString()];
+            })
+            ->values()
+            ->all();
     }
 }

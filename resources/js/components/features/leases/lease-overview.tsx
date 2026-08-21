@@ -172,7 +172,7 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                     Billing rate
                                 </span>
                                 <span className="tabular-nums">
-                                    {formatPrice(lease.rent_amount)}
+                                    {formatPrice(lease.rent_amount, lease.currency)}
                                     {lease.billing_label}
                                 </span>
                             </div>
@@ -192,7 +192,7 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                     Monthly equivalent
                                 </span>
                                 <span className="tabular-nums">
-                                    {formatPrice(lease.monthly_equivalent)}/mo
+                                    {formatPrice(lease.monthly_equivalent, lease.currency)}/mo
                                 </span>
                             </div>
                             <div className="flex items-center justify-between text-sm">
@@ -224,7 +224,7 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                     Amount
                                 </span>
                                 <span className="tabular-nums">
-                                    {formatPrice(lease.deposit_amount)}
+                                    {formatPrice(lease.deposit_amount, lease.currency)}
                                 </span>
                             </div>
                             {lease.deposit_paid_at && (
@@ -245,6 +245,7 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                     <span className="tabular-nums">
                                         {formatPrice(
                                             lease.deposit_refund_amount,
+                                            lease.currency,
                                         )}
                                     </span>
                                 </div>

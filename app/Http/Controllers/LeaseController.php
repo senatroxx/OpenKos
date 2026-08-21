@@ -31,10 +31,12 @@ use App\Models\Unit;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Brick\Math\BigDecimal;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -267,17 +269,17 @@ class LeaseController extends Controller
         $periodStart = Carbon::now()->startOfMonth()->startOfDay();
         $periodEnd = Carbon::now()->endOfMonth()->endOfDay();
 
-        $collectedThisMonth = (float) Payment::query()
+        $collectedThisMonth = Payment::query()
             ->whereNotIn('status', [PaymentStatus::Cancelled->value])
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereBetween('period_start', [$periodStart, $periodEnd])
                 ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery)))
-            ->sum('amount');
+            ->get(['amount', 'currency']);
 
-        $overdueAmount = (float) Invoice::query()
+        $overdueAmount = Invoice::query()
             ->overdue()
             ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
-            ->sum(DB::raw('total - amount_paid'));
+            ->get(['total', 'amount_paid', 'currency']);
 
         $pendingPaymentVerification = Payment::query()
             ->where('status', PaymentStatus::Pending->value)
@@ -291,8 +293,10 @@ class LeaseController extends Controller
             'availableUnits' => $availableUnits,
             'stats' => [
                 'active_leases' => $activeLeases,
-                'collected_this_month' => $collectedThisMonth,
-                'overdue_amount' => $overdueAmount,
+                'collected_this_month' => $this->aggregateMoney($collectedThisMonth, fn (Payment $payment): string => (string) $payment->amount),
+                'overdue_amount' => $this->aggregateMoney($overdueAmount, fn (Invoice $invoice): string => BigDecimal::of((string) $invoice->total)
+                    ->minus((string) $invoice->amount_paid)
+                    ->toString()),
                 'pending_payment_verification' => $pendingPaymentVerification,
             ],
         ]);
@@ -536,5 +540,21 @@ class LeaseController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Tenant moved to new unit.')]);
 
         return back();
+    }
+
+    private function aggregateMoney(Collection $rows, callable $amount): array
+    {
+        return $rows
+            ->groupBy(fn (Invoice|Payment $row): string => $row->currency)
+            ->map(function ($rows, string $currency) use ($amount): array {
+                $total = $rows->reduce(
+                    fn (BigDecimal $total, Invoice|Payment $row): BigDecimal => $total->plus($amount($row)),
+                    BigDecimal::zero(),
+                );
+
+                return ['currency' => $currency, 'amount' => $total->toString()];
+            })
+            ->values()
+            ->all();
     }
 }

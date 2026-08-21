@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +31,8 @@ export default function LeaseEditSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { setting } = usePage<{ setting: { currency: string } }>().props;
+    const currency = lease?.currency ?? setting.currency;
     const { data, setData, submit, processing, errors } = useForm({
         rent_amount: lease?.rent_amount ?? '',
         rent_due_day: lease ? String(lease.rent_due_day) : '1',
@@ -142,12 +144,14 @@ export default function LeaseEditSheet({
                             <div className="flex items-start gap-4">
                                 <div className="min-w-0 flex-1">
                                     <Label htmlFor="rent_amount">
-                                        Rent Amount (IDR)
+                                        Rent Amount ({currency})
                                     </Label>
                                     <Input
                                         id="rent_amount"
                                         type="number"
                                         min={0}
+                                        step="any"
+                                        inputMode="decimal"
                                         value={data.rent_amount}
                                         onChange={(e) =>
                                             setData(
@@ -199,7 +203,7 @@ export default function LeaseEditSheet({
                                         Amount
                                     </span>
                                     <span className="font-medium tabular-nums">
-                                        {formatPrice(lease.deposit_amount)}
+                                        {formatPrice(lease.deposit_amount, lease.currency)}
                                     </span>
                                 </div>
                                 {lease.deposit_paid_at && (

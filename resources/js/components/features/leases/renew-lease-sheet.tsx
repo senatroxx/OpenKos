@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { InputError } from '@/components/shared';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -36,11 +36,11 @@ export default function RenewLeaseSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { setting } = usePage<{ setting: { currency: string } }>().props;
+    const currency = lease?.currency ?? setting.currency;
     const { data, setData, transform, submit, reset, processing, errors } =
         useForm({
-            rent_amount: lease?.rent_amount
-                ? String(Number.parseInt(lease.rent_amount))
-                : '',
+            rent_amount: lease?.rent_amount ?? '',
             extension_value: '',
             extension_unit: 'months',
             deposit_handling: 'carry_forward',
@@ -95,12 +95,14 @@ export default function RenewLeaseSheet({
                     <div className="space-y-6">
                         <div className="grid gap-2">
                             <Label htmlFor="rent_amount">
-                                New Rent Amount (IDR)
+                                New Rent Amount ({currency})
                             </Label>
                             <Input
                                 id="rent_amount"
                                 type="number"
-                                min={1}
+                                min={0}
+                                step="any"
+                                inputMode="decimal"
                                 value={data.rent_amount}
                                 onChange={(e) =>
                                     setData('rent_amount', e.target.value)

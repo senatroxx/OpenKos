@@ -70,7 +70,7 @@ it('creates a provider attempt with exact currency-aware money and normalized in
     expect($result->reused)->toBeFalse()
         ->and($result->instructions->url)->toBe('https://example.test/checkout')
         ->and($result->instructions->entries[0]->value)->toBe('1234567890')
-        ->and($result->attempt->fresh()->amount)->toBe('1500000.00')
+        ->and($result->attempt->fresh()->amount)->toBe('1500000.000')
         ->and($result->attempt->fresh()->currency)->toBe('IDR')
         ->and($result->attempt->fresh()->gateway_key)->toBe('test-gateway')
         ->and($result->attempt->fresh()->status)->toBe(PaymentStatus::Pending)

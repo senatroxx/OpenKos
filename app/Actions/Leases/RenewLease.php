@@ -35,7 +35,7 @@ class RenewLease
 
         if ($outstanding['hasOutstanding'] && ! $data->confirmedOutstanding) {
             return RenewLeaseResult::error(
-                'Lease has an outstanding balance of '.number_format($outstanding['balance'] / 100, 2).'. Confirm to proceed.'
+                'Lease has an outstanding balance of '.$outstanding['balance'].'. Confirm to proceed.'
             );
         }
 
@@ -67,6 +67,7 @@ class RenewLease
                 'start_date' => $lease->end_date->addDay(),
                 'end_date' => $newEndDate,
                 'rent_amount' => $data->rentAmount,
+                'currency' => $lease->currency,
                 'deposit_amount' => $lease->deposit_amount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'billing_interval' => $lease->billing_interval,

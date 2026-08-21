@@ -69,7 +69,7 @@ export default function LeaseWorkspace({ lease }: { lease: Lease }) {
                     <div className="space-y-2 rounded-lg border p-4 text-sm">
                         <Detail
                             label="Billing rate"
-                            value={`${formatPrice(lease.rent_amount)} ${lease.billing_label ?? ''}`}
+                            value={`${formatPrice(lease.rent_amount, lease.currency)} ${lease.billing_label ?? ''}`}
                         />
                         <Detail
                             label="Due date"

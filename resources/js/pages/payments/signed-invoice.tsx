@@ -16,6 +16,7 @@ type PublicInvoice = {
     total: string;
     amount_paid: string;
     outstanding: string;
+    currency: string;
     context: {
         property_name: string | null;
         unit_name: string | null;
@@ -145,7 +146,7 @@ export default function SignedInvoice({
                                             </p>
                                         </div>
                                         <span className="tabular-nums">
-                                            {formatPrice(item.amount)}
+                                            {formatPrice(item.amount, invoice.currency)}
                                         </span>
                                     </div>
                                 ))}
@@ -185,16 +186,16 @@ export default function SignedInvoice({
                         Outstanding balance
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums">
-                        {formatPrice(invoice.outstanding)}
+                        {formatPrice(invoice.outstanding, invoice.currency)}
                     </p>
                     <div className="mt-5 grid gap-4 text-sm">
                         <Detail
                             label="Total"
-                            value={formatPrice(invoice.total)}
+                            value={formatPrice(invoice.total, invoice.currency)}
                         />
                         <Detail
                             label="Paid"
-                            value={formatPrice(invoice.amount_paid)}
+                            value={formatPrice(invoice.amount_paid, invoice.currency)}
                         />
                         <Detail
                             label="Due date"

@@ -59,7 +59,7 @@ export default function TenantOverview({
                                     : ' — Present'}
                             </span>
                             <span className="font-medium tabular-nums">
-                                {formatPrice(activeLease.rent_amount)}/mo
+                                {formatPrice(activeLease.rent_amount, activeLease.currency)}/mo
                             </span>
                         </div>
                     </div>

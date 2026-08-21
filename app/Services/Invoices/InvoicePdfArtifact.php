@@ -101,6 +101,7 @@ final class InvoicePdfArtifact
             'invoice' => $this->attributes($invoice, [
                 'id', 'reference', 'created_at', 'period_start', 'period_end',
                 'due_date', 'status', 'total', 'amount_paid',
+                'currency',
             ]),
             'lease' => $this->attributes($invoice->lease, ['id', 'reference']),
             'unit' => $this->attributes($invoice->lease?->unit, ['id', 'name']),

@@ -39,20 +39,20 @@ const columns: TableColumn<Invoice>[] = [
         label: 'Total',
         sortable: true,
         className: 'tabular-nums',
-        render: (inv) => formatPrice(inv.total),
+        render: (inv) => formatPrice(inv.total, inv.currency),
     },
     {
         key: 'amount_paid',
         label: 'Paid',
         sortable: true,
         className: 'tabular-nums text-muted-foreground',
-        render: (inv) => formatPrice(inv.amount_paid),
+        render: (inv) => formatPrice(inv.amount_paid, inv.currency),
     },
     {
         key: 'outstanding',
         label: 'Outstanding',
         className: 'tabular-nums',
-        render: (inv) => formatPrice(inv.outstanding ?? '0'),
+        render: (inv) => formatPrice(inv.outstanding ?? '0', inv.currency),
     },
     {
         key: 'status',

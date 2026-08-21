@@ -46,8 +46,9 @@ export default function AssignTenantSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
-    const { tenants } = usePage<{
+    const { tenants, setting } = usePage<{
         tenants: { id: number; name: string; phone: string }[];
+        setting: { currency: string };
     }>().props;
     const [hasDeposit, setHasDeposit] = useState(false);
     const [overridePrice, setOverridePrice] = useState(false);
@@ -85,6 +86,7 @@ export default function AssignTenantSheet({
     const hasRates = (unit?.active_rates?.length ?? 0) > 0;
     const selectedRate =
         unit?.active_rates?.find((r) => r.id === data.unit_rate_id) ?? null;
+    const currency = selectedRate?.currency ?? setting.currency;
 
     function handleOverrideToggle(checked: boolean) {
         setOverridePrice(checked);
@@ -308,6 +310,7 @@ export default function AssignTenantSheet({
                                                     <span className="font-medium tabular-nums">
                                                         {formatPrice(
                                                             rate.amount,
+                                                            rate.currency,
                                                         )}
                                                     </span>
                                                 </div>
@@ -368,7 +371,7 @@ export default function AssignTenantSheet({
                             {(overridePrice || !hasRates) && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="rent_amount">
-                                        Rent Amount (IDR)
+                                        Rent Amount ({currency})
                                     </Label>
                                     <Input
                                         id="rent_amount"
@@ -449,7 +452,7 @@ export default function AssignTenantSheet({
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
                                             <Label htmlFor="deposit_amount">
-                                                Deposit Amount (IDR)
+                                                Deposit Amount ({currency})
                                             </Label>
                                             <Input
                                                 id="deposit_amount"

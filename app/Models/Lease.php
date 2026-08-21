@@ -7,6 +7,9 @@ use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
 use App\Enums\LeaseStatus;
+use App\Services\Payments\MoneyConverter;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Collection;
+use LogicException;
 
 #[Fillable([
     'primary_tenant_id',
@@ -26,6 +30,7 @@ use Illuminate\Support\Collection;
     'start_date',
     'end_date',
     'rent_amount',
+    'currency',
     'billing_interval',
     'billing_unit',
     'billing_strategy',
@@ -65,6 +70,20 @@ class Lease extends Model
 
                 $lease->reference = $prefix.$year.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
             }
+
+            $currency = $lease->getAttributeFromArray('currency');
+
+            if ($currency === null && $lease->unit_rate_id !== null) {
+                $currency = UnitRate::query()->whereKey($lease->unit_rate_id)->value('currency');
+            }
+
+            $lease->currency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        });
+
+        static::updating(function (Lease $lease): void {
+            if ($lease->isDirty('currency')) {
+                throw new LogicException('Lease currency cannot be changed after creation.');
+            }
         });
     }
 
@@ -75,14 +94,14 @@ class Lease extends Model
         return [
             'start_date' => 'date:Y-m-d',
             'end_date' => 'date:Y-m-d',
-            'rent_amount' => 'decimal:2',
+            'rent_amount' => 'decimal:3',
             'billing_interval' => 'integer',
             'billing_unit' => BillingUnit::class,
             'billing_strategy' => BillingStrategy::class,
             'status' => LeaseStatus::class,
             'is_custom_price' => 'boolean',
-            'deposit_amount' => 'decimal:2',
-            'deposit_refund_amount' => 'decimal:2',
+            'deposit_amount' => 'decimal:3',
+            'deposit_refund_amount' => 'decimal:3',
             'deposit_paid_at' => 'datetime',
             'deposit_refunded_at' => 'datetime',
             'rent_due_day' => 'integer',
@@ -139,16 +158,27 @@ class Lease extends Model
 
     public function getMonthlyEquivalentAttribute(): string
     {
-        $amount = $this->rent_amount ? (float) $this->rent_amount : 0;
+        $amount = $this->rent_amount ? (string) $this->rent_amount : '0';
         $interval = $this->billing_interval ?? 1;
         $unit = $this->billing_unit ?? BillingUnit::Month;
 
         return match ($unit) {
-            BillingUnit::Day => number_format($amount * 365 / 12 / $interval, 2, '.', ''),
-            BillingUnit::Week => number_format($amount * 52 / 12 / $interval, 2, '.', ''),
-            BillingUnit::Month => number_format($amount / $interval, 2, '.', ''),
-            BillingUnit::Year => number_format($amount / 12 / $interval, 2, '.', ''),
+            BillingUnit::Day => (string) BigDecimal::of($amount)
+                ->multipliedBy(365)
+                ->dividedBy(12 * $interval, 12, RoundingMode::HalfUp),
+            BillingUnit::Week => (string) BigDecimal::of($amount)
+                ->multipliedBy(52)
+                ->dividedBy(12 * $interval, 12, RoundingMode::HalfUp),
+            BillingUnit::Month => (string) BigDecimal::of($amount)
+                ->dividedBy($interval, 12, RoundingMode::HalfUp),
+            BillingUnit::Year => (string) BigDecimal::of($amount)
+                ->dividedBy(12 * $interval, 12, RoundingMode::HalfUp),
         };
+    }
+
+    public function getCurrencyAttribute(?string $value): string
+    {
+        return app(MoneyConverter::class)->normalizeCurrency($value);
     }
 
     public function getBillingLabelAttribute(): string

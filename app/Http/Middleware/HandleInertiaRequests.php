@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Services\Payments\MoneyConverter;
 use Closure;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -40,6 +41,7 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'app' => [
                 'timezone' => config('app.display_timezone', 'UTC'),
+                'currency_scales' => app(MoneyConverter::class)->scales(),
             ],
             // Integration configs (mail_config, whatsapp_config, payment_gateway_config) hold secrets — SMTP
             // password, API tokens — so they never go into the app-wide share. Their

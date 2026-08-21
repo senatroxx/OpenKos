@@ -3,21 +3,22 @@
 namespace App\Business\Leases;
 
 use App\Models\Lease;
+use Brick\Math\BigDecimal;
 
 class LeaseFinancialChecker
 {
-    /**
-     * @return int Total outstanding amount in cents.
-     */
-    public function outstandingBalance(Lease $lease): int
+    public function outstandingBalance(Lease $lease): string
     {
-        return (int) $lease->invoices()->overdue()->get()->sum(
-            fn ($invoice) => (int) round((float) $invoice->outstanding * 100)
-        );
+        return $lease->invoices()->overdue()->get()
+            ->reduce(
+                fn (BigDecimal $total, $invoice): BigDecimal => $total->plus($invoice->outstanding),
+                BigDecimal::zero(),
+            )
+            ->toString();
     }
 
     /**
-     * @return array{balance: int, hasOutstanding: bool}
+     * @return array{balance: string, hasOutstanding: bool}
      */
     public function outstandingCheck(Lease $lease): array
     {

@@ -27,6 +27,7 @@ class LeaseRentScheduleController extends Controller
                 'amount' => $invoice->total,
                 'amount_paid' => $invoice->amount_paid,
                 'outstanding' => $invoice->outstanding,
+                'currency' => $invoice->currency,
                 'status' => match ($invoice->status) {
                     InvoiceStatus::Paid => 'paid',
                     InvoiceStatus::Partial => $invoice->isOverdue()

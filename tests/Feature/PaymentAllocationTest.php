@@ -35,7 +35,7 @@ it('creates allocation records when recording a confirmed payment', function () 
     app(AllocatePayment::class)->execute($payment);
 
     expect($payment->allocations()->count())->toBe(1);
-    expect($payment->allocations->first()->amount)->toBe('500000.00');
+    expect($payment->allocations->first()->amount)->toBe('500000.000');
 });
 
 it('marks invoice as partial after partial payment', function () {

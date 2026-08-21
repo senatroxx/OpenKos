@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Lease;
 
 use App\Models\Lease;
+use App\Rules\MoneyAmount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,7 +22,7 @@ class MoveOutRequest extends FormRequest
             'move_out_date' => ['required', 'date'],
             'reason' => ['nullable', 'string', 'max:255'],
             'deposit_returned' => ['nullable', 'boolean'],
-            'deposit_refund_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposit_refund_amount' => ['nullable', new MoneyAmount($lease instanceof Lease ? $lease->currency : null)],
             'notes' => ['nullable', 'string', 'max:65535'],
             'move_to_another_unit' => ['nullable', 'boolean'],
             'target_unit_id' => ['nullable', 'integer', Rule::notIn([$sourceUnitId]), 'exists:units,id'],

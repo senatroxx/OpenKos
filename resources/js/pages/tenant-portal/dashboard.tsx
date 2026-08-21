@@ -10,11 +10,14 @@ import { index as billingIndex } from '@/routes/portal/billing';
 import { payments as paymentHistory } from '@/routes/portal/billing/history';
 import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import { show as showLease } from '@/routes/portal/lease';
+import type { MoneyAggregate } from '@/types';
 
 type Lease = {
     id: number;
     start_date: string;
     end_date: string | null;
+    rent_amount: string;
+    currency: string;
     status: string;
     unit: {
         name: string;
@@ -24,6 +27,7 @@ type Lease = {
 
 type PendingPayment = {
     amount: string;
+    currency: string;
     payment_date: string;
 };
 
@@ -38,12 +42,13 @@ type NextAction =
               due_date: string;
               display_status: string;
               amount: string;
+              currency: string;
           };
           pending_payment: PendingPayment | null;
       };
 
 type AccountSummary = {
-    outstanding_balance: string;
+    outstanding_amounts: MoneyAggregate[];
     payable_invoice_count: number;
     pending_verification_count: number;
     next_due_date: string | null;
@@ -58,6 +63,7 @@ type Activity = {
         | 'lease_started';
     date: string;
     amount: string | null;
+    currency: string;
     reference: string | null;
 };
 
@@ -133,7 +139,7 @@ function CurrentPaymentCard({
                     />
                     <div>
                         <p className="text-3xl font-semibold tracking-tight tabular-nums">
-                            {formatPrice(nextAction.invoice.amount)}
+                            {formatPrice(nextAction.invoice.amount, nextAction.invoice.currency)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                             Due {formatDate(nextAction.invoice.due_date)}
@@ -142,7 +148,7 @@ function CurrentPaymentCard({
                     {nextAction.pending_payment && (
                         <p className="text-sm text-muted-foreground">
                             A payment of{' '}
-                            {formatPrice(nextAction.pending_payment.amount)}{' '}
+                            {formatPrice(nextAction.pending_payment.amount, nextAction.pending_payment.currency)}{' '}
                             submitted{' '}
                             {formatDate(
                                 nextAction.pending_payment.payment_date,
@@ -171,7 +177,7 @@ function CurrentPaymentCard({
                     <StatusBadge domain="tenant_payment" value="pending" />
                     <p className="text-sm text-muted-foreground">
                         Your payment of{' '}
-                        {formatPrice(nextAction.pending_payment.amount)}{' '}
+                        {formatPrice(nextAction.pending_payment.amount, nextAction.pending_payment.currency)}{' '}
                         submitted{' '}
                         {formatDate(nextAction.pending_payment.payment_date)} is
                         being reviewed. You do not need to do anything right
@@ -245,7 +251,11 @@ function AccountSummaryCard({
                         Outstanding balance
                     </p>
                     <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">
-                        {formatPrice(summary.outstanding_balance)}
+                        {summary.outstanding_amounts
+                            .map((amount) =>
+                                formatPrice(amount.amount, amount.currency),
+                            )
+                            .join(' · ') || formatPrice('0')}
                     </p>
                 </div>
                 <div className="space-y-2 border-t pt-3">
@@ -393,7 +403,7 @@ function ActivityIcon({ type }: { type: Activity['type'] }) {
 
 function activitySupport(item: Activity): string | null {
     const support = [
-        item.amount && formatPrice(item.amount),
+        item.amount && formatPrice(item.amount, item.currency),
         item.reference,
     ].filter(Boolean);
 

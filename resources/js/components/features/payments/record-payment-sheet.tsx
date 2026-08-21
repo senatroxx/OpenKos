@@ -136,7 +136,7 @@ function RecordPaymentForm({
                                         >
                                             {formatPeriod(entry.period_start)}
                                             {' — '}
-                                            {formatPrice(entry.outstanding)}
+                                            {formatPrice(entry.outstanding, entry.currency)}
                                             {entry.status === 'partial' &&
                                                 ' outstanding'}
                                         </SelectItem>
@@ -155,12 +155,16 @@ function RecordPaymentForm({
 
                     <div className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="amount">Amount (IDR)</Label>
+                            <Label htmlFor="amount">
+                                Amount ({selectedInvoice?.currency ?? lease.currency})
+                            </Label>
                             <Input
                                 id="amount"
                                 name="amount"
                                 type="number"
-                                min={1}
+                                min={0}
+                                step="any"
+                                inputMode="decimal"
                                 key={selectedInvoiceId}
                                 defaultValue={
                                     selectedInvoice?.outstanding ??

@@ -123,8 +123,8 @@ describe('CRUD', function () {
         expect($lease)->not->toBeNull();
         expect($lease->primary_tenant_id)->toBe($tenant->id);
         expect($lease->unit_id)->toBe($unit->id);
-        expect($lease->rent_amount)->toBe('1500000.00');
-        expect($lease->deposit_amount)->toBe('1000000.00');
+        expect($lease->rent_amount)->toBe('1500000.000');
+        expect($lease->deposit_amount)->toBe('1000000.000');
         expect($lease->rent_due_day)->toBe(5);
         expect($lease->status)->toBe(LeaseStatus::Active);
     });
@@ -358,8 +358,8 @@ describe('move unit', function () {
         expect($newLease)->not->toBeNull();
         expect($newLease->primary_tenant_id)->toBe($tenant->id);
         expect($newLease->status)->toBe(LeaseStatus::Active);
-        expect($newLease->rent_amount)->toBe('1000000.00');
-        expect($newLease->deposit_amount)->toBe('500000.00');
+        expect($newLease->rent_amount)->toBe('1000000.000');
+        expect($newLease->deposit_amount)->toBe('500000.000');
     });
 
     it('returns authoritative transition state from a move', function () {

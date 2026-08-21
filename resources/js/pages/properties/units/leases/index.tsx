@@ -155,13 +155,14 @@ export default function Index({
                                             {formatDate(lease.end_date)}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {formatPrice(lease.rent_amount)}
+                                            {formatPrice(lease.rent_amount, lease.currency)}
                                             {lease.billing_label}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
                                             <div>
                                                 {formatPrice(
                                                     lease.deposit_amount,
+                                                    lease.currency,
                                                 )}
                                             </div>
                                             {lease.deposit_refund_amount && (
@@ -169,6 +170,7 @@ export default function Index({
                                                     Refund:{' '}
                                                     {formatPrice(
                                                         lease.deposit_refund_amount,
+                                                        lease.currency,
                                                     )}
                                                 </div>
                                             )}

@@ -316,6 +316,6 @@ describe('active rates ordering', function () {
         $first = $unit->activeRates()->first();
 
         expect($first->billing_unit->value)->toBe('month')
-            ->and($first->amount)->toBe('1500000.00');
+            ->and($first->amount)->toBe('1500000.000');
     });
 });

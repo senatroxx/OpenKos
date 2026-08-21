@@ -134,6 +134,7 @@ export default function UnitDetailSheet({
                                                             <span className="tabular-nums">
                                                                 {formatPrice(
                                                                     rate.amount,
+                                                                    rate.currency,
                                                                 )}
                                                             </span>
                                                         </div>
@@ -191,6 +192,7 @@ export default function UnitDetailSheet({
                                             <span className="font-medium tabular-nums">
                                                 {formatPrice(
                                                     unit.leases[0].rent_amount,
+                                                    unit.leases[0].currency,
                                                 )}
                                                 {unit.leases[0].billing_label}
                                             </span>
@@ -212,6 +214,7 @@ export default function UnitDetailSheet({
                                                 {formatPrice(
                                                     unit.leases[0]
                                                         .monthly_equivalent,
+                                                    unit.leases[0].currency,
                                                 )}
                                                 /mo
                                             </span>
@@ -224,6 +227,7 @@ export default function UnitDetailSheet({
                                                 {formatPrice(
                                                     unit.leases[0]
                                                         .deposit_amount,
+                                                    unit.leases[0].currency,
                                                 )}
                                             </span>
                                         </div>

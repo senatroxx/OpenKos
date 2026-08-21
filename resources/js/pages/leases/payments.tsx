@@ -104,7 +104,7 @@ export default function LeasePayments({
             label: 'Amount',
             sortable: true,
             className: 'tabular-nums',
-            render: (payment) => formatPrice(payment.amount),
+            render: (payment) => formatPrice(payment.amount, payment.currency),
         },
         {
             key: 'payment_method',

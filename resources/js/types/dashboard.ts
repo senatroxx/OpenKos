@@ -13,10 +13,15 @@ export type PropertyStats = {
 };
 
 export type Finance = {
-    revenue_this_month: number;
-    monthly_potential: number;
-    outstanding: number;
-    collection_rate: number;
+    revenue_this_month: MoneyAggregate[];
+    monthly_potential: MoneyAggregate[];
+    outstanding: MoneyAggregate[];
+    collection_rate: Array<{ currency: string; rate: number }>;
+};
+
+export type MoneyAggregate = {
+    currency: string;
+    amount: string;
 };
 
 export type Stats = {
@@ -37,6 +42,7 @@ export type RentDashboardEntry = {
     rent_due_day: number;
     days_overdue: number | null;
     rent_amount: string;
+    currency: string;
     rent_status: 'paid' | 'overdue' | 'due_today' | 'due_soon';
 };
 
@@ -63,6 +69,7 @@ export type NeedsAttentionInvoice = {
     total: string;
     amount_paid: string;
     outstanding: string;
+    currency: string;
     days_overdue: number | null;
     urgency: 'overdue' | 'due_today' | 'due_tomorrow' | 'due_soon' | 'upcoming';
     status: string;
@@ -74,6 +81,7 @@ export type NeedsAttentionInvoice = {
 export type RecentPaymentEntry = {
     id: number;
     amount: string;
+    currency: string;
     payment_date: string;
     payment_method: string;
     status: string;
@@ -119,7 +127,7 @@ export type RecentActivityEntry = {
 };
 
 export type AttentionData = {
-    overdue_invoices: { count: number; amount: number };
+    overdue_invoices: { count: number; amounts: MoneyAggregate[] };
     due_today: number;
     open_maintenance: number;
     leases_ending_soon: number;

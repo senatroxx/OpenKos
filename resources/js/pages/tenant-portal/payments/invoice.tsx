@@ -114,7 +114,7 @@ export default function InvoiceDetail({
                                         >
                                             <span>{item.description}</span>
                                             <span className="tabular-nums">
-                                                {formatPrice(item.amount)}
+                                                {formatPrice(item.amount, invoice.currency)}
                                             </span>
                                         </div>
                                     ))}
@@ -185,6 +185,7 @@ export default function InvoiceDetail({
                                                 <p className="font-medium tabular-nums">
                                                     {formatPrice(
                                                         payment.amount,
+                                                        payment.currency,
                                                     )}
                                                 </p>
                                                 <StatusBadge
@@ -204,7 +205,7 @@ export default function InvoiceDetail({
                             Outstanding balance
                         </p>
                         <p className="mt-1 text-2xl font-semibold tabular-nums">
-                            {formatPrice(invoice.outstanding ?? '0')}
+                            {formatPrice(invoice.outstanding ?? '0', invoice.currency)}
                         </p>
                         <div className="mt-5 grid gap-4 text-sm">
                             <Detail

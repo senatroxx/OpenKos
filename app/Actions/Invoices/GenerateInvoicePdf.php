@@ -29,7 +29,7 @@ final class GenerateInvoicePdf
 
         $pdf = new Dompdf($options);
         $pdf->loadHtml(view('invoices.pdf', [
-            'currency' => $settings['currency'] ?? 'IDR',
+            'currency' => $invoice->currency,
             'invoice' => $invoice,
             'locale' => $settings['locale'] ?? 'id',
             'siteName' => $settings['site_name'] ?? config('app.name'),

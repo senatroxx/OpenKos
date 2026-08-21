@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Settings;
 use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -40,7 +41,20 @@ class GeneralController extends Controller
             'site_name' => ['sometimes', 'required', 'string', 'max:255'],
             'country_code' => ['sometimes', 'required', 'string', 'size:2', 'regex:/^[A-Z]+$/'],
             'locale' => ['sometimes', 'required', 'string', 'max:10'],
-            'currency' => ['sometimes', 'required', 'string', 'size:3', 'regex:/^[A-Z]+$/'],
+            'currency' => [
+                'sometimes',
+                'required',
+                'string',
+                'size:3',
+                'regex:/^[A-Z]+$/',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    try {
+                        app(MoneyConverter::class)->normalizeCurrency((string) $value);
+                    } catch (\Throwable) {
+                        $fail(__('This currency is not supported.'));
+                    }
+                },
+            ],
             'timezone' => ['sometimes', 'required', 'string', Rule::in(timezone_identifiers_list())],
             'lease_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
             'invoice_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],

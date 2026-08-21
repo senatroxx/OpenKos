@@ -76,7 +76,7 @@ describe('payment events', function () {
             ->subject_id->toBe($payment->id)
             ->actor_id->toBe($actor->id)
             ->metadata->toBe([
-                'amount' => '150000.00',
+                'amount' => '150000.000',
                 'method' => 'cash',
                 'status' => PaymentStatus::Pending->value,
             ]);

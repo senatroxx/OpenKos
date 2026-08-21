@@ -74,7 +74,7 @@ it('does not let gateway attempt statuses affect invoice accounting', function (
 
     $invoice->recalculateStatus();
 
-    expect($invoice->fresh()->amount_paid)->toBe('0.00')
+    expect($invoice->fresh()->amount_paid)->toBe('0.000')
         ->and($invoice->fresh()->status->value)->toBe('pending')
         ->and($invoice->payments)->toHaveCount(0);
 });
@@ -106,7 +106,7 @@ it('keeps the financial snapshot immutable after creation', function () {
     expect(fn () => $attempt->update(['currency' => 'USD']))
         ->toThrow(LogicException::class);
 
-    expect($attempt->fresh()->amount)->toBe('125000.00');
+    expect($attempt->fresh()->amount)->toBe('125000.000');
 });
 
 it('normalizes and validates currencies', function () {

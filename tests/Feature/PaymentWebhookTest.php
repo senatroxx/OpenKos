@@ -86,9 +86,9 @@ it('settles an attempt and creates exactly one canonical payment', function () {
         ->and($attempt->payment_id)->toBe($payment->id)
         ->and($payment->status)->toBe(ApplicationPaymentStatus::Confirmed)
         ->and($payment->payment_method)->toBe('gateway')
-        ->and($payment->amount)->toBe('1500000.00')
+        ->and($payment->amount)->toBe('1500000.000')
         ->and($invoice->status)->toBe(InvoiceStatus::Paid)
-        ->and($invoice->amount_paid)->toBe('1500000.00')
+        ->and($invoice->amount_paid)->toBe('1500000.000')
         ->and($payment->allocations)->toHaveCount(1);
 
     Event::assertDispatched(PaymentRecorded::class);
@@ -200,7 +200,7 @@ it('applies failed callbacks without affecting invoice accounting', function () 
     expect($attempt->fresh()->status)->toBe(PaymentStatus::Failed)
         ->and($attempt->fresh()->provider_reference)->toBe('provider-1')
         ->and(Payment::query()->count())->toBe(0)
-        ->and($invoice->fresh()->amount_paid)->toBe('0.00');
+        ->and($invoice->fresh()->amount_paid)->toBe('0.000');
 });
 
 it('applies a late settlement after a failed local attempt', function () {
@@ -432,5 +432,5 @@ it('rolls back the payment and attempt when invoice allocation fails', function 
     expect($attempt->fresh()->status)->toBe(PaymentStatus::Pending)
         ->and($attempt->fresh()->payment_id)->toBeNull()
         ->and(Payment::query()->count())->toBe(0)
-        ->and($invoice->fresh()->amount_paid)->toBe('0.00');
+        ->and($invoice->fresh()->amount_paid)->toBe('0.000');
 });

@@ -14,7 +14,8 @@ class ReminderEvent
         public readonly string $periodStart,
         public readonly string $periodEnd,
         public readonly string $dueDate,
-        public readonly int $amount,
+        public readonly string $amount,
+        public readonly string $currency,
         public readonly ?int $overdueDays = null,
         public readonly ?Invoice $invoice = null,
     ) {}

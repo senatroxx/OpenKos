@@ -232,9 +232,9 @@ test('invoice PDF view reflects the current aggregate for each payable state', f
         ->toContain('Tenant ID '.$fixture['tenant']->id)
         ->toContain('john@example.com')
         ->toContain('+62 812 3456 7890')
-        ->toContain((string) Number::currency((float) $invoice->total, in: 'IDR', locale: 'id', precision: 2))
-        ->toContain((string) Number::currency((float) $invoice->amount_paid, in: 'IDR', locale: 'id', precision: 2))
-        ->toContain((string) Number::currency((float) $invoice->outstanding, in: 'IDR', locale: 'id', precision: 2))
+        ->toContain((string) Number::currency((float) $invoice->total, in: 'IDR', locale: 'id', precision: 0))
+        ->toContain((string) Number::currency((float) $invoice->amount_paid, in: 'IDR', locale: 'id', precision: 0))
+        ->toContain((string) Number::currency((float) $invoice->outstanding, in: 'IDR', locale: 'id', precision: 0))
         ->toContain($expectedLabel)
         ->toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;')
         ->not->toContain('<script>');

@@ -43,7 +43,7 @@ export default function InvoiceActionItem({
             </div>
 
             <span className="shrink-0 font-medium tabular-nums">
-                {formatPrice(amount)}
+                {formatPrice(amount, invoice.currency)}
             </span>
 
             <div className="grid w-full gap-1 sm:flex sm:w-auto sm:items-center sm:gap-2">

@@ -56,12 +56,8 @@
 @php
     $formatDate = static fn ($date): string => $date?->copy()->locale($locale)->translatedFormat('d M Y') ?? '-';
     $formatDateTime = static fn ($date, string $format = 'd M Y, H:i'): string => App\Support\DateTimeFormatter::inDisplayTimezone($date)?->locale($locale)->translatedFormat($format) ?? '-';
-    $formatMoney = static fn (string $amount): string => (string) Illuminate\Support\Number::currency(
-        (float) $amount,
-        in: $currency,
-        locale: $locale,
-        precision: 2,
-    );
+    $formatMoney = static fn (string $amount): string => app(App\Services\Payments\MoneyConverter::class)
+        ->format($amount, $currency, $locale);
     $property = $invoice->lease?->unit?->property;
     $propertyAddress = collect([
         $property?->address,

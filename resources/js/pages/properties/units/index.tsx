@@ -295,7 +295,7 @@ export default function Index({
             className: 'tabular-nums',
             render: (r) =>
                 r.active_rates?.[0]
-                    ? formatPrice(r.active_rates[0].amount)
+                    ? formatPrice(r.active_rates[0].amount, r.active_rates[0].currency)
                     : '\u2014',
         },
         {

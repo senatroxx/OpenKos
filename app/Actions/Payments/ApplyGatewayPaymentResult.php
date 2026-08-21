@@ -147,6 +147,7 @@ class ApplyGatewayPaymentResult
 
             $payment = $invoice->payments()->create([
                 'amount' => $attempt->amount,
+                'currency' => $attempt->currency,
                 'payment_date' => ($result->occurredAt ?? now())->format('Y-m-d'),
                 'payment_method' => PaymentMethod::Gateway->value,
                 'reference_number' => $attempt->reference,
@@ -266,6 +267,10 @@ class ApplyGatewayPaymentResult
     private function cannotSettle(Invoice $invoice, PaymentAttempt $attempt): bool
     {
         if (in_array($invoice->status, [InvoiceStatus::Cancelled, InvoiceStatus::Void], true)) {
+            return true;
+        }
+
+        if ($invoice->currency !== $attempt->currency) {
             return true;
         }
 

@@ -1,8 +1,15 @@
 import { AlertCircle, Building2, TrendingUp } from 'lucide-react';
-import { formatRupiah } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 import type { Finance } from '@/types';
 
 export function BusinessHealthPanel({ finance }: { finance: Finance }) {
+    const formatGroups = (groups: Finance['revenue_this_month']) =>
+        groups.map((group) => formatPrice(group.amount, group.currency)).join(' · ') || '—';
+
+    const formatRates = finance.collection_rate
+        .map((rate) => `${rate.currency} ${rate.rate}%`)
+        .join(' · ') || '—';
+
     return (
         <section className="mb-10 flex flex-col gap-3">
             <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
@@ -16,7 +23,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                             <span>Revenue This Month</span>
                         </div>
                         <p className="text-2xl font-bold text-surface-green-foreground tabular-nums sm:text-3xl">
-                            {formatRupiah(finance.revenue_this_month)}
+                            {formatGroups(finance.revenue_this_month)}
                         </p>
                     </div>
                     <div className="pt-4 sm:px-4 sm:pt-0">
@@ -25,7 +32,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                             <span>Monthly Potential</span>
                         </div>
                         <p className="text-2xl font-bold text-foreground tabular-nums sm:text-3xl">
-                            {formatRupiah(finance.monthly_potential)}
+                            {formatGroups(finance.monthly_potential)}
                         </p>
                     </div>
                     <div className="pt-4 sm:px-4 sm:pt-0">
@@ -34,7 +41,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                             <span>Outstanding</span>
                         </div>
                         <p className="text-2xl font-bold text-surface-red-foreground tabular-nums sm:text-3xl">
-                            {formatRupiah(finance.outstanding)}
+                            {formatGroups(finance.outstanding)}
                         </p>
                     </div>
                     <div className="pt-4 sm:px-4 sm:pt-0">
@@ -42,13 +49,13 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                             <span>Collection Rate</span>
                         </div>
                         <p className="text-2xl font-bold text-primary tabular-nums sm:text-3xl">
-                            {finance.collection_rate}%
+                            {formatRates}
                         </p>
                         <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                             <div
                                 className="h-full rounded-full bg-primary transition-all duration-300"
                                 style={{
-                                    width: `${finance.collection_rate}%`,
+                                    width: `${Math.max(...finance.collection_rate.map((rate) => rate.rate), 0)}%`,
                                 }}
                             />
                         </div>

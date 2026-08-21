@@ -125,6 +125,7 @@ test('rent reminder channels contain database only once', function () {
         periodEnd: today()->addMonth()->toDateString(),
         dueDate: today()->addDays(3)->toDateString(),
         amount: 100000,
+        currency: 'IDR',
     ));
 
     expect($reminder->via($lease->primaryTenant))->toHaveCount(2)
@@ -187,6 +188,7 @@ test('invoice reminder events notify tenants with a configured route', function 
         periodEnd: today()->addMonth()->toDateString(),
         dueDate: today()->addDays(3)->toDateString(),
         amount: 100000,
+        currency: 'IDR',
     );
 
     InvoiceReminderDispatched::dispatch($event);

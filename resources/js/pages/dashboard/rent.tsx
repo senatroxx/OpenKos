@@ -34,13 +34,14 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
-import { formatDate, formatPrice, formatRupiah } from '@/lib/formatters';
+import { formatDate, formatPrice } from '@/lib/formatters';
 import { rent as dashboardRent } from '@/routes/dashboard';
 import type {
     NeedsAttentionInvoice,
     PaginatedData,
     RecentPaymentEntry,
     RecentReminderEntry,
+    MoneyAggregate,
 } from '@/types';
 
 type TabCounts = {
@@ -56,7 +57,7 @@ type TabCounts = {
 type Progress = {
     processed: number;
     total: number;
-    amount_collected: number;
+    amount_collected: MoneyAggregate[];
     last_payment_at: string | null;
 };
 
@@ -67,7 +68,7 @@ type PageProps = {
     urgency?: string;
     properties?: string;
     per_page?: number;
-    outstanding: { count: number; amount: number };
+    outstanding: { count: number; amounts: MoneyAggregate[] };
     tab_counts: TabCounts;
     progress: Progress;
     recent_payments: RecentPaymentEntry[];
@@ -144,6 +145,10 @@ function pendingReviewLabel(count: number | undefined): string {
     }
 
     return `Pending review · ${count}`;
+}
+
+function formatMoneyGroups(groups: MoneyAggregate[]): string {
+    return groups.map((group) => formatPrice(group.amount, group.currency)).join(' · ') || '—';
 }
 
 export default function CollectionQueue({
@@ -327,14 +332,14 @@ export default function CollectionQueue({
             label: 'Amount',
             sortable: true,
             className: 'tabular-nums font-medium',
-            render: (entry) => formatPrice(entry.total),
+            render: (entry) => formatPrice(entry.total, entry.currency),
         },
         {
             key: 'outstanding',
             label: 'Outstanding',
             className:
                 'tabular-nums text-muted-foreground hidden sm:table-cell',
-            render: (entry) => formatPrice(entry.outstanding),
+            render: (entry) => formatPrice(entry.outstanding, entry.currency),
         },
         {
             key: 'due_date',
@@ -444,7 +449,7 @@ export default function CollectionQueue({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <MetricCard
                         label="Outstanding Balance"
-                        value={formatRupiah(outstanding.amount)}
+                        value={formatMoneyGroups(outstanding.amounts)}
                         subtext={`${outstanding.count} invoice${outstanding.count !== 1 ? 's' : ''} unpaid`}
                         variant="amber"
                         emphasis="subtle"
@@ -483,7 +488,7 @@ export default function CollectionQueue({
                         </div>
                         <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
                             <span className="font-medium tabular-nums">
-                                {formatRupiah(progress.amount_collected)}{' '}
+                                {formatMoneyGroups(progress.amount_collected)}{' '}
                                 collected
                             </span>
                             <span className="font-bold text-foreground tabular-nums">
@@ -650,6 +655,7 @@ export default function CollectionQueue({
                                                     +
                                                     {formatPrice(
                                                         payment.amount,
+                                                        payment.currency,
                                                     )}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">

@@ -70,7 +70,7 @@ export default function PaymentDetailSheet({
                                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                     <DetailRow
                                         label="Amount"
-                                        value={formatPrice(payment.amount)}
+                                        value={formatPrice(payment.amount, payment.currency)}
                                     />
                                     <DetailRow
                                         label="Paid on"

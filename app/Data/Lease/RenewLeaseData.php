@@ -9,7 +9,7 @@ final readonly class RenewLeaseData
 {
     public function __construct(
         public CarbonImmutable $endDate,
-        public int $rentAmount,
+        public string $rentAmount,
         public DepositHandling $depositHandling,
         public bool $confirmedOutstanding,
     ) {}

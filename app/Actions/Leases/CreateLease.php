@@ -11,6 +11,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Support\Facades\DB;
 
 class CreateLease
@@ -19,6 +20,7 @@ class CreateLease
         private OccupancyCalculator $occupancy,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
+        private MoneyConverter $money,
     ) {}
 
     public function execute(Unit $unit, CreateLeaseData $data): mixed
@@ -30,6 +32,10 @@ class CreateLease
             $unitRate = $data->unitRateId === null
                 ? null
                 : $unit->rates()->find($data->unitRateId);
+            $defaultRate = $unitRate ?? $unit->rates()
+                ->where('billing_unit', 'month')
+                ->where('billing_interval', 1)
+                ->first();
 
             abort_if(
                 $data->unitRateId !== null && $unitRate === null,
@@ -65,8 +71,20 @@ class CreateLease
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
-            $rentAmount = $data->rentAmount ?? $unitRate?->amount ?? $unit->rates()->where('billing_unit', 'month')->where('billing_interval', 1)->value('amount');
-            $isCustomPrice = $data->rentAmount !== null && $unitRate && (float) $data->rentAmount !== (float) $unitRate->amount;
+            $rentAmount = $data->rentAmount ?? $defaultRate?->amount;
+            $currency = $defaultRate?->currency ?? $this->money->normalizeCurrency();
+            $rentAmount = $rentAmount === null
+                ? null
+                : $this->money->normalizeAmount((string) $rentAmount, $currency);
+            $depositAmount = $data->depositAmount === null
+                ? '0'
+                : $this->money->normalizeAmount($data->depositAmount, $currency);
+            $depositRefundAmount = $data->depositRefundAmount === null
+                ? null
+                : $this->money->normalizeAmount($data->depositRefundAmount, $currency);
+            $isCustomPrice = $data->rentAmount !== null
+                && $unitRate
+                && $this->money->compare($data->rentAmount, (string) $unitRate->amount) !== 0;
 
             $primaryTenantId = $tenantIds[0];
 
@@ -75,14 +93,15 @@ class CreateLease
                 'start_date' => $data->startDate,
                 'end_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
+                'currency' => $currency,
                 'billing_interval' => $data->billingInterval ?? $unitRate?->billing_interval ?? 1,
                 'billing_unit' => $data->billingUnit ?? $unitRate?->billing_unit ?? 'month',
                 'billing_strategy' => $data->billingStrategy ?? 'advance',
                 'is_custom_price' => $isCustomPrice,
                 'unit_rate_id' => $data->unitRateId,
-                'deposit_amount' => $data->depositAmount ?? 0,
+                'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $data->depositPaidAt,
-                'deposit_refund_amount' => $data->depositRefundAmount,
+                'deposit_refund_amount' => $depositRefundAmount,
                 'deposit_refunded_at' => $data->depositRefundedAt,
                 'rent_due_day' => $data->rentDueDay ?? 1,
                 'status' => LeaseStatus::Active,

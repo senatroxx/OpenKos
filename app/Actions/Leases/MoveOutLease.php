@@ -180,15 +180,25 @@ class MoveOutLease
                 }
             }
         } else {
-            $matchingRate = $targetUnit->rates()
+            $matchingRates = $targetUnit->rates()
                 ->where('billing_interval', $lease->billing_interval)
                 ->where('billing_unit', $lease->billing_unit)
-                ->first();
+                ->get();
+            $matchingRate = $matchingRates->first(
+                fn ($rate): bool => $rate->currency === $lease->currency,
+            );
+
+            abort_if(
+                $matchingRates->isNotEmpty() && $matchingRate === null,
+                422,
+                __('The target unit rate currency must match the existing lease currency.'),
+            );
 
             $newLease = $targetUnit->leases()->create([
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $data->endDate,
                 'rent_amount' => $lease->rent_amount,
+                'currency' => $lease->currency,
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
                 'billing_strategy' => $lease->billing_strategy,

@@ -1,4 +1,4 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { InputError, SearchableSelect } from '@/components/shared';
@@ -48,6 +48,7 @@ export default function AssignUnitSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { setting } = usePage<{ setting: { currency: string } }>().props;
     const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(
         null,
     );
@@ -98,6 +99,7 @@ export default function AssignUnitSheet({
     }, [data.unit_id]);
 
     const selectedRate = rates.find((r) => r.id === data.unit_rate_id) ?? null;
+    const currency = selectedRate?.currency ?? setting.currency;
     const hasRates = rates.length > 0;
 
     function handleOverrideToggle(checked: boolean) {
@@ -358,6 +360,7 @@ export default function AssignUnitSheet({
                                                         <span className="font-medium tabular-nums">
                                                             {formatPrice(
                                                                 rate.amount,
+                                                                rate.currency,
                                                             )}
                                                         </span>
                                                     </div>
@@ -420,7 +423,7 @@ export default function AssignUnitSheet({
                                 (overridePrice || !hasRates) && (
                                     <div className="mt-4 grid gap-2">
                                         <Label htmlFor="rent_amount">
-                                            Rent Amount (IDR)
+                                            Rent Amount ({currency})
                                         </Label>
                                         <Input
                                             id="rent_amount"
@@ -504,7 +507,7 @@ export default function AssignUnitSheet({
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2">
                                             <Label htmlFor="deposit_amount">
-                                                Deposit Amount (IDR)
+                                                Deposit Amount ({currency})
                                             </Label>
                                             <Input
                                                 id="deposit_amount"

@@ -9,6 +9,7 @@ use App\Exceptions\PaymentOverflowException;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Results\Payment\RecordPaymentResult;
+use Brick\Math\BigDecimal;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -28,20 +29,21 @@ class RecordPayment
             // correct outstanding balance and cannot overpay.
             $locked = Invoice::lockForUpdate()->findOrFail($invoice->id);
 
-            $availableAmount = (float) $locked->outstanding;
+            $availableAmount = BigDecimal::of($locked->outstanding);
 
             if ($forcePending) {
-                $availableAmount -= (float) $locked->payments()
+                $availableAmount = $availableAmount->minus((string) $locked->payments()
                     ->where('status', PaymentStatus::Pending)
-                    ->sum('amount');
+                    ->sum('amount'));
             }
 
-            if ($data->amount > $availableAmount) {
+            if (BigDecimal::of($data->amount)->compareTo($availableAmount) > 0) {
                 throw new PaymentOverflowException;
             }
 
             $payment = $locked->payments()->create([
                 'amount' => $data->amount,
+                'currency' => $locked->currency,
                 'payment_date' => $data->paymentDate,
                 'payment_method' => $data->paymentMethod,
                 'notes' => $data->notes,
