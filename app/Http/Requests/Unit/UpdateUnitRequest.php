@@ -77,7 +77,34 @@ class UpdateUnitRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $submittedIds = collect($this->input('rates', []))
+                ->filter(fn (mixed $rate): bool => is_array($rate))
+                ->pluck('id')
+                ->filter(fn (mixed $id): bool => is_scalar($id))
+                ->map(fn (mixed $id): int => (int) $id)
+                ->values()
+                ->all();
+
             $seen = [];
+            UnitRate::query()
+                ->where('unit_id', $this->route('unit')->id)
+                ->where('is_active', false)
+                ->when($submittedIds !== [], fn ($query) => $query->whereNotIn('id', $submittedIds))
+                ->get()
+                ->each(function (UnitRate $rate) use (&$seen): void {
+                    try {
+                        $currency = $rate->currency;
+                    } catch (\Throwable) {
+                        return;
+                    }
+
+                    $key = implode('|', [
+                        $rate->billing_interval,
+                        $rate->billing_unit->value,
+                        $currency,
+                    ]);
+                    $seen[$key] = $rate->id;
+                });
 
             foreach ($this->input('rates', []) as $index => $rate) {
                 if (! is_array($rate)) {
@@ -98,15 +125,18 @@ class UpdateUnitRequest extends FormRequest
                     $rate['billing_unit'] ?? '',
                     $currency,
                 ]);
+                $rateId = isset($rate['id']) && is_scalar($rate['id'])
+                    ? (int) $rate['id']
+                    : -($index + 1);
 
-                if (isset($seen[$key])) {
+                if (array_key_exists($key, $seen) && $seen[$key] !== $rateId) {
                     $validator->errors()->add(
                         "rates.{$index}.currency",
-                        __('A unit cannot have duplicate active rates for the same billing period and currency.'),
+                        __('A unit cannot have duplicate rates for the same billing period and currency.'),
                     );
                 }
 
-                $seen[$key] = true;
+                $seen[$key] = $rateId;
 
                 if ($storedRate && isset($rate['currency']) && $storedRate->currency !== $rate['currency']) {
                     $validator->errors()->add(

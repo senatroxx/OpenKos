@@ -482,6 +482,44 @@ describe('currency-specific rates', function () {
         $response->assertSessionHasErrors('rates.1.currency');
     });
 
+    it('rejects updates that collide with preserved inactive rates', function () {
+        Setting::set('currency', 'IDR');
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $activeRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'year',
+            'amount' => '120.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'rates' => [[
+                    'id' => $activeRate->id,
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'amount' => '100.00',
+                    'currency' => 'USD',
+                    'is_active' => true,
+                ]],
+            ])
+            ->assertSessionHasErrors('rates.0.currency');
+
+        expect($activeRate->fresh()->billing_unit->value)->toBe('year');
+    });
+
     it('does not reinterpret an existing rate when the default currency changes', function () {
         Setting::set('currency', 'IDR');
         $unit = Unit::factory()->withRate(1_500_000)->create();
