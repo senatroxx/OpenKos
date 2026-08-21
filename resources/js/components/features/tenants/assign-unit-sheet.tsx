@@ -100,6 +100,7 @@ export default function AssignUnitSheet({
 
     const selectedRate = rates.find((r) => r.id === data.unit_rate_id) ?? null;
     const currency = selectedRate?.currency ?? setting.currency;
+    const monthlyCurrency = String(currency);
     const hasRates = rates.length > 0;
 
     function handleOverrideToggle(checked: boolean) {
@@ -111,11 +112,20 @@ export default function AssignUnitSheet({
         }
     }
 
-    const monthlyEquivalent = computeMonthlyEquivalent(
-        data.rent_amount,
-        Number.parseInt(data.billing_interval) || 1,
-        data.billing_unit,
-        currency,
+    const monthlyEquivalent = useMemo(
+        () =>
+            computeMonthlyEquivalent(
+                data.rent_amount,
+                Number.parseInt(data.billing_interval) || 1,
+                data.billing_unit,
+                monthlyCurrency,
+            ),
+        [
+            data.rent_amount,
+            data.billing_interval,
+            data.billing_unit,
+            monthlyCurrency,
+        ],
     );
 
     function handleOpenChange(next: boolean) {
