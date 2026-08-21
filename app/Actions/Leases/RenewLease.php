@@ -12,6 +12,7 @@ use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
 use App\Models\Unit;
 use App\Results\Lease\RenewLeaseResult;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Support\Facades\DB;
 
 class RenewLease
@@ -21,6 +22,7 @@ class RenewLease
         private readonly LeaseFinancialChecker $financial,
         private readonly LeaseStatusValidator $leaseStatusValidator,
         private readonly GenerateInvoices $generateInvoices,
+        private readonly MoneyConverter $money,
     ) {}
 
     public function execute(Lease $lease, RenewLeaseData $data): RenewLeaseResult
@@ -55,6 +57,15 @@ class RenewLease
                 return RenewLeaseResult::error('Unit already has an active lease.');
             }
 
+            try {
+                $rentAmount = $this->money->normalizeAmount($data->rentAmount, $lease->currency);
+                $depositAmount = $lease->deposit_amount === null
+                    ? null
+                    : $this->money->normalizeAmount((string) $lease->deposit_amount, $lease->currency);
+            } catch (\InvalidArgumentException) {
+                return RenewLeaseResult::error('The existing lease amount is invalid for its currency.');
+            }
+
             $lease->update([
                 'status' => LeaseStatus::Renewed,
             ]);
@@ -66,9 +77,9 @@ class RenewLease
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $lease->end_date->addDay(),
                 'end_date' => $newEndDate,
-                'rent_amount' => $data->rentAmount,
+                'rent_amount' => $rentAmount,
                 'currency' => $lease->currency,
-                'deposit_amount' => $lease->deposit_amount,
+                'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'billing_interval' => $lease->billing_interval,
                 'billing_unit' => $lease->billing_unit,

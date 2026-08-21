@@ -12,6 +12,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -21,6 +22,7 @@ class MoveOutLease
         private OccupancyCalculator $occupancy,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
+        private MoneyConverter $money,
     ) {}
 
     private function cancelFutureInvoices(Lease $lease): void
@@ -201,19 +203,33 @@ class MoveOutLease
                 __('The target unit rate currency must match the existing lease currency.'),
             );
 
+            try {
+                $rentAmount = $lease->rent_amount === null
+                    ? null
+                    : $this->money->normalizeAmount((string) $lease->rent_amount, $lease->currency);
+                $depositAmount = $lease->deposit_amount === null
+                    ? null
+                    : $this->money->normalizeAmount((string) $lease->deposit_amount, $lease->currency);
+                $depositRefundAmount = $data->carryDepositRefund && $lease->deposit_refund_amount !== null
+                    ? $this->money->normalizeAmount((string) $lease->deposit_refund_amount, $lease->currency)
+                    : null;
+            } catch (\InvalidArgumentException) {
+                abort(422, __('The existing lease amount is invalid for its currency.'));
+            }
+
             $newLease = $targetUnit->leases()->create([
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $data->endDate,
-                'rent_amount' => $lease->rent_amount,
+                'rent_amount' => $rentAmount,
                 'currency' => $lease->currency,
                 'billing_interval' => $lease->billing_interval ?? 1,
                 'billing_unit' => $lease->billing_unit ?? 'month',
                 'billing_strategy' => $lease->billing_strategy,
                 'is_custom_price' => $lease->is_custom_price,
                 'unit_rate_id' => $matchingRate?->id,
-                'deposit_amount' => $lease->deposit_amount,
+                'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
-                'deposit_refund_amount' => $data->carryDepositRefund ? $lease->deposit_refund_amount : null,
+                'deposit_refund_amount' => $depositRefundAmount,
                 'deposit_refunded_at' => $data->carryDepositRefund ? $lease->deposit_refunded_at : null,
                 'rent_due_day' => $lease->rent_due_day,
                 'status' => LeaseStatus::Active,

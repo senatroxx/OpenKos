@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Leases\RenewLease;
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\DepositHandling;
 use App\Enums\InvoiceStatus;
@@ -13,6 +14,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -177,6 +179,25 @@ describe('eligibility', function () {
 });
 
 describe('renewal', function () {
+    it('rejects invalid legacy deposits before creating a renewed lease', function () {
+        [, , $lease] = createRenewableLease([
+            'deposit_amount' => '1.50',
+        ]);
+        DB::table('leases')->whereKey($lease->id)->update(['currency' => null]);
+
+        $result = app(RenewLease::class)->execute($lease->fresh(), new RenewLeaseData(
+            endDate: Carbon::parse('2027-06-30')->toImmutable(),
+            rentAmount: '1000000',
+            depositHandling: DepositHandling::CarryForward,
+            confirmedOutstanding: true,
+        ));
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->error)->toContain('invalid for its currency')
+            ->and($lease->fresh()->status)->toBe(LeaseStatus::Active)
+            ->and(Lease::query()->where('previous_lease_id', $lease->id)->exists())->toBeFalse();
+    });
+
     it('creates a new lease with updated rent and extension', function () {
         [, , $lease] = createRenewableLease();
         $user = User::factory()->owner()->create();
