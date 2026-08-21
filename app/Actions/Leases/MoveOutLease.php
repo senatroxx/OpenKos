@@ -187,6 +187,7 @@ class MoveOutLease
             }
         } else {
             $matchingRates = $targetUnit->rates()
+                ->where('is_active', true)
                 ->where('billing_interval', $lease->billing_interval)
                 ->where('billing_unit', $lease->billing_unit)
                 ->get();
