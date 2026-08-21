@@ -368,6 +368,48 @@ describe('CRUD', function () {
         expect($existingLease->fresh()->tenants)->toHaveCount(1);
     });
 
+    it('validates existing lease amounts using the existing currency', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        Setting::set('currency', 'IDR');
+        $unit->update(['capacity' => 2]);
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $existingLease = Lease::factory()->create([
+            'primary_tenant_id' => $tenantA->id,
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $usdRate->id,
+            'rent_amount' => '95.00',
+            'currency' => 'USD',
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'billing_strategy' => 'advance',
+            'start_date' => '2026-06-01',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenantB->id],
+                'start_date' => $existingLease->start_date->toDateString(),
+                'rent_amount' => '95.00',
+                'billing_interval' => 1,
+                'billing_unit' => 'month',
+                'billing_strategy' => $existingLease->billing_strategy->value,
+                'rent_due_day' => $existingLease->rent_due_day,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($existingLease->fresh()->tenants)->toHaveCount(2);
+    });
+
     it('prevents assigning a tenant to a second active lease', function () {
         [$property, $unit] = createPropertyWithUnit();
         $otherUnit = Unit::factory()->for($property)->create();
