@@ -209,7 +209,7 @@ class UnitController extends Controller
                         'billing_unit' => $rate['billing_unit'],
                         'amount' => $rate['amount'],
                         'currency' => $rate['currency'] ?? null,
-                        'is_active' => true,
+                        'is_active' => $rate['is_active'] ?? true,
                     ]);
                 }
             }
