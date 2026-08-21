@@ -14,6 +14,7 @@ use App\Models\Unit;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -178,11 +179,21 @@ class UnitController extends Controller
 
         $validated = $request->validated();
         $rates = $validated['rates'] ?? [];
+        $expectedUpdatedAt = CarbonImmutable::parse($validated['updated_at']);
+        unset($validated['updated_at']);
         unset($validated['rates']);
 
         try {
-            DB::transaction(function () use ($unit, $validated, $rates, $request): void {
-                $unit->update($validated);
+            DB::transaction(function () use ($unit, $validated, $rates, $request, $expectedUpdatedAt): void {
+                $lockedUnit = Unit::query()->lockForUpdate()->findOrFail($unit->id);
+
+                if (! $lockedUnit->updated_at?->equalTo($expectedUpdatedAt)) {
+                    throw ValidationException::withMessages([
+                        'updated_at' => __('This unit changed while you were editing it. Refresh and try again.'),
+                    ]);
+                }
+
+                $lockedUnit->update($validated);
 
                 if (! $request->has('rates')) {
                     return;
@@ -195,9 +206,9 @@ class UnitController extends Controller
                     ->all();
 
                 if ($keepIds === []) {
-                    $unit->rates()->where('is_active', true)->update(['is_active' => false]);
+                    $lockedUnit->rates()->where('is_active', true)->update(['is_active' => false]);
                 } else {
-                    $unit->rates()
+                    $lockedUnit->rates()
                         ->where('is_active', true)
                         ->whereNotIn('id', $keepIds)
                         ->update(['is_active' => false]);
@@ -205,13 +216,13 @@ class UnitController extends Controller
 
                 foreach ($rates as $rate) {
                     if (isset($rate['id'])) {
-                        $unitRate = $unit->rates()->whereKey($rate['id'])->firstOrFail();
+                        $unitRate = $lockedUnit->rates()->whereKey($rate['id'])->firstOrFail();
                         $unitRate->update([
                             'amount' => $rate['amount'],
                             'is_active' => $rate['is_active'] ?? true,
                         ]);
                     } else {
-                        $unit->rates()->create([
+                        $lockedUnit->rates()->create([
                             'billing_interval' => $rate['billing_interval'],
                             'billing_unit' => $rate['billing_unit'],
                             'amount' => $rate['amount'],
@@ -220,6 +231,8 @@ class UnitController extends Controller
                         ]);
                     }
                 }
+
+                $lockedUnit->touch();
             });
         } catch (QueryException $exception) {
             if (! $this->isUnitRateUniqueViolation($exception)) {

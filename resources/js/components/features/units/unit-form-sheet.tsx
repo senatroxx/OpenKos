@@ -62,6 +62,7 @@ export default function UnitFormSheet({
         status: unit?.status ?? 'available',
         description: unit?.description ?? '',
         notes: unit?.notes ?? '',
+        updated_at: unit?.updated_at ?? null,
     });
 
     function handleOpenChange(next: boolean) {
@@ -369,6 +370,7 @@ export default function UnitFormSheet({
                                 ))}
                             </div>
                             <InputError message={errors.rates} />
+                            <InputError message={errors.updated_at} />
                         </section>
 
                         <div className="grid grid-cols-2 gap-4">

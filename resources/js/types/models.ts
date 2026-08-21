@@ -97,6 +97,7 @@ export type Unit = {
     status: string;
     notes: string | null;
     active_leases?: number;
+    updated_at?: string | null;
     leases?: LeaseInfo[];
     rates?: UnitRate[];
     active_rates?: UnitRate[];
