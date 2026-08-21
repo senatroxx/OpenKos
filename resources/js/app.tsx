@@ -87,10 +87,8 @@ createInertiaApp({
         }
     },
     strictMode: true,
-    withApp(app, { ssr }) {
-        syncDisplaySettings(
-            (app.props as { initialPage?: PageWithTimezone }).initialPage ?? {},
-        );
+    withApp(app, { ssr, page }) {
+        syncDisplaySettings(page as PageWithTimezone);
 
         if (!ssr) {
             router.on('navigate', ({ detail }) => {
