@@ -613,6 +613,12 @@ describe('currency-specific rates', function () {
         $rate->billing_unit = 'year';
 
         expect(fn () => $rate->save())->toThrow(LogicException::class);
+
+        $rate = $rate->fresh();
+        $otherUnit = Unit::factory()->for($property)->create();
+        $rate->unit_id = $otherUnit->id;
+
+        expect(fn () => $rate->save())->toThrow(LogicException::class);
     });
 
     it('preserves the active flag for new rates during updates', function () {
