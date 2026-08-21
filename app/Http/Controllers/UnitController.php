@@ -154,9 +154,9 @@ class UnitController extends Controller
         $rates = $validated['rates'] ?? [];
         unset($validated['rates']);
 
-        $unit = $property->units()->create($validated);
+        DB::transaction(function () use ($property, $validated, $rates): void {
+            $unit = $property->units()->create($validated);
 
-        if ($rates !== []) {
             foreach ($rates as $rate) {
                 $unit->rates()->create([
                     'billing_interval' => $rate['billing_interval'],
@@ -166,7 +166,7 @@ class UnitController extends Controller
                     'is_active' => $rate['is_active'] ?? true,
                 ]);
             }
-        }
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit created.')]);
 

@@ -749,6 +749,40 @@ describe('currency-specific rates', function () {
         expect($unit->rates()->where('billing_unit', 'year')->exists())->toBeFalse();
     });
 
+    it('rolls back unit creation when an initial rate fails', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $dispatcher = UnitRate::getEventDispatcher();
+        $testDispatcher = clone $dispatcher;
+
+        UnitRate::setEventDispatcher($testDispatcher);
+        UnitRate::creating(function (): void {
+            throw new RuntimeException('rate insert failed');
+        });
+
+        try {
+            $this->actingAs($user)->post(route('properties.units.store', $property), [
+                'name' => 'Atomic Unit',
+                'capacity' => 1,
+                'rates' => [[
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'amount' => '100.00',
+                    'currency' => 'USD',
+                ]],
+            ]);
+        } catch (RuntimeException $exception) {
+            expect($exception->getMessage())->toBe('rate insert failed');
+        } finally {
+            UnitRate::setEventDispatcher($dispatcher);
+        }
+
+        expect(Unit::query()
+            ->where('property_id', $property->id)
+            ->where('name', 'Atomic Unit')
+            ->exists())->toBeFalse();
+    });
+
     it('deactivates omitted rates without breaking lease lineage', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
