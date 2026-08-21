@@ -24,12 +24,14 @@ test('tenant profile page only shares account settings pages', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.tenant.id', $tenant->id)
             ->where('auth.tenant.name', $tenant->name)
-            ->has('platform.settings', 2)
-            ->where('platform.settings.0.key', 'profile')
+            ->has('platform.settings', 3)
+            ->where('platform.settings.0.key', 'about')
             ->where('platform.settings.0.ownerOnly', false)
-            ->where('platform.settings.1.key', 'security')
+            ->where('platform.settings.1.key', 'profile')
             ->where('platform.settings.1.ownerOnly', false)
-            ->missing('platform.settings.2'));
+            ->where('platform.settings.2.key', 'security')
+            ->where('platform.settings.2.ownerOnly', false)
+            ->missing('platform.settings.3'));
 });
 
 test('profile information can be updated', function () {

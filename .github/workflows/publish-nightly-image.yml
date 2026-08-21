@@ -52,5 +52,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            OPENKOS_BUILD_VERSION=nightly-${{ steps.date.outputs.value }}
+            OPENKOS_BUILD_CHANNEL=nightly
+            OPENKOS_BUILD_COMMIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

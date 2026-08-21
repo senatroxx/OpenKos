@@ -54,6 +54,12 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'build' => [
+        'version' => env('OPENKOS_BUILD_VERSION'),
+        'channel' => env('OPENKOS_BUILD_CHANNEL'),
+        'commit_sha' => env('OPENKOS_BUILD_COMMIT_SHA'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

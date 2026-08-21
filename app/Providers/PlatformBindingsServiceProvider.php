@@ -27,6 +27,7 @@ class PlatformBindingsServiceProvider extends ServiceProvider
     private function registerPlatformSettingsPages(): void
     {
         app(OpenKOSManager::class)->settings()
+            ->registerPage(new SettingsPage('about', 'About', '/settings/about', ownerOnly: false, group: null, order: 50, routeName: 'settings.about.edit'))
             ->registerPage(new SettingsPage('profile', 'Profile', '/settings/profile', ownerOnly: false, group: 'Account', order: 100, routeName: 'profile.edit'))
             ->registerPage(new SettingsPage('security', 'Security', '/settings/security', ownerOnly: false, group: 'Account', order: 200, routeName: 'security.edit'))
             ->registerPage(new SettingsPage('general', 'General', '/settings/general', group: null, order: 0, routeName: 'settings.general.edit'))
