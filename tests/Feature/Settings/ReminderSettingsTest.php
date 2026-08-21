@@ -3,6 +3,7 @@
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Payments\MoneyConverter;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -53,6 +54,30 @@ describe('Reminder settings page', function () {
                 ->has('previewInvoiceContext')
                 ->has('previewInvoiceLink')
             );
+    });
+
+    it('uses the configured currency for the preview amount', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', 'USD');
+        Setting::set('locale', 'en');
+        $expectedAmount = app(MoneyConverter::class)->format('1500000', 'USD', 'en');
+
+        $this->actingAs($owner)
+            ->get(route('settings.reminders.edit'))
+            ->assertInertia(fn ($page) => $page
+                ->where('previewAmount', $expectedAmount)
+                ->where('previewInvoiceContext', fn (string $context): bool => str_contains($context, $expectedAmount))
+            );
+    });
+
+    it('renders an empty preview amount when currency is unconfigured', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', '');
+
+        $this->actingAs($owner)
+            ->get(route('settings.reminders.edit'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('previewAmount', ''));
     });
 
     it('updates reminder settings', function () {

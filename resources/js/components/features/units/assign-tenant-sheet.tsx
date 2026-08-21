@@ -102,8 +102,9 @@ export default function AssignTenantSheet({
             data.rent_amount,
             Number.parseInt(data.billing_interval) || 1,
             data.billing_unit,
+            currency,
         );
-    }, [data.rent_amount, data.billing_interval, data.billing_unit]);
+    }, [data.rent_amount, data.billing_interval, data.billing_unit, currency]);
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();

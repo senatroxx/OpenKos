@@ -47,6 +47,7 @@ export default function Reminders({
     settings,
     defaultTemplates,
     previewInvoiceContext,
+    previewAmount,
     previewInvoiceLink,
 }: {
     settings: {
@@ -58,6 +59,7 @@ export default function Reminders({
     };
     defaultTemplates: Record<string, string>;
     previewInvoiceContext: string;
+    previewAmount: string;
     previewInvoiceLink: string;
 }) {
     const {
@@ -97,7 +99,7 @@ export default function Reminders({
         name: 'John',
         unit: 'Unit A-02',
         days: settings.reminder_days_before,
-        amount: '1,500,000',
+        amount: previewAmount,
         date: '01 Jul 2026',
         overdueDays: 3,
     };

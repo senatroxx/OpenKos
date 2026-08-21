@@ -6,6 +6,7 @@ use App\Actions\Settings\UpdateSettings;
 use App\Enums\ReminderType;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -15,6 +16,7 @@ class ReminderController extends Controller
 {
     public function __construct(
         private UpdateSettings $updateSettings,
+        private MoneyConverter $money,
     ) {}
 
     public function edit(): Response
@@ -38,6 +40,14 @@ class ReminderController extends Controller
             ])
             ->all();
         $settings['reminder_channels'] ??= ['log'];
+        $previewCurrency = Setting::get('currency');
+        $previewAmount = blank($previewCurrency)
+            ? ''
+            : $this->money->format(
+                '1500000',
+                (string) $previewCurrency,
+                (string) (Setting::get('locale') ?? 'id'),
+            );
 
         return Inertia::render('settings/reminders', [
             'settings' => $settings,
@@ -50,8 +60,9 @@ class ReminderController extends Controller
                 'reference' => 'INV-2026-07',
                 'period' => '01 Jul 2026 – 31 Jul 2026',
                 'date' => '01 Jul 2026',
-                'amount' => '1,500,000',
+                'amount' => $previewAmount,
             ]),
+            'previewAmount' => $previewAmount,
             'previewInvoiceLink' => __('notifications.rent.view_invoice').': https://example.test/portal/billing/invoices/1',
         ]);
     }
