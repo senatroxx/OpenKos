@@ -28,18 +28,18 @@ class OverviewStatsCalculator
         $currentMonth = (int) $now->month;
         $currentYear = (int) $now->year;
 
-        $leaseIds = (clone $accessibleLeasesQuery)->pluck('id');
+        $authorizedLeaseIds = (clone $accessibleLeasesQuery)->select('leases.id');
 
-        $periodStart = Carbon::create($currentYear, $currentMonth, 1)->startOfDay();
-        $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay();
+        $periodStart = Carbon::create($currentYear, $currentMonth, 1)->toDateString();
+        $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->toDateString();
 
         $revenueThisMonth = Payment::where('status', 'confirmed')
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereBetween('period_start', [$periodStart, $periodEnd])
-                ->whereIn('lease_id', $leaseIds))
+                ->whereIn('lease_id', clone $authorizedLeaseIds))
             ->get(['amount', 'currency']);
 
-        $outstanding = Invoice::whereIn('lease_id', $leaseIds)
+        $outstanding = Invoice::whereIn('lease_id', clone $authorizedLeaseIds)
             ->whereBetween('period_start', [$periodStart, $periodEnd])
             ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
             ->get(['total', 'amount_paid', 'currency']);

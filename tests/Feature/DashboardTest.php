@@ -315,7 +315,7 @@ test('dashboard preserves historical financial activity after lease termination'
     $invoice = Invoice::factory()->create([
         'lease_id' => $terminatedLease->id,
         'currency' => 'USD',
-        'period_start' => '2026-07-02',
+        'period_start' => '2026-07-01',
         'period_end' => '2026-07-31',
         'due_date' => '2026-07-05',
         'total' => 500,
