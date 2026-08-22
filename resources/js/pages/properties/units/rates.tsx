@@ -133,6 +133,10 @@ export default function UnitRates({
     }
 
     function submitRates(rates: UnitRate[], onSuccess?: () => void) {
+        if (processing) {
+            return;
+        }
+
         transform((formData) => ({ ...formData, rates }));
         submit(
             properties.units.update({
@@ -146,10 +150,12 @@ export default function UnitRates({
 
                     const updatedUnit = page.props.unit as Unit | undefined;
 
-                    setData({
-                        rates: updatedUnit?.rates ?? rates,
-                        updated_at: updatedUnit?.updated_at ?? data.updated_at,
-                    });
+                    setData((current) => ({
+                        ...current,
+                        rates: updatedUnit?.rates ?? current.rates,
+                        updated_at:
+                            updatedUnit?.updated_at ?? current.updated_at,
+                    }));
 
                     onSuccess?.();
                 },
@@ -260,6 +266,7 @@ export default function UnitRates({
                                     type="button"
                                     variant="ghost"
                                     size="icon-sm"
+                                    disabled={processing}
                                     aria-label={`Actions for ${currency} rate`}
                                 >
                                     <Ellipsis />
