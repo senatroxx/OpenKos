@@ -5,13 +5,20 @@ namespace App\Http\Middleware;
 use App\Models\Setting;
 use App\Services\Payments\MoneyConverter;
 use Closure;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Middleware;
 use OpenKOS\Platform\Facades\OpenKOS;
 use Symfony\Component\HttpFoundation\Response;
 
 class HandleInertiaRequests extends Middleware
 {
+    private const BRANDING_MIMES = [
+        'logo' => ['image/jpeg', 'image/png', 'image/webp'],
+        'favicon' => ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon'],
+    ];
+
     protected $rootView = 'app';
 
     public function handle(Request $request, Closure $next): Response
@@ -47,8 +54,15 @@ class HandleInertiaRequests extends Middleware
             // password, API tokens — so they never go into the app-wide share. Their
             // own settings pages load them (masked) separately.
             'setting' => fn () => collect(Setting::get())
-                ->except(['mail_config', 'whatsapp_config', 'payment_gateway_config'])
+                ->except([
+                    'mail_config',
+                    'whatsapp_config',
+                    'payment_gateway_config',
+                    'branding_logo_path',
+                    'branding_favicon_path',
+                ])
                 ->all(),
+            'branding' => fn () => $this->branding(),
             'notificationChannels' => fn () => [
                 'mail' => filled(data_get(Setting::effectiveMailConfig(), 'host')),
                 'whatsapp' => filled(Setting::get('whatsapp_driver')),
@@ -90,5 +104,71 @@ class HandleInertiaRequests extends Middleware
         $permission = $page['permission'] ?? null;
 
         return $permission === null || $user->isOwner() || $user->can($permission);
+    }
+
+    /**
+     * @return array{logoUrl: string, faviconUrl: string, hasCustomLogo: bool, hasCustomFavicon: bool, hasConfiguredLogo: bool, hasConfiguredFavicon: bool}
+     */
+    private function branding(): array
+    {
+        $logoPath = Setting::get('branding_logo_path');
+        $faviconPath = Setting::get('branding_favicon_path');
+        $hasConfiguredLogo = $this->isConfigured($logoPath);
+        $hasConfiguredFavicon = $this->isConfigured($faviconPath);
+        $disk = null;
+
+        if ($hasConfiguredLogo || $hasConfiguredFavicon) {
+            try {
+                $disk = Storage::disk((string) config('filesystems.default', 'local'));
+            } catch (\Throwable) {
+                // Use bundled branding when the configured disk is unavailable.
+            }
+        }
+
+        $logoVersion = $this->storedAssetVersion('logo', $logoPath, $disk);
+        $faviconVersion = $this->storedAssetVersion('favicon', $faviconPath, $disk);
+
+        return [
+            'logoUrl' => $this->brandingUrl('logo', $logoVersion),
+            'faviconUrl' => $this->brandingUrl('favicon', $faviconVersion),
+            'hasCustomLogo' => $logoVersion !== null,
+            'hasCustomFavicon' => $faviconVersion !== null,
+            'hasConfiguredLogo' => $hasConfiguredLogo,
+            'hasConfiguredFavicon' => $hasConfiguredFavicon,
+        ];
+    }
+
+    private function brandingUrl(string $asset, ?string $version): string
+    {
+        return route('branding.asset', [
+            'asset' => $asset,
+            'v' => $version ?? 'default',
+        ]);
+    }
+
+    private function storedAssetVersion(string $asset, mixed $path, ?FilesystemAdapter $disk): ?string
+    {
+        if ($disk === null || ! $this->isConfigured($path)) {
+            return null;
+        }
+
+        try {
+            if (! $disk->exists($path)) {
+                return null;
+            }
+
+            $mimeType = $disk->mimeType($path);
+
+            return is_string($mimeType) && in_array($mimeType, self::BRANDING_MIMES[$asset], true)
+                ? sha1((string) $path)
+                : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function isConfigured(mixed $path): bool
+    {
+        return is_string($path) && filled($path);
     }
 }

@@ -1,5 +1,8 @@
-import { useForm } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
 import { AppearanceTabs } from '@/components/features';
+import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -22,6 +25,12 @@ import {
     edit as editGeneral,
     update as updateGeneral,
 } from '@/routes/settings/general';
+import {
+    destroy as destroyBranding,
+    update as updateBranding,
+} from '@/routes/settings/general/branding';
+
+type BrandingAsset = 'logo' | 'favicon';
 
 export default function General({
     settings,
@@ -39,6 +48,22 @@ export default function General({
     };
     timezone_list: string[];
 }) {
+    const { branding } = usePage<{
+        branding: {
+            logoUrl: string;
+            faviconUrl: string;
+            hasCustomLogo: boolean;
+            hasCustomFavicon: boolean;
+            hasConfiguredLogo: boolean;
+            hasConfiguredFavicon: boolean;
+        };
+    }>().props;
+    const [uploadingBranding, setUploadingBranding] =
+        useState<BrandingAsset | null>(null);
+    const [brandingErrors, setBrandingErrors] = useState<
+        Record<string, string>
+    >({});
+
     const siteForm = useForm({
         site_name: settings.site_name,
     });
@@ -59,6 +84,38 @@ export default function General({
         invoice_pdf_enabled: settings.invoice_pdf_enabled,
     });
 
+    function uploadBranding(
+        event: FormEvent<HTMLFormElement>,
+        asset: BrandingAsset,
+    ): void {
+        event.preventDefault();
+
+        const form = event.currentTarget;
+
+        setUploadingBranding(asset);
+        setBrandingErrors({});
+
+        router.post(updateBranding.url({ asset }), new FormData(form), {
+            preserveScroll: true,
+            onError: (errors) => setBrandingErrors(errors),
+            onFinish: () => {
+                setUploadingBranding(null);
+                form.reset();
+            },
+        });
+    }
+
+    function removeBranding(asset: BrandingAsset): void {
+        setUploadingBranding(asset);
+        setBrandingErrors({});
+
+        router.delete(destroyBranding.url({ asset }), {
+            preserveScroll: true,
+            onError: (errors) => setBrandingErrors(errors),
+            onFinish: () => setUploadingBranding(null),
+        });
+    }
+
     return (
         <div className="space-y-6">
             <div>
@@ -67,6 +124,119 @@ export default function General({
                     Manage application-wide settings.
                 </p>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Branding</CardTitle>
+                    <CardDescription>
+                        Customize the logo and favicon used by this
+                        installation.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-6 lg:grid-cols-2">
+                    {(
+                        [
+                            {
+                                asset: 'logo',
+                                title: 'Website logo',
+                                description:
+                                    'Shown in application navigation and authentication pages.',
+                                url: branding.logoUrl,
+                                hasCustom: branding.hasCustomLogo,
+                                hasConfigured: branding.hasConfiguredLogo,
+                                accept: '.jpg,.jpeg,.png,.webp',
+                                formats: 'JPG, PNG, or WebP · 2 MB maximum',
+                            },
+                            {
+                                asset: 'favicon',
+                                title: 'Browser favicon',
+                                description:
+                                    'Shown in browser tabs and bookmarks.',
+                                url: branding.faviconUrl,
+                                hasCustom: branding.hasCustomFavicon,
+                                hasConfigured: branding.hasConfiguredFavicon,
+                                accept: '.png,.ico',
+                                formats: 'PNG or ICO · 512 KB maximum',
+                            },
+                        ] as const
+                    ).map((item) => (
+                        <div key={item.asset} className="space-y-4 rounded-lg border p-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex size-20 items-center justify-center rounded-md border bg-muted/30 p-2">
+                                    <img
+                                        src={item.url}
+                                        alt={`${item.title} preview`}
+                                        className="size-full object-contain"
+                                    />
+                                </div>
+                                <div>
+                                    <h3 className="font-medium">{item.title}</h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        {item.description}
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        {item.hasCustom
+                                            ? 'Using custom asset'
+                                            : 'Using bundled default'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <form
+                                onSubmit={(event) =>
+                                    uploadBranding(event, item.asset)
+                                }
+                                className="space-y-3"
+                            >
+                                <div className="grid gap-2">
+                                    <Label htmlFor={`${item.asset}-file`}>
+                                        Upload replacement
+                                    </Label>
+                                    <Input
+                                        id={`${item.asset}-file`}
+                                        name="file"
+                                        type="file"
+                                        accept={item.accept}
+                                        required
+                                        aria-describedby={`${item.asset}-formats`}
+                                    />
+                                    <p
+                                        id={`${item.asset}-formats`}
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        {item.formats}
+                                    </p>
+                                    <InputError message={brandingErrors.file} />
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        type="submit"
+                                        disabled={uploadingBranding !== null}
+                                    >
+                                        {uploadingBranding === item.asset
+                                            ? 'Uploading...'
+                                            : 'Upload'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={
+                                            !item.hasConfigured ||
+                                            uploadingBranding !== null
+                                        }
+                                        onClick={() =>
+                                            removeBranding(item.asset)
+                                        }
+                                    >
+                                        Restore default
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
 
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
                 <div className="space-y-6">

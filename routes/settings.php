@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\Settings\AboutController;
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\MailController;
@@ -12,6 +13,10 @@ use App\Http\Controllers\Settings\SettingValuesController;
 use App\Http\Controllers\Settings\WhatsAppController;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
+
+Route::get('branding/{asset}', BrandingAssetController::class)
+    ->whereIn('asset', ['logo', 'favicon'])
+    ->name('branding.asset');
 
 Route::middleware(['auth'])->group(function () {
     Route::redirect('settings', '/settings/profile');
@@ -37,6 +42,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:owner')->group(function () {
         Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');
         Route::patch('settings/general', [GeneralController::class, 'update'])->name('settings.general.update');
+        Route::post('settings/general/branding/{asset}', [GeneralController::class, 'updateBranding'])
+            ->whereIn('asset', ['logo', 'favicon'])
+            ->name('settings.general.branding.update');
+        Route::delete('settings/general/branding/{asset}', [GeneralController::class, 'removeBranding'])
+            ->whereIn('asset', ['logo', 'favicon'])
+            ->name('settings.general.branding.destroy');
 
         Route::get('settings/payment-gateway', [PaymentGatewayController::class, 'edit'])->name('settings.payment-gateway.edit');
         Route::patch('settings/payment-gateway', [PaymentGatewayController::class, 'update'])->name('settings.payment-gateway.update');

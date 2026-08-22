@@ -25,6 +25,14 @@ declare module '@inertiajs/core' {
                 currency: string;
                 timezone: string;
             };
+            branding: {
+                logoUrl: string;
+                faviconUrl: string;
+                hasCustomLogo: boolean;
+                hasCustomFavicon: boolean;
+                hasConfiguredLogo: boolean;
+                hasConfiguredFavicon: boolean;
+            };
             notificationChannels: { mail: boolean; whatsapp: boolean };
             sidebarOpen: boolean;
             platform: Platform;
