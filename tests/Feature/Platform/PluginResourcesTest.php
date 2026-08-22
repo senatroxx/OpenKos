@@ -2,7 +2,6 @@
 
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
-use OpenKOS\Platform\PlatformServiceProvider;
 use OpenKOS\Plugins\Example\ExamplePlugin;
 use Spatie\Permission\Models\Permission;
 
@@ -11,7 +10,7 @@ use Spatie\Permission\Models\Permission;
 beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
     config(['platform.plugins' => [ExamplePlugin::class]]);
-    (new PlatformServiceProvider(app()))->boot();
+    $this->bootPlatformWithIsolatedRegistries();
 });
 
 it('loads routes shipped by an enabled plugin', function () {
