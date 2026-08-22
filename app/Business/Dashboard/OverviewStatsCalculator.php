@@ -3,6 +3,7 @@
 namespace App\Business\Dashboard;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\LeaseStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Brick\Math\BigDecimal;
@@ -13,8 +14,11 @@ use Illuminate\Support\Collection;
 
 class OverviewStatsCalculator
 {
-    public function computeFinance(Builder $activeLeasesQuery): array
+    public function computeFinance(Builder $accessibleLeasesQuery): array
     {
+        $activeLeasesQuery = (clone $accessibleLeasesQuery)
+            ->where('status', LeaseStatus::Active->value);
+
         $monthlyPotential = $this->aggregate(
             (clone $activeLeasesQuery)->get(['rent_amount', 'currency']),
             fn ($row): string => (string) $row->rent_amount,
@@ -24,7 +28,7 @@ class OverviewStatsCalculator
         $currentMonth = (int) $now->month;
         $currentYear = (int) $now->year;
 
-        $leaseIds = (clone $activeLeasesQuery)->pluck('id');
+        $leaseIds = (clone $accessibleLeasesQuery)->pluck('id');
 
         $periodStart = Carbon::create($currentYear, $currentMonth, 1)->startOfDay();
         $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay();
