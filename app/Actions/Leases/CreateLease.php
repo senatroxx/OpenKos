@@ -11,6 +11,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\UnitRate;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Support\Facades\DB;
 
@@ -31,11 +32,8 @@ class CreateLease
             $unit = Unit::lockForUpdate()->findOrFail($unit->id);
             $unitRate = $data->unitRateId === null
                 ? null
-                : $unit->rates()->find($data->unitRateId);
-            $defaultRate = $unitRate ?? $unit->rates()
-                ->where('billing_unit', 'month')
-                ->where('billing_interval', 1)
-                ->first();
+                : $unit->activeRates()->whereKey($data->unitRateId)->first();
+            $effectiveRate = $unitRate ?? $unit->defaultActiveRate();
 
             abort_if(
                 $data->unitRateId !== null && $unitRate === null,
@@ -51,6 +49,8 @@ class CreateLease
             $activeTenantsCount = $this->occupancy->activeOccupantCount($unit);
 
             if ($existingLease) {
+                $this->ensureExistingLeaseTermsMatch($existingLease, $unitRate, $data);
+
                 $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
                 $newTenantIds = array_diff($tenantIds, $existingTenantIds->all());
 
@@ -71,20 +71,24 @@ class CreateLease
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
-            $rentAmount = $data->rentAmount ?? $defaultRate?->amount;
-            $currency = $defaultRate?->currency ?? $this->money->normalizeCurrency();
-            $rentAmount = $rentAmount === null
-                ? null
-                : $this->money->normalizeAmount((string) $rentAmount, $currency);
-            $depositAmount = $data->depositAmount === null
-                ? '0'
-                : $this->money->normalizeAmount($data->depositAmount, $currency);
-            $depositRefundAmount = $data->depositRefundAmount === null
-                ? null
-                : $this->money->normalizeAmount($data->depositRefundAmount, $currency);
+            try {
+                $rentAmount = $data->rentAmount ?? $effectiveRate?->amount;
+                $currency = $effectiveRate?->currency ?? $this->money->normalizeCurrency();
+                $rentAmount = $rentAmount === null
+                    ? null
+                    : $this->money->normalizeAmount((string) $rentAmount, $currency);
+                $depositAmount = $data->depositAmount === null
+                    ? '0'
+                    : $this->money->normalizeAmount($data->depositAmount, $currency);
+                $depositRefundAmount = $data->depositRefundAmount === null
+                    ? null
+                    : $this->money->normalizeAmount($data->depositRefundAmount, $currency);
+            } catch (\InvalidArgumentException) {
+                abort(422, __('The selected unit rate amount is invalid for its currency.'));
+            }
             $isCustomPrice = $data->rentAmount !== null
-                && $unitRate
-                && $this->money->compare($data->rentAmount, (string) $unitRate->amount) !== 0;
+                && $effectiveRate
+                && $this->money->compare($data->rentAmount, (string) $effectiveRate->amount) !== 0;
 
             $primaryTenantId = $tenantIds[0];
 
@@ -94,11 +98,11 @@ class CreateLease
                 'end_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
                 'currency' => $currency,
-                'billing_interval' => $data->billingInterval ?? $unitRate?->billing_interval ?? 1,
-                'billing_unit' => $data->billingUnit ?? $unitRate?->billing_unit ?? 'month',
+                'billing_interval' => $effectiveRate?->billing_interval ?? $data->billingInterval ?? 1,
+                'billing_unit' => $effectiveRate?->billing_unit ?? $data->billingUnit ?? 'month',
                 'billing_strategy' => $data->billingStrategy ?? 'advance',
                 'is_custom_price' => $isCustomPrice,
-                'unit_rate_id' => $data->unitRateId,
+                'unit_rate_id' => $effectiveRate?->id,
                 'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $data->depositPaidAt,
                 'deposit_refund_amount' => $depositRefundAmount,
@@ -118,6 +122,69 @@ class CreateLease
 
             return $lease;
         });
+    }
+
+    private function ensureExistingLeaseTermsMatch(Lease $lease, ?UnitRate $unitRate, CreateLeaseData $data): void
+    {
+        if ($data->unitRateId !== null) {
+            abort_if(
+                $lease->unit_rate_id !== $data->unitRateId,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+            abort_if(
+                $unitRate?->currency !== $lease->currency,
+                422,
+                __('The selected rate currency does not match the existing lease.'),
+            );
+        }
+
+        if ($data->rentAmount !== null) {
+            abort_if(
+                $lease->rent_amount === null
+                    || $this->money->compare($data->rentAmount, (string) $lease->rent_amount) !== 0,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->billingInterval !== null) {
+            abort_if(
+                $data->billingInterval !== $lease->billing_interval,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->billingUnit !== null) {
+            abort_if(
+                $data->billingUnit !== $lease->billing_unit?->value,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->billingStrategy !== null) {
+            abort_if(
+                $data->billingStrategy !== $lease->billing_strategy?->value,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        if ($data->rentDueDay !== null) {
+            abort_if(
+                $data->rentDueDay !== $lease->rent_due_day,
+                422,
+                __('The existing lease terms cannot be changed while adding a tenant.'),
+            );
+        }
+
+        abort_if(
+            $data->startDate !== $lease->start_date?->toDateString(),
+            422,
+            __('The existing lease terms cannot be changed while adding a tenant.'),
+        );
     }
 
     /**

@@ -46,8 +46,8 @@ class UnitRate extends Model
         });
 
         static::updating(function (UnitRate $rate): void {
-            if ($rate->isDirty('currency')) {
-                throw new LogicException('Unit rate currency cannot be changed after creation.');
+            if ($rate->isDirty(['unit_id', 'billing_interval', 'billing_unit', 'currency'])) {
+                throw new LogicException('Unit rate identity cannot be changed after creation.');
             }
         });
     }

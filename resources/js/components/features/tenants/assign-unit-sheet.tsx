@@ -74,7 +74,34 @@ export default function AssignUnitSheet({
 
     const selectedUnit =
         availableUnits.find((r) => r.id === data.unit_id) ?? null;
-    const rates = selectedUnit?.active_rates ?? [];
+    const activeLease = selectedUnit?.leases?.[0] ?? null;
+    const rates = useMemo(
+        () => selectedUnit?.active_rates ?? [],
+        [selectedUnit],
+    );
+    const [selectedCurrency, setSelectedCurrency] = useState<string | null>(
+        null,
+    );
+
+    const availableCurrencies = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    rates.map((rate) =>
+                        (rate.currency ?? setting.currency).toUpperCase(),
+                    ),
+                ),
+            ).sort(),
+        [rates, setting.currency],
+    );
+
+    const displayCurrency =
+        selectedCurrency ?? availableCurrencies[0] ?? setting.currency;
+    const visibleRates = rates.filter(
+        (rate) =>
+            (rate.currency ?? setting.currency).toUpperCase() ===
+            displayCurrency.toUpperCase(),
+    );
 
     // Reset the rate/rent fields to the newly selected unit's default rate.
     const unitInitialized = useRef(false);
@@ -85,21 +112,53 @@ export default function AssignUnitSheet({
             return;
         }
 
-        const defaultRate = selectedUnit?.active_rates?.[0] ?? null;
+        const preferredCurrency = setting.currency.toUpperCase();
+        const defaultRate =
+            selectedUnit?.active_rates?.find(
+                (rate) =>
+                    (rate.currency ?? setting.currency).toUpperCase() ===
+                    preferredCurrency,
+            ) ??
+            selectedUnit?.active_rates?.[0] ??
+            null;
 
         setData((prev) => ({
             ...prev,
-            unit_rate_id: defaultRate?.id ?? null,
-            rent_amount: defaultRate?.amount ?? '',
-            billing_interval: String(defaultRate?.billing_interval ?? 1),
-            billing_unit: defaultRate?.billing_unit ?? 'month',
+            start_date: activeLease?.start_date ?? prev.start_date,
+            unit_rate_id: activeLease ? null : (defaultRate?.id ?? null),
+            rent_amount: activeLease
+                ? (activeLease.rent_amount ?? '')
+                : (defaultRate?.amount ?? ''),
+            billing_interval: String(
+                activeLease?.billing_interval ??
+                    defaultRate?.billing_interval ??
+                    1,
+            ),
+            billing_unit:
+                activeLease?.billing_unit ??
+                defaultRate?.billing_unit ??
+                'month',
+            billing_strategy: activeLease
+                ? (activeLease.billing_strategy ?? '')
+                : 'advance',
+            rent_due_day: activeLease
+                ? String(activeLease.rent_due_day ?? '')
+                : prev.rent_due_day,
         }));
+        setSelectedCurrency(
+            activeLease
+                ? activeLease.currency.toUpperCase()
+                : defaultRate
+                  ? (defaultRate.currency ?? setting.currency).toUpperCase()
+                  : null,
+        );
         setOverridePrice(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.unit_id]);
 
     const selectedRate = rates.find((r) => r.id === data.unit_rate_id) ?? null;
-    const currency = selectedRate?.currency ?? setting.currency;
+    const currency =
+        activeLease?.currency ?? selectedRate?.currency ?? displayCurrency;
     const monthlyCurrency = String(currency);
     const hasRates = rates.length > 0;
 
@@ -160,6 +219,7 @@ export default function AssignUnitSheet({
     }
 
     function handleRateSelect(rate: UnitRate) {
+        setSelectedCurrency((rate.currency ?? setting.currency).toUpperCase());
         setData((prev) => ({
             ...prev,
             unit_rate_id: rate.id ?? null,
@@ -320,19 +380,95 @@ export default function AssignUnitSheet({
                                     type="date"
                                     value={data.start_date}
                                     onChange={handleStartDateChange}
+                                    disabled={Boolean(activeLease)}
                                     required
                                 />
                                 <InputError message={errors.start_date} />
                             </div>
 
                             {data.unit_id &&
-                                (rates.length > 0 ? (
+                                (activeLease ? (
+                                    <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm">
+                                        <p className="font-medium">
+                                            Existing lease terms
+                                        </p>
+                                        <p className="mt-1 text-muted-foreground">
+                                            {activeLease.rent_amount
+                                                ? formatPrice(
+                                                      activeLease.rent_amount,
+                                                      activeLease.currency,
+                                                  )
+                                                : 'Custom amount'}{' '}
+                                            {activeLease.billing_label}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Adding a tenant keeps this lease's
+                                            currency and billing terms.
+                                        </p>
+                                    </div>
+                                ) : rates.length > 0 ? (
                                     <div className="mt-4 grid gap-2">
-                                        <Label>Unit Rate Options</Label>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <Label>Unit Rate Options</Label>
+                                            {availableCurrencies.length > 1 ? (
+                                                <Select
+                                                    value={displayCurrency}
+                                                    onValueChange={(value) => {
+                                                        const nextRate =
+                                                            rates.find(
+                                                                (rate) =>
+                                                                    (
+                                                                        rate.currency ??
+                                                                        setting.currency
+                                                                    ).toUpperCase() ===
+                                                                    value,
+                                                            );
+
+                                                        setSelectedCurrency(
+                                                            value,
+                                                        );
+
+                                                        if (nextRate) {
+                                                            handleRateSelect(
+                                                                nextRate,
+                                                            );
+                                                        }
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-24">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {availableCurrencies.map(
+                                                            (
+                                                                availableCurrency,
+                                                            ) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        availableCurrency
+                                                                    }
+                                                                    value={
+                                                                        availableCurrency
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        availableCurrency
+                                                                    }
+                                                                </SelectItem>
+                                                            ),
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            ) : (
+                                                <span className="text-sm font-medium text-muted-foreground">
+                                                    {displayCurrency}
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="space-y-1">
-                                            {rates.map((rate) => (
+                                            {visibleRates.map((rate) => (
                                                 <label
-                                                    key={`${rate.billing_interval}-${rate.billing_unit}`}
+                                                    key={rate.id}
                                                     className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors ${
                                                         data.unit_rate_id ===
                                                         rate.id
@@ -383,34 +519,36 @@ export default function AssignUnitSheet({
                                     </p>
                                 ))}
 
-                            <div className="mt-4 grid gap-2">
-                                <Label htmlFor="rent_due_day">
-                                    Rent Due Every Month
-                                </Label>
-                                <Select
-                                    value={data.rent_due_day}
-                                    onValueChange={(v) =>
-                                        setData('rent_due_day', v)
-                                    }
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select due day" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {DUE_DAY_OPTIONS.map((opt) => (
-                                            <SelectItem
-                                                key={opt.value}
-                                                value={opt.value}
-                                            >
-                                                {opt.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.rent_due_day} />
-                            </div>
+                            {!activeLease && (
+                                <div className="mt-4 grid gap-2">
+                                    <Label htmlFor="rent_due_day">
+                                        Rent Due Every Month
+                                    </Label>
+                                    <Select
+                                        value={data.rent_due_day}
+                                        onValueChange={(v) =>
+                                            setData('rent_due_day', v)
+                                        }
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select due day" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {DUE_DAY_OPTIONS.map((opt) => (
+                                                <SelectItem
+                                                    key={opt.value}
+                                                    value={opt.value}
+                                                >
+                                                    {opt.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError message={errors.rent_due_day} />
+                                </div>
+                            )}
 
-                            {hasRates && (
+                            {hasRates && !activeLease && (
                                 <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm">
                                     <input
                                         type="checkbox"
@@ -427,6 +565,7 @@ export default function AssignUnitSheet({
                             )}
 
                             {data.unit_id != null &&
+                                !activeLease &&
                                 (overridePrice || !hasRates) && (
                                     <div className="mt-4 grid gap-2">
                                         <Label htmlFor="rent_amount">
@@ -455,106 +594,116 @@ export default function AssignUnitSheet({
                                         />
                                     </div>
                                 )}
-                            <div className="mt-4 grid gap-2">
-                                <Label htmlFor="billing_strategy">
-                                    Billing Strategy
-                                </Label>
-                                <Select
-                                    value={data.billing_strategy}
-                                    onValueChange={(v) =>
-                                        setData('billing_strategy', v)
-                                    }
-                                >
-                                    <SelectTrigger id="billing_strategy">
-                                        <SelectValue placeholder="Select billing strategy" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {BILLING_STRATEGIES.map((s) => (
-                                            <SelectItem
-                                                key={s.value}
-                                                value={s.value}
-                                            >
-                                                {s.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.billing_strategy} />
-                            </div>
-                        </section>
-
-                        <section>
-                            <Collapsible
-                                open={hasDeposit}
-                                onOpenChange={setHasDeposit}
-                                className="space-y-3"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                        Section 3 — Deposit
-                                    </h3>
-                                    <CollapsibleTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            type="button"
-                                            className="flex items-center gap-2 text-xs text-muted-foreground"
-                                        >
-                                            {hasDeposit
-                                                ? 'Has deposit'
-                                                : 'No deposit'}
-                                            <ChevronDown
-                                                className={`size-3 transition-transform ${hasDeposit ? 'rotate-180' : ''}`}
-                                            />
-                                        </Button>
-                                    </CollapsibleTrigger>
+                            {!activeLease && (
+                                <div className="mt-4 grid gap-2">
+                                    <Label htmlFor="billing_strategy">
+                                        Billing Strategy
+                                    </Label>
+                                    <Select
+                                        value={data.billing_strategy}
+                                        onValueChange={(v) =>
+                                            setData('billing_strategy', v)
+                                        }
+                                    >
+                                        <SelectTrigger id="billing_strategy">
+                                            <SelectValue placeholder="Select billing strategy" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {BILLING_STRATEGIES.map((s) => (
+                                                <SelectItem
+                                                    key={s.value}
+                                                    value={s.value}
+                                                >
+                                                    {s.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <InputError
+                                        message={errors.billing_strategy}
+                                    />
                                 </div>
-
-                                <CollapsibleContent className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="deposit_amount">
-                                                Deposit Amount ({currency})
-                                            </Label>
-                                            <Input
-                                                id="deposit_amount"
-                                                type="number"
-                                                min={0}
-                                                value={data.deposit_amount}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'deposit_amount',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.deposit_amount}
-                                            />
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="deposit_paid_at">
-                                                Paid Date
-                                            </Label>
-                                            <Input
-                                                id="deposit_paid_at"
-                                                type="date"
-                                                value={data.deposit_paid_at}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'deposit_paid_at',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                            />
-                                            <InputError
-                                                message={errors.deposit_paid_at}
-                                            />
-                                        </div>
-                                    </div>
-                                </CollapsibleContent>
-                            </Collapsible>
+                            )}
                         </section>
+
+                        {!activeLease && (
+                            <section>
+                                <Collapsible
+                                    open={hasDeposit}
+                                    onOpenChange={setHasDeposit}
+                                    className="space-y-3"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                            Section 3 — Deposit
+                                        </h3>
+                                        <CollapsibleTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                type="button"
+                                                className="flex items-center gap-2 text-xs text-muted-foreground"
+                                            >
+                                                {hasDeposit
+                                                    ? 'Has deposit'
+                                                    : 'No deposit'}
+                                                <ChevronDown
+                                                    className={`size-3 transition-transform ${hasDeposit ? 'rotate-180' : ''}`}
+                                                />
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                    </div>
+
+                                    <CollapsibleContent className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="deposit_amount">
+                                                    Deposit Amount ({currency})
+                                                </Label>
+                                                <Input
+                                                    id="deposit_amount"
+                                                    type="number"
+                                                    min={0}
+                                                    value={data.deposit_amount}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'deposit_amount',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={
+                                                        errors.deposit_amount
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label htmlFor="deposit_paid_at">
+                                                    Paid Date
+                                                </Label>
+                                                <Input
+                                                    id="deposit_paid_at"
+                                                    type="date"
+                                                    value={data.deposit_paid_at}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'deposit_paid_at',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                <InputError
+                                                    message={
+                                                        errors.deposit_paid_at
+                                                    }
+                                                />
+                                            </div>
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                            </section>
+                        )}
 
                         <div className="grid gap-2">
                             <Label htmlFor="notes">Notes</Label>

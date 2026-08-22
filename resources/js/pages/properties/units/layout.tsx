@@ -34,6 +34,11 @@ export function UnitLayout({
                 tabs={[
                     { key: 'overview', label: 'Overview', href: base },
                     {
+                        key: 'rates',
+                        label: 'Rates',
+                        href: `${base}/rates`,
+                    },
+                    {
                         key: 'maintenance',
                         label: 'Maintenance',
                         href: `${base}/maintenance-history`,

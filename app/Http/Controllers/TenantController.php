@@ -169,7 +169,11 @@ class TenantController extends Controller
         $result = $table->paginate($query, $request, 'tenants');
 
         $availableUnits = Unit::query()
-            ->with(['property.city', 'activeRates'])
+            ->with([
+                'property.city',
+                'activeRates',
+                'leases' => fn ($q) => $q->where('status', 'active'),
+            ])
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()

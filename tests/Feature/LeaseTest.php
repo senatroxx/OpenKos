@@ -8,6 +8,7 @@ use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
@@ -164,6 +165,113 @@ describe('CRUD', function () {
             ->and($lease->rent_amount)->toBe($rate->amount);
     });
 
+    it('snapshots the selected currency-specific rate', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $usdRate->id,
+            ])
+            ->assertRedirect();
+
+        expect(Lease::firstOrFail()->currency)->toBe('USD')
+            ->and(Lease::firstOrFail()->rent_amount)->toBe('95.000');
+    });
+
+    it('uses the selected rate schedule over submitted billing fields', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $usdRate->id,
+                'billing_interval' => 1,
+                'billing_unit' => 'year',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect(Lease::firstOrFail()->billing_interval)->toBe(1)
+            ->and(Lease::firstOrFail()->billing_unit->value)->toBe('month');
+    });
+
+    it('uses the complete default rate when no rate is selected', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $unit->rates()->delete();
+        $defaultRate = $unit->rates()->create([
+            'billing_interval' => 3,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+                'billing_interval' => 1,
+                'billing_unit' => 'year',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $lease = Lease::firstOrFail();
+
+        expect($lease->unit_rate_id)->toBe($defaultRate->id)
+            ->and($lease->rent_amount)->toBe('95.000')
+            ->and($lease->currency)->toBe('USD')
+            ->and($lease->billing_interval)->toBe(3)
+            ->and($lease->billing_unit->value)->toBe('month');
+    });
+
+    it('inherits the configured currency from the default rate', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        Setting::set('currency', 'USD');
+        $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenant->id],
+                'start_date' => '2026-06-01',
+            ])
+            ->assertRedirect();
+
+        expect(Lease::firstOrFail()->currency)->toBe('USD')
+            ->and(Lease::firstOrFail()->rent_amount)->toBe('95.000');
+    });
+
     it('rejects a rate from another unit when creating a lease', function () {
         [$property, $unit] = createPropertyWithUnit();
         $otherUnit = Unit::factory()->withRate(1_250_000)->create([
@@ -258,6 +366,80 @@ describe('CRUD', function () {
                 'start_date' => '2026-06-01',
             ])
             ->assertStatus(422);
+    });
+
+    it('does not allow pricing changes when adding to an existing lease', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        $unit->update(['capacity' => 2]);
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $existingLease = Lease::factory()->create([
+            'primary_tenant_id' => $tenantA->id,
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $unit->rates()->firstOrFail()->id,
+            'rent_amount' => '1000000',
+            'currency' => 'IDR',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenantB->id],
+                'start_date' => '2026-06-01',
+                'unit_rate_id' => $usdRate->id,
+            ])
+            ->assertStatus(422);
+
+        expect($existingLease->fresh()->tenants)->toHaveCount(1);
+    });
+
+    it('validates existing lease amounts using the existing currency', function () {
+        [$property, $unit] = createPropertyWithUnit();
+        Setting::set('currency', 'IDR');
+        $unit->update(['capacity' => 2]);
+        $usdRate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        $user = User::factory()->owner()->create();
+        $tenantA = Tenant::factory()->create();
+        $tenantB = Tenant::factory()->create();
+        $existingLease = Lease::factory()->create([
+            'primary_tenant_id' => $tenantA->id,
+            'unit_id' => $unit->id,
+            'unit_rate_id' => $usdRate->id,
+            'rent_amount' => '95.00',
+            'currency' => 'USD',
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'billing_strategy' => 'advance',
+            'start_date' => '2026-06-01',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.store', [$property, $unit]), [
+                'tenant_ids' => [$tenantB->id],
+                'start_date' => $existingLease->start_date->toDateString(),
+                'rent_amount' => '95.00',
+                'billing_interval' => 1,
+                'billing_unit' => 'month',
+                'billing_strategy' => $existingLease->billing_strategy->value,
+                'rent_due_day' => $existingLease->rent_due_day,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($existingLease->fresh()->tenants)->toHaveCount(2);
     });
 
     it('prevents assigning a tenant to a second active lease', function () {

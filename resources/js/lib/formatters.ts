@@ -157,6 +157,14 @@ export function formatPrice(
         .join('');
 }
 
+export function formatBillingPeriod(interval: number, unit: string): string {
+    const normalizedUnit = unit.toLowerCase();
+
+    return interval === 1
+        ? `/${normalizedUnit}`
+        : `every ${interval} ${normalizedUnit}s`;
+}
+
 export function formatSize(bytes: number): string {
     if (bytes < 1024) {
         return bytes + ' B';

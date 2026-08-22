@@ -119,3 +119,92 @@ it('rejects moving a lease onto a rate with a different currency', function () {
     expect($lease->fresh()->status)->toBe(LeaseStatus::Active)
         ->and(Lease::query()->where('unit_id', $targetUnit->id)->exists())->toBeFalse();
 });
+
+it('rejects merging a lease into an occupied unit with a different currency', function () {
+    Setting::set('currency', 'IDR');
+    $sourceUnit = Unit::factory()->create();
+    $targetUnit = Unit::factory()->create(['capacity' => 2]);
+    $sourceTenant = Tenant::factory()->create();
+    $targetTenant = Tenant::factory()->create();
+    $sourceLease = Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'primary_tenant_id' => $sourceTenant->id,
+        'currency' => 'USD',
+        'status' => LeaseStatus::Active,
+    ]);
+    Lease::factory()->create([
+        'unit_id' => $targetUnit->id,
+        'primary_tenant_id' => $targetTenant->id,
+        'currency' => 'IDR',
+        'status' => LeaseStatus::Active,
+    ]);
+
+    expect(fn () => app(MoveOutLease::class)->execute($sourceLease, new MoveOutLeaseData(
+        terminationDate: '2026-08-21',
+        endDate: '2026-08-21',
+        reason: 'Currency mismatch merge test',
+        moveToAnotherUnit: true,
+        targetUnitId: $targetUnit->id,
+    )))->toThrow(HttpException::class);
+
+    expect($sourceLease->fresh()->status)->toBe(LeaseStatus::Active)
+        ->and($targetUnit->leases()->firstOrFail()->tenants)->toHaveCount(1);
+});
+
+it('does not use inactive rates when moving a lease', function () {
+    Setting::set('currency', 'IDR');
+    $sourceUnit = Unit::factory()->create();
+    $targetUnit = Unit::factory()->create();
+    $targetUnit->rates()->create([
+        'billing_interval' => 1,
+        'billing_unit' => 'month',
+        'amount' => '95.00',
+        'currency' => 'USD',
+        'is_active' => false,
+    ]);
+    $tenant = Tenant::factory()->create();
+    $sourceLease = Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'primary_tenant_id' => $tenant->id,
+        'currency' => 'USD',
+        'status' => LeaseStatus::Active,
+    ]);
+
+    expect(fn () => app(MoveOutLease::class)->execute($sourceLease, new MoveOutLeaseData(
+        terminationDate: '2026-08-21',
+        endDate: '2026-08-21',
+        reason: 'Inactive rate test',
+        moveToAnotherUnit: true,
+        targetUnitId: $targetUnit->id,
+    )))->toThrow(HttpException::class);
+
+    expect($sourceLease->fresh()->status)->toBe(LeaseStatus::Active)
+        ->and(Lease::query()->where('unit_id', $targetUnit->id)->exists())->toBeFalse();
+});
+
+it('rejects invalid legacy amounts when moving a lease', function () {
+    Setting::set('currency', 'IDR');
+    $sourceUnit = Unit::factory()->create();
+    $targetUnit = Unit::factory()->create();
+    $tenant = Tenant::factory()->create();
+    $sourceLease = Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'primary_tenant_id' => $tenant->id,
+        'rent_amount' => '1000000',
+        'deposit_amount' => '1.50',
+        'start_date' => '2026-08-01',
+        'status' => LeaseStatus::Active,
+    ]);
+    DB::table('leases')->whereKey($sourceLease->id)->update(['currency' => null]);
+
+    expect(fn () => app(MoveOutLease::class)->execute($sourceLease, new MoveOutLeaseData(
+        terminationDate: '2026-08-21',
+        endDate: '2026-08-21',
+        reason: 'Invalid legacy amount test',
+        moveToAnotherUnit: true,
+        targetUnitId: $targetUnit->id,
+    )))->toThrow(HttpException::class);
+
+    expect($sourceLease->fresh()->status)->toBe(LeaseStatus::Active)
+        ->and(Lease::query()->where('unit_id', $targetUnit->id)->exists())->toBeFalse();
+});

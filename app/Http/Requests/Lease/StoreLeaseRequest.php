@@ -4,6 +4,7 @@ namespace App\Http\Requests\Lease;
 
 use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
+use App\Models\Unit;
 use App\Models\UnitRate;
 use App\Rules\MoneyAmount;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -17,17 +18,19 @@ class StoreLeaseRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var Unit $unit */
+        $unit = $this->route('unit');
         $rate = $this->integer('unit_rate_id') > 0
             ? UnitRate::query()
                 ->whereKey($this->integer('unit_rate_id'))
-                ->where('unit_id', $this->route('unit')->id)
+                ->where('unit_id', $unit->id)
+                ->where('is_active', true)
                 ->first()
-            : UnitRate::query()
-                ->where('unit_id', $this->route('unit')->id)
-                ->where('billing_unit', 'month')
-                ->where('billing_interval', 1)
-                ->first();
-        $currency = $rate?->currency;
+            : $unit->defaultActiveRate();
+        $existingLease = $unit->leases()->where('status', 'active')->first();
+        $currency = $this->integer('unit_rate_id') > 0
+            ? $rate?->currency
+            : ($existingLease?->currency ?? $rate?->currency);
 
         return [
             'tenant_ids' => ['required', 'array', 'min:1'],
@@ -41,7 +44,9 @@ class StoreLeaseRequest extends FormRequest
             'unit_rate_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('unit_rates', 'id')->where('unit_id', $this->route('unit')->id),
+                Rule::exists('unit_rates', 'id')
+                    ->where('unit_id', $unit->id)
+                    ->where('is_active', true),
             ],
             'deposit_amount' => ['nullable', new MoneyAmount($currency)],
             'deposit_paid_at' => ['nullable', 'date'],
