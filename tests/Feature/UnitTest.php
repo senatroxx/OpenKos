@@ -294,6 +294,56 @@ describe('CRUD', function () {
             ->assertSessionHasNoErrors();
 
         expect($rate->fresh()->is_active)->toBeTrue();
+
+        $this->actingAs($user)
+            ->get(route('properties.units.rates', [$property, $unit]))
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/units/rates')
+                ->where('unit.rates', function ($rates) use ($rate): bool {
+                    $updatedRate = collect($rates)->firstWhere('id', $rate->id);
+
+                    return $updatedRate !== null
+                        && $updatedRate['is_active'] === true;
+                })
+            );
+    });
+
+    it('deactivates a persisted active rate and refreshes the workspace state', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $rate = $unit->activeRates()->firstOrFail();
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'updated_at' => $unit->updated_at->toISOString(),
+                'rates' => [[
+                    'id' => $rate->id,
+                    'billing_interval' => $rate->billing_interval,
+                    'billing_unit' => $rate->billing_unit->value,
+                    'amount' => $rate->amount,
+                    'currency' => $rate->currency,
+                    'is_active' => false,
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($rate->fresh()->is_active)->toBeFalse();
+
+        $this->actingAs($user)
+            ->get(route('properties.units.rates', [$property, $unit]))
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/units/rates')
+                ->where('unit.rates', function ($rates) use ($rate): bool {
+                    $updatedRate = collect($rates)->firstWhere('id', $rate->id);
+
+                    return $updatedRate !== null
+                        && $updatedRate['is_active'] === false;
+                })
+            );
     });
 
     it('deletes a unit via soft delete', function () {
