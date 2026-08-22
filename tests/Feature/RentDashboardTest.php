@@ -192,6 +192,87 @@ test('outstanding amounts include currencies represented by collected payments',
     Carbon::setTestNow();
 });
 
+test('collection queue preserves financial activity from terminated leases', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+    $lease = Lease::factory()->terminated()->create([
+        'currency' => 'USD',
+        'end_date' => '2026-07-10',
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'reference' => 'INV-TERMINATED-PENDING',
+        'currency' => 'USD',
+        'period_start' => '2026-07-01',
+        'due_date' => '2026-07-05',
+        'total' => 400,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+    $paidInvoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'reference' => 'INV-TERMINATED-PAID',
+        'currency' => 'USD',
+        'period_start' => '2026-07-02',
+        'due_date' => '2026-07-05',
+        'total' => 600,
+        'amount_paid' => 600,
+        'status' => InvoiceStatus::Paid,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'USD',
+        'period_start' => '2026-07-03',
+        'total' => 700,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Cancelled,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'USD',
+        'period_start' => '2026-07-04',
+        'total' => 800,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Void,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $paidInvoice->id,
+        'amount' => 600,
+        'currency' => 'USD',
+        'payment_date' => '2026-07-08',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard.rent'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('tab_counts.all', 1)
+            ->where('tab_counts.paid', 1)
+            ->where('outstanding.count', 1)
+            ->where('outstanding.amounts', [[
+                'currency' => 'USD',
+                'amount' => '400.000',
+            ]])
+            ->where('progress.processed', 1)
+            ->where('progress.total', 2)
+            ->where('progress.amount_collected', [[
+                'currency' => 'USD',
+                'amount' => '600',
+            ]])
+        );
+
+    $this->actingAs($user)
+        ->get(route('dashboard.rent', ['urgency' => 'paid']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('entries.data.0.reference', 'INV-TERMINATED-PAID')
+        );
+
+    Carbon::setTestNow();
+});
+
 test('collection queue tab counts are correct', function () {
     Carbon::setTestNow(Carbon::parse('2026-07-10'));
 

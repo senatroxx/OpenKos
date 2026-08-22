@@ -66,12 +66,14 @@ class OverviewController extends Controller
             ))
             ->pluck('id');
 
-        $activeLeases = Lease::where('status', LeaseStatus::Active->value)
+        $accessibleLeases = Lease::query()
             ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
 
-        $invoiceScope = Invoice::whereHas('lease', fn (Builder $q) => $q
-            ->where('status', LeaseStatus::Active->value)
-            ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties)));
+        $activeLeases = (clone $accessibleLeases)
+            ->where('status', LeaseStatus::Active->value);
+
+        $invoiceScope = Invoice::query()
+            ->whereIn('lease_id', (clone $accessibleLeases)->select('id'));
 
         $overdueInvoices = (clone $invoiceScope)
             ->payable()
@@ -178,7 +180,7 @@ class OverviewController extends Controller
 
         $propertyTypes = PropertyType::active()->ordered()->get(['slug', 'label']);
 
-        $financeResult = $finance->computeFinance($activeLeases);
+        $financeResult = $finance->computeFinance($accessibleLeases);
 
         return Inertia::render('dashboard/overview', [
             'attention' => $attention,

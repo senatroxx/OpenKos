@@ -47,7 +47,6 @@ class RentController extends Controller
         ];
 
         $invoiceScope = Invoice::query()
-            ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
             ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
 
         $invoiceTable = DB::getQueryGrammar()->wrap((new Invoice)->getTable());
@@ -131,7 +130,6 @@ class RentController extends Controller
         $paymentStats = Payment::query()
             ->where('status', PaymentStatus::Confirmed->value)
             ->whereHas('invoice', fn (Builder $q) => $q
-                ->whereHas('lease', fn (Builder $q) => $q->where('status', 'active'))
                 ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
             ->selectRaw(
                 'COALESCE(currency, ?) as currency, COALESCE(SUM(amount), 0) as amount, MAX(payment_date) as last_payment_at',
