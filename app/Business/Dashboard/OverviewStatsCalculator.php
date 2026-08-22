@@ -3,6 +3,7 @@
 namespace App\Business\Dashboard;
 
 use App\Enums\InvoiceStatus;
+use App\Enums\LeaseStatus;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Brick\Math\BigDecimal;
@@ -13,8 +14,11 @@ use Illuminate\Support\Collection;
 
 class OverviewStatsCalculator
 {
-    public function computeFinance(Builder $activeLeasesQuery): array
+    public function computeFinance(Builder $accessibleLeasesQuery): array
     {
+        $activeLeasesQuery = (clone $accessibleLeasesQuery)
+            ->where('status', LeaseStatus::Active->value);
+
         $monthlyPotential = $this->aggregate(
             (clone $activeLeasesQuery)->get(['rent_amount', 'currency']),
             fn ($row): string => (string) $row->rent_amount,
@@ -24,18 +28,18 @@ class OverviewStatsCalculator
         $currentMonth = (int) $now->month;
         $currentYear = (int) $now->year;
 
-        $leaseIds = (clone $activeLeasesQuery)->pluck('id');
+        $authorizedLeaseIds = (clone $accessibleLeasesQuery)->select('leases.id');
 
-        $periodStart = Carbon::create($currentYear, $currentMonth, 1)->startOfDay();
-        $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->endOfDay();
+        $periodStart = Carbon::create($currentYear, $currentMonth, 1)->toDateString();
+        $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->toDateString();
 
         $revenueThisMonth = Payment::where('status', 'confirmed')
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereBetween('period_start', [$periodStart, $periodEnd])
-                ->whereIn('lease_id', $leaseIds))
+                ->whereIn('lease_id', clone $authorizedLeaseIds))
             ->get(['amount', 'currency']);
 
-        $outstanding = Invoice::whereIn('lease_id', $leaseIds)
+        $outstanding = Invoice::whereIn('lease_id', clone $authorizedLeaseIds)
             ->whereBetween('period_start', [$periodStart, $periodEnd])
             ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
             ->get(['total', 'amount_paid', 'currency']);

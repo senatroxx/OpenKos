@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Leases\MoveOutLease;
+use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentStatus;
@@ -289,6 +291,211 @@ test('dashboard keeps every finance metric aligned to the same currencies', func
                 ['currency' => 'IDR', 'rate' => 100],
                 ['currency' => 'USD', 'rate' => 0],
             ])
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard preserves historical financial activity after lease termination', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+    $activeLease = Lease::factory()->create([
+        'currency' => 'IDR',
+        'rent_amount' => '1000000',
+        'start_date' => now()->subMonths(2),
+        'status' => LeaseStatus::Active,
+    ]);
+    $terminatedLease = Lease::factory()->create([
+        'currency' => 'USD',
+        'rent_amount' => '500',
+        'start_date' => now()->subMonths(2),
+        'status' => LeaseStatus::Active,
+    ]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $terminatedLease->id,
+        'currency' => 'USD',
+        'period_start' => '2026-07-01',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'total' => 500,
+        'amount_paid' => 500,
+        'status' => InvoiceStatus::Paid,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $invoice->id,
+        'amount' => 500,
+        'currency' => 'USD',
+        'payment_date' => '2026-07-05',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    app(MoveOutLease::class)->execute($terminatedLease, new MoveOutLeaseData(
+        terminationDate: '2026-07-10',
+        endDate: '2026-07-10',
+        reason: 'Historical dashboard test',
+    ));
+
+    expect($activeLease->fresh()->status)->toBe(LeaseStatus::Active)
+        ->and($terminatedLease->fresh()->status)->toBe(LeaseStatus::Terminated);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('finance.revenue_this_month', [
+                ['currency' => 'IDR', 'amount' => '0'],
+                ['currency' => 'USD', 'amount' => '500.000'],
+            ])
+            ->where('finance.monthly_potential', [
+                ['currency' => 'IDR', 'amount' => '1000000.000'],
+                ['currency' => 'USD', 'amount' => '0'],
+            ])
+            ->where('finance.outstanding', [
+                ['currency' => 'IDR', 'amount' => '0'],
+                ['currency' => 'USD', 'amount' => '0'],
+            ])
+            ->where('finance.collection_rate', [
+                ['currency' => 'IDR', 'rate' => 0],
+                ['currency' => 'USD', 'rate' => 0],
+            ])
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard includes collectible invoices from terminated leases only', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->owner()->create();
+    $lease = Lease::factory()->create([
+        'currency' => 'IDR',
+        'status' => LeaseStatus::Active,
+        'start_date' => now()->subMonths(2),
+    ]);
+
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'IDR',
+        'period_start' => '2026-07-02',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'total' => 800,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Pending,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'IDR',
+        'period_start' => '2026-07-03',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-10',
+        'total' => 500,
+        'amount_paid' => 100,
+        'status' => InvoiceStatus::Partial,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'IDR',
+        'period_start' => '2026-07-04',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'total' => 900,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Cancelled,
+    ]);
+    Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'IDR',
+        'period_start' => '2026-07-01',
+        'period_end' => '2026-07-31',
+        'due_date' => '2026-07-05',
+        'total' => 1000,
+        'amount_paid' => 0,
+        'status' => InvoiceStatus::Void,
+    ]);
+
+    app(MoveOutLease::class)->execute($lease, new MoveOutLeaseData(
+        terminationDate: '2026-07-10',
+        endDate: '2026-07-10',
+        reason: 'Collectible invoice test',
+    ));
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('finance.outstanding', [[
+                'currency' => 'IDR',
+                'amount' => '1200.000',
+            ]])
+            ->where('attention.overdue_invoices.count', 1)
+            ->where('attention.overdue_invoices.amounts', [[
+                'currency' => 'IDR',
+                'amount' => '800.000',
+            ]])
+            ->where('attention.due_today', 1)
+        );
+
+    Carbon::setTestNow();
+});
+
+test('dashboard financial metrics remain scoped to accessible properties', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    $user = User::factory()->admin()->create();
+    $accessibleProperty = Property::factory()->create();
+    $user->properties()->sync([$accessibleProperty->id]);
+
+    $accessibleLease = Lease::factory()->create([
+        'unit_id' => Unit::factory()->for($accessibleProperty)->create()->id,
+        'currency' => 'USD',
+        'status' => LeaseStatus::Terminated,
+    ]);
+    $accessibleInvoice = Invoice::factory()->create([
+        'lease_id' => $accessibleLease->id,
+        'currency' => 'USD',
+        'period_start' => '2026-07-02',
+        'period_end' => '2026-07-31',
+        'status' => InvoiceStatus::Paid,
+        'total' => 100,
+        'amount_paid' => 100,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $accessibleInvoice->id,
+        'amount' => 100,
+        'currency' => 'USD',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    $hiddenLease = Lease::factory()->create([
+        'currency' => 'USD',
+        'status' => LeaseStatus::Terminated,
+    ]);
+    $hiddenInvoice = Invoice::factory()->create([
+        'lease_id' => $hiddenLease->id,
+        'currency' => 'USD',
+        'period_start' => '2026-07-02',
+        'period_end' => '2026-07-31',
+        'status' => InvoiceStatus::Paid,
+        'total' => 900,
+        'amount_paid' => 900,
+    ]);
+    Payment::factory()->create([
+        'invoice_id' => $hiddenInvoice->id,
+        'amount' => 900,
+        'currency' => 'USD',
+        'status' => PaymentStatus::Confirmed,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('finance.revenue_this_month', [[
+                'currency' => 'USD',
+                'amount' => '100.000',
+            ]])
         );
 
     Carbon::setTestNow();
