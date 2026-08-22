@@ -3,7 +3,6 @@
 use App\Services\Platform\ComposerPluginDiscovery;
 use Composer\InstalledVersions;
 use OpenKOS\Core\Contracts\PluginDiscovery;
-use OpenKOS\Platform\PlatformServiceProvider;
 use Tests\Support\Fixtures\ComposerDiscoveryFixturePlugin;
 use Tests\Support\Fixtures\ComposerDiscoverySecondFixturePlugin;
 
@@ -13,6 +12,10 @@ use Tests\Support\Fixtures\ComposerDiscoverySecondFixturePlugin;
 function withComposerDiscoveryFixtures(array $packages, Closure $callback): mixed
 {
     $original = require base_path('vendor/composer/installed.php');
+    $installedPackages = array_diff(
+        InstalledVersions::getInstalledPackages(),
+        array_keys($packages),
+    );
     $originalDisabledPackages = config('platform.discovery.disabled_packages', []);
     $versions = [];
     $directories = [];
@@ -37,6 +40,11 @@ function withComposerDiscoveryFixtures(array $packages, Closure $callback): mixe
                 'dev_requirement' => false,
             ];
         }
+
+        config(['platform.discovery.disabled_packages' => array_values(array_unique([
+            ...$originalDisabledPackages,
+            ...$installedPackages,
+        ]))]);
 
         InstalledVersions::reload([
             'root' => [
@@ -73,7 +81,7 @@ it('discovers a plugin declared by Composer metadata', function () {
         ],
     ], fn (): array => app(ComposerPluginDiscovery::class)->discover());
 
-    expect($plugins)->toContain(ComposerDiscoveryFixturePlugin::class);
+    expect($plugins)->toBe([ComposerDiscoveryFixturePlugin::class]);
 });
 
 it('ignores packages without OpenKOS plugin metadata', function () {
@@ -131,7 +139,7 @@ it('boots a Composer-discovered plugin through the normal lifecycle', function (
         ],
     ], function (): null {
         config(['platform.plugins' => []]);
-        (new PlatformServiceProvider(app()))->boot();
+        $this->bootPlatformWithIsolatedRegistries();
 
         return null;
     });
@@ -151,7 +159,7 @@ it('does not run any plugin lifecycle when discovery finds an invalid class', fu
 
     config(['platform.plugins' => []]);
 
-    expect(fn () => (new PlatformServiceProvider(app()))->boot())
+    expect(fn () => $this->bootPlatformWithIsolatedRegistries())
         ->toThrow(InvalidArgumentException::class, 'Plugin class [Acme\\MissingPlugin] does not exist.');
 
     expect(ComposerDiscoveryFixturePlugin::$registerCalls)->toBe(0);

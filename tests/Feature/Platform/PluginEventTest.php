@@ -10,13 +10,12 @@ use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Support\Facades\Event;
 use OpenKOS\Core\Events\PaymentRecorded;
-use OpenKOS\Platform\PlatformServiceProvider;
 use Tests\Support\Fixtures\EventProbePlugin;
 
 it('wires a plugins event listeners at boot', function () {
     EventProbePlugin::$fired = false;
     config(['platform.plugins' => [EventProbePlugin::class]]);
-    (new PlatformServiceProvider(app()))->boot();
+    $this->bootPlatformWithIsolatedRegistries();
 
     event(new PaymentRecorded(paymentId: 1));
 
