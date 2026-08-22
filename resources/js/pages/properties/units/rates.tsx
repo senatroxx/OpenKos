@@ -132,11 +132,7 @@ export default function UnitRates({
         });
     }
 
-    function submitRates(
-        rates: UnitRate[],
-        keepDialogOpen = false,
-        onSuccess?: () => void,
-    ) {
+    function submitRates(rates: UnitRate[], onSuccess?: () => void) {
         transform((formData) => ({ ...formData, rates }));
         submit(
             properties.units.update({
@@ -144,19 +140,16 @@ export default function UnitRates({
                 unit: unit.slug,
             }),
             {
-                preserveState: keepDialogOpen,
+                preserveState: true,
                 onSuccess: (page) => {
                     transform((formData) => formData);
 
-                    if (keepDialogOpen) {
-                        const updatedUnit = page.props.unit as Unit | undefined;
+                    const updatedUnit = page.props.unit as Unit | undefined;
 
-                        setData({
-                            rates: updatedUnit?.rates ?? rates,
-                            updated_at:
-                                updatedUnit?.updated_at ?? data.updated_at,
-                        });
-                    }
+                    setData({
+                        rates: updatedUnit?.rates ?? rates,
+                        updated_at: updatedUnit?.updated_at ?? data.updated_at,
+                    });
 
                     onSuccess?.();
                 },
@@ -188,7 +181,7 @@ export default function UnitRates({
             item.id === rate.id ? { ...item, amount: editingAmount } : item,
         );
 
-        submitRates(rates, false, cancelEdit);
+        submitRates(rates, cancelEdit);
     }
 
     function toggleRate(rate: UnitRate) {
@@ -211,7 +204,7 @@ export default function UnitRates({
             .submitter as HTMLButtonElement | null;
         const keepDialogOpen = submitter?.dataset.keepDialogOpen === 'true';
 
-        submitRates([...data.rates, newRate], keepDialogOpen, () => {
+        submitRates([...data.rates, newRate], () => {
             if (!keepDialogOpen) {
                 setAddDialogOpen(false);
             }
