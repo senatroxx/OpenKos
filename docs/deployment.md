@@ -30,6 +30,16 @@ including:
   same-host uploads
 - `TRUSTED_PROXIES` containing the reverse-proxy addresses or networks
 
+## Branding storage verification
+
+Logo and favicon files use `FILESYSTEM_DISK` and are streamed through the
+application's branding routes, including when the disk is private. Automated
+coverage uses Laravel's local fake disk; there is no remote-storage test
+harness. Before enabling a remote or private production disk, manually verify
+upload, replacement, removal, and the `Content-Type` returned by both branding
+routes. Also verify that an Inertia navigation after a favicon change updates
+the browser tab; this remains an integration check rather than a browser test.
+
 The application is HTTP-only inside the Compose network. Terminate TLS in
 Traefik, Caddy, Cloudflare Tunnel, or another external load balancer and
 forward `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Port`, and

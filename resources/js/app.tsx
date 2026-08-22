@@ -22,6 +22,7 @@ type PageWithTimezone = {
             currency_scales?: Record<string, number>;
         };
         setting?: { currency?: string; locale?: string };
+        branding?: { faviconUrl?: string };
     };
 };
 
@@ -30,6 +31,18 @@ function syncDisplaySettings(page: PageWithTimezone): void {
     setCurrencyScales(page.props?.app?.currency_scales);
     setDisplayCurrency(page.props?.setting?.currency);
     setDisplayLocale(page.props?.setting?.locale);
+}
+
+function syncBrandingFavicon(page: PageWithTimezone): void {
+    const faviconUrl = page.props?.branding?.faviconUrl;
+
+    if (!faviconUrl || typeof document === 'undefined') {
+        return;
+    }
+
+    document
+        .querySelector<HTMLLinkElement>('link[data-branding-favicon]')
+        ?.setAttribute('href', faviconUrl);
 }
 
 // The server drives the display name from the settings table (site_name),
@@ -89,10 +102,12 @@ createInertiaApp({
     strictMode: true,
     withApp(app, { ssr, page }) {
         syncDisplaySettings(page as PageWithTimezone);
+        syncBrandingFavicon(page as PageWithTimezone);
 
         if (!ssr) {
             router.on('navigate', ({ detail }) => {
                 syncDisplaySettings(detail.page);
+                syncBrandingFavicon(detail.page);
             });
         }
 

@@ -1,5 +1,6 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
+import AppLogo from '@/components/features/app/app-logo';
 import {
     Card,
     CardContent,
@@ -18,8 +19,6 @@ export default function AuthCardLayout({
     title?: string;
     description?: string;
 }>) {
-    const { setting } = usePage<{ setting: { site_name: string } }>().props;
-
     return (
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
             <div className="flex w-full max-w-md flex-col gap-6">
@@ -27,9 +26,7 @@ export default function AuthCardLayout({
                     href={login()}
                     className="flex items-center gap-2 self-center font-medium"
                 >
-                    <span className="text-sm font-semibold">
-                        {setting.site_name}
-                    </span>
+                    <AppLogo />
                 </Link>
 
                 <div className="flex flex-col gap-6">

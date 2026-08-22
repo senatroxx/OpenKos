@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Settings\UpdateBranding;
 use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Settings\UpdateBrandingRequest;
 use App\Models\Setting;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +18,7 @@ class GeneralController extends Controller
 {
     public function __construct(
         private UpdateSettings $updateSettings,
+        private UpdateBranding $updateBranding,
     ) {}
 
     public function edit(): Response
@@ -64,6 +67,26 @@ class GeneralController extends Controller
         $this->updateSettings->execute($validated, $request->user());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('General settings updated.')]);
+
+        return back();
+    }
+
+    public function updateBranding(UpdateBrandingRequest $request, string $asset): RedirectResponse
+    {
+        $this->updateBranding->execute($asset, $request->file('file'), $request->user());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __(':asset updated.', ['asset' => ucfirst($asset)])]);
+
+        return back();
+    }
+
+    public function removeBranding(Request $request, string $asset): RedirectResponse
+    {
+        abort_unless($request->user()?->isOwner(), 403);
+
+        $this->updateBranding->remove($asset, $request->user());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Default :asset restored.', ['asset' => ucfirst($asset)])]);
 
         return back();
     }

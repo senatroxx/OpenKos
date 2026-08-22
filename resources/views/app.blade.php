@@ -30,8 +30,7 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        <link data-branding-favicon rel="icon" href="{{ data_get($page, 'props.branding.faviconUrl', route('branding.asset', ['asset' => 'favicon', 'v' => 'default'])) }}">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts
