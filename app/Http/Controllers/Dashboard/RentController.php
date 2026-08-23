@@ -166,7 +166,7 @@ class RentController extends Controller
                 'lease.unit.property',
                 'lineItems',
                 'payments' => fn ($q) => $q
-                    ->with(['confirmedBy:id,name', 'proofs'])
+                    ->with(['confirmedBy:id,name', 'proofs.media'])
                     ->latest('payment_date')
                     ->latest('id'),
             ]);

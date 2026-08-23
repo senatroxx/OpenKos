@@ -21,14 +21,13 @@ class TenantDocument extends Model
     protected $appends = ['download_url'];
 
     /**
-     * `file_path` remains fillable only for compatibility writes and rollback.
+     * Legacy storage coordinates are written only through explicit compatibility paths.
      */
     protected $fillable = [
         'tenant_id',
         'media_id',
         'type',
         'original_name',
-        'file_path',
         'mime_type',
         'size',
     ];
@@ -57,5 +56,29 @@ class TenantDocument extends Model
             'tenant' => $this->tenant_id,
             'document' => $this->id,
         ]));
+    }
+
+    protected function originalName(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): mixed => $this->canonicalValue('original_name', $value));
+    }
+
+    protected function mimeType(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): mixed => $this->canonicalValue('mime_type', $value));
+    }
+
+    protected function size(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): mixed => $this->canonicalValue('size', $value));
+    }
+
+    private function canonicalValue(string $attribute, mixed $legacyValue): mixed
+    {
+        if ($this->media_id === null) {
+            return $legacyValue;
+        }
+
+        return $this->relationLoaded('media') ? $this->media?->{$attribute} : null;
     }
 }

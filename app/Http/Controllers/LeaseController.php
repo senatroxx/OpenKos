@@ -57,7 +57,7 @@ class LeaseController extends Controller
             'primaryTenant:id,name,phone',
             'unit.property.city',
             'payments.confirmedBy:id,name',
-            'payments.proofs',
+            'payments.proofs.media',
             'payments.invoice:id,period_start,period_end,reference,status',
             'unitHistories.transferredBy:id,name',
         ]);
@@ -104,7 +104,7 @@ class LeaseController extends Controller
             ->defaultSort('-payment_date');
 
         $result = $table->paginate(
-            $lease->payments()->with(['confirmedBy:id,name', 'proofs', 'invoice:id,reference,period_start,period_end,status']),
+            $lease->payments()->with(['confirmedBy:id,name', 'proofs.media', 'invoice:id,reference,period_start,period_end,status']),
             $request,
             'payments',
         );
@@ -134,7 +134,7 @@ class LeaseController extends Controller
         $result = $table->paginate(
             PaymentProof::query()
                 ->whereHas('payment.invoice', fn ($q) => $q->where('lease_id', $lease->id))
-                ->with('payment:id,invoice_id,amount,status', 'payment.invoice:id,period_start'),
+                ->with('media', 'payment:id,invoice_id,amount,status', 'payment.invoice:id,period_start'),
             $request,
             'documents',
         );
@@ -153,7 +153,7 @@ class LeaseController extends Controller
         $unit->load('property.city');
 
         $leases = $unit->leases()
-            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs', 'payments.invoice:id,period_start,period_end,reference,status'])
+            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -243,7 +243,7 @@ class LeaseController extends Controller
         $result = $table->paginate($query, $request, 'leases');
 
         $leases = $result['leases'];
-        $leases->loadMissing(['unit.property.city', 'payments.confirmedBy:id,name', 'payments.proofs', 'payments.invoice:id,period_start,period_end,reference,status']);
+        $leases->loadMissing(['unit.property.city', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status']);
 
         $availableUnits = Unit::query()
             ->with('property.city')

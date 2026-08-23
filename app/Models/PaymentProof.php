@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'payment_id',
     'media_id',
-    'path',
     'original_name',
     'mime_type',
 ])]
@@ -33,5 +33,24 @@ class PaymentProof extends Model
     public function media(): BelongsTo
     {
         return $this->belongsTo(Media::class);
+    }
+
+    protected function originalName(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): mixed => $this->canonicalValue('original_name', $value));
+    }
+
+    protected function mimeType(): Attribute
+    {
+        return Attribute::get(fn (mixed $value): mixed => $this->canonicalValue('mime_type', $value));
+    }
+
+    private function canonicalValue(string $attribute, mixed $legacyValue): mixed
+    {
+        if ($this->media_id === null) {
+            return $legacyValue;
+        }
+
+        return $this->relationLoaded('media') ? $this->media?->{$attribute} : null;
     }
 }

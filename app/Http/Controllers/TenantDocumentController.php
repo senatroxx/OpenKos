@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Tenant\StoreTenantDocumentRequest;
+use App\Models\Media;
 use App\Models\Tenant;
 use App\Models\TenantDocument;
 use App\Services\Media\MediaManager;
@@ -20,7 +21,8 @@ class TenantDocumentController extends Controller
         $file = $request->file('file');
 
         DB::transaction(function () use ($mediaManager, $tenant, $file, $request): void {
-            $media = $mediaManager->store($tenant, 'documents', $file);
+            // Keep compatibility-phase uploads readable by released code, which assumes local.
+            $media = $mediaManager->store($tenant, 'documents', $file, disk: 'local');
 
             $document = $tenant->documents()->make([
                 'media_id' => $media->id,
@@ -44,13 +46,13 @@ class TenantDocumentController extends Controller
         abort_if($document->tenant_id !== $tenant->id, 404);
 
         if ($document->media_id !== null) {
-            abort_if($document->media === null, 404);
+            $media = $this->canonicalMedia($tenant, $document);
 
-            $storage = Storage::disk($document->media->disk);
-            abort_unless($storage->exists($document->media->path), 404);
+            $storage = Storage::disk($media->disk);
+            abort_unless($storage->exists($media->path), 404);
 
-            return $storage->response($document->media->path, $document->media->original_name, [
-                'Content-Type' => $document->media->mime_type,
+            return $storage->response($media->path, $media->original_name, [
+                'Content-Type' => $media->mime_type,
             ]);
         }
 
@@ -68,15 +70,18 @@ class TenantDocumentController extends Controller
 
         abort_if($document->tenant_id !== $tenant->id, 404);
 
-        DB::transaction(function () use ($document, $mediaManager): void {
+        DB::transaction(function () use ($tenant, $document, $mediaManager): void {
             $media = $document->media;
             $legacyPath = $document->file_path;
             $hasCanonicalMedia = $document->media_id !== null;
 
+            if ($hasCanonicalMedia) {
+                $media = $this->canonicalMedia($tenant, $document);
+            }
+
             $document->deleteOrFail();
 
             if ($hasCanonicalMedia) {
-                abort_if($media === null, 404);
                 $mediaManager->remove($media);
 
                 return;
@@ -88,5 +93,20 @@ class TenantDocumentController extends Controller
         });
 
         return to_route('tenants.index');
+    }
+
+    private function canonicalMedia(Tenant $tenant, TenantDocument $document): Media
+    {
+        $media = $document->media;
+
+        abort_if(
+            $media === null
+                || $media->mediable_type !== $tenant->getMorphClass()
+                || (string) $media->mediable_id !== (string) $document->tenant_id
+                || $media->collection !== 'documents',
+            404,
+        );
+
+        return $media;
     }
 }

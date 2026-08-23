@@ -32,7 +32,7 @@ class TenantController extends Controller
 
         $tenant->load([
             'user:id,email,email_verified_at,last_login_at,is_active,invited_at',
-            'documents',
+            'documents.media',
             'leases' => fn ($q) => $q->where('status', 'active')
                 ->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
         ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
@@ -92,7 +92,7 @@ class TenantController extends Controller
             ])
             ->defaultSort('-created_at');
 
-        $result = $table->paginate($tenant->documents(), $request, 'documents');
+        $result = $table->paginate($tenant->documents()->with('media'), $request, 'documents');
 
         return Inertia::render('tenants/documents', [
             ...$result,
@@ -159,7 +159,7 @@ class TenantController extends Controller
             : null;
 
         $query = Tenant::query()
-            ->with(['user:id,email,email_verified_at,last_login_at,is_active,invited_at', 'documents', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
+            ->with(['user:id,email,email_verified_at,last_login_at,is_active,invited_at', 'documents.media', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
             ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',

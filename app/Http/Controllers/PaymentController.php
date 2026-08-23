@@ -13,6 +13,7 @@ use App\Exceptions\PaymentOverflowException;
 use App\Http\Requests\Payment\StorePaymentRequest;
 use App\Models\Invoice;
 use App\Models\Lease;
+use App\Models\Media;
 use App\Models\Payment;
 use App\Models\PaymentProof;
 use App\Services\Payments\MoneyConverter;
@@ -77,13 +78,13 @@ class PaymentController extends Controller
         abort_if($proof->payment_id !== $payment->id, 404);
 
         if ($proof->media_id !== null) {
-            abort_if($proof->media === null, 404);
+            $media = $this->canonicalMedia($payment, $proof);
 
-            $storage = Storage::disk($proof->media->disk);
-            abort_unless($storage->exists($proof->media->path), 404);
+            $storage = Storage::disk($media->disk);
+            abort_unless($storage->exists($media->path), 404);
 
-            return $storage->response($proof->media->path, $proof->media->original_name, [
-                'Content-Type' => $proof->media->mime_type,
+            return $storage->response($media->path, $media->original_name, [
+                'Content-Type' => $media->mime_type,
             ]);
         }
 
@@ -93,6 +94,21 @@ class PaymentController extends Controller
         return $storage->response($proof->path, $proof->original_name, [
             'Content-Type' => $proof->mime_type,
         ]);
+    }
+
+    private function canonicalMedia(Payment $payment, PaymentProof $proof): Media
+    {
+        $media = $proof->media;
+
+        abort_if(
+            $media === null
+                || $media->mediable_type !== $payment->getMorphClass()
+                || (string) $media->mediable_id !== (string) $proof->payment_id
+                || $media->collection !== 'proofs',
+            404,
+        );
+
+        return $media;
     }
 
     public function __construct(

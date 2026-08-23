@@ -5,6 +5,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\InvoiceLineItem;
 use App\Models\Lease;
+use App\Models\Media;
 use App\Models\Payment;
 use App\Models\PaymentProof;
 use App\Models\Property;
@@ -87,10 +88,23 @@ test('collection queue includes invoice detail payload', function () {
         'status' => PaymentStatus::Pending,
     ]);
 
-    PaymentProof::factory()->create([
+    $proof = PaymentProof::factory()->create([
         'payment_id' => $payment->id,
-        'original_name' => 'receipt.png',
+        'original_name' => 'legacy.txt',
+        'mime_type' => 'text/plain',
     ]);
+    $media = Media::create([
+        'mediable_type' => $payment->getMorphClass(),
+        'mediable_id' => $payment->id,
+        'collection' => 'proofs',
+        'disk' => 'local',
+        'path' => 'media/receipt.png',
+        'mime_type' => 'image/png',
+        'size' => 42,
+        'original_name' => 'receipt.png',
+        'position' => 0,
+    ]);
+    $proof->forceFill(['media_id' => $media->id])->saveOrFail();
 
     $this->actingAs($user)
         ->get(route('dashboard.rent'))
@@ -100,6 +114,7 @@ test('collection queue includes invoice detail payload', function () {
             ->where('entries.data.0.line_items.0.description', 'Monthly Rent')
             ->where('entries.data.0.payments.0.amount', '250000.000')
             ->where('entries.data.0.payments.0.proofs.0.original_name', 'receipt.png')
+            ->where('entries.data.0.payments.0.proofs.0.mime_type', 'image/png')
         );
 
     Carbon::setTestNow();

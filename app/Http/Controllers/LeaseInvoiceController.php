@@ -72,7 +72,7 @@ class LeaseInvoiceController extends Controller
         $this->authorize('view', $lease);
 
         $invoice->loadMissing('lease.unit');
-        $invoice->load(['lineItems', 'payments.confirmedBy:id,name', 'payments.proofs']);
+        $invoice->load(['lineItems', 'payments.confirmedBy:id,name', 'payments.proofs.media']);
         $gatewayAttempts = $invoice->paymentAttempts()
             ->latest('id')
             ->get([

@@ -70,6 +70,17 @@ it('uses the configured default filesystem disk', function () {
     Storage::disk('public')->assertExists($media->path);
 });
 
+it('does not serialize storage coordinates', function () {
+    $property = Property::factory()->create();
+    $media = app(MediaManager::class)->store(
+        $property,
+        'photos',
+        UploadedFile::fake()->create('front-house.jpg', 1, 'image/jpeg'),
+    );
+
+    expect($media->toArray())->not->toHaveKeys(['disk', 'path']);
+});
+
 it('retrieves and reorders media within an owner collection', function () {
     $property = Property::factory()->create();
     $manager = app(MediaManager::class);

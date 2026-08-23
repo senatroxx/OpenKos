@@ -13,6 +13,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -150,13 +151,14 @@ final class MigrateLegacyMedia extends Command
             }
 
             $values = $attributes($record);
+            $this->lockOwner($ownerType, $values['owner_id']);
             $existing = $this->findExistingMedia(
                 $ownerType,
                 $values['owner_id'],
                 $collection,
                 $values['path'],
             );
-            $missing = false;
+            $missing = $existing !== null && ! $this->mediaFileExists($existing);
 
             if ($existing === null) {
                 [$existing, $missing] = $this->createMedia(
@@ -167,6 +169,8 @@ final class MigrateLegacyMedia extends Command
                     $legacyId,
                     $values,
                 );
+            } elseif ($missing) {
+                $this->markMissingMedia($existing, $table, $legacyId);
             }
 
             $link($record, $existing);
@@ -194,6 +198,43 @@ final class MigrateLegacyMedia extends Command
         }
 
         return $matches->first();
+    }
+
+    private function lockOwner(string $ownerType, int $ownerId): void
+    {
+        $owner = new $ownerType;
+        $query = $owner->newQuery();
+
+        if (in_array(SoftDeletes::class, class_uses_recursive($ownerType), true)) {
+            $query->withTrashed();
+        }
+
+        $query->lockForUpdate()->findOrFail($ownerId);
+    }
+
+    private function mediaFileExists(Media $media): bool
+    {
+        return $media->path !== '' && Storage::disk($media->disk)->exists($media->path);
+    }
+
+    private function markMissingMedia(Media $media, string $table, int $legacyId): void
+    {
+        $metadata = is_array($media->metadata) ? $media->metadata : [];
+        $legacyMetadata = is_array($metadata['legacy'] ?? null) ? $metadata['legacy'] : [];
+
+        $media->forceFill([
+            'metadata' => [
+                ...$metadata,
+                'legacy' => [
+                    ...$legacyMetadata,
+                    'table' => $table,
+                    'id' => $legacyId,
+                    'missing_file' => true,
+                ],
+            ],
+        ])->saveOrFail();
+
+        $this->warn("Missing legacy file: {$table}#{$legacyId} ({$media->path}).");
     }
 
     /**

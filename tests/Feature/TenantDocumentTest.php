@@ -52,6 +52,25 @@ it('stores new tenant documents through canonical media', function (): void {
     Storage::disk('local')->assertExists($document->media->path);
 });
 
+it('keeps compatibility-phase tenant uploads on the local disk', function (): void {
+    [$owner, $tenant] = tenantDocumentOwner();
+    Storage::fake('public');
+    config(['filesystems.default' => 'public']);
+
+    $this->actingAs($owner)
+        ->post(route('tenants.documents.store', $tenant), [
+            'type' => 'ktp',
+            'file' => UploadedFile::fake()->create('identity.pdf', 2, 'application/pdf'),
+        ])
+        ->assertRedirect();
+
+    $document = $tenant->documents()->sole();
+
+    expect($document->media->disk)->toBe('local');
+    Storage::disk('local')->assertExists($document->media->path);
+    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+});
+
 it('never falls back to the legacy path after a canonical link exists', function (): void {
     [$owner, $tenant] = tenantDocumentOwner();
     $legacyPath = 'tenant-documents/legacy.pdf';
@@ -67,12 +86,41 @@ it('never falls back to the legacy path after a canonical link exists', function
         'original_name' => 'canonical.pdf',
         'position' => 0,
     ]);
-    $document = TenantDocument::create([
+    $document = TenantDocument::forceCreate([
         'tenant_id' => $tenant->id,
         'media_id' => $media->id,
         'type' => 'other',
         'original_name' => 'legacy.pdf',
         'file_path' => $legacyPath,
+        'mime_type' => 'application/pdf',
+        'size' => 10,
+    ]);
+
+    $this->actingAs($owner)
+        ->get(route('tenants.documents.show', [$tenant, $document]))
+        ->assertNotFound();
+});
+
+it('fails closed when canonical media belongs to another tenant', function (): void {
+    [$owner, $tenant] = tenantDocumentOwner();
+    $otherTenant = Tenant::factory()->create();
+    $media = Media::create([
+        'mediable_type' => $otherTenant->getMorphClass(),
+        'mediable_id' => $otherTenant->id,
+        'collection' => 'documents',
+        'disk' => 'local',
+        'path' => 'media/foreign.pdf',
+        'mime_type' => 'application/pdf',
+        'size' => 10,
+        'original_name' => 'foreign.pdf',
+        'position' => 0,
+    ]);
+    $document = TenantDocument::forceCreate([
+        'tenant_id' => $tenant->id,
+        'media_id' => $media->id,
+        'type' => 'other',
+        'original_name' => 'legacy.pdf',
+        'file_path' => 'tenant-documents/legacy.pdf',
         'mime_type' => 'application/pdf',
         'size' => 10,
     ]);

@@ -57,7 +57,8 @@ class RecordPayment
 
             if ($hasProof) {
                 $file = $data->proof;
-                $media = $this->mediaManager->store($payment, 'proofs', $file);
+                // Keep compatibility-phase uploads readable by released code, which assumes local.
+                $media = $this->mediaManager->store($payment, 'proofs', $file, disk: 'local');
 
                 $proof = $payment->proofs()->make([
                     'media_id' => $media->id,
@@ -76,7 +77,7 @@ class RecordPayment
             return $payment;
         });
 
-        $payment->load('confirmedBy:id,name', 'recordedBy:id,name', 'proofs');
+        $payment->load('confirmedBy:id,name', 'recordedBy:id,name', 'proofs.media');
 
         return RecordPaymentResult::success($payment);
 
