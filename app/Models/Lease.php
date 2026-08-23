@@ -60,13 +60,15 @@ class Lease extends Model
             if ($lease->reference === null) {
                 $prefix = Setting::get('lease_id_prefix') ?? 'LSX';
                 $year = now()->format('Y');
-                $pattern = $prefix.$year.'%';
+                $referencePrefix = $prefix.$year;
+                $pattern = $referencePrefix.'%';
 
-                $max = static::where('reference', 'like', $pattern)
-                    ->orderBy('reference', 'desc')
+                $max = static::withTrashed()
+                    ->where('reference', 'like', $pattern)
+                    ->orderByRaw('LENGTH(reference) DESC, reference DESC')
                     ->value('reference');
 
-                $seq = $max ? (int) substr($max, -4) + 1 : 1;
+                $seq = $max ? (int) substr($max, strlen($referencePrefix)) + 1 : 1;
 
                 $lease->reference = $prefix.$year.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
             }
