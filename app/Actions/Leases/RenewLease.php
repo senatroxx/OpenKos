@@ -14,7 +14,7 @@ use App\Models\Lease;
 use App\Models\Unit;
 use App\Results\Lease\RenewLeaseResult;
 use App\Services\Payments\MoneyConverter;
-use Illuminate\Support\Facades\DB;
+use App\Services\ReferenceAllocationRetry;
 
 class RenewLease
 {
@@ -24,11 +24,12 @@ class RenewLease
         private readonly LeaseStatusValidator $leaseStatusValidator,
         private readonly GenerateInvoices $generateInvoices,
         private readonly MoneyConverter $money,
+        private readonly ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
     public function execute(Lease $lease, RenewLeaseData $data): RenewLeaseResult
     {
-        return DB::transaction(function () use ($lease, $data) {
+        return $this->referenceAllocationRetry->run(function () use ($lease, $data) {
             $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
             $lockedLease = Lease::query()
                 ->whereKey($lease->getKey())
@@ -118,6 +119,6 @@ class RenewLease
             $this->generateInvoices->execute($newLease);
 
             return RenewLeaseResult::success($newLease);
-        });
+        }, 'leases');
     }
 }

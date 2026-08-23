@@ -13,7 +13,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitRate;
 use App\Services\Payments\MoneyConverter;
-use Illuminate\Support\Facades\DB;
+use App\Services\ReferenceAllocationRetry;
 
 class CreateLease
 {
@@ -22,13 +22,14 @@ class CreateLease
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
+        private ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
     public function execute(Unit $unit, CreateLeaseData $data): mixed
     {
         $tenantIds = array_values(array_unique($data->tenantIds));
 
-        return DB::transaction(function () use ($unit, $data, $tenantIds) {
+        return $this->referenceAllocationRetry->run(function () use ($unit, $data, $tenantIds) {
             $unit = Unit::lockForUpdate()->findOrFail($unit->id);
             $unitRate = $data->unitRateId === null
                 ? null
@@ -121,7 +122,7 @@ class CreateLease
             $this->generateInvoices->execute($lease);
 
             return $lease;
-        });
+        }, 'leases');
     }
 
     private function ensureExistingLeaseTermsMatch(Lease $lease, ?UnitRate $unitRate, CreateLeaseData $data): void

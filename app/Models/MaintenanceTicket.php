@@ -36,13 +36,14 @@ class MaintenanceTicket extends Model
         static::creating(function (MaintenanceTicket $ticket) {
             if ($ticket->reference === null) {
                 $year = now()->format('Y');
-                $pattern = 'TKT'.$year.'%';
+                $referencePrefix = 'TKT'.$year;
+                $pattern = $referencePrefix.'%';
 
                 $max = static::where('reference', 'like', $pattern)
-                    ->orderBy('reference', 'desc')
+                    ->orderByRaw('LENGTH(reference) DESC, reference DESC')
                     ->value('reference');
 
-                $seq = $max ? (int) substr($max, -4) + 1 : 1;
+                $seq = $max ? (int) substr($max, strlen($referencePrefix)) + 1 : 1;
 
                 $ticket->reference = 'TKT'.$year.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
             }

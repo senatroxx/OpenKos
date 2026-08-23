@@ -13,8 +13,8 @@ use App\Models\Lease;
 use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
 use App\Services\Payments\MoneyConverter;
+use App\Services\ReferenceAllocationRetry;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class MoveOutLease
 {
@@ -23,6 +23,7 @@ class MoveOutLease
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
+        private ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
     private function cancelFutureInvoices(Lease $lease): void
@@ -40,7 +41,7 @@ class MoveOutLease
 
     public function execute(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
-        return DB::transaction(function () use ($lease, $data) {
+        return $this->referenceAllocationRetry->run(function () use ($lease, $data) {
             $unitIds = [$lease->unit_id];
             if ($data->moveToAnotherUnit) {
                 abort_unless($data->targetUnitId !== null, 422, __('Target unit is required.'));
@@ -61,7 +62,7 @@ class MoveOutLease
             }
 
             return $this->terminate($lockedLease, $sourceUnit, $data);
-        });
+        }, 'leases');
     }
 
     /**

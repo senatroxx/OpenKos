@@ -18,6 +18,7 @@ use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\ReferenceAllocationRetry;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -35,6 +36,7 @@ class MaintenanceTicketController extends Controller
         private TransitionValidator $transitionValidator,
         private BlockUnit $blockUnit,
         private ResolveTicket $resolveTicket,
+        private ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
     public function show(MaintenanceTicket $ticket): Response
@@ -163,22 +165,27 @@ class MaintenanceTicketController extends Controller
         $moveToUnitId = $data['move_tenant_to_unit_id'] ?? null;
         unset($data['block_unit'], $data['move_tenant_to_unit_id']);
 
-        DB::transaction(function () use ($data, $blockUnit, $moveToUnitId): void {
+        $result = $this->referenceAllocationRetry->run(function () use ($data, $blockUnit, $moveToUnitId): array {
             $ticket = MaintenanceTicket::create($data);
             $statusChanges = [];
-
-            MaintenanceTicketCreated::dispatch($ticket, actorId: Auth::id());
 
             if ($blockUnit && ! empty($data['unit_id'])) {
                 $statusChanges = $this->blockUnit->execute($data['unit_id'], $moveToUnitId);
             }
 
-            foreach ($statusChanges as $change) {
-                if ($change['from'] !== $change['unit']->status) {
-                    UnitStatusChanged::dispatch($change['unit'], $change['from'], $change['unit']->status, actorId: Auth::id());
-                }
+            return [
+                'ticket' => $ticket,
+                'status_changes' => $statusChanges,
+            ];
+        }, 'maintenance_tickets');
+
+        MaintenanceTicketCreated::dispatch($result['ticket'], actorId: Auth::id());
+
+        foreach ($result['status_changes'] as $change) {
+            if ($change['from'] !== $change['unit']->status) {
+                UnitStatusChanged::dispatch($change['unit'], $change['from'], $change['unit']->status, actorId: Auth::id());
             }
-        });
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Maintenance ticket created.')]);
 

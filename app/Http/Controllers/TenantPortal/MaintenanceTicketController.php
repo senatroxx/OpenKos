@@ -6,6 +6,7 @@ use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Events\Maintenance\MaintenanceTicketCreated;
 use App\Models\MaintenanceTicket;
+use App\Services\ReferenceAllocationRetry;
 use App\Support\DateTimeFormatter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,10 @@ use Inertia\Response;
 
 class MaintenanceTicketController extends TenantPortalController
 {
+    public function __construct(
+        private ReferenceAllocationRetry $referenceAllocationRetry,
+    ) {}
+
     public function index(Request $request): Response
     {
         $tenant = $this->tenant($request);
@@ -75,7 +80,7 @@ class MaintenanceTicketController extends TenantPortalController
 
         $isUnit = $validated['location_type'] === 'unit';
 
-        $ticket = MaintenanceTicket::create([
+        $ticket = $this->referenceAllocationRetry->run(fn (): MaintenanceTicket => MaintenanceTicket::create([
             'property_id' => $lease->unit->property_id,
             'unit_id' => $isUnit ? $lease->unit_id : null,
             'location' => $isUnit ? null : $validated['location'],
@@ -84,7 +89,7 @@ class MaintenanceTicketController extends TenantPortalController
             'priority' => MaintenancePriority::Medium->value,
             'status' => MaintenanceStatus::Reported->value,
             'created_by' => $request->user()->id,
-        ]);
+        ]), 'maintenance_tickets');
 
         MaintenanceTicketCreated::dispatch($ticket, actorId: $request->user()->id);
 
