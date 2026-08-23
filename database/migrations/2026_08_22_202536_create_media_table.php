@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id();
-            $table->morphs('mediable');
+            $table->string('mediable_type');
+            $table->unsignedBigInteger('mediable_id');
             $table->string('collection', 64);
             $table->string('disk', 64);
             $table->string('path');
