@@ -411,7 +411,10 @@ describe('SendRentRemindersAction', function () {
 
         $invoiceQueries = [];
         DB::listen(function (QueryExecuted $query) use (&$invoiceQueries): void {
-            if (str_contains(strtolower($query->sql), 'where "lease_id" in')) {
+            $sql = strtolower($query->sql);
+
+            if (str_contains($sql, ' from "invoices"')
+                && ! str_contains($sql, 'select exists')) {
                 $invoiceQueries[] = $query->sql;
             }
         });
