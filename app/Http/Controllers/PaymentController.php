@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use OpenKOS\Core\Events\PaymentRecorded as PlatformPaymentRecorded;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PaymentController extends Controller
 {
@@ -70,15 +71,28 @@ class PaymentController extends Controller
         return back();
     }
 
-    public function proof(Payment $payment, PaymentProof $proof)
+    public function proof(Payment $payment, PaymentProof $proof): StreamedResponse
     {
         $this->authorize('view', $payment);
+        abort_if($proof->payment_id !== $payment->id, 404);
 
-        if (! Storage::disk('local')->exists($proof->path)) {
-            abort(404);
+        if ($proof->media_id !== null) {
+            abort_if($proof->media === null, 404);
+
+            $storage = Storage::disk($proof->media->disk);
+            abort_unless($storage->exists($proof->media->path), 404);
+
+            return $storage->response($proof->media->path, $proof->media->original_name, [
+                'Content-Type' => $proof->media->mime_type,
+            ]);
         }
 
-        return Storage::disk('local')->response($proof->path);
+        $storage = Storage::disk('local');
+        abort_unless($storage->exists($proof->path), 404);
+
+        return $storage->response($proof->path, $proof->original_name, [
+            'Content-Type' => $proof->mime_type,
+        ]);
     }
 
     public function __construct(

@@ -2,6 +2,7 @@ import type { TableColumn } from '@/components/data-table';
 import { PluginRegion } from '@/components/shared/plugin-region';
 import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { formatDate, formatPeriod } from '@/lib/formatters';
+import paymentRoutes from '@/routes/payments';
 import type {
     PaginatedData,
     ProofRow,
@@ -18,7 +19,10 @@ const columns: TableColumn<ProofRow>[] = [
         className: 'font-medium',
         render: (d) => (
             <a
-                href={`/payments/${d.payment_id}/proof/${d.id}`}
+                href={paymentRoutes.proof.url({
+                    payment: d.payment_id,
+                    proof: d.id,
+                })}
                 target="_blank"
                 rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}

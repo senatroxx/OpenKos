@@ -6,6 +6,7 @@ use App\Enums\PaymentStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
+use App\Models\Media;
 use App\Models\Payment;
 use App\Models\PaymentAttempt;
 use App\Models\Tenant;
@@ -670,14 +671,18 @@ test('tenant submits a pending invoice payment for verification', function () {
 
     $payment = $invoice->payments()->sole();
 
+    $proof = $payment->proofs->sole();
+
     expect($payment->status)->toBe(PaymentStatus::Pending)
         ->and($payment->recorded_by)->toBe($tenantUser->id)
         ->and($payment->confirmed_by)->toBeNull()
         ->and($payment->proofs)->toHaveCount(1)
+        ->and($proof->media_id)->not->toBeNull()
+        ->and($proof->media->is(Media::query()->find($proof->media_id)))->toBeTrue()
         ->and($invoice->fresh()->amount_paid)->toBe('0.000')
         ->and($invoice->fresh()->status)->toBe(InvoiceStatus::Pending);
 
-    Storage::disk('local')->assertExists($payment->proofs->sole()->path);
+    Storage::disk($proof->media->disk)->assertExists($proof->media->path);
 
     $this->actingAs($tenantUser)
         ->post(route('portal.billing.store'), [

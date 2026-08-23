@@ -382,7 +382,6 @@ class RentController extends Controller
                 'proofs' => $payment->proofs->map(fn (PaymentProof $proof) => [
                     'id' => $proof->id,
                     'payment_id' => $proof->payment_id,
-                    'path' => $proof->path,
                     'original_name' => $proof->original_name,
                     'mime_type' => $proof->mime_type,
                     'created_at' => DateTimeFormatter::iso($proof->created_at),

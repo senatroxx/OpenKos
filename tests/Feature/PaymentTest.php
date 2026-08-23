@@ -5,6 +5,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Models\Invoice;
 use App\Models\Lease;
+use App\Models\Media;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\PaymentProof;
@@ -490,5 +491,38 @@ describe('proof download', function () {
         $this->actingAs($user)
             ->get(route('payments.proof', [$payment, $proof]))
             ->assertNotFound();
+    });
+
+    it('does not fall back to the legacy path after canonical migration', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $canonicalPath = 'media/missing-proof.pdf';
+        $legacyPath = 'proofs/legacy-proof.pdf';
+        File::makeDirectory(dirname(storage_path('app/private/'.$legacyPath)), 0755, true, true);
+        File::put(storage_path('app/private/'.$legacyPath), 'legacy content');
+        $media = Media::create([
+            'mediable_type' => $payment->getMorphClass(),
+            'mediable_id' => $payment->id,
+            'collection' => 'proofs',
+            'disk' => 'local',
+            'path' => $canonicalPath,
+            'mime_type' => 'application/pdf',
+            'size' => 10,
+            'original_name' => 'proof.pdf',
+            'position' => 0,
+        ]);
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $payment->id,
+            'media_id' => $media->id,
+            'path' => $legacyPath,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertNotFound();
+
+        File::delete(storage_path('app/private/'.$legacyPath));
     });
 });
