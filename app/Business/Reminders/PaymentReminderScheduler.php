@@ -19,18 +19,7 @@ class PaymentReminderScheduler
         $invoices = $lease->invoices()
             ->payable()
             ->orderBy('period_start')
-            ->get([
-                'id',
-                'lease_id',
-                'reference',
-                'period_start',
-                'period_end',
-                'due_date',
-                'status',
-                'total',
-                'amount_paid',
-                'currency',
-            ]);
+            ->get();
 
         return $this->eventsFor($lease, $invoices, $settings);
     }
@@ -49,18 +38,7 @@ class PaymentReminderScheduler
             ->whereIn('lease_id', $leases->modelKeys())
             ->payable()
             ->orderBy('period_start')
-            ->get([
-                'id',
-                'lease_id',
-                'reference',
-                'period_start',
-                'period_end',
-                'due_date',
-                'status',
-                'total',
-                'amount_paid',
-                'currency',
-            ])
+            ->get()
             ->groupBy('lease_id');
 
         $eventsByLease = [];
