@@ -53,6 +53,7 @@ class ReferenceAllocationRetry
         $isUniqueViolation = match (DB::getDriverName()) {
             'pgsql' => (string) ($errorInfo[0] ?? $exception->getCode()) === '23505',
             'mysql' => (int) ($errorInfo[1] ?? 0) === 1062,
+            'mariadb' => (int) ($errorInfo[1] ?? 0) === 1062,
             'sqlite' => (int) ($errorInfo[1] ?? 0) === 19,
             default => false,
         };
