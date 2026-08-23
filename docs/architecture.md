@@ -314,6 +314,14 @@ Every foreign key intentionally chooses one of four strategies:
 
 The full FK inventory with per-constraint rationale is enforced by `tests/Feature/Schema/ForeignKeyDeleteStrategyTest.php`.
 
+### Polymorphic Media Owner IDs
+
+The reusable `media` foundation stores `mediable_id` as an unsigned BIGINT,
+matching the integer primary keys used by current OpenKOS domain models. A
+plugin owner must use a compatible integer key before opting into `HasMedia`.
+UUID or other custom owner keys require a deliberate schema extension rather
+than being silently coerced by the generic media layer.
+
 ### Composite Indexes
 
 Composite indexes are added to support production query patterns (filtering and sorting across multiple columns). The rationale for each:
