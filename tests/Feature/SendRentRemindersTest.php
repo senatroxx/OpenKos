@@ -313,8 +313,8 @@ describe('SendRentRemindersAction', function () {
         $first = $action->execute($lease);
         $second = $action->execute($lease);
 
-        expect($first)->toHaveCount(1);
-        expect($second)->toBeEmpty();
+        expect($first)->toBe(1);
+        expect($second)->toBe(0);
         expect(ReminderLog::count())->toBe(1);
 
         Notification::assertSentToTimes($lease->primaryTenant, RentReminder::class, 1);
@@ -334,7 +334,7 @@ describe('SendRentRemindersAction', function () {
         $action = app(SendRentReminders::class);
         $sent = $action->execute($lease);
 
-        expect($sent)->toBeEmpty();
+        expect($sent)->toBe(0);
         Notification::assertNothingSent();
 
         Carbon::setTestNow();
@@ -363,7 +363,7 @@ describe('SendRentRemindersAction', function () {
         $action = app(SendRentReminders::class);
         $sent = $action->execute($lease);
 
-        expect($sent)->toBeEmpty();
+        expect($sent)->toBe(0);
         Notification::assertNothingSent();
 
         Carbon::setTestNow();
@@ -379,9 +379,51 @@ describe('SendRentRemindersAction', function () {
 
         $sent = app(SendRentReminders::class)->execute($lease);
 
-        expect($sent)->toBeEmpty();
+        expect($sent)->toBe(0);
         expect(ReminderLog::count())->toBe(0);
         Notification::assertNothingSent();
+
+        Carbon::setTestNow();
+    });
+
+    it('processes large batches in chunks and batches invoice queries', function () {
+        Carbon::setTestNow(Carbon::parse('2026-07-01'));
+        Notification::fake();
+
+        $leases = Lease::factory()->count(101)->create([
+            'start_date' => '2026-06-01',
+            'rent_amount' => 1500000.00,
+            'rent_due_day' => 1,
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'status' => 'active',
+        ]);
+
+        foreach ($leases as $lease) {
+            Invoice::factory()->for($lease)->create([
+                'period_start' => '2026-06-01',
+                'period_end' => '2026-06-30',
+                'due_date' => '2026-07-01',
+                'total' => 1500000,
+                'amount_paid' => 0,
+            ]);
+        }
+
+        $invoiceQueries = [];
+        DB::listen(function (QueryExecuted $query) use (&$invoiceQueries): void {
+            if (str_contains(strtolower($query->sql), 'where "lease_id" in')) {
+                $invoiceQueries[] = $query->sql;
+            }
+        });
+
+        $sent = app(SendRentReminders::class)->execute();
+
+        expect($sent)->toBe($leases->count())
+            ->and(count($invoiceQueries))->toBeGreaterThan(0)
+            ->and(count($invoiceQueries))->toBeLessThan($leases->count())
+            ->and(ReminderLog::count())->toBe($leases->count());
+
+        expect(app(SendRentReminders::class)->execute())->toBe(0);
 
         Carbon::setTestNow();
     });

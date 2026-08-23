@@ -9,13 +9,79 @@ use App\Models\Invoice;
 use App\Models\Lease;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Collection;
 
 class PaymentReminderScheduler
 {
     /** @return array<ReminderEvent> */
     public function pendingFor(Lease $lease, ReminderSettings $settings): array
     {
-        $invoices = $lease->invoices()->payable()->orderBy('period_start')->get();
+        $invoices = $lease->invoices()
+            ->payable()
+            ->orderBy('period_start')
+            ->get([
+                'id',
+                'lease_id',
+                'reference',
+                'period_start',
+                'period_end',
+                'due_date',
+                'status',
+                'total',
+                'amount_paid',
+                'currency',
+            ]);
+
+        return $this->eventsFor($lease, $invoices, $settings);
+    }
+
+    /**
+     * @param  Collection<int, Lease>  $leases
+     * @return array<int, array<int, ReminderEvent>>
+     */
+    public function pendingForMany(Collection $leases, ReminderSettings $settings): array
+    {
+        if ($leases->isEmpty()) {
+            return [];
+        }
+
+        $invoicesByLease = Invoice::query()
+            ->whereIn('lease_id', $leases->modelKeys())
+            ->payable()
+            ->orderBy('period_start')
+            ->get([
+                'id',
+                'lease_id',
+                'reference',
+                'period_start',
+                'period_end',
+                'due_date',
+                'status',
+                'total',
+                'amount_paid',
+                'currency',
+            ])
+            ->groupBy('lease_id');
+
+        $eventsByLease = [];
+
+        foreach ($leases as $lease) {
+            $eventsByLease[$lease->getKey()] = $this->eventsFor(
+                $lease,
+                $invoicesByLease->get($lease->getKey(), []),
+                $settings,
+            );
+        }
+
+        return $eventsByLease;
+    }
+
+    /**
+     * @param  iterable<Invoice>  $invoices
+     * @return array<int, ReminderEvent>
+     */
+    private function eventsFor(Lease $lease, iterable $invoices, ReminderSettings $settings): array
+    {
         $today = now()->startOfDay();
         $events = [];
 
