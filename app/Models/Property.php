@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\UnitStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -32,7 +33,7 @@ use Illuminate\Support\Str;
 ])]
 class Property extends Model
 {
-    use Auditable, HasFactory, SerializesDatesWithTimezone, SoftDeletes;
+    use Auditable, HasFactory, HasMedia, SerializesDatesWithTimezone, SoftDeletes;
 
     protected array $auditableMask = ['phone'];
 
