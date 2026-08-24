@@ -104,3 +104,19 @@ it('raises an operational error for corrupted state', function (): void {
     expect(fn (): array => $store->withLock(fn (RuntimePluginStore $store): array => $store->readState()))
         ->toThrow(RuntimeException::class, 'state is corrupted');
 });
+
+it('rejects recovery paths outside their managed directories', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath, 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/recovery',
+        'staging' => '.staging/incoming',
+        'backup' => 'state.json',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    expect(fn (): mixed => $store->withLock(fn (): null => null))
+        ->toThrow(RuntimeException::class, 'recovery marker is invalid');
+});

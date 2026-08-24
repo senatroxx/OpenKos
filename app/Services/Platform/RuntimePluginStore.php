@@ -54,6 +54,10 @@ final class RuntimePluginStore
     {
         $path = $this->statePath();
 
+        if (is_link($path)) {
+            throw new RuntimeException('Runtime plugin state is corrupted. Repair or remove '.$path.' before continuing.');
+        }
+
         if (! is_file($path)) {
             return [];
         }
@@ -97,6 +101,10 @@ final class RuntimePluginStore
     public function writeState(array $state): void
     {
         $this->ensureDirectory($this->root);
+
+        if (is_link($this->statePath())) {
+            throw new RuntimeException('Could not persist runtime plugin state through a symlink.');
+        }
 
         try {
             $contents = json_encode($state, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
@@ -307,6 +315,10 @@ final class RuntimePluginStore
     {
         $path = $this->recoveryMarkerPath();
 
+        if (is_link($path)) {
+            throw new RuntimeException('Runtime plugin recovery marker is unsafe.');
+        }
+
         if (! is_file($path)) {
             return;
         }
@@ -328,7 +340,9 @@ final class RuntimePluginStore
             ! in_array($marker['operation'] ?? null, ['swap', 'remove'], true) ||
             ! in_array($marker['phase'] ?? null, ['prepared', 'old_preserved', 'new_active', 'committed'], true) ||
             ! is_string($marker['id'] ?? null) ||
-            ! isset($marker['backup'])
+            ! is_string($marker['backup'] ?? null) ||
+            ! str_starts_with($marker['backup'], '.backup/') ||
+            (isset($marker['staging']) && $marker['staging'] !== null && (! is_string($marker['staging']) || ! str_starts_with($marker['staging'], '.staging/')))
         ) {
             throw new RuntimeException('Runtime plugin recovery marker is invalid.');
         }
@@ -428,6 +442,10 @@ final class RuntimePluginStore
      */
     private function writeRecoveryMarker(array $marker): void
     {
+        if (is_link($this->recoveryMarkerPath())) {
+            throw new RuntimeException('Could not persist runtime plugin recovery state through a symlink.');
+        }
+
         $contents = json_encode($marker, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
         $temporaryPath = $this->recoveryMarkerPath().'.tmp';
 

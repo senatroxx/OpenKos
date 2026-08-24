@@ -107,6 +107,17 @@ it('rejects a runtime plugin that conflicts with an explicit plugin', function (
         ->toThrow(RuntimeException::class, 'conflicts');
 });
 
+it('rejects an entry-class conflict before activating a runtime plugin', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    config(['platform.plugins' => [$artifact['class']]]);
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('conflicts');
+
+    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
+});
+
 it('fails on corrupted runtime state instead of treating it as disabled', function (): void {
     mkdir($this->runtimePluginPath, 0750, true);
     file_put_contents($this->runtimePluginPath.'/state.json', '{broken');

@@ -204,10 +204,11 @@ final class PluginInstaller
      */
     private function validateBootSet(array $metadata, string $stagingPath, RuntimePluginStore $store): void
     {
-        $classes = [
+        $hostClasses = [
             ...config('platform.plugins', []),
             ...app(ComposerPluginDiscovery::class)->discoverComposerOnly(),
         ];
+        $runtimeClasses = [];
         $state = $store->readState();
 
         foreach ($store->installedPackages() as $id => $path) {
@@ -215,11 +216,21 @@ final class PluginInstaller
                 continue;
             }
 
-            $classes[] = $this->validator->validate($path, $id)['entry_class'];
+            $runtimeClasses[] = $this->validator->validate($path, $id)['entry_class'];
         }
 
         require_once $stagingPath.'/vendor/autoload.php';
-        $classes[] = $metadata['entry_class'];
+        $runtimeClasses[] = $metadata['entry_class'];
+
+        foreach ($runtimeClasses as $class) {
+            if (in_array($class, $hostClasses, true)) {
+                throw new RuntimePluginConflictException(
+                    "Runtime plugin entry class [{$class}] conflicts with a Composer or explicit plugin. Neither copy will load.",
+                );
+            }
+        }
+
+        $classes = [...$hostClasses, ...$runtimeClasses];
         $classes = array_values(array_unique($classes));
         $plugins = [];
 
