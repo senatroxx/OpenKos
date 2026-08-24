@@ -135,5 +135,13 @@
     "Total paid": "Total dibayar",
     "Generated on": "Dibuat pada",
     "This document reflects the invoice status at the time it was generated.": "Dokumen ini mencerminkan status tagihan saat dibuat.",
-    "Partially Paid": "Dibayar sebagian"
+    "Partially Paid": "Dibayar sebagian",
+    "Rent": "Sewa",
+    "Deposit": "Uang jaminan",
+    "Utility": "Utilitas",
+    "Cash": "Tunai",
+    "Bank Transfer": "Transfer bank",
+    "E-Wallet": "Dompet digital",
+    "Online Gateway": "Gerbang pembayaran online",
+    "Other": "Lainnya"
 }

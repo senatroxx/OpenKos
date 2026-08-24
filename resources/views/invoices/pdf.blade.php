@@ -55,6 +55,15 @@
 <body>
 @php
     $translate = static fn (string $key): string => __($key, [], $locale);
+    $formatLineItemType = static fn (string $value): string => $translate(
+        str($value)->replace('_', ' ')->title()->toString(),
+    );
+    $formatPaymentMethod = static function (string $value) use ($translate): string {
+        $label = App\Enums\PaymentMethod::tryFrom($value)?->label()
+            ?? str($value)->replace('_', ' ')->title()->toString();
+
+        return $translate($label);
+    };
     $formatDate = static fn ($date): string => $date?->copy()->locale($locale)->translatedFormat('d M Y') ?? '-';
     $formatDateTime = static fn ($date, string $format = 'd M Y, H:i'): string => App\Support\DateTimeFormatter::inDisplayTimezone($date)?->locale($locale)->translatedFormat($format) ?? '-';
     $formatMoney = static fn (string $amount): string => app(App\Services\Payments\MoneyConverter::class)
@@ -145,7 +154,7 @@
     @forelse ($invoice->lineItems as $item)
         <tr>
             <td>{{ $item->description }}</td>
-            <td>{{ str($item->type)->replace('_', ' ')->title() }}</td>
+            <td>{{ $formatLineItemType($item->type) }}</td>
             <td class="right">{{ $formatMoney($item->amount) }}</td>
         </tr>
     @empty
@@ -168,7 +177,7 @@
             <table class="single">
                 <tr>
                     <td><span class="label">{{ $translate('Payment date') }}</span><br>{{ $formatDate($payment->payment_date) }}</td>
-                    <td><span class="label">{{ $translate('Method') }}</span><br>{{ str($payment->payment_method)->replace('_', ' ')->title() }}</td>
+                    <td><span class="label">{{ $translate('Method') }}</span><br>{{ $formatPaymentMethod($payment->payment_method) }}</td>
                     <td><span class="label">{{ $translate('Reference') }}</span><br>{{ $payment->reference_number ?? '-' }}</td>
                     @if ($payment->verified_at)
                         <td><span class="label">{{ $translate('Verified at') }}</span><br>{{ $formatDateTime($payment->verified_at) }}</td>
@@ -184,7 +193,7 @@
                 @foreach ($payments as $payment)
                     <tr>
                         <td>{{ $formatDate($payment->payment_date) }}</td>
-                        <td>{{ str($payment->payment_method)->replace('_', ' ')->title() }}</td>
+                        <td>{{ $formatPaymentMethod($payment->payment_method) }}</td>
                         <td>{{ $payment->reference_number ?? '-' }}</td>
                         <td>{{ $formatMoney($payment->amount) }}</td>
                     </tr>

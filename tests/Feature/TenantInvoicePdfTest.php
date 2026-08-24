@@ -211,6 +211,25 @@ test('invoice PDF fingerprints use canonical locale values', function () {
         ->toBe($aliasFingerprint);
 });
 
+test('invoice PDF fingerprints change when translations change', function () {
+    $fixture = createTenantInvoicePdfFixture();
+    $artifact = app(InvoicePdfArtifact::class);
+    $path = lang_path('id.json');
+    $original = file_get_contents($path);
+
+    expect($original)->toBeString();
+
+    try {
+        $before = $artifact->fingerprint($fixture['invoice']);
+        file_put_contents($path, $original."\n");
+        $after = $artifact->fingerprint($fixture['invoice']);
+    } finally {
+        file_put_contents($path, $original);
+    }
+
+    expect($after)->not->toBe($before);
+});
+
 test('invoice PDF view reflects the current aggregate for each payable state', function (
     string $paymentAmount,
     InvoiceStatus $expectedStatus,
@@ -296,7 +315,7 @@ test('invoice PDF renders confirmed payment details and history', function () {
 
     expect($html)
         ->toContain(__('Payments', [], 'id'))
-        ->toContain('Bank Transfer')
+        ->toContain(__('Bank Transfer', [], 'id'))
         ->toContain('PAY20260021')
         ->toContain(__('Total paid', [], 'id'))
         ->toContain(__('Outstanding', [], 'id'))

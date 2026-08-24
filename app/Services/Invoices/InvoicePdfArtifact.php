@@ -104,6 +104,7 @@ final class InvoicePdfArtifact
 
         $payload = [
             'settings' => $settings,
+            'translation_catalogs' => $this->translationCatalogs($settings['locale']),
             'invoice' => $this->attributes($invoice, [
                 'id', 'reference', 'created_at', 'period_start', 'period_end',
                 'due_date', 'status', 'total', 'amount_paid',
@@ -127,6 +128,19 @@ final class InvoicePdfArtifact
         ];
 
         return hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array<string, string|null> */
+    private function translationCatalogs(string $locale): array
+    {
+        $locales = array_values(array_unique([$locale, $this->locale->fallback()]));
+
+        return collect($locales)->mapWithKeys(function (string $catalogLocale): array {
+            $path = lang_path("{$catalogLocale}.json");
+            $hash = is_file($path) ? hash_file('sha256', $path) : false;
+
+            return [$catalogLocale => is_string($hash) ? $hash : null];
+        })->all();
     }
 
     /** @return array<string, mixed>|null */

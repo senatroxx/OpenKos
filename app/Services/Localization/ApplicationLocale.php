@@ -6,15 +6,29 @@ use App\Models\Setting;
 
 final class ApplicationLocale
 {
+    private const DEFAULT_LOCALE_ALIASES = [
+        'en' => 'en',
+        'en-us' => 'en',
+        'id' => 'id',
+        'id-id' => 'id',
+    ];
+
+    private const DEFAULT_INTL_LOCALES = [
+        'en' => 'en-US',
+        'id' => 'id-ID',
+    ];
+
     /**
      * @return array<string, string>
      */
     public function options(): array
     {
-        return config('app.supported_locales', [
+        $options = $this->config('app.supported_locales', [
             'en' => 'English',
             'id' => 'Bahasa Indonesia',
         ]);
+
+        return is_array($options) ? $options : [];
     }
 
     public function normalize(mixed $locale): ?string
@@ -24,9 +38,10 @@ final class ApplicationLocale
         }
 
         $normalized = strtolower(str_replace('_', '-', trim($locale)));
-        $aliases = config('app.locale_aliases', []);
+        $aliases = $this->config('app.locale_aliases', self::DEFAULT_LOCALE_ALIASES);
+        $resolved = is_array($aliases) ? ($aliases[$normalized] ?? null) : null;
 
-        return is_array($aliases) ? ($aliases[$normalized] ?? null) : null;
+        return is_string($resolved) ? $resolved : null;
     }
 
     public function resolve(mixed $locale = null): string
@@ -40,7 +55,7 @@ final class ApplicationLocale
         }
 
         return $this->normalize($locale)
-            ?? $this->normalize((string) config('app.fallback_locale'))
+            ?? $this->normalize((string) $this->config('app.fallback_locale', 'en'))
             ?? 'en';
     }
 
@@ -62,7 +77,7 @@ final class ApplicationLocale
     {
         $resolved = $this->resolve($locale);
 
-        $locales = config('app.intl_locales', []);
+        $locales = $this->config('app.intl_locales', self::DEFAULT_INTL_LOCALES);
 
         return is_array($locales) ? ($locales[$resolved] ?? $resolved) : $resolved;
     }
@@ -85,6 +100,15 @@ final class ApplicationLocale
 
     public function fallback(): string
     {
-        return $this->normalize((string) config('app.fallback_locale')) ?? 'en';
+        return $this->normalize((string) $this->config('app.fallback_locale', 'en')) ?? 'en';
+    }
+
+    private function config(string $key, mixed $default): mixed
+    {
+        try {
+            return config($key, $default);
+        } catch (\Throwable) {
+            return $default;
+        }
     }
 }

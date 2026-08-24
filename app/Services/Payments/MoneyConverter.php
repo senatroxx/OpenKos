@@ -172,7 +172,8 @@ final class MoneyConverter
         $absolute = $amount->abs()->toScale($scale, RoundingMode::Unnecessary)->toString();
         [$integer, $fraction] = array_pad(explode('.', $absolute, 2), 2, '');
 
-        $displayLocale = $this->localeResolver?->intlLocale($locale) ?? ($locale ?? 'en-US');
+        $localeResolver = $this->localeResolver ?? new ApplicationLocale;
+        $displayLocale = $localeResolver->intlLocale($locale);
         $formatter = new \NumberFormatter(
             $displayLocale,
             \NumberFormatter::CURRENCY,

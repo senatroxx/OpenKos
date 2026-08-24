@@ -4,6 +4,7 @@ use App\Actions\Reminders\ForceSendReminder;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Services\Localization\ApplicationLocale;
+use App\Services\Payments\MoneyConverter;
 
 test('installation locales are normalized to supported application locales', function () {
     $locale = app(ApplicationLocale::class);
@@ -49,4 +50,12 @@ test('manual reminder actions apply the configured locale', function () {
 
     expect($result)->toBe('all_paid')
         ->and(app()->getLocale())->toBe('id');
+});
+
+test('direct money formatting uses the configured locale', function () {
+    Setting::set('locale', 'id');
+    app()->setLocale('en');
+
+    expect((new MoneyConverter)->format('1500000', 'USD'))
+        ->toBe(app(MoneyConverter::class)->format('1500000', 'USD'));
 });
