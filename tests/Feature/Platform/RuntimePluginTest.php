@@ -54,6 +54,21 @@ it('does not boot a disabled runtime plugin', function (): void {
     expect(app(PermissionRegistry::class)->all())->not->toHaveKey('runtime-fixture.view');
 });
 
+it('validates updates in a fresh process after the previous class was loaded', function (): void {
+    $first = makeRuntimePluginArtifact();
+
+    $this->artisan('plugin:install', ['zip' => $first['zip']])->assertSuccessful();
+    $this->bootPlatformWithIsolatedRegistries();
+
+    $classShort = basename(str_replace('\\', '/', $first['class']));
+    $second = makeRuntimePluginArtifact(['version' => '2.0.0'], $first['id'], $classShort);
+
+    $this->artisan('plugin:install', ['zip' => $second['zip']])->assertSuccessful();
+
+    expect(file_get_contents($this->runtimePluginPath.'/'.$first['id'].'/src/'.$classShort.'.php'))
+        ->toContain("version: '2.0.0'");
+});
+
 it('revalidates an installed plugin before enabling it', function (): void {
     $artifact = makeRuntimePluginArtifact();
 
@@ -84,6 +99,36 @@ it('rejects artifacts that exceed the configured archive limit', function (): vo
 
     $this->artisan('plugin:install', ['zip' => $zip])
         ->assertFailed();
+});
+
+it('counts archive directories toward the entry limit', function (): void {
+    config(['platform.runtime.max_files' => 1]);
+    $zip = makeDirectoryHeavyZip();
+
+    $this->artisan('plugin:install', ['zip' => $zip])->assertFailed();
+});
+
+it('validates bundled dependency versions and rejects bundled host packages', function (): void {
+    $artifact = makeRuntimePluginArtifact(
+        id: null,
+        classShort: null,
+        bundledPackages: ['acme/dependency' => '1.0.0'],
+        additionalRequirements: ['acme/dependency' => '^2.0'],
+    );
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('Bundled package [acme/dependency] version [1.0.0]');
+
+    $hostPackageArtifact = makeRuntimePluginArtifact(
+        id: null,
+        classShort: null,
+        bundledPackages: ['laravel/framework' => '13.0.0'],
+    );
+
+    $this->artisan('plugin:install', ['zip' => $hostPackageArtifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('must not bundle host package [laravel/framework]');
 });
 
 it('reports an enabled package with a malformed manifest without booting it', function (): void {
@@ -129,13 +174,20 @@ it('fails on corrupted runtime state instead of treating it as disabled', functi
 
 /**
  * @param  array<string, mixed>  $overrides
+ * @param  array<string, string>  $bundledPackages
+ * @param  array<string, string>  $additionalRequirements
  * @return array{zip: string, id: string, class: string}
  */
-function makeRuntimePluginArtifact(array $overrides = []): array
-{
+function makeRuntimePluginArtifact(
+    array $overrides = [],
+    ?string $id = null,
+    ?string $classShort = null,
+    array $bundledPackages = [],
+    array $additionalRequirements = [],
+): array {
     $suffix = (string) random_int(100000, 999999);
-    $id = "acme/runtime-{$suffix}";
-    $classShort = "Runtime{$suffix}Plugin";
+    $id ??= "acme/runtime-{$suffix}";
+    $classShort ??= "Runtime{$suffix}Plugin";
     $entryClass = "RuntimeArtifact\\{$classShort}";
     $manifest = [
         'id' => $id,
@@ -149,11 +201,12 @@ function makeRuntimePluginArtifact(array $overrides = []): array
         ...$overrides,
     ];
     $composer = [
-        'name' => $id,
+        'name' => $manifest['id'],
         'type' => 'library',
         'require' => [
             'php' => '^8.3',
             'openkos/platform' => '^0.2',
+            ...$additionalRequirements,
         ],
         'autoload' => ['psr-4' => ['RuntimeArtifact\\' => 'src/']],
         'extra' => ['openkos' => ['plugin' => $entryClass]],
@@ -164,13 +217,23 @@ function makeRuntimePluginArtifact(array $overrides = []): array
         'manifest.json' => json_encode($manifest, JSON_THROW_ON_ERROR),
         'composer.json' => json_encode($composer, JSON_THROW_ON_ERROR),
         'composer.lock' => json_encode([
-            'packages' => [['name' => 'openkos/platform', 'version' => '0.2.2']],
+            'packages' => [
+                ['name' => 'openkos/platform', 'version' => '0.2.2'],
+                ...array_map(
+                    fn (string $version, string $name): array => ['name' => $name, 'version' => $version],
+                    $bundledPackages,
+                    array_keys($bundledPackages),
+                ),
+            ],
             'packages-dev' => [],
         ], JSON_THROW_ON_ERROR),
         'src/'.$classShort.'.php' => $source,
         'vendor/autoload.php' => "<?php\nspl_autoload_register(static function (string \$class): void {\n    if (\$class === '{$entryClass}') {\n        require_once __DIR__.'/../src/{$classShort}.php';\n    }\n});\n",
-        'vendor/composer/installed.php' => "<?php\nreturn ['versions' => []];\n",
-    ], $id, $entryClass);
+        'vendor/composer/installed.php' => "<?php\nreturn ['versions' => ".var_export(array_map(
+            fn (string $version): array => ['pretty_version' => $version],
+            $bundledPackages,
+        ), true)."];\n",
+    ], $manifest['id'], $entryClass);
 }
 
 /**
@@ -193,4 +256,19 @@ function makeZip(array $files, string $id = 'acme/invalid', string $class = 'Run
     File::deleteDirectory($directory);
 
     return ['zip' => $zipPath, 'id' => $id, 'class' => $class];
+}
+
+function makeDirectoryHeavyZip(): string
+{
+    $directory = sys_get_temp_dir().'/openkos-directory-heavy-'.bin2hex(random_bytes(8));
+    mkdir($directory, 0750, true);
+    $zipPath = $directory.'.zip';
+    $zip = new ZipArchive;
+    $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    $zip->addEmptyDir('src');
+    $zip->addFromString('manifest.json', '{}');
+    $zip->close();
+    File::deleteDirectory($directory);
+
+    return $zipPath;
 }

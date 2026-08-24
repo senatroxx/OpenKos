@@ -6,6 +6,7 @@ use Composer\InstalledVersions;
 use Composer\Semver\Semver;
 use InvalidArgumentException;
 use OpenKOS\Platform\Plugin\Plugin;
+use Symfony\Component\Process\Process;
 use Throwable;
 
 final class RuntimePluginArtifactValidator
@@ -110,6 +111,67 @@ final class RuntimePluginArtifactValidator
     }
 
     /**
+     * @return array{
+     *     id: string,
+     *     name: string,
+     *     version: string,
+     *     description: string,
+     *     entry_class: class-string<Plugin>,
+     *     core_version: string,
+     *     php: string,
+     *     dependencies: array<int, string>
+     * }
+     */
+    public function validateInFreshProcess(string $directory, ?string $expectedId = null): array
+    {
+        try {
+            $runtimeConfig = json_encode(config('platform.runtime'), JSON_THROW_ON_ERROR);
+        } catch (Throwable $exception) {
+            throw new InvalidArgumentException('Runtime plugin configuration cannot be serialized.', previous: $exception);
+        }
+
+        $process = new Process([
+            PHP_BINARY,
+            base_path('bin/validate-runtime-plugin.php'),
+            $directory,
+            $expectedId ?? '',
+            $runtimeConfig,
+            (string) config('platform.version', '0.2.0'),
+        ], base_path());
+        $process->setTimeout(60);
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            $message = trim($process->getErrorOutput() ?: $process->getOutput());
+
+            throw new InvalidArgumentException($message !== '' ? $message : 'Runtime plugin validation failed.');
+        }
+
+        try {
+            $metadata = json_decode($process->getOutput(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable $exception) {
+            throw new InvalidArgumentException('Runtime plugin validation returned malformed metadata.', previous: $exception);
+        }
+
+        if (! is_array($metadata)) {
+            throw new InvalidArgumentException('Runtime plugin validation returned malformed metadata.');
+        }
+
+        /** @var array{
+         *     id: string,
+         *     name: string,
+         *     version: string,
+         *     description: string,
+         *     entry_class: class-string<Plugin>,
+         *     core_version: string,
+         *     php: string,
+         *     dependencies: array<int, string>
+         * } $metadata
+         */
+        return $metadata;
+    }
+
+    /**
      * @param  array<string, mixed>  $manifest
      * @return array{
      *     id: string,
@@ -207,6 +269,12 @@ final class RuntimePluginArtifactValidator
 
         $bundledPackages = $this->bundledPackages($directory.'/vendor/composer/installed.php');
 
+        foreach (array_keys($bundledPackages) as $package) {
+            if ($this->isSharedPackage($package)) {
+                throw new InvalidArgumentException("Runtime plugin must not bundle host package [{$package}].");
+            }
+        }
+
         foreach ($requires as $package => $constraint) {
             if (! is_string($package) || ! is_string($constraint)) {
                 throw new InvalidArgumentException('Runtime plugin Composer requirements must be valid strings.');
@@ -227,10 +295,6 @@ final class RuntimePluginArtifactValidator
             }
 
             if ($this->isSharedPackage($package)) {
-                if (isset($bundledPackages[$package])) {
-                    throw new InvalidArgumentException("Runtime plugin must not bundle host package [{$package}].");
-                }
-
                 if (! InstalledVersions::isInstalled($package)) {
                     throw new InvalidArgumentException("Host package [{$package}] is not installed.");
                 }
@@ -247,6 +311,14 @@ final class RuntimePluginArtifactValidator
             if (! isset($lockedPackages[$package]) && ! InstalledVersions::isInstalled($package)) {
                 throw new InvalidArgumentException(
                     "Runtime plugin dependency [{$package}] is absent from composer.lock and the host.",
+                );
+            }
+
+            if (isset($bundledPackages[$package])) {
+                $this->assertSatisfies(
+                    $bundledPackages[$package],
+                    $constraint,
+                    "Bundled package [{$package}]",
                 );
             }
 
@@ -267,7 +339,7 @@ final class RuntimePluginArtifactValidator
     }
 
     /**
-     * @return array<string, true>
+     * @return array<string, string>
      */
     private function bundledPackages(string $installedPath): array
     {
@@ -283,10 +355,12 @@ final class RuntimePluginArtifactValidator
         }
 
         $packages = [];
-        foreach (array_keys($versions) as $package) {
-            if (is_string($package)) {
-                $packages[$package] = true;
+        foreach ($versions as $package => $metadata) {
+            if (! is_string($package) || ! is_array($metadata) || ! is_string($metadata['pretty_version'] ?? null)) {
+                throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
             }
+
+            $packages[$package] = $metadata['pretty_version'];
         }
 
         return $packages;
@@ -348,8 +422,9 @@ final class RuntimePluginArtifactValidator
 
         $iterator = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($realDirectory, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
         );
-        $fileCount = 0;
+        $entryCount = 0;
         $size = 0;
 
         foreach ($iterator as $file) {
@@ -360,6 +435,8 @@ final class RuntimePluginArtifactValidator
             if ($file->isLink() || is_link($path)) {
                 throw new InvalidArgumentException("Runtime plugin artifact contains symlink [{$relative}].");
             }
+
+            $entryCount++;
 
             if ($topLevel === '' || ! in_array($topLevel, [
                 'manifest.json',
@@ -376,7 +453,6 @@ final class RuntimePluginArtifactValidator
             }
 
             if ($file->isFile()) {
-                $fileCount++;
                 $size += $file->getSize();
 
                 if (($file->getPerms() & 0111) !== 0) {
@@ -389,7 +465,7 @@ final class RuntimePluginArtifactValidator
             }
         }
 
-        if ($fileCount > (int) config('platform.runtime.max_files', 5000)) {
+        if ($entryCount > (int) config('platform.runtime.max_files', 5000)) {
             throw new InvalidArgumentException('Runtime plugin artifact exceeds the maximum file count.');
         }
 

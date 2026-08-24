@@ -284,6 +284,11 @@ Runtime installation is intentionally a strict plugin contract. Laravel service
 providers are not runtime entrypoints; a package such as Fonnte must expose an OpenKOS
 `Plugin` class and may delegate internally as needed.
 
+The installer validates each artifact in a fresh PHP process before promotion, so an
+already-loaded class from an older version cannot be mistaken for the staged version.
+Archive entry names are normalized and bounded, and bundled dependency versions must
+satisfy the artifact's Composer constraints.
+
 Use the operator-only CLI lifecycle:
 
 ```text

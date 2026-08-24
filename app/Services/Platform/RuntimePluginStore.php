@@ -13,11 +13,18 @@ final class RuntimePluginStore
     public function __construct()
     {
         $configuredPath = (string) config('platform.runtime.path');
-        $this->root = str_starts_with($configuredPath, DIRECTORY_SEPARATOR)
+        $path = str_starts_with($configuredPath, DIRECTORY_SEPARATOR)
             ? rtrim($configuredPath, DIRECTORY_SEPARATOR)
             : base_path(trim($configuredPath, DIRECTORY_SEPARATOR));
+        $this->root = $this->canonicalizePath($path);
+        $basePath = realpath(base_path());
 
-        if ($this->root === '' || $this->root === base_path() || $this->root === DIRECTORY_SEPARATOR) {
+        if (
+            ! is_string($basePath) ||
+            $this->root === DIRECTORY_SEPARATOR ||
+            $this->root === $basePath ||
+            str_starts_with($basePath, $this->root.DIRECTORY_SEPARATOR)
+        ) {
             throw new RuntimeException('Runtime plugin storage must be a dedicated directory.');
         }
     }
@@ -548,5 +555,38 @@ final class RuntimePluginStore
     private function isValidId(string $id): bool
     {
         return preg_match('/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/', $id) === 1;
+    }
+
+    private function canonicalizePath(string $path): string
+    {
+        if ($path === '') {
+            throw new RuntimeException('Runtime plugin storage must be a dedicated directory.');
+        }
+
+        $missing = [];
+        $current = $path;
+
+        while (! file_exists($current)) {
+            $parent = dirname($current);
+
+            if ($parent === $current) {
+                throw new RuntimeException('Runtime plugin storage path cannot be resolved.');
+            }
+
+            array_unshift($missing, basename($current));
+            $current = $parent;
+        }
+
+        $resolved = realpath($current);
+
+        if (! is_string($resolved)) {
+            throw new RuntimeException('Runtime plugin storage path cannot be resolved.');
+        }
+
+        foreach ($missing as $segment) {
+            $resolved .= DIRECTORY_SEPARATOR.$segment;
+        }
+
+        return rtrim($resolved, DIRECTORY_SEPARATOR) ?: DIRECTORY_SEPARATOR;
     }
 }

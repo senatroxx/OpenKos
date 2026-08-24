@@ -3,8 +3,10 @@
 namespace App\Services\Platform;
 
 use InvalidArgumentException;
+use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
 use OpenKOS\Platform\Plugin\PluginLoader;
+use OpenKOS\Platform\Plugin\PluginManifest;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
@@ -56,8 +58,8 @@ final class PluginInstaller
                     throw new RuntimeException('Plugin ZIP could not be extracted into staging storage.');
                 }
 
-                $metadata = $this->validator->validate($stagingPath);
-                $this->validateBootSet($metadata, $stagingPath, $store);
+                $metadata = $this->validator->validateInFreshProcess($stagingPath);
+                $this->validateBootSet($metadata, $store);
 
                 $state = $store->readState();
                 $enabled = ! isset($state[$metadata['id']]) || $state[$metadata['id']]['enabled'];
@@ -93,8 +95,8 @@ final class PluginInstaller
     {
         return $this->store->withLock(function (RuntimePluginStore $store) use ($id): array {
             $path = $store->packagePath($id);
-            $metadata = $this->validator->validate($path, $id);
-            $this->validateBootSet($metadata, $path, $store);
+            $metadata = $this->validator->validateInFreshProcess($path, $id);
+            $this->validateBootSet($metadata, $store);
             $store->setEnabled($id, true);
 
             return $metadata;
@@ -117,10 +119,11 @@ final class PluginInstaller
 
     private function validateArchiveEntries(ZipArchive $archive): void
     {
-        $count = 0;
+        $entryCount = 0;
         $size = 0;
         $maxFiles = (int) config('platform.runtime.max_files', 5000);
         $maxSize = (int) config('platform.runtime.max_uncompressed_bytes', 268_435_456);
+        $seen = [];
 
         for ($index = 0; $index < $archive->numFiles; $index++) {
             $stat = $archive->statIndex($index);
@@ -131,6 +134,7 @@ final class PluginInstaller
 
             $name = $stat['name'];
             $normalizedName = str_replace('\\', '/', $name);
+            $normalizedPath = rtrim($normalizedName, '/');
             $segments = explode('/', $normalizedName);
             $isDirectory = str_ends_with($normalizedName, '/');
 
@@ -140,10 +144,18 @@ final class PluginInstaller
                 str_starts_with($normalizedName, '/') ||
                 preg_match('/^[A-Za-z]:\//', $normalizedName) === 1 ||
                 in_array('..', $segments, true) ||
+                in_array('.', $segments, true) ||
                 in_array('', array_slice($segments, 0, -1), true)
             ) {
                 throw new InvalidArgumentException("Plugin ZIP contains an unsafe path [{$name}].");
             }
+
+            if ($normalizedPath === '' || isset($seen[$normalizedPath])) {
+                throw new InvalidArgumentException("Plugin ZIP contains a duplicate path [{$name}].");
+            }
+
+            $seen[$normalizedPath] = true;
+            $entryCount++;
 
             $topLevel = $segments[0] ?? '';
             if (! in_array($topLevel, [
@@ -176,11 +188,10 @@ final class PluginInstaller
             }
 
             if (! $isDirectory) {
-                $count++;
                 $size += (int) ($stat['size'] ?? 0);
             }
 
-            if ($count > $maxFiles || $size > $maxSize) {
+            if ($entryCount > $maxFiles || $size > $maxSize) {
                 throw new InvalidArgumentException('Plugin ZIP exceeds the configured archive limits.');
             }
 
@@ -202,12 +213,13 @@ final class PluginInstaller
      *     dependencies: array<int, string>
      * } $metadata
      */
-    private function validateBootSet(array $metadata, string $stagingPath, RuntimePluginStore $store): void
+    private function validateBootSet(array $metadata, RuntimePluginStore $store): void
     {
         $hostClasses = [
             ...config('platform.plugins', []),
             ...app(ComposerPluginDiscovery::class)->discoverComposerOnly(),
         ];
+        $runtimeMetadata = [];
         $runtimeClasses = [];
         $state = $store->readState();
 
@@ -216,14 +228,18 @@ final class PluginInstaller
                 continue;
             }
 
-            $runtimeClasses[] = $this->validator->validate($path, $id)['entry_class'];
+            $runtimeMetadata[] = $this->validator->validateInFreshProcess($path, $id);
+            $runtimeClasses[] = $runtimeMetadata[array_key_last($runtimeMetadata)]['entry_class'];
         }
 
-        require_once $stagingPath.'/vendor/autoload.php';
-        $runtimeClasses[] = $metadata['entry_class'];
+        if (in_array($metadata['entry_class'], $hostClasses, true)) {
+            throw new RuntimePluginConflictException(
+                "Runtime plugin entry class [{$metadata['entry_class']}] conflicts with a Composer or explicit plugin. Neither copy will load.",
+            );
+        }
 
         foreach ($runtimeClasses as $class) {
-            if (in_array($class, $hostClasses, true)) {
+            if (in_array($class, $hostClasses, true) || $class === $metadata['entry_class']) {
                 throw new RuntimePluginConflictException(
                     "Runtime plugin entry class [{$class}] conflicts with a Composer or explicit plugin. Neither copy will load.",
                 );
@@ -240,6 +256,39 @@ final class PluginInstaller
             }
 
             $plugins[] = app()->make($class);
+        }
+
+        foreach ([...$runtimeMetadata, $metadata] as $pluginMetadata) {
+            $plugins[] = new class($pluginMetadata) extends Plugin
+            {
+                /**
+                 * @param  array{
+                 *     id: string,
+                 *     name: string,
+                 *     version: string,
+                 *     description: string,
+                 *     entry_class: class-string<Plugin>,
+                 *     core_version: string,
+                 *     php: string,
+                 *     dependencies: array<int, string>
+                 * }  $metadata
+                 */
+                public function __construct(private array $metadata) {}
+
+                public function manifest(): PluginManifest
+                {
+                    return new PluginManifest(
+                        id: $this->metadata['id'],
+                        name: $this->metadata['name'],
+                        version: $this->metadata['version'],
+                        description: $this->metadata['description'],
+                        coreVersion: $this->metadata['core_version'],
+                        dependencies: $this->metadata['dependencies'],
+                    );
+                }
+
+                public function register(OpenKOSManager $platform): void {}
+            };
         }
 
         (new PluginLoader)->prepare($plugins, config('platform.version', '0.2.0'));

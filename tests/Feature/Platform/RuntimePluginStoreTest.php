@@ -120,3 +120,11 @@ it('rejects recovery paths outside their managed directories', function (): void
     expect(fn (): mixed => $store->withLock(fn (): null => null))
         ->toThrow(RuntimeException::class, 'recovery marker is invalid');
 });
+
+it('rejects the application root as runtime plugin storage', function (): void {
+    config(['platform.runtime.path' => base_path('.')]);
+    app()->forgetInstance(RuntimePluginStore::class);
+
+    expect(fn (): RuntimePluginStore => app(RuntimePluginStore::class))
+        ->toThrow(RuntimeException::class, 'dedicated directory');
+});
