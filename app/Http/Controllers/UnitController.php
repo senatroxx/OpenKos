@@ -370,8 +370,22 @@ class UnitController extends Controller
     /**
      * @param  array<int, array<string, mixed>>  $rates
      */
-    private function assertNewRateCurrenciesSupported(array $rates): void
+    private function assertNewRateCurrenciesSupported(array &$rates): void
     {
+        $hasNewRate = false;
+
+        foreach ($rates as $rate) {
+            if (! isset($rate['id'])) {
+                $hasNewRate = true;
+
+                break;
+            }
+        }
+
+        if (! $hasNewRate) {
+            return;
+        }
+
         $this->currencies->lockForUpdate();
 
         $defaultCurrency = $this->currencies->default(fresh: true);
@@ -393,10 +407,14 @@ class UnitController extends Controller
             }
 
             try {
-                $this->money->normalizeAmount((string) $rate['amount'], $currency);
+                $rates[$index]['currency'] = $currency;
+                $rates[$index]['amount'] = $this->money->normalizeAmount(
+                    (string) $rate['amount'],
+                    $currency,
+                );
             } catch (\Throwable) {
                 throw ValidationException::withMessages([
-                    "rates.{$index}.amount" => __('The amount has too many decimal places for this currency.'),
+                    "rates.{$index}.amount" => __('The amount is invalid for the selected currency.'),
                 ]);
             }
         }

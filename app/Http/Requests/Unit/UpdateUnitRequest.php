@@ -73,7 +73,13 @@ class UpdateUnitRequest extends FormRequest
                 ? $storedRate?->currency
                 : (is_string($rate['currency'] ?? null) ? $rate['currency'] : null);
 
-            $rules["rates.{$index}.amount"] = ['required_with:rates', new MoneyAmount($currency)];
+            $amountRules = ['required_with:rates'];
+
+            if ($currency !== null) {
+                $amountRules[] = new MoneyAmount($currency);
+            }
+
+            $rules["rates.{$index}.amount"] = $amountRules;
         }
 
         return $rules;

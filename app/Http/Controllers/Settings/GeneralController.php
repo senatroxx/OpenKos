@@ -55,17 +55,21 @@ class GeneralController extends Controller
             return DB::transaction(function () use ($request): RedirectResponse {
                 $this->currencies->lockForUpdate();
 
-                return $this->persistUpdate($request);
+                return $this->persistUpdate($request, useFreshCurrencySettings: true);
             });
         }
 
         return $this->persistUpdate($request);
     }
 
-    private function persistUpdate(Request $request): RedirectResponse
+    private function persistUpdate(Request $request, bool $useFreshCurrencySettings = false): RedirectResponse
     {
-        $previousSupported = $this->currencies->supported();
-        $hasStoredSupportedCurrencies = $this->currencies->hasStoredSupportedCurrencies();
+        $previousSupported = $useFreshCurrencySettings
+            ? $this->currencies->freshSupported()
+            : $this->currencies->supported();
+        $hasStoredSupportedCurrencies = $this->currencies->hasStoredSupportedCurrencies(
+            fresh: $useFreshCurrencySettings,
+        );
 
         $validated = $request->validate([
             'site_name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -80,7 +84,11 @@ class GeneralController extends Controller
             'invoice_pdf_enabled' => ['sometimes', 'boolean'],
         ]);
 
-        $nextDefault = $validated['currency'] ?? $this->currencies->default();
+        $nextDefault = $validated['currency'] ?? (
+            $useFreshCurrencySettings
+                ? $this->currencies->default(fresh: true)
+                : $this->currencies->default()
+        );
         if (array_key_exists('supported_currencies', $validated)) {
             try {
                 $validated['supported_currencies'] = $this->currencies->normalize(
@@ -140,7 +148,7 @@ class GeneralController extends Controller
                     static fn (mixed $currency): mixed => is_string($currency)
                         ? strtoupper(trim($currency))
                         : $currency,
-                    array_values($request->input('supported_currencies')),
+                    $request->input('supported_currencies'),
                 ),
             ]);
         }

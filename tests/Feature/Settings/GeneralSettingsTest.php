@@ -4,6 +4,7 @@ use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -80,6 +81,29 @@ describe('General settings page', function () {
             );
     });
 
+    it('reads currency settings fresh after acquiring the transaction lock', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', 'IDR');
+        Setting::set('supported_currencies', ['IDR', 'USD']);
+        $unit = Unit::factory()->create();
+        Setting::get('site_name');
+
+        DB::table('settings')->where('key', 'currency')->update(['value' => 'USD']);
+        DB::table('settings')
+            ->where('key', 'supported_currencies')
+            ->update(['value' => json_encode(['USD'], JSON_THROW_ON_ERROR)]);
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'currency' => 'USD',
+                'supported_currencies' => ['USD'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+
+        expect($unit->rates()->where('currency', 'IDR')->where('is_active', true)->exists())->toBeTrue();
+    });
+
     it('updates all general settings', function () {
         $owner = User::factory()->owner()->create();
 
@@ -144,6 +168,7 @@ describe('General settings page', function () {
         'empty' => [[], 'supported_currencies'],
         'unknown' => [['USD', 'ZZZ'], 'supported_currencies.1'],
         'default excluded' => [['IDR'], 'supported_currencies'],
+        'associative' => [['default' => 'USD'], 'supported_currencies'],
     ]);
 
     it('changes the legacy fallback with the new default currency', function () {

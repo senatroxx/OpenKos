@@ -57,10 +57,13 @@ class StoreUnitRequest extends FormRequest
             }
 
             $currency = $rate['currency'] ?? null;
-            $rules["rates.{$index}.amount"] = [
-                'required_with:rates',
-                new MoneyAmount(is_string($currency) ? $currency : null),
-            ];
+            $amountRules = ['required_with:rates'];
+
+            if (is_string($currency)) {
+                $amountRules[] = new MoneyAmount($currency);
+            }
+
+            $rules["rates.{$index}.amount"] = $amountRules;
         }
 
         return $rules;

@@ -540,6 +540,37 @@ describe('currency-specific rates', function () {
             ->assertSessionHasErrors('rates.0.currency');
     });
 
+    it('uses the fresh default currency for omitted new-rate currency values', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        Setting::set('currency', 'IDR');
+        Setting::set('supported_currencies', ['IDR', 'USD']);
+        Setting::get('site_name');
+
+        DB::table('settings')->where('key', 'currency')->update(['value' => 'USD']);
+        DB::table('settings')
+            ->where('key', 'supported_currencies')
+            ->update(['value' => json_encode(['USD'], JSON_THROW_ON_ERROR)]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => [[
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'amount' => '95.25',
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $unit = Unit::query()->where('name', 'Unit 101')->firstOrFail();
+
+        expect($unit->rates()->value('currency'))->toBe('USD')
+            ->and($unit->rates()->value('amount'))->toBe('95.250');
+    });
+
     it('keeps existing rates usable after their currency is removed', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();

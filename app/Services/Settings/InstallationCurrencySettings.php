@@ -49,6 +49,13 @@ final class InstallationCurrencySettings
         return $this->resolveSupported($configured, $default);
     }
 
+    /**
+     * Lock currency settings for a transaction that changes currency settings
+     * or creates new rate variants.
+     *
+     * This relies on row-level SELECT ... FOR UPDATE support from the
+     * supported production database drivers. SQLite's lockForUpdate is a no-op.
+     */
     public function lockForUpdate(): void
     {
         Setting::query()
@@ -57,16 +64,19 @@ final class InstallationCurrencySettings
             ->get();
     }
 
-    public function hasStoredSupportedCurrencies(): bool
+    public function hasStoredSupportedCurrencies(bool $fresh = false): bool
     {
-        $configured = Setting::get('supported_currencies');
+        $configured = $fresh
+            ? $this->storedValue('supported_currencies')
+            : Setting::get('supported_currencies');
 
         if (! is_array($configured) || $configured === []) {
             return false;
         }
 
         try {
-            $this->normalize($configured, $this->default());
+            $default = $fresh ? $this->freshDefault() : $this->default();
+            $this->normalize($configured, $default);
 
             return true;
         } catch (\Throwable) {
