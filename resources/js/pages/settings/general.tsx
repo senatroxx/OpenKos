@@ -11,6 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -41,6 +42,7 @@ export default function General({
         country_code: string;
         locale: string;
         currency: string;
+        supported_currencies: string[];
         timezone: string;
         lease_id_prefix: string;
         invoice_id_prefix: string;
@@ -48,7 +50,8 @@ export default function General({
     };
     timezone_list: string[];
 }) {
-    const { branding } = usePage<{
+    const { app, branding } = usePage<{
+        app: { currency_scales: Record<string, number> };
         branding: {
             logoUrl: string;
             faviconUrl: string;
@@ -58,6 +61,12 @@ export default function General({
             hasConfiguredFavicon: boolean;
         };
     }>().props;
+    const currencyOptions = Object.keys(app.currency_scales).sort();
+    const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' });
+
+    function currencyLabel(currency: string): string {
+        return `${currency} — ${currencyNames.of(currency) ?? currency}`;
+    }
     const [uploadingBranding, setUploadingBranding] =
         useState<BrandingAsset | null>(null);
     const [brandingErrors, setBrandingErrors] = useState<
@@ -72,8 +81,41 @@ export default function General({
         country_code: settings.country_code,
         locale: settings.locale,
         currency: settings.currency,
+        supported_currencies: settings.supported_currencies,
         timezone: settings.timezone,
     });
+
+    function setDefaultCurrency(currency: string): void {
+        localizationForm.setData((current) => ({
+            ...current,
+            currency,
+            supported_currencies: current.supported_currencies.includes(
+                currency,
+            )
+                ? current.supported_currencies
+                : [...current.supported_currencies, currency],
+        }));
+    }
+
+    function toggleSupportedCurrency(currency: string, checked: boolean): void {
+        if (!checked && currency === localizationForm.data.currency) {
+            return;
+        }
+
+        localizationForm.setData(
+            'supported_currencies',
+            checked
+                ? Array.from(
+                      new Set([
+                          ...localizationForm.data.supported_currencies,
+                          currency,
+                      ]),
+                  )
+                : localizationForm.data.supported_currencies.filter(
+                      (item) => item !== currency,
+                  ),
+        );
+    }
 
     const referenceForm = useForm({
         lease_id_prefix: settings.lease_id_prefix,
@@ -160,7 +202,10 @@ export default function General({
                             },
                         ] as const
                     ).map((item) => (
-                        <div key={item.asset} className="space-y-4 rounded-lg border p-4">
+                        <div
+                            key={item.asset}
+                            className="space-y-4 rounded-lg border p-4"
+                        >
                             <div className="flex items-center gap-4">
                                 <div className="flex size-20 items-center justify-center rounded-md border bg-muted/30 p-2">
                                     <img
@@ -170,7 +215,9 @@ export default function General({
                                     />
                                 </div>
                                 <div>
-                                    <h3 className="font-medium">{item.title}</h3>
+                                    <h3 className="font-medium">
+                                        {item.title}
+                                    </h3>
                                     <p className="text-sm text-muted-foreground">
                                         {item.description}
                                     </p>
@@ -352,28 +399,92 @@ export default function General({
                                     )}
                                 </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="currency">Currency</Label>
-                                    <Input
-                                        id="currency"
-                                        name="currency"
+                                <div className="grid max-w-md gap-2">
+                                    <Label htmlFor="currency">
+                                        Default currency
+                                    </Label>
+                                    <Select
                                         value={localizationForm.data.currency}
-                                        onChange={(e) =>
-                                            localizationForm.setData(
-                                                'currency',
-                                                e.target.value.toUpperCase(),
-                                            )
-                                        }
-                                        maxLength={3}
-                                        className="font-mono uppercase"
-                                        placeholder="ISO 4217"
-                                        required
-                                    />
+                                        onValueChange={setDefaultCurrency}
+                                    >
+                                        <SelectTrigger id="currency">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencyOptions.map((currency) => (
+                                                <SelectItem
+                                                    key={currency}
+                                                    value={currency}
+                                                >
+                                                    {currencyLabel(currency)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     {localizationForm.errors.currency && (
                                         <p className="text-sm text-red-600">
                                             {localizationForm.errors.currency}
                                         </p>
                                     )}
+                                </div>
+
+                                <div className="grid max-w-md gap-2">
+                                    <div>
+                                        <Label>Supported currencies</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Available for new pricing and
+                                            billing rates. Existing records keep
+                                            their original currency.
+                                        </p>
+                                    </div>
+                                    <div className="grid max-h-72 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
+                                        {currencyOptions.map((currency) => {
+                                            const isSupported =
+                                                localizationForm.data.supported_currencies.includes(
+                                                    currency,
+                                                );
+                                            const isDefault =
+                                                localizationForm.data
+                                                    .currency === currency;
+
+                                            return (
+                                                <label
+                                                    key={currency}
+                                                    className="flex items-start gap-2 rounded-md p-2 text-sm hover:bg-muted/50"
+                                                >
+                                                    <Checkbox
+                                                        checked={isSupported}
+                                                        disabled={isDefault}
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            toggleSupportedCurrency(
+                                                                currency,
+                                                                checked ===
+                                                                    true,
+                                                            )
+                                                        }
+                                                    />
+                                                    <span>
+                                                        <span className="block font-mono font-medium">
+                                                            {currency}
+                                                        </span>
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            {currencyNames.of(
+                                                                currency,
+                                                            ) ?? currency}
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    <InputError
+                                        message={
+                                            localizationForm.errors
+                                                .supported_currencies
+                                        }
+                                    />
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">

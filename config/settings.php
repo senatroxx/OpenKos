@@ -8,6 +8,7 @@ return [
     'country_code' => ['default' => 'ID', 'cast' => 'string'],
     'locale' => ['default' => 'id', 'cast' => 'string'],
     'currency' => ['default' => 'IDR', 'cast' => 'string'],
+    'supported_currencies' => ['default' => null, 'cast' => 'array'],
     'timezone' => ['default' => 'Asia/Jakarta', 'cast' => 'string'],
     'lease_id_prefix' => ['default' => 'LSX', 'cast' => 'string'],
     'invoice_pdf_enabled' => ['default' => false, 'cast' => 'boolean'],

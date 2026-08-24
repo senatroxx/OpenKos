@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Setting;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use Closure;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
@@ -53,15 +54,19 @@ class HandleInertiaRequests extends Middleware
             // Integration configs (mail_config, whatsapp_config, payment_gateway_config) hold secrets — SMTP
             // password, API tokens — so they never go into the app-wide share. Their
             // own settings pages load them (masked) separately.
-            'setting' => fn () => collect(Setting::get())
-                ->except([
-                    'mail_config',
-                    'whatsapp_config',
-                    'payment_gateway_config',
-                    'branding_logo_path',
-                    'branding_favicon_path',
-                ])
-                ->all(),
+            'setting' => fn () => [
+                ...collect(Setting::get())
+                    ->except([
+                        'mail_config',
+                        'whatsapp_config',
+                        'payment_gateway_config',
+                        'branding_logo_path',
+                        'branding_favicon_path',
+                    ])
+                    ->all(),
+                'currency' => app(InstallationCurrencySettings::class)->default(),
+                'supported_currencies' => app(InstallationCurrencySettings::class)->supported(),
+            ],
             'branding' => fn () => $this->branding(),
             'notificationChannels' => fn () => [
                 'mail' => filled(data_get(Setting::effectiveMailConfig(), 'host')),

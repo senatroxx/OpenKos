@@ -2,7 +2,9 @@
 
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -56,12 +58,50 @@ describe('General settings page', function () {
                 ->has('settings.country_code')
                 ->has('settings.locale')
                 ->has('settings.currency')
+                ->where('settings.supported_currencies', ['IDR'])
                 ->has('settings.timezone')
                 ->has('settings.lease_id_prefix')
                 ->has('settings.invoice_id_prefix')
                 ->has('settings.invoice_pdf_enabled')
                 ->has('timezone_list')
             );
+    });
+
+    it('exposes the canonical currency when persisted storage is non-canonical', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', ' usd ');
+
+        $this->actingAs($owner)
+            ->get(route('settings.general.edit'))
+            ->assertInertia(fn ($page) => $page
+                ->where('settings.currency', 'USD')
+                ->where('settings.supported_currencies', ['USD'])
+                ->where('setting.currency', 'USD')
+                ->where('setting.supported_currencies', ['USD'])
+            );
+    });
+
+    it('reads currency settings fresh after acquiring the transaction lock', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', 'IDR');
+        Setting::set('supported_currencies', ['IDR', 'USD']);
+        $unit = Unit::factory()->create();
+        Setting::get('site_name');
+
+        DB::table('settings')->where('key', 'currency')->update(['value' => 'USD']);
+        DB::table('settings')
+            ->where('key', 'supported_currencies')
+            ->update(['value' => json_encode(['USD'], JSON_THROW_ON_ERROR)]);
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'currency' => 'USD',
+                'supported_currencies' => ['USD'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('inertia.flash_data.toast.type', 'success');
+
+        expect($unit->rates()->where('currency', 'IDR')->where('is_active', true)->exists())->toBeTrue();
     });
 
     it('updates all general settings', function () {
@@ -88,6 +128,76 @@ describe('General settings page', function () {
         expect(Setting::get('lease_id_prefix'))->toBe('LSE');
         expect(Setting::get('invoice_id_prefix'))->toBe('INV');
         expect(Setting::get('invoice_pdf_enabled'))->toBeTrue();
+    });
+
+    it('normalizes and stores supported currencies', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'currency' => ' usd ',
+                'supported_currencies' => [' idr ', 'usd'],
+            ])
+            ->assertRedirect();
+
+        expect(Setting::get('currency'))->toBe('USD')
+            ->and(Setting::get('supported_currencies'))->toBe(['IDR', 'USD']);
+    });
+
+    it('rejects case-insensitive duplicate supported currencies', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'currency' => 'IDR',
+                'supported_currencies' => ['idr', 'IDR'],
+            ])
+            ->assertSessionHasErrors('supported_currencies.1');
+    });
+
+    it('rejects empty, unknown, and default-excluding supported currencies', function (array $supported, string $error): void {
+        $owner = User::factory()->owner()->create();
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'currency' => 'USD',
+                'supported_currencies' => $supported,
+            ])
+            ->assertSessionHasErrors($error);
+    })->with([
+        'empty' => [[], 'supported_currencies'],
+        'unknown' => [['USD', 'ZZZ'], 'supported_currencies.1'],
+        'default excluded' => [['IDR'], 'supported_currencies'],
+        'associative' => [['default' => 'USD'], 'supported_currencies'],
+    ]);
+
+    it('changes the legacy fallback with the new default currency', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', 'IDR');
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), ['currency' => 'USD'])
+            ->assertRedirect();
+
+        expect(Setting::get('currency'))->toBe('USD')
+            ->and(Setting::get('supported_currencies'))->toBeNull();
+    });
+
+    it('warns when removing a currency used by active rates', function () {
+        $owner = User::factory()->owner()->create();
+        $unit = Unit::factory()->create();
+        Setting::set('currency', 'IDR');
+        Setting::set('supported_currencies', ['IDR', 'USD']);
+
+        $this->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'currency' => 'USD',
+                'supported_currencies' => ['USD'],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('inertia.flash_data.toast.type', 'warning');
+
+        expect($unit->rates()->where('currency', 'IDR')->where('is_active', true)->exists())->toBeTrue();
     });
 
     it('validates country_code is 2 uppercase letters', function () {

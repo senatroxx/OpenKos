@@ -11,6 +11,8 @@ use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -27,6 +29,11 @@ use Inertia\Response;
 
 class UnitController extends Controller
 {
+    public function __construct(
+        private InstallationCurrencySettings $currencies,
+        private MoneyConverter $money,
+    ) {}
+
     public function show(Property $property, Unit $unit): Response
     {
         $this->authorize('view', $unit);
@@ -172,6 +179,8 @@ class UnitController extends Controller
         unset($validated['rates']);
 
         DB::transaction(function () use ($property, $validated, $rates): void {
+            $this->assertNewRateCurrenciesSupported($rates);
+
             $unit = $property->units()->create($validated);
 
             foreach ($rates as $rate) {
@@ -209,6 +218,8 @@ class UnitController extends Controller
                         'updated_at' => __('This unit changed while you were editing it. Refresh and try again.'),
                     ]);
                 }
+
+                $this->assertNewRateCurrenciesSupported($rates);
 
                 $lockedUnit->update($validated);
 
@@ -354,5 +365,58 @@ class UnitController extends Controller
             'property' => $property->only('id', 'slug', 'name'),
             'unit' => $unit->only('id', 'slug', 'name', 'floor'),
         ]);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rates
+     */
+    private function assertNewRateCurrenciesSupported(array &$rates): void
+    {
+        $hasNewRate = false;
+
+        foreach ($rates as $rate) {
+            if (! isset($rate['id'])) {
+                $hasNewRate = true;
+
+                break;
+            }
+        }
+
+        if (! $hasNewRate) {
+            return;
+        }
+
+        $this->currencies->lockForUpdate();
+
+        $defaultCurrency = $this->currencies->default(fresh: true);
+        $supportedCurrencies = $this->currencies->freshSupported();
+
+        foreach ($rates as $index => $rate) {
+            if (isset($rate['id'])) {
+                continue;
+            }
+
+            $currency = isset($rate['currency'])
+                ? $this->money->normalizeCurrency($rate['currency'])
+                : $defaultCurrency;
+
+            if (! in_array($currency, $supportedCurrencies, true)) {
+                throw ValidationException::withMessages([
+                    "rates.{$index}.currency" => __('This currency is not enabled for new pricing rates.'),
+                ]);
+            }
+
+            try {
+                $rates[$index]['currency'] = $currency;
+                $rates[$index]['amount'] = $this->money->normalizeAmount(
+                    (string) $rate['amount'],
+                    $currency,
+                );
+            } catch (\Throwable) {
+                throw ValidationException::withMessages([
+                    "rates.{$index}.amount" => __('The amount is invalid for the selected currency.'),
+                ]);
+            }
+        }
     }
 }

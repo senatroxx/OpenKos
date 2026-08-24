@@ -6,6 +6,7 @@ use App\Enums\BillingUnit;
 use App\Enums\UnitStatus;
 use App\Rules\MoneyAmount;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -56,10 +57,13 @@ class StoreUnitRequest extends FormRequest
             }
 
             $currency = $rate['currency'] ?? null;
-            $rules["rates.{$index}.amount"] = [
-                'required_with:rates',
-                new MoneyAmount(is_string($currency) ? $currency : null),
-            ];
+            $amountRules = ['required_with:rates'];
+
+            if (is_string($currency)) {
+                $amountRules[] = new MoneyAmount($currency);
+            }
+
+            $rules["rates.{$index}.amount"] = $amountRules;
         }
 
         return $rules;
@@ -88,6 +92,14 @@ class StoreUnitRequest extends FormRequest
                 } catch (\Throwable) {
                     continue;
                 }
+
+                if (! app(InstallationCurrencySettings::class)->supports($currency)) {
+                    $validator->errors()->add(
+                        "rates.{$index}.currency",
+                        __('This currency is not enabled for new pricing rates.'),
+                    );
+                }
+
                 $key = implode('|', [
                     $rate['billing_interval'] ?? '',
                     $rate['billing_unit'] ?? '',

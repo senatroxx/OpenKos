@@ -79,12 +79,15 @@ export default function UnitRates({
     property: Property;
     unit: Unit;
 }) {
-    const { app, setting } = usePage<{
-        app: { currency_scales: Record<string, number> };
-        setting: { currency: string };
+    const { setting } = usePage<{
+        setting: { currency: string; supported_currencies: string[] };
     }>().props;
-    const currencies = Object.keys(app.currency_scales).sort();
     const defaultCurrency = setting.currency.toUpperCase();
+    const supportedCurrencies = setting.supported_currencies.includes(
+        defaultCurrency,
+    )
+        ? setting.supported_currencies
+        : [defaultCurrency, ...setting.supported_currencies];
     const [currencyFilter, setCurrencyFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('active');
     const [editingRateId, setEditingRateId] = useState<number | null>(null);
@@ -109,6 +112,14 @@ export default function UnitRates({
             notes: unit.notes ?? '',
             updated_at: unit.updated_at ?? null,
         });
+    const currencies = Array.from(
+        new Set([
+            ...supportedCurrencies,
+            ...data.rates.map((rate) =>
+                (rate.currency ?? defaultCurrency).toUpperCase(),
+            ),
+        ]),
+    ).sort();
 
     const visibleRates = data.rates.filter((rate) => {
         const currency = (rate.currency ?? defaultCurrency).toUpperCase();
@@ -465,7 +476,7 @@ export default function UnitRates({
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {currencies.map((currency) => (
+                                    {supportedCurrencies.map((currency) => (
                                         <SelectItem
                                             key={currency}
                                             value={currency}

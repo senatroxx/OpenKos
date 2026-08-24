@@ -26,6 +26,7 @@ test('install command creates owner account and settings', function () {
     expect(Setting::get('country_code'))->toBe('ID');
     expect(Setting::get('locale'))->toBe('en');
     expect(Setting::get('currency'))->toBe('IDR');
+    expect(Setting::get('supported_currencies'))->toBe(['IDR']);
     expect(Setting::get('timezone'))->toBe('Asia/Jakarta');
 });
 
@@ -44,6 +45,7 @@ test('install command stores other country defaults', function () {
     expect(Setting::get('site_name'))->toBe('My Boarding');
     expect(Setting::get('country_code'))->toBe('XX');
     expect(Setting::get('currency'))->toBe('USD');
+    expect(Setting::get('supported_currencies'))->toBe(['USD']);
     expect(Setting::get('timezone'))->toBe('UTC');
 });
 
