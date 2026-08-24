@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Reminders\ForceSendReminder;
+use App\Models\Lease;
 use App\Models\Setting;
 use App\Services\Localization\ApplicationLocale;
 
@@ -8,7 +10,9 @@ test('installation locales are normalized to supported application locales', fun
 
     expect($locale->normalize('en-US'))->toBe('en')
         ->and($locale->normalize('id_ID'))->toBe('id')
-        ->and($locale->normalize('fr'))->toBeNull();
+        ->and($locale->normalize('fr'))->toBeNull()
+        ->and($locale->normalize(['id']))->toBeNull()
+        ->and($locale->resolve(['id']))->toBe('en');
 });
 
 test('http requests apply the configured locale and share its catalogs', function () {
@@ -35,4 +39,14 @@ test('unsupported installation locales fall back to english', function () {
             ->where('app.intl_locale', 'en-US')
             ->where('i18n.locale', 'en')
         );
+});
+
+test('manual reminder actions apply the configured locale', function () {
+    Setting::set('locale', 'id');
+    app()->setLocale('en');
+
+    $result = app(ForceSendReminder::class)->execute(Lease::factory()->create());
+
+    expect($result)->toBe('all_paid')
+        ->and(app()->getLocale())->toBe('id');
 });

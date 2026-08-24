@@ -76,7 +76,7 @@ class InstallCommand extends Command
         Setting::set('currency', $country === 'ID' ? 'IDR' : 'USD');
         Setting::set('timezone', $timezone);
 
-        $this->info('Locale set to en. Internationalization (i18n) is planned for a future release.');
+        $this->info('Locale set to en.');
 
         $this->updateEnv([
             'APP_NAME' => $siteName,

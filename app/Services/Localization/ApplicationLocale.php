@@ -17,9 +17,9 @@ final class ApplicationLocale
         ]);
     }
 
-    public function normalize(?string $locale): ?string
+    public function normalize(mixed $locale): ?string
     {
-        if ($locale === null || trim($locale) === '') {
+        if (! is_string($locale) || trim($locale) === '') {
             return null;
         }
 
@@ -29,7 +29,7 @@ final class ApplicationLocale
         return is_array($aliases) ? ($aliases[$normalized] ?? null) : null;
     }
 
-    public function resolve(?string $locale = null): string
+    public function resolve(mixed $locale = null): string
     {
         if ($locale === null) {
             try {
@@ -44,7 +44,7 @@ final class ApplicationLocale
             ?? 'en';
     }
 
-    public function apply(?string $locale = null): string
+    public function apply(mixed $locale = null): string
     {
         $resolved = $this->resolve($locale);
 
@@ -58,7 +58,7 @@ final class ApplicationLocale
         return $this->resolve(app()->getLocale());
     }
 
-    public function intlLocale(?string $locale = null): string
+    public function intlLocale(mixed $locale = null): string
     {
         $resolved = $this->resolve($locale);
 

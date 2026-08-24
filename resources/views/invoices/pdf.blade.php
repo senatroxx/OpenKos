@@ -54,6 +54,7 @@
 </head>
 <body>
 @php
+    $translate = static fn (string $key): string => __($key, [], $locale);
     $formatDate = static fn ($date): string => $date?->copy()->locale($locale)->translatedFormat('d M Y') ?? '-';
     $formatDateTime = static fn ($date, string $format = 'd M Y, H:i'): string => App\Support\DateTimeFormatter::inDisplayTimezone($date)?->locale($locale)->translatedFormat($format) ?? '-';
     $formatMoney = static fn (string $amount): string => app(App\Services\Payments\MoneyConverter::class)
@@ -69,8 +70,9 @@
         'partial' => 'Partially Paid',
         'cancelled' => 'Cancelled',
         'void' => 'Void',
-        default => str($invoice->display_status)->replace('_', ' ')->title(),
+        default => str($invoice->display_status)->replace('_', ' ')->title()->toString(),
     };
+    $status = $translate($status);
     $tenant = $invoice->lease?->primaryTenant;
     $payments = $invoice->payments ?? collect();
     $generatedAt = App\Support\DateTimeFormatter::inDisplayTimezone(now())->locale($locale)->translatedFormat('d M Y, H:i T');
@@ -80,10 +82,10 @@
     <tr>
         <td>
             <p class="brand">{{ $siteName }}</p>
-            <p class="muted">{{ $property?->name ?? 'Property' }}</p>
+            <p class="muted">{{ $property?->name ?? $translate('Property') }}</p>
         </td>
         <td class="right">
-            <h1>Invoice</h1>
+            <h1>{{ $translate('Invoice') }}</h1>
             <p>{{ $invoice->reference ?? '#'.$invoice->getKey() }}</p>
             <p style="margin-top: 7px"><span class="status">{{ $status }}</span></p>
         </td>
@@ -93,15 +95,15 @@
 <table class="meta">
     <tr>
         <td>
-            <p class="label">Issue date</p>
+            <p class="label">{{ $translate('Issue date') }}</p>
             <p class="value">{{ $formatDateTime($invoice->created_at, 'd M Y') }}</p>
         </td>
         <td>
-            <p class="label">Billing period</p>
+            <p class="label">{{ $translate('Billing period') }}</p>
             <p class="value">{{ $formatDate($invoice->period_start) }} - {{ $formatDate($invoice->period_end) }}</p>
         </td>
         <td>
-            <p class="label">Due date</p>
+            <p class="label">{{ $translate('Due date') }}</p>
             <p class="value">{{ $formatDate($invoice->due_date) }}</p>
         </td>
     </tr>
@@ -110,10 +112,10 @@
 <table class="bill-to">
     <tr>
         <td>
-            <h2>Bill To</h2>
+            <h2>{{ $translate('Bill To') }}</h2>
             <p class="name">{{ $tenant?->name ?? '-' }}</p>
             @if ($tenant)
-                <p class="detail">Tenant ID {{ $tenant->getKey() }}</p>
+                <p class="detail">{{ $translate('Tenant ID') }} {{ $tenant->getKey() }}</p>
                 @if ($tenant->user?->email)
                     <p class="detail">{{ $tenant->user->email }}</p>
                 @endif
@@ -126,18 +128,18 @@
 </table>
 
 <table class="context">
-    <tr><td class="key">Lease</td><td class="value">{{ $invoice->lease?->reference ?? '-' }}</td></tr>
-    <tr><td class="key">Property</td><td class="value">{{ $property?->name ?? '-' }}</td></tr>
+    <tr><td class="key">{{ $translate('Lease') }}</td><td class="value">{{ $invoice->lease?->reference ?? '-' }}</td></tr>
+    <tr><td class="key">{{ $translate('Property') }}</td><td class="value">{{ $property?->name ?? '-' }}</td></tr>
     @if ($propertyAddress !== '')
-        <tr><td class="key">Address</td><td>{{ $propertyAddress }}</td></tr>
+        <tr><td class="key">{{ $translate('Address') }}</td><td>{{ $propertyAddress }}</td></tr>
     @endif
-    <tr><td class="key">Unit</td><td class="value">{{ $invoice->lease?->unit?->name ?? '-' }}</td></tr>
+    <tr><td class="key">{{ $translate('Unit') }}</td><td class="value">{{ $invoice->lease?->unit?->name ?? '-' }}</td></tr>
 </table>
 
-<h2>Line items</h2>
+<h2>{{ $translate('Line items') }}</h2>
 <table class="items">
     <thead>
-        <tr><th>Description</th><th>Type</th><th>Amount</th></tr>
+        <tr><th>{{ $translate('Description') }}</th><th>{{ $translate('Type') }}</th><th>{{ $translate('Amount') }}</th></tr>
     </thead>
     <tbody>
     @forelse ($invoice->lineItems as $item)
@@ -147,36 +149,36 @@
             <td class="right">{{ $formatMoney($item->amount) }}</td>
         </tr>
     @empty
-        <tr><td class="empty" colspan="3">No itemized charges.</td></tr>
+        <tr><td class="empty" colspan="3">{{ $translate('No itemized charges.') }}</td></tr>
     @endforelse
     </tbody>
 </table>
 
 <table class="totals">
-    <tr><td>Total</td><td class="right">{{ $formatMoney($invoice->total) }}</td></tr>
-    <tr><td>Amount paid</td><td class="right">{{ $formatMoney($invoice->amount_paid) }}</td></tr>
-    <tr class="outstanding"><td>Outstanding</td><td class="right">{{ $formatMoney($invoice->outstanding) }}</td></tr>
+    <tr><td>{{ $translate('Total') }}</td><td class="right">{{ $formatMoney($invoice->total) }}</td></tr>
+    <tr><td>{{ $translate('Amount paid') }}</td><td class="right">{{ $formatMoney($invoice->amount_paid) }}</td></tr>
+    <tr class="outstanding"><td>{{ $translate('Outstanding') }}</td><td class="right">{{ $formatMoney($invoice->outstanding) }}</td></tr>
 </table>
 
 @if ($payments->isNotEmpty())
     <section class="payment-details">
-        <h2>{{ $payments->count() === 1 ? 'Payment Details' : 'Payments' }}</h2>
+        <h2>{{ $payments->count() === 1 ? $translate('Payment Details') : $translate('Payments') }}</h2>
         @if ($payments->count() === 1)
             @php($payment = $payments->first())
             <table class="single">
                 <tr>
-                    <td><span class="label">Payment date</span><br>{{ $formatDate($payment->payment_date) }}</td>
-                    <td><span class="label">Method</span><br>{{ str($payment->payment_method)->replace('_', ' ')->title() }}</td>
-                    <td><span class="label">Reference</span><br>{{ $payment->reference_number ?? '-' }}</td>
+                    <td><span class="label">{{ $translate('Payment date') }}</span><br>{{ $formatDate($payment->payment_date) }}</td>
+                    <td><span class="label">{{ $translate('Method') }}</span><br>{{ str($payment->payment_method)->replace('_', ' ')->title() }}</td>
+                    <td><span class="label">{{ $translate('Reference') }}</span><br>{{ $payment->reference_number ?? '-' }}</td>
                     @if ($payment->verified_at)
-                        <td><span class="label">Verified at</span><br>{{ $formatDateTime($payment->verified_at) }}</td>
+                        <td><span class="label">{{ $translate('Verified at') }}</span><br>{{ $formatDateTime($payment->verified_at) }}</td>
                     @endif
                 </tr>
             </table>
         @else
             <table class="payments">
                 <thead>
-                    <tr><th>Payment date</th><th>Method</th><th>Reference</th><th>Amount</th></tr>
+                    <tr><th>{{ $translate('Payment date') }}</th><th>{{ $translate('Method') }}</th><th>{{ $translate('Reference') }}</th><th>{{ $translate('Amount') }}</th></tr>
                 </thead>
                 <tbody>
                 @foreach ($payments as $payment)
@@ -187,15 +189,15 @@
                         <td>{{ $formatMoney($payment->amount) }}</td>
                     </tr>
                 @endforeach
-                    <tr class="payment-total"><td colspan="3">Total paid</td><td>{{ $formatMoney($invoice->amount_paid) }}</td></tr>
-                    <tr class="payment-total"><td colspan="3">Outstanding</td><td>{{ $formatMoney($invoice->outstanding) }}</td></tr>
+                    <tr class="payment-total"><td colspan="3">{{ $translate('Total paid') }}</td><td>{{ $formatMoney($invoice->amount_paid) }}</td></tr>
+                    <tr class="payment-total"><td colspan="3">{{ $translate('Outstanding') }}</td><td>{{ $formatMoney($invoice->outstanding) }}</td></tr>
                 </tbody>
             </table>
         @endif
     </section>
 @endif
 
-<p class="footer">Generated on {{ $generatedAt }}. This document reflects the invoice status at the time it was generated.</p>
+<p class="footer">{{ $translate('Generated on') }} {{ $generatedAt }}. {{ $translate('This document reflects the invoice status at the time it was generated.') }}</p>
 @if ($autoPrint ?? false)
     <script>
         window.addEventListener('load', () => window.print());

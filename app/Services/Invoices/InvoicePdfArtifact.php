@@ -5,11 +5,14 @@ namespace App\Services\Invoices;
 use App\Jobs\GenerateInvoicePdfArtifact;
 use App\Models\Invoice;
 use App\Models\Setting;
+use App\Services\Localization\ApplicationLocale;
 use Illuminate\Support\Facades\Storage;
 
 final class InvoicePdfArtifact
 {
     private const DISK = 'local';
+
+    public function __construct(private ApplicationLocale $locale) {}
 
     public function status(Invoice $invoice): string
     {
@@ -96,8 +99,11 @@ final class InvoicePdfArtifact
                 ->orderBy('id'),
         ]);
 
+        $settings = Setting::some(['site_name', 'locale', 'currency']);
+        $settings['locale'] = $this->locale->resolve($settings['locale'] ?? null);
+
         $payload = [
-            'settings' => Setting::some(['site_name', 'locale', 'currency']),
+            'settings' => $settings,
             'invoice' => $this->attributes($invoice, [
                 'id', 'reference', 'created_at', 'period_start', 'period_end',
                 'due_date', 'status', 'total', 'amount_paid',

@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Models\Setting;
+use App\Services\Localization\ApplicationLocale;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use InvalidArgumentException;
@@ -11,6 +12,8 @@ use OpenKOS\Core\Data\Payment\Money;
 final class MoneyConverter
 {
     private const MAX_INTEGER_DIGITS = 17;
+
+    public function __construct(private ?ApplicationLocale $localeResolver = null) {}
 
     /**
      * Application billing scales for supported ISO 4217 currencies.
@@ -169,8 +172,9 @@ final class MoneyConverter
         $absolute = $amount->abs()->toScale($scale, RoundingMode::Unnecessary)->toString();
         [$integer, $fraction] = array_pad(explode('.', $absolute, 2), 2, '');
 
+        $displayLocale = $this->localeResolver?->intlLocale($locale) ?? ($locale ?? 'en-US');
         $formatter = new \NumberFormatter(
-            $locale ?? (string) (Setting::get('locale') ?? 'en'),
+            $displayLocale,
             \NumberFormatter::CURRENCY,
         );
         $formatter->setAttribute(\NumberFormatter::FRACTION_DIGITS, $scale);
