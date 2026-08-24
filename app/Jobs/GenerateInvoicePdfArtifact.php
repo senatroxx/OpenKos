@@ -6,6 +6,7 @@ use App\Actions\Invoices\GenerateInvoicePdf;
 use App\Models\Invoice;
 use App\Models\Setting;
 use App\Services\Invoices\InvoicePdfArtifact;
+use App\Services\Localization\ApplicationLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,8 +28,10 @@ class GenerateInvoicePdfArtifact implements ShouldBeUnique, ShouldQueue
         return "invoice-pdf:{$this->invoiceId}:{$this->fingerprint}";
     }
 
-    public function handle(InvoicePdfArtifact $artifact, GenerateInvoicePdf $renderer): void
+    public function handle(InvoicePdfArtifact $artifact, GenerateInvoicePdf $renderer, ApplicationLocale $locale): void
     {
+        $locale->apply();
+
         if (! Setting::get('invoice_pdf_enabled')) {
             return;
         }

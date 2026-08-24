@@ -37,10 +37,7 @@ export default function PaymentDetailSheet({
                 <SheetHeader>
                     <SheetTitle>
                         {payment?.invoice
-                            ? formatPeriod(
-                                  payment.invoice.period_start,
-                                  'id-ID',
-                              )
+                            ? formatPeriod(payment.invoice.period_start)
                             : 'Payment'}
                     </SheetTitle>
                 </SheetHeader>
@@ -70,7 +67,10 @@ export default function PaymentDetailSheet({
                                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                     <DetailRow
                                         label="Amount"
-                                        value={formatPrice(payment.amount, payment.currency)}
+                                        value={formatPrice(
+                                            payment.amount,
+                                            payment.currency,
+                                        )}
                                     />
                                     <DetailRow
                                         label="Paid on"

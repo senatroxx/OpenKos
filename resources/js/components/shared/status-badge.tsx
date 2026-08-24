@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { t } from '@/lib/i18n';
 
 type StatusConfig = {
     label: string;
@@ -271,16 +272,16 @@ export function StatusBadge({
     const config = STATUS_CONFIGS[domain]?.[val];
 
     if (!config) {
-        return <Badge variant="outline">{val}</Badge>;
+        return <Badge variant="outline">{t(val)}</Badge>;
     }
 
     if (config.variant) {
         return (
             <Badge variant={config.variant} className={config.className}>
-                {config.label}
+                {t(config.label)}
             </Badge>
         );
     }
 
-    return <Badge className={config.className}>{config.label}</Badge>;
+    return <Badge className={config.className}>{t(config.label)}</Badge>;
 }

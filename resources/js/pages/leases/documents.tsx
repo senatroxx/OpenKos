@@ -38,7 +38,7 @@ const columns: TableColumn<ProofRow>[] = [
         className: 'text-muted-foreground',
         render: (d) =>
             d.payment?.invoice?.period_start
-                ? formatPeriod(d.payment.invoice.period_start, 'id-ID')
+                ? formatPeriod(d.payment.invoice.period_start)
                 : '—',
     },
     {

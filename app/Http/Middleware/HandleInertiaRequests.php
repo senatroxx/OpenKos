@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
 use Closure;
 use Illuminate\Filesystem\FilesystemAdapter;
@@ -21,6 +22,8 @@ class HandleInertiaRequests extends Middleware
 
     protected $rootView = 'app';
 
+    public function __construct(private ApplicationLocale $locale) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         // Use the configured site name (settings table) as the app-wide display
@@ -38,6 +41,8 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $locale = $this->locale->current();
+
         $settingsPages = array_values(array_filter(
             OpenKOS::settings()->toArray(),
             fn (array $page) => $this->canSeeSettingsPage($request, $page),
@@ -49,19 +54,19 @@ class HandleInertiaRequests extends Middleware
             'app' => [
                 'timezone' => config('app.display_timezone', 'UTC'),
                 'currency_scales' => app(MoneyConverter::class)->scales(),
+                'locale' => $locale,
+                'intl_locale' => $this->locale->intlLocale($locale),
+                'locales' => $this->locale->options(),
+            ],
+            'i18n' => [
+                'locale' => $locale,
+                'messages' => $this->locale->messages($locale),
+                'fallback' => $this->locale->messages($this->locale->fallback()),
             ],
             // Integration configs (mail_config, whatsapp_config, payment_gateway_config) hold secrets — SMTP
             // password, API tokens — so they never go into the app-wide share. Their
             // own settings pages load them (masked) separately.
-            'setting' => fn () => collect(Setting::get())
-                ->except([
-                    'mail_config',
-                    'whatsapp_config',
-                    'payment_gateway_config',
-                    'branding_logo_path',
-                    'branding_favicon_path',
-                ])
-                ->all(),
+            'setting' => fn () => $this->sharedSettings(),
             'branding' => fn () => $this->branding(),
             'notificationChannels' => fn () => [
                 'mail' => filled(data_get(Setting::effectiveMailConfig(), 'host')),
@@ -84,6 +89,26 @@ class HandleInertiaRequests extends Middleware
                 'dashboard' => OpenKOS::dashboard()->toArray(),
             ],
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sharedSettings(): array
+    {
+        $settings = collect(Setting::get())
+            ->except([
+                'mail_config',
+                'whatsapp_config',
+                'payment_gateway_config',
+                'branding_logo_path',
+                'branding_favicon_path',
+            ])
+            ->all();
+
+        $settings['locale'] = $this->locale->current();
+
+        return $settings;
     }
 
     /**

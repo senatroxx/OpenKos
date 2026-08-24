@@ -11,6 +11,7 @@ use App\Models\Property;
 use App\Models\Role as RoleModel;
 use App\Models\User;
 use App\Notifications\UserInvitation;
+use App\Services\Localization\ApplicationLocale;
 use App\Support\DateTimeFormatter;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -30,6 +31,8 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
+    public function __construct(private ApplicationLocale $locale) {}
+
     public function show(User $user): Response
     {
         abort_if($user->tenant()->exists(), 404);
@@ -134,10 +137,10 @@ class UserController extends Controller
             $user->properties()->sync($validated['property_ids'] ?? []);
 
             $token = $this->createInvitationToken($user);
-            $user->notify(new UserInvitation(route('users.invitations.accept', [
+            $user->notify((new UserInvitation(route('users.invitations.accept', [
                 'token' => $token,
                 'email' => $user->email,
-            ])));
+            ])))->locale($this->locale->current()));
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('User invited.')]);
@@ -222,10 +225,10 @@ class UserController extends Controller
         }
 
         $token = $this->createInvitationToken($user);
-        $user->notify(new UserInvitation(route('users.invitations.accept', [
+        $user->notify((new UserInvitation(route('users.invitations.accept', [
             'token' => $token,
             'email' => $user->email,
-        ])));
+        ])))->locale($this->locale->current()));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation link resent.')]);
 

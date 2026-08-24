@@ -89,7 +89,7 @@ function formatLastLogin(value: string | null) {
         return 'Never';
     }
 
-    return formatDateTime(value, 'en');
+    return formatDateTime(value);
 }
 
 export default function Index({

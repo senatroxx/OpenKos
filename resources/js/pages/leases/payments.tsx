@@ -88,7 +88,7 @@ export default function LeasePayments({
             className: 'font-medium',
             render: (payment) =>
                 payment.invoice
-                    ? formatPeriod(payment.invoice.period_start, 'id-ID')
+                    ? formatPeriod(payment.invoice.period_start)
                     : '—',
         },
         {

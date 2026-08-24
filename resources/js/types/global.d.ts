@@ -15,6 +15,14 @@ declare module '@inertiajs/core' {
             app: {
                 timezone: string;
                 currency_scales: Record<string, number>;
+                locale: string;
+                intl_locale: string;
+                locales: Record<string, string>;
+            };
+            i18n: {
+                locale: string;
+                messages: Record<string, string>;
+                fallback: Record<string, string>;
             };
             auth: Auth;
             setting: {

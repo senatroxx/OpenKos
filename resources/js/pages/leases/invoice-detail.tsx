@@ -128,7 +128,7 @@ export default function InvoiceDetail({
                                 {invoice.reference ?? 'Invoice'}
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                {formatPeriod(invoice.period_start, 'id-ID')}
+                                {formatPeriod(invoice.period_start)}
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-3">
@@ -196,13 +196,19 @@ export default function InvoiceDetail({
                         <div>
                             <p className="text-muted-foreground">Paid</p>
                             <p className="mt-1 font-medium tabular-nums">
-                                {formatPrice(invoice.amount_paid, invoice.currency)}
+                                {formatPrice(
+                                    invoice.amount_paid,
+                                    invoice.currency,
+                                )}
                             </p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Outstanding</p>
                             <p className="mt-1 font-medium tabular-nums">
-                                {formatPrice(invoice.outstanding ?? '0', invoice.currency)}
+                                {formatPrice(
+                                    invoice.outstanding ?? '0',
+                                    invoice.currency,
+                                )}
                             </p>
                         </div>
                         <div>
@@ -246,7 +252,10 @@ export default function InvoiceDetail({
                                         </p>
                                     </div>
                                     <p className="tabular-nums">
-                                        {formatPrice(item.amount, invoice.currency)}
+                                        {formatPrice(
+                                            item.amount,
+                                            invoice.currency,
+                                        )}
                                     </p>
                                 </div>
                             ))}
@@ -296,7 +305,10 @@ export default function InvoiceDetail({
                                             ] ?? payment.payment_method}
                                         </p>
                                         <p className="mt-1 font-medium tabular-nums">
-                                            {formatPrice(payment.amount, payment.currency)}
+                                            {formatPrice(
+                                                payment.amount,
+                                                payment.currency,
+                                            )}
                                         </p>
                                     </div>
                                 </div>
@@ -330,7 +342,10 @@ export default function InvoiceDetail({
                                                     'Payment gateway'}
                                             </p>
                                             <p className="mt-1 text-xs text-muted-foreground">
-                                            {formatPrice(attempt.amount, attempt.currency)}{' '}
+                                                {formatPrice(
+                                                    attempt.amount,
+                                                    attempt.currency,
+                                                )}{' '}
                                                 {attempt.currency}
                                             </p>
                                         </div>

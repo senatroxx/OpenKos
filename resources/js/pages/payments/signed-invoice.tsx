@@ -58,7 +58,7 @@ export default function SignedInvoice({
                             {invoice.reference ?? 'Invoice'}
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {formatPeriod(invoice.period_start, 'id-ID')}
+                            {formatPeriod(invoice.period_start)}
                         </p>
                     </div>
                     <StatusBadge
@@ -146,7 +146,10 @@ export default function SignedInvoice({
                                             </p>
                                         </div>
                                         <span className="tabular-nums">
-                                            {formatPrice(item.amount, invoice.currency)}
+                                            {formatPrice(
+                                                item.amount,
+                                                invoice.currency,
+                                            )}
                                         </span>
                                     </div>
                                 ))}
@@ -195,7 +198,10 @@ export default function SignedInvoice({
                         />
                         <Detail
                             label="Paid"
-                            value={formatPrice(invoice.amount_paid, invoice.currency)}
+                            value={formatPrice(
+                                invoice.amount_paid,
+                                invoice.currency,
+                            )}
                         />
                         <Detail
                             label="Due date"
@@ -203,12 +209,12 @@ export default function SignedInvoice({
                         />
                     </div>
                     {isPayable && onlinePaymentAvailable && (
-                        <form
-                            action={paymentUrl}
-                            method="post"
-                            target="_blank"
-                        >
-                            <input type="hidden" name="_token" value={csrfToken} />
+                        <form action={paymentUrl} method="post" target="_blank">
+                            <input
+                                type="hidden"
+                                name="_token"
+                                value={csrfToken}
+                            />
                             <Button className="mt-6 w-full" type="submit">
                                 {resumableAttempt
                                     ? 'Continue online payment'
@@ -226,8 +232,8 @@ export default function SignedInvoice({
             </div>
 
             <p className="text-center text-xs text-muted-foreground">
-                Payment status is confirmed by the payment provider and may
-                take a moment to appear here.
+                Payment status is confirmed by the payment provider and may take
+                a moment to appear here.
             </p>
         </div>
     );

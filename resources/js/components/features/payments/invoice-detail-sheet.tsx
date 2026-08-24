@@ -102,7 +102,6 @@ export default function InvoiceDetailSheet({
                                             <p className="font-medium">
                                                 {formatPeriod(
                                                     invoice.period_start,
-                                                    'id-ID',
                                                 )}
                                             </p>
                                             <p className="text-sm text-muted-foreground">
@@ -122,7 +121,10 @@ export default function InvoiceDetailSheet({
                                     <div className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
                                         <DetailRow
                                             label="Total"
-                                            value={formatPrice(invoice.total, invoice.currency)}
+                                            value={formatPrice(
+                                                invoice.total,
+                                                invoice.currency,
+                                            )}
                                         />
                                         <DetailRow
                                             label="Paid"

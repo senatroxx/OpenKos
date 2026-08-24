@@ -21,6 +21,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { t } from '@/lib/i18n';
 import {
     edit as editGeneral,
     update as updateGeneral,
@@ -34,6 +35,7 @@ type BrandingAsset = 'logo' | 'favicon';
 
 export default function General({
     settings,
+    locale_options: localeOptions,
     timezone_list: timezoneList,
 }: {
     settings: {
@@ -46,6 +48,7 @@ export default function General({
         invoice_id_prefix: string;
         invoice_pdf_enabled: boolean;
     };
+    locale_options: Record<string, string>;
     timezone_list: string[];
 }) {
     const { branding } = usePage<{
@@ -119,9 +122,9 @@ export default function General({
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-lg font-medium">General settings</h2>
+                <h2 className="text-lg font-medium">{t('General settings')}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Manage application-wide settings.
+                    {t('Manage application-wide settings.')}
                 </p>
             </div>
 
@@ -160,7 +163,10 @@ export default function General({
                             },
                         ] as const
                     ).map((item) => (
-                        <div key={item.asset} className="space-y-4 rounded-lg border p-4">
+                        <div
+                            key={item.asset}
+                            className="space-y-4 rounded-lg border p-4"
+                        >
                             <div className="flex items-center gap-4">
                                 <div className="flex size-20 items-center justify-center rounded-md border bg-muted/30 p-2">
                                     <img
@@ -170,7 +176,9 @@ export default function General({
                                     />
                                 </div>
                                 <div>
-                                    <h3 className="font-medium">{item.title}</h3>
+                                    <h3 className="font-medium">
+                                        {item.title}
+                                    </h3>
                                     <p className="text-sm text-muted-foreground">
                                         {item.description}
                                     </p>
@@ -292,9 +300,11 @@ export default function General({
                     >
                         <Card>
                             <CardHeader>
-                                <CardTitle>Localization</CardTitle>
+                                <CardTitle>{t('Localization')}</CardTitle>
                                 <CardDescription>
-                                    Regional preferences for the application.
+                                    {t(
+                                        'Regional preferences for the application.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -330,21 +340,34 @@ export default function General({
                                 </div>
 
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="locale">Locale</Label>
-                                    <Input
-                                        id="locale"
-                                        name="locale"
+                                    <Label htmlFor="locale">
+                                        {t('Locale')}
+                                    </Label>
+                                    <Select
                                         value={localizationForm.data.locale}
-                                        onChange={(e) =>
+                                        onValueChange={(value) =>
                                             localizationForm.setData(
                                                 'locale',
-                                                e.target.value,
+                                                value,
                                             )
                                         }
-                                        maxLength={10}
-                                        placeholder="id"
-                                        required
-                                    />
+                                    >
+                                        <SelectTrigger id="locale">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {Object.entries(localeOptions).map(
+                                                ([value, label]) => (
+                                                    <SelectItem
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {t(label)}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
                                     {localizationForm.errors.locale && (
                                         <p className="text-sm text-red-600">
                                             {localizationForm.errors.locale}

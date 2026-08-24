@@ -11,6 +11,7 @@ use App\Notifications\Channels\LogChannel;
 use App\Notifications\Channels\MailChannel;
 use App\Notifications\Channels\WhatsAppChannel;
 use App\Services\Invoices\InvoicePdfArtifact;
+use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -162,6 +163,9 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
 
     private function renderMessage(object $notifiable): string
     {
+        $locale = app(ApplicationLocale::class);
+        $locale->apply($this->locale ?? null);
+
         $days = $this->event->overdueDays
             ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
 
@@ -169,9 +173,9 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
         $amount = app(MoneyConverter::class)->format(
             $this->event->amount,
             $currency,
-            (string) (Setting::get('locale') ?? 'id'),
+            $locale->current(),
         );
-        $date = Carbon::parse($this->event->dueDate)->format('d M Y');
+        $date = Carbon::parse($this->event->dueDate)->locale($locale->current())->translatedFormat('d M Y');
 
         $templates = Setting::get('reminder_message_templates');
         $template = is_array($templates)
@@ -183,8 +187,8 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
         $invoiceContext = $invoice
             ? __('notifications.rent.invoice_context', [
                 'reference' => $invoice->reference,
-                'period' => Carbon::parse($this->event->periodStart)->format('d M Y')
-                    .' – '.Carbon::parse($this->event->periodEnd)->format('d M Y'),
+                'period' => Carbon::parse($this->event->periodStart)->locale($locale->current())->translatedFormat('d M Y')
+                    .' – '.Carbon::parse($this->event->periodEnd)->locale($locale->current())->translatedFormat('d M Y'),
                 'date' => $date,
                 'amount' => $amount,
             ])

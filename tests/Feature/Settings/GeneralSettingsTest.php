@@ -90,6 +90,36 @@ describe('General settings page', function () {
         expect(Setting::get('invoice_pdf_enabled'))->toBeTrue();
     });
 
+    it('normalizes locale aliases before saving and translating the success flash', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->from(route('settings.general.edit'))->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'country_code' => 'ID',
+                'locale' => 'id-ID',
+                'currency' => 'IDR',
+                'timezone' => 'Asia/Jakarta',
+            ])
+            ->assertRedirect(route('settings.general.edit'))
+            ->assertSessionHas('inertia.flash_data.toast.message', 'Pengaturan umum diperbarui.');
+
+        expect(Setting::get('locale'))->toBe('id')
+            ->and(app()->getLocale())->toBe('id');
+    });
+
+    it('rejects unsupported locales', function () {
+        $owner = User::factory()->owner()->create();
+
+        $this->from(route('settings.general.edit'))->actingAs($owner)
+            ->patch(route('settings.general.update'), [
+                'country_code' => 'ID',
+                'locale' => 'fr',
+                'currency' => 'IDR',
+                'timezone' => 'Asia/Jakarta',
+            ])
+            ->assertSessionHasErrors(['locale']);
+    });
+
     it('validates country_code is 2 uppercase letters', function () {
         $owner = User::factory()->owner()->create();
 

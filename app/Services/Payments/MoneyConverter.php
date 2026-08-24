@@ -170,7 +170,7 @@ final class MoneyConverter
         [$integer, $fraction] = array_pad(explode('.', $absolute, 2), 2, '');
 
         $formatter = new \NumberFormatter(
-            $locale ?? (string) (Setting::get('locale') ?? 'id'),
+            $locale ?? (string) (Setting::get('locale') ?? 'en'),
             \NumberFormatter::CURRENCY,
         );
         $formatter->setAttribute(\NumberFormatter::FRACTION_DIGITS, $scale);

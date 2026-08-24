@@ -178,6 +178,7 @@ test('maintenance ticket updates create a tenant notification', function () {
 test('invoice reminder events notify tenants with a configured route', function () {
     Notification::fake();
     Setting::set('reminder_channels', ['log'], 'array');
+    Setting::set('locale', 'id');
 
     $lease = Lease::factory()->create();
     $tenant = $lease->primaryTenant;
@@ -193,7 +194,11 @@ test('invoice reminder events notify tenants with a configured route', function 
 
     InvoiceReminderDispatched::dispatch($event);
 
-    Notification::assertSentTo($tenant, RentReminder::class);
+    Notification::assertSentTo(
+        $tenant,
+        RentReminder::class,
+        fn (RentReminder $notification): bool => $notification->locale === 'id',
+    );
 });
 
 test('lease expiration command creates only one notification at thirty days', function () {
@@ -208,4 +213,17 @@ test('lease expiration command creates only one notification at thirty days', fu
     $this->artisan('app:send-lease-expiration-notifications')->assertSuccessful();
 
     expect($tenant->notifications()->where('type', 'lease_expiring')->count())->toBe(1);
+});
+
+test('lease expiration notifications use the configured locale', function () {
+    Setting::set('locale', 'id');
+    $tenant = Tenant::factory()->withUser()->create();
+    Lease::factory()->create([
+        'primary_tenant_id' => $tenant->id,
+        'end_date' => today()->addDays(30),
+    ]);
+
+    $this->artisan('app:send-lease-expiration-notifications')->assertSuccessful();
+
+    expect($tenant->notifications()->first()->data['title'])->toBe('Pengingat berakhirnya sewa');
 });

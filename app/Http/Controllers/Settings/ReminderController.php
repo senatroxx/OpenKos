@@ -6,6 +6,7 @@ use App\Actions\Settings\UpdateSettings;
 use App\Enums\ReminderType;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
+use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class ReminderController extends Controller
     public function __construct(
         private UpdateSettings $updateSettings,
         private MoneyConverter $money,
+        private ApplicationLocale $locale,
     ) {}
 
     public function edit(): Response
@@ -46,7 +48,7 @@ class ReminderController extends Controller
             : $this->money->format(
                 '1500000',
                 (string) $previewCurrency,
-                (string) (Setting::get('locale') ?? 'id'),
+                $this->locale->current(),
             );
 
         return Inertia::render('settings/reminders', [

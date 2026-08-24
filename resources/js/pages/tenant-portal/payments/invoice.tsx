@@ -69,7 +69,7 @@ export default function InvoiceDetail({
                         {invoice.reference ?? 'Invoice'}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {formatPeriod(invoice.period_start, 'id-ID')}
+                        {formatPeriod(invoice.period_start)}
                     </p>
                     <p className="mt-3 text-sm text-muted-foreground">
                         {lease.reference ?? 'Lease'}
@@ -114,7 +114,10 @@ export default function InvoiceDetail({
                                         >
                                             <span>{item.description}</span>
                                             <span className="tabular-nums">
-                                                {formatPrice(item.amount, invoice.currency)}
+                                                {formatPrice(
+                                                    item.amount,
+                                                    invoice.currency,
+                                                )}
                                             </span>
                                         </div>
                                     ))}
@@ -205,7 +208,10 @@ export default function InvoiceDetail({
                             Outstanding balance
                         </p>
                         <p className="mt-1 text-2xl font-semibold tabular-nums">
-                            {formatPrice(invoice.outstanding ?? '0', invoice.currency)}
+                            {formatPrice(
+                                invoice.outstanding ?? '0',
+                                invoice.currency,
+                            )}
                         </p>
                         <div className="mt-5 grid gap-4 text-sm">
                             <Detail

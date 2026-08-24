@@ -1,6 +1,8 @@
+import { t } from '@/lib/i18n';
+
 let displayTimezone = 'UTC';
 let displayCurrency: string | null = null;
-let displayLocale = 'id-ID';
+let displayLocale = 'en-US';
 let currencyScales: Record<string, number> = {};
 
 export function setDisplayTimezone(timezone: string | null | undefined): void {
@@ -12,10 +14,12 @@ export function setDisplayCurrency(currency: string | null | undefined): void {
 }
 
 export function setDisplayLocale(locale: string | null | undefined): void {
-    displayLocale = locale || 'id-ID';
+    displayLocale = locale || 'en-US';
 }
 
-export function setCurrencyScales(scales: Record<string, number> | null | undefined): void {
+export function setCurrencyScales(
+    scales: Record<string, number> | null | undefined,
+): void {
     currencyScales = Object.fromEntries(
         Object.entries(scales || {}).map(([currency, scale]) => [
             currency.toUpperCase(),
@@ -72,7 +76,7 @@ export function formatDate(dateStr: string | null): string {
     }
 
     return dateTimeFormatter(
-        'id-ID',
+        displayLocale,
         {
             year: 'numeric',
             month: 'short',
@@ -84,13 +88,13 @@ export function formatDate(dateStr: string | null): string {
 
 export function formatDateTime(
     dateStr: string | null,
-    locale = 'id-ID',
+    locale?: string,
 ): string {
     if (!dateStr) {
         return '—';
     }
 
-    return dateTimeFormatter(locale, {
+    return dateTimeFormatter(locale ?? displayLocale, {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -129,18 +133,22 @@ export function formatPrice(
     const absoluteMinor = minor < 0n ? -minor : minor;
     const factor = 10n ** BigInt(scale);
     const whole = absoluteMinor / factor;
-    const fraction = scale > 0 ? (absoluteMinor % factor).toString().padStart(scale, '0') : '';
+    const fraction =
+        scale > 0
+            ? (absoluteMinor % factor).toString().padStart(scale, '0')
+            : '';
     const groupedWhole = new Intl.NumberFormat(displayLocale, {
         useGrouping: true,
         maximumFractionDigits: 0,
     }).format(whole);
-    const localizedFraction = scale > 0
-        ? new Intl.NumberFormat(displayLocale, {
-              useGrouping: false,
-              minimumIntegerDigits: scale,
-              maximumFractionDigits: 0,
-          }).format(Number(fraction))
-        : '';
+    const localizedFraction =
+        scale > 0
+            ? new Intl.NumberFormat(displayLocale, {
+                  useGrouping: false,
+                  minimumIntegerDigits: scale,
+                  maximumFractionDigits: 0,
+              }).format(Number(fraction))
+            : '';
     let integerPartReplaced = false;
 
     return formatter
@@ -161,8 +169,11 @@ export function formatBillingPeriod(interval: number, unit: string): string {
     const normalizedUnit = unit.toLowerCase();
 
     return interval === 1
-        ? `/${normalizedUnit}`
-        : `every ${interval} ${normalizedUnit}s`;
+        ? t(`/${normalizedUnit}`)
+        : t('Every :count :unit', {
+              count: interval,
+              unit: t(`${normalizedUnit}s`),
+          });
 }
 
 export function formatSize(bytes: number): string {
@@ -228,11 +239,11 @@ function minorToMajor(minor: bigint, scale: number): string {
     return `${value.slice(0, -scale)}.${value.slice(-scale)}`;
 }
 
-export function formatPeriod(periodStart: string, locale = 'id-ID'): string {
+export function formatPeriod(periodStart: string, locale?: string): string {
     const [y, m] = periodStart.split('-');
     const date = new Date(Date.UTC(Number(y), Number(m) - 1, 1));
 
-    return date.toLocaleDateString(locale, {
+    return date.toLocaleDateString(locale ?? displayLocale, {
         year: 'numeric',
         month: 'long',
         timeZone: 'UTC',
@@ -298,20 +309,32 @@ export function formatRelativeTime(iso: string): string {
     const diff = Math.floor((now - then) / 1000);
 
     if (diff < 60) {
-        return 'just now';
+        return t('just now');
     }
 
     if (diff < 3600) {
-        return `${Math.floor(diff / 60)}m ago`;
+        const count = Math.floor(diff / 60);
+
+        return t(count === 1 ? ':count minute ago' : ':count minutes ago', {
+            count,
+        });
     }
 
     if (diff < 86400) {
-        return `${Math.floor(diff / 3600)}h ago`;
+        const count = Math.floor(diff / 3600);
+
+        return t(count === 1 ? ':count hour ago' : ':count hours ago', {
+            count,
+        });
     }
 
     if (diff < 2592000) {
-        return `${Math.floor(diff / 86400)}d ago`;
+        const count = Math.floor(diff / 86400);
+
+        return t(count === 1 ? ':count day ago' : ':count days ago', { count });
     }
 
-    return `${Math.floor(diff / 2592000)}mo ago`;
+    const count = Math.floor(diff / 2592000);
+
+    return t(count === 1 ? ':count month ago' : ':count months ago', { count });
 }

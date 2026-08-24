@@ -25,7 +25,7 @@ const columns: TableColumn<Invoice>[] = [
         label: 'Period',
         sortable: true,
         className: 'text-muted-foreground',
-        render: (inv) => formatPeriod(inv.period_start, 'id-ID'),
+        render: (inv) => formatPeriod(inv.period_start),
     },
     {
         key: 'due_date',

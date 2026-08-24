@@ -3,6 +3,7 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import type { HTMLAttributes } from 'react';
 import type { Appearance } from '@/hooks/use-appearance';
 import { useAppearance } from '@/hooks/use-appearance';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export default function AppearanceToggleTab({
@@ -37,7 +38,7 @@ export default function AppearanceToggleTab({
                     )}
                 >
                     <Icon className="-ml-1 h-4 w-4" />
-                    <span className="ml-1.5 text-sm">{label}</span>
+                    <span className="ml-1.5 text-sm">{t(label)}</span>
                 </button>
             ))}
         </div>

@@ -26,6 +26,7 @@ import {
 
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
@@ -91,7 +92,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     {item.icon && (
                                                         <item.icon className="h-5 w-5" />
                                                     )}
-                                                    <span>{item.title}</span>
+                                                    <span>{t(item.title)}</span>
                                                 </Link>
                                             ))}
                                         </div>
@@ -132,7 +133,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             {item.icon && (
                                                 <item.icon className="mr-2 h-4 w-4" />
                                             )}
-                                            {item.title}
+                                            {t(item.title)}
                                         </Link>
                                         {isCurrentUrl(item.href!) && (
                                             <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
