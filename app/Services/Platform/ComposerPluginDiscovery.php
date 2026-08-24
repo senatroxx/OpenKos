@@ -9,10 +9,41 @@ use OpenKOS\Platform\Plugin\Plugin;
 
 final class ComposerPluginDiscovery implements PluginDiscovery
 {
+    public function __construct(private RuntimePluginDiscovery $runtime) {}
+
     /**
      * @return array<int, class-string<Plugin>>
      */
     public function discover(): array
+    {
+        $composerPlugins = $this->discoverComposerOnly();
+        $runtimePlugins = $this->runtime->discover([
+            ...config('platform.plugins', []),
+            ...$composerPlugins,
+        ]);
+
+        $duplicateClasses = array_intersect($composerPlugins, $runtimePlugins);
+        if ($duplicateClasses !== []) {
+            throw new InvalidArgumentException(
+                'Runtime plugin entry class conflicts with an existing plugin: '.implode(', ', $duplicateClasses),
+            );
+        }
+
+        return array_values(array_unique([...$composerPlugins, ...$runtimePlugins]));
+    }
+
+    /**
+     * @return array<int, class-string<Plugin>>
+     */
+    public function discoverComposerOnly(): array
+    {
+        return $this->discoverComposerPlugins();
+    }
+
+    /**
+     * @return array<int, class-string<Plugin>>
+     */
+    private function discoverComposerPlugins(): array
     {
         $disabledPackages = config('platform.discovery.disabled_packages', []);
         $packages = InstalledVersions::getInstalledPackages();

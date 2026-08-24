@@ -267,6 +267,44 @@ in the standalone package and enabled by the OpenKOS application.
 Installing a Composer plugin grants trusted in-process PHP execution; disabled packages
 are not sandboxed. Frontend assets remain out of scope and must still be handled by the host.
 
+### Runtime ZIP plugins
+
+OpenKOS also accepts prepared runtime plugin artifacts without changing the root
+`composer.json`, `composer.lock`, or `vendor/` directory. Runtime packages live in the
+persistent `storage/app/private/plugins` directory by default and are discovered only
+when enabled in the separate `state.json` file.
+
+An artifact must contain `manifest.json`, `composer.json`, `composer.lock`, `src/`, and
+a bundled `vendor/autoload.php`. The runtime entrypoint must be an
+`OpenKOS\\Platform\\Plugin\\Plugin` subclass. The manifest's `id`, `version`, entry class,
+core constraint, PHP constraint, and plugin dependencies must match the entry class and
+Composer metadata.
+
+Runtime installation is intentionally a strict plugin contract. Laravel service
+providers are not runtime entrypoints; a package such as Fonnte must expose an OpenKOS
+`Plugin` class and may delegate internally as needed.
+
+Use the operator-only CLI lifecycle:
+
+```text
+php artisan plugin:install /path/to/plugin.zip
+php artisan plugin:list
+php artisan plugin:enable openkos/example
+php artisan plugin:disable openkos/example
+php artisan plugin:remove openkos/example --force
+```
+
+Installation and state changes are durable immediately but take effect after a fresh
+application process starts. Restart FrankenPHP workers, queue workers, and the scheduler
+after changing runtime plugins. If a plugin ships migrations or permissions, run
+`php artisan migrate` and `php artisan platform:permissions:sync` separately.
+
+Runtime and Composer copies of the same plugin ID or entry class are conflicts; neither
+copy is loaded. Runtime artifacts are trusted in-process code, so the installer rejects
+unsafe archive paths, symlinks, executable entries, install scripts, incompatible host
+dependencies, and oversized archives before activation. Host-provided packages such as
+Laravel, Illuminate, Composer Semver, and the OpenKOS platform must not be bundled.
+
 ### Security & permission boundaries
 
 Plugins run **in-process with full application access** — there is no sandbox. The trust
