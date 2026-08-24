@@ -27,11 +27,12 @@ uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
 });
 
-function bindTenantPortalGateway(?PaymentGateway $gateway): void
+function bindTenantPortalGateway(?PaymentGateway $gateway, ?bool $currencySupport = null): void
 {
     $manager = Mockery::mock(PaymentGatewayManager::class);
     $manager->shouldReceive('activeKey')->andReturn($gateway ? 'test-gateway' : null);
     $manager->shouldReceive('active')->andReturn($gateway);
+    $manager->shouldReceive('supportsCurrency')->zeroOrMoreTimes()->andReturn($currencySupport);
 
     app()->instance(PaymentGatewayManager::class, $manager);
 }
@@ -470,6 +471,33 @@ test('tenant sees online payment unavailable without a gateway or resumable atte
             'type' => 'error',
             'message' => 'Online payment is not available for this invoice.',
         ]);
+});
+
+test('tenant sees online payment unavailable when the gateway rejects the invoice currency', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $lease = Lease::factory()->create(['primary_tenant_id' => $tenant->id]);
+    $invoice = Invoice::factory()->create([
+        'lease_id' => $lease->id,
+        'currency' => 'USD',
+        'status' => InvoiceStatus::Pending,
+    ]);
+    bindTenantPortalGateway(Mockery::mock(PaymentGateway::class), currencySupport: false);
+
+    $this->actingAs($user)
+        ->get(route('portal.billing.invoices.show', $invoice))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('onlinePaymentAvailable', false)
+            ->where('onlinePaymentUnavailableReason', 'Test Gateway is not available for USD payments.'));
+
+    $this->post(route('portal.billing.invoices.pay', $invoice))
+        ->assertInertiaFlash('toast', [
+            'type' => 'error',
+            'message' => 'Test Gateway is not available for USD payments.',
+        ]);
+
+    expect($invoice->paymentAttempts()->count())->toBe(0);
 });
 
 test('tenant sees only their billing data', function () {

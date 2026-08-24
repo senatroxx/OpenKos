@@ -23,6 +23,7 @@ export default function InvoiceDetail({
     invoicePdf,
     gatewayAttempts,
     onlinePaymentAvailable,
+    onlinePaymentUnavailableReason,
 }: {
     invoice: Invoice;
     lease: InvoiceLease;
@@ -31,6 +32,7 @@ export default function InvoiceDetail({
     };
     gatewayAttempts: GatewayPaymentAttempt[];
     onlinePaymentAvailable: boolean;
+    onlinePaymentUnavailableReason?: string | null;
 }) {
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [gatewayProcessing, setGatewayProcessing] = useState(false);
@@ -114,7 +116,10 @@ export default function InvoiceDetail({
                                         >
                                             <span>{item.description}</span>
                                             <span className="tabular-nums">
-                                                {formatPrice(item.amount, invoice.currency)}
+                                                {formatPrice(
+                                                    item.amount,
+                                                    invoice.currency,
+                                                )}
                                             </span>
                                         </div>
                                     ))}
@@ -205,7 +210,10 @@ export default function InvoiceDetail({
                             Outstanding balance
                         </p>
                         <p className="mt-1 text-2xl font-semibold tabular-nums">
-                            {formatPrice(invoice.outstanding ?? '0', invoice.currency)}
+                            {formatPrice(
+                                invoice.outstanding ?? '0',
+                                invoice.currency,
+                            )}
                         </p>
                         <div className="mt-5 grid gap-4 text-sm">
                             <Detail
@@ -266,6 +274,11 @@ export default function InvoiceDetail({
                                           ? 'Continue online payment'
                                           : 'Pay online'}
                                 </Button>
+                            )}
+                            {isPayable && onlinePaymentUnavailableReason && (
+                                <p className="text-xs text-muted-foreground">
+                                    {onlinePaymentUnavailableReason}
+                                </p>
                             )}
                             {isPayable && (
                                 <Button

@@ -3,6 +3,7 @@
 use App\Actions\Payments\StartGatewayPayment;
 use App\Exceptions\InvoiceNotPayableException;
 use App\Exceptions\PaymentGatewayCreationException;
+use App\Exceptions\PaymentGatewayCurrencyUnsupportedException;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
@@ -28,6 +29,7 @@ function startGatewayPaymentAction(PaymentGateway $gateway): StartGatewayPayment
     $manager = Mockery::mock(PaymentGatewayManager::class);
     $manager->shouldReceive('active')->andReturn($gateway);
     $manager->shouldReceive('activeKey')->andReturn('test-gateway');
+    $manager->shouldReceive('supportsCurrency')->zeroOrMoreTimes()->andReturn(null);
 
     app()->instance(PaymentGatewayManager::class, $manager);
 
@@ -76,6 +78,29 @@ it('creates a provider attempt with exact currency-aware money and normalized in
         ->and($result->attempt->fresh()->status)->toBe(PaymentStatus::Pending)
         ->and($result->attempt->fresh()->checkout_instructions['entries'][0]['key'])->toBe('va_number')
         ->and($result->attempt->fresh()->metadata['channel'])->toBe('virtual_account');
+});
+
+it('rejects an unsupported invoice currency before creating an attempt', function () {
+    $invoice = Invoice::factory()->create();
+    $gateway = Mockery::mock(PaymentGateway::class);
+    $gateway->shouldReceive('key')->andReturn('test-gateway');
+    $gateway->shouldNotReceive('createPayment');
+
+    $manager = Mockery::mock(PaymentGatewayManager::class);
+    $manager->shouldReceive('active')->once()->andReturn($gateway);
+    $manager->shouldReceive('activeKey')->once()->andReturn('test-gateway');
+    $manager->shouldReceive('supportsCurrency')
+        ->once()
+        ->with($gateway, $invoice->currency)
+        ->andReturnFalse();
+    app()->instance(PaymentGatewayManager::class, $manager);
+
+    expect(fn () => app(StartGatewayPayment::class)->execute(
+        $invoice,
+        User::factory()->owner()->create(),
+    ))->toThrow(PaymentGatewayCurrencyUnsupportedException::class, 'not available');
+
+    expect($invoice->paymentAttempts()->count())->toBe(0);
 });
 
 it('reuses a valid pending attempt without creating another provider checkout', function () {
