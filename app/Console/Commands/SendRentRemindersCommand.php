@@ -17,7 +17,7 @@ class SendRentRemindersCommand extends Command
         $leaseId = $this->argument('lease');
         $lease = $leaseId ? Lease::findOrFail($leaseId) : null;
 
-        $count = $action->execute($lease)->count();
+        $count = $action->execute($lease);
 
         $this->info("Sent {$count} reminder(s).");
     }
