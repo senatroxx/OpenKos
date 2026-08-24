@@ -11,6 +11,8 @@ use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -27,6 +29,10 @@ use Inertia\Response;
 
 class UnitController extends Controller
 {
+    public function __construct(
+        private InstallationCurrencySettings $currencies,
+    ) {}
+
     public function show(Property $property, Unit $unit): Response
     {
         $this->authorize('view', $unit);
@@ -172,6 +178,8 @@ class UnitController extends Controller
         unset($validated['rates']);
 
         DB::transaction(function () use ($property, $validated, $rates): void {
+            $this->assertNewRateCurrenciesSupported($rates);
+
             $unit = $property->units()->create($validated);
 
             foreach ($rates as $rate) {
@@ -209,6 +217,8 @@ class UnitController extends Controller
                         'updated_at' => __('This unit changed while you were editing it. Refresh and try again.'),
                     ]);
                 }
+
+                $this->assertNewRateCurrenciesSupported($rates);
 
                 $lockedUnit->update($validated);
 
@@ -354,5 +364,27 @@ class UnitController extends Controller
             'property' => $property->only('id', 'slug', 'name'),
             'unit' => $unit->only('id', 'slug', 'name', 'floor'),
         ]);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $rates
+     */
+    private function assertNewRateCurrenciesSupported(array $rates): void
+    {
+        foreach ($rates as $rate) {
+            if (isset($rate['id'])) {
+                continue;
+            }
+
+            $currency = isset($rate['currency'])
+                ? app(MoneyConverter::class)->normalizeCurrency($rate['currency'])
+                : $this->currencies->default(fresh: true);
+
+            if (! $this->currencies->supports($currency, fresh: true)) {
+                throw ValidationException::withMessages([
+                    'rates' => __('This currency is not enabled for new pricing rates.'),
+                ]);
+            }
+        }
     }
 }

@@ -7,6 +7,7 @@ use App\Enums\UnitStatus;
 use App\Models\UnitRate;
 use App\Rules\MoneyAmount;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -132,6 +133,14 @@ class UpdateUnitRequest extends FormRequest
                 } catch (\Throwable) {
                     continue;
                 }
+
+                if ($storedRate === null && ! app(InstallationCurrencySettings::class)->supports($currency)) {
+                    $validator->errors()->add(
+                        "rates.{$index}.currency",
+                        __('This currency is not enabled for new pricing rates.'),
+                    );
+                }
+
                 $key = implode('|', [
                     $rate['billing_interval'] ?? '',
                     $rate['billing_unit'] ?? '',

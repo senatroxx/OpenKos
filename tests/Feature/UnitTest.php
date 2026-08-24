@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
+    Setting::set('supported_currencies', ['IDR', 'USD']);
 });
 
 describe('authorization', function () {
@@ -136,6 +137,7 @@ describe('CRUD', function () {
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('properties/units/rates')
+                ->where('setting.supported_currencies', ['IDR', 'USD'])
                 ->where('unit.rates.1.currency', 'USD')
             );
     });
@@ -519,6 +521,59 @@ describe('active rates ordering', function () {
 });
 
 describe('currency-specific rates', function () {
+    it('rejects new rate variants outside supported currencies', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        Setting::set('supported_currencies', ['IDR']);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.store', $property), [
+                'name' => 'Unit 101',
+                'capacity' => 1,
+                'rates' => [[
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'amount' => '95.00',
+                    'currency' => 'USD',
+                ]],
+            ])
+            ->assertSessionHasErrors('rates.0.currency');
+    });
+
+    it('keeps existing rates usable after their currency is removed', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        $rate = $unit->rates()->create([
+            'billing_interval' => 1,
+            'billing_unit' => 'month',
+            'amount' => '95.00',
+            'currency' => 'USD',
+            'is_active' => true,
+        ]);
+        Setting::set('supported_currencies', ['IDR']);
+
+        $this->actingAs($user)
+            ->put(route('properties.units.update', [$property, $unit]), [
+                'name' => $unit->name,
+                'capacity' => $unit->capacity,
+                'updated_at' => $unit->updated_at->toISOString(),
+                'rates' => [[
+                    'id' => $rate->id,
+                    'billing_interval' => $rate->billing_interval,
+                    'billing_unit' => $rate->billing_unit->value,
+                    'amount' => '100.00',
+                    'currency' => 'USD',
+                    'is_active' => false,
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($rate->fresh()->amount)->toBe('100.000')
+            ->and($rate->fresh()->is_active)->toBeFalse();
+    });
+
     it('allows independent prices for the same billing period in different currencies', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
