@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,7 +27,7 @@ use Illuminate\Notifications\Notification;
 ])]
 class Tenant extends Model
 {
-    use Auditable, HasFactory, Notifiable, SerializesDatesWithTimezone, SoftDeletes;
+    use Auditable, HasFactory, HasMedia, Notifiable, SerializesDatesWithTimezone, SoftDeletes;
 
     protected array $auditableMask = ['phone', 'id_card_number', 'emergency_contact_phone'];
 

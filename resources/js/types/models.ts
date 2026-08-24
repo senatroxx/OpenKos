@@ -229,7 +229,6 @@ export type LeaseData = {
 export type PaymentProof = {
     id: number;
     payment_id: number;
-    path: string;
     original_name: string;
     mime_type: string;
     created_at: string;

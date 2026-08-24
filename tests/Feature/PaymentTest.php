@@ -5,6 +5,7 @@ use App\Enums\PaymentStatus;
 use App\Enums\Permission;
 use App\Models\Invoice;
 use App\Models\Lease;
+use App\Models\Media;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use App\Models\PaymentProof;
@@ -15,8 +16,10 @@ use App\Models\User;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -265,6 +268,28 @@ describe('payment recording', function () {
         expect($payment->verified_at)->not->toBeNull();
         expect($payment->status)->toBe(PaymentStatus::Confirmed);
     });
+
+    it('keeps compatibility-phase proof uploads on the local disk', function () {
+        Storage::fake('local');
+        Storage::fake('public');
+        config(['filesystems.default' => 'public']);
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+
+        $this->actingAs($user)
+            ->post(route('leases.payments.store', $lease), paymentPayload($invoice, [
+                'payment_method' => 'transfer',
+                'proof' => UploadedFile::fake()->image('receipt.jpg'),
+            ]))
+            ->assertRedirect();
+
+        $proof = $invoice->payments()->sole()->proofs()->sole();
+
+        expect($proof->media->disk)->toBe('local');
+        Storage::disk('local')->assertExists($proof->media->path);
+        expect(Storage::disk('public')->allFiles())->toBeEmpty();
+    });
 });
 
 describe('invoice settlement', function () {
@@ -485,6 +510,67 @@ describe('proof download', function () {
         $proof = PaymentProof::factory()->create([
             'payment_id' => $payment->id,
             'path' => 'proofs/nonexistent.pdf',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertNotFound();
+    });
+
+    it('does not fall back to the legacy path after canonical migration', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $canonicalPath = 'media/missing-proof.pdf';
+        $legacyPath = 'proofs/legacy-proof.pdf';
+        File::makeDirectory(dirname(storage_path('app/private/'.$legacyPath)), 0755, true, true);
+        File::put(storage_path('app/private/'.$legacyPath), 'legacy content');
+        $media = Media::create([
+            'mediable_type' => $payment->getMorphClass(),
+            'mediable_id' => $payment->id,
+            'collection' => 'proofs',
+            'disk' => 'local',
+            'path' => $canonicalPath,
+            'mime_type' => 'application/pdf',
+            'size' => 10,
+            'original_name' => 'proof.pdf',
+            'position' => 0,
+        ]);
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $payment->id,
+            'media_id' => $media->id,
+            'path' => $legacyPath,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('payments.proof', [$payment, $proof]))
+            ->assertNotFound();
+
+        File::delete(storage_path('app/private/'.$legacyPath));
+    });
+
+    it('fails closed when canonical media belongs to another payment', function () {
+        $user = User::factory()->owner()->create();
+        $lease = createLeaseForProperty();
+        $invoice = createInvoiceFor($lease);
+        $payment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $otherPayment = Payment::factory()->create(['invoice_id' => $invoice->id]);
+        $media = Media::create([
+            'mediable_type' => $otherPayment->getMorphClass(),
+            'mediable_id' => $otherPayment->id,
+            'collection' => 'proofs',
+            'disk' => 'local',
+            'path' => 'media/foreign-proof.pdf',
+            'mime_type' => 'application/pdf',
+            'size' => 10,
+            'original_name' => 'foreign-proof.pdf',
+            'position' => 0,
+        ]);
+        $proof = PaymentProof::factory()->create([
+            'payment_id' => $payment->id,
+            'media_id' => $media->id,
+            'path' => 'proofs/legacy-proof.pdf',
         ]);
 
         $this->actingAs($user)

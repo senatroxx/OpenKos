@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\Auditable;
+use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\PaymentStatus;
 use App\Services\Payments\MoneyConverter;
@@ -30,7 +31,7 @@ use LogicException;
 ])]
 class Payment extends Model
 {
-    use Auditable, HasFactory, SerializesDatesWithTimezone;
+    use Auditable, HasFactory, HasMedia, SerializesDatesWithTimezone;
 
     protected function casts(): array
     {

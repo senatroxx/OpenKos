@@ -25,7 +25,7 @@ $expected = [
         'transferred_by' => 'SET NULL',
     ],
     'reminder_logs' => ['lease_id' => 'RESTRICT'],
-    'tenant_documents' => ['tenant_id' => 'RESTRICT'],
+    'tenant_documents' => ['tenant_id' => 'RESTRICT', 'media_id' => 'RESTRICT'],
     'unit_rates' => ['unit_id' => 'RESTRICT'],
     'maintenance_tickets' => [
         'property_id' => 'RESTRICT',
@@ -50,7 +50,7 @@ $expected = [
     'model_has_roles' => ['role_id' => 'CASCADE'],
     'role_has_permissions' => ['permission_id' => 'CASCADE', 'role_id' => 'CASCADE'],
     'property_user' => ['user_id' => 'CASCADE', 'property_id' => 'CASCADE'],
-    'payment_proofs' => ['payment_id' => 'CASCADE'],
+    'payment_proofs' => ['payment_id' => 'CASCADE', 'media_id' => 'RESTRICT'],
 ];
 
 $appTables = array_keys($expected);

@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 ])]
 class Media extends Model
 {
+    protected $hidden = ['disk', 'path'];
+
     /** @use HasFactory<MediaFactory> */
     use HasFactory, SerializesDatesWithTimezone;
 
