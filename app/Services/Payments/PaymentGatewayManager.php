@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 
 use Illuminate\Contracts\Container\Container;
 use OpenKOS\Core\Contracts\PaymentGateway;
+use OpenKOS\Core\Contracts\PaymentGatewayCurrencySupport;
 use OpenKOS\Core\Contracts\PaymentGatewayStatusLookup;
 use OpenKOS\Platform\Payment\PaymentRegistry;
 use OpenKOS\Platform\Settings\SettingsManager;
@@ -45,6 +46,7 @@ class PaymentGatewayManager
                     'configuration_schema' => $this->publicSchema($schema),
                     'configuration' => $this->publicConfiguration($schema, $configuration),
                     'secret_fields' => $this->configuredSecretFields($schema, $configuration),
+                    'supported_currencies' => $this->supportedCurrencies($gateway),
                     'status' => $missing === [] ? 'configured' : 'incomplete',
                     'missing_fields' => $missing,
                     'error' => null,
@@ -128,6 +130,54 @@ class PaymentGatewayManager
     public function supportsStatusLookup(string $key): bool
     {
         return $this->find($key) instanceof PaymentGatewayStatusLookup;
+    }
+
+    public function supportsCurrency(PaymentGateway $gateway, string $currency): ?bool
+    {
+        if (! interface_exists(PaymentGatewayCurrencySupport::class)
+            || ! $gateway instanceof PaymentGatewayCurrencySupport) {
+            return null;
+        }
+
+        try {
+            $declared = $this->supportedCurrencies($gateway);
+
+            return $gateway->supportsCurrency($currency)
+                && in_array(strtoupper(trim($currency)), $declared, true);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    public function supportedCurrencies(PaymentGateway $gateway): ?array
+    {
+        if (! interface_exists(PaymentGatewayCurrencySupport::class)
+            || ! $gateway instanceof PaymentGatewayCurrencySupport) {
+            return null;
+        }
+
+        $currencies = $gateway->supportedCurrencies();
+
+        if (! array_is_list($currencies)) {
+            throw new \RuntimeException('Payment gateway supported currencies must be a list.');
+        }
+
+        $normalized = [];
+
+        foreach ($currencies as $currency) {
+            if (! is_string($currency) || ! preg_match('/\A[A-Z]{3}\z/D', strtoupper(trim($currency)))) {
+                throw new \RuntimeException('Payment gateway supported currencies must be ISO 4217 codes.');
+            }
+
+            $normalized[] = strtoupper(trim($currency));
+        }
+
+        return array_values(array_unique($normalized));
     }
 
     public function activeKey(): ?string

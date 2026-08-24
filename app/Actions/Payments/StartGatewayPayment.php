@@ -6,6 +6,7 @@ use App\Business\Payments\PaymentAttemptStatusValidator;
 use App\Enums\InvoiceStatus;
 use App\Exceptions\InvoiceNotPayableException;
 use App\Exceptions\PaymentGatewayCreationException;
+use App\Exceptions\PaymentGatewayCurrencyUnsupportedException;
 use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Models\Invoice;
 use App\Models\PaymentAttempt;
@@ -129,6 +130,10 @@ class StartGatewayPayment
             $gateway = $this->gateways->active();
             if ($gatewayKey === null || $gateway === null) {
                 throw new PaymentGatewayUnavailableException('No active payment gateway is configured.');
+            }
+
+            if ($this->gateways->supportsCurrency($gateway, $currency) === false) {
+                throw new PaymentGatewayCurrencyUnsupportedException($gatewayKey, $currency);
             }
 
             $attempt = $locked->paymentAttempts()->create([

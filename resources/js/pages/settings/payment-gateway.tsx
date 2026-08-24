@@ -140,7 +140,9 @@ export default function PaymentGateway({
                             ? 'attempt is'
                             : 'attempts are'}{' '}
                         in progress. Wait until{' '}
-                        {activePaymentAttemptCount === 1 ? 'it completes' : 'they complete'}{' '}
+                        {activePaymentAttemptCount === 1
+                            ? 'it completes'
+                            : 'they complete'}{' '}
                         or expire before switching or deactivating the gateway.
                     </AlertDescription>
                 </Alert>
@@ -215,6 +217,16 @@ export default function PaymentGateway({
                                             {errors.gateway}
                                         </p>
                                     )}
+                                    {selectedGateway &&
+                                        selectedGateway.supported_currencies !==
+                                            null && (
+                                            <p className="text-xs text-muted-foreground">
+                                                Supported currencies:{' '}
+                                                {selectedGateway.supported_currencies.join(
+                                                    ', ',
+                                                ) || 'None'}
+                                            </p>
+                                        )}
                                 </div>
 
                                 {selectedGateway?.status === 'unavailable' && (
