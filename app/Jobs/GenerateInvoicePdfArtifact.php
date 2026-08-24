@@ -30,25 +30,31 @@ class GenerateInvoicePdfArtifact implements ShouldBeUnique, ShouldQueue
 
     public function handle(InvoicePdfArtifact $artifact, GenerateInvoicePdf $renderer, ApplicationLocale $locale): void
     {
-        $locale->apply();
+        $previousLocale = app()->getLocale();
 
-        if (! Setting::get('invoice_pdf_enabled')) {
-            return;
+        try {
+            $locale->apply();
+
+            if (! Setting::get('invoice_pdf_enabled')) {
+                return;
+            }
+
+            $invoice = Invoice::find($this->invoiceId);
+
+            if (! $invoice) {
+                return;
+            }
+
+            $currentFingerprint = $artifact->fingerprint($invoice);
+            if ($currentFingerprint !== $this->fingerprint) {
+                self::dispatch($invoice->getKey(), $currentFingerprint);
+
+                return;
+            }
+
+            $artifact->generate($invoice, $this->fingerprint, $renderer->execute($invoice));
+        } finally {
+            app()->setLocale($previousLocale);
         }
-
-        $invoice = Invoice::find($this->invoiceId);
-
-        if (! $invoice) {
-            return;
-        }
-
-        $currentFingerprint = $artifact->fingerprint($invoice);
-        if ($currentFingerprint !== $this->fingerprint) {
-            self::dispatch($invoice->getKey(), $currentFingerprint);
-
-            return;
-        }
-
-        $artifact->generate($invoice, $this->fingerprint, $renderer->execute($invoice));
     }
 }

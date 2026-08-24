@@ -230,6 +230,24 @@ test('invoice PDF fingerprints change when translations change', function () {
     expect($after)->not->toBe($before);
 });
 
+test('invoice PDF fingerprints change when the display timezone changes', function () {
+    $fixture = createTenantInvoicePdfFixture();
+    $artifact = app(InvoicePdfArtifact::class);
+    $originalTimezone = config('app.display_timezone');
+
+    try {
+        config(['app.display_timezone' => 'UTC']);
+        $before = $artifact->fingerprint($fixture['invoice']);
+
+        config(['app.display_timezone' => 'Asia/Jakarta']);
+        $after = $artifact->fingerprint($fixture['invoice']);
+    } finally {
+        config(['app.display_timezone' => $originalTimezone]);
+    }
+
+    expect($after)->not->toBe($before);
+});
+
 test('invoice PDF view reflects the current aggregate for each payable state', function (
     string $paymentAmount,
     InvoiceStatus $expectedStatus,

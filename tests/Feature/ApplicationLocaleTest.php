@@ -1,8 +1,11 @@
 <?php
 
+use App\Actions\Invoices\GenerateInvoicePdf;
 use App\Actions\Reminders\ForceSendReminder;
+use App\Jobs\GenerateInvoicePdfArtifact;
 use App\Models\Lease;
 use App\Models\Setting;
+use App\Services\Invoices\InvoicePdfArtifact;
 use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
 
@@ -58,4 +61,18 @@ test('direct money formatting uses the configured locale', function () {
 
     expect((new MoneyConverter)->format('1500000', 'USD'))
         ->toBe(app(MoneyConverter::class)->format('1500000', 'USD'));
+});
+
+test('invoice PDF jobs restore the worker locale', function () {
+    Setting::set('invoice_pdf_enabled', false, 'boolean');
+    Setting::set('locale', 'id');
+    app()->setLocale('en');
+
+    (new GenerateInvoicePdfArtifact(0, ''))->handle(
+        app(InvoicePdfArtifact::class),
+        app(GenerateInvoicePdf::class),
+        app(ApplicationLocale::class),
+    );
+
+    expect(app()->getLocale())->toBe('en');
 });
