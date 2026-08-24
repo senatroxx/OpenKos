@@ -131,6 +131,7 @@ it('keeps broken providers visible without making enumeration throw', function (
 
     expect($provider['status'])->toBe('unavailable')
         ->and($provider['error'])->toBe('This payment gateway is unavailable.')
+        ->and($provider['supported_currencies'])->toBeNull()
         ->and($gateway->find('broken/gateway'))->toBeNull();
 });
 

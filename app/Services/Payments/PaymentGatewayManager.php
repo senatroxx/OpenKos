@@ -58,6 +58,7 @@ class PaymentGatewayManager
                     'configuration_schema' => [],
                     'configuration' => [],
                     'secret_fields' => [],
+                    'supported_currencies' => null,
                     'status' => 'unavailable',
                     'missing_fields' => [],
                     'error' => 'This payment gateway is unavailable.',

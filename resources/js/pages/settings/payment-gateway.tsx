@@ -218,8 +218,9 @@ export default function PaymentGateway({
                                         </p>
                                     )}
                                     {selectedGateway &&
-                                        selectedGateway.supported_currencies !==
-                                            null && (
+                                        Array.isArray(
+                                            selectedGateway.supported_currencies,
+                                        ) && (
                                             <p className="text-xs text-muted-foreground">
                                                 Supported currencies:{' '}
                                                 {selectedGateway.supported_currencies.join(
