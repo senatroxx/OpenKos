@@ -512,7 +512,7 @@ describe('SendRentRemindersAction', function () {
         Carbon::setTestNow();
     });
 
-    it('includes invoice context without a portal link for whatsapp-only tenants', function () {
+    it('includes a signed invoice link for whatsapp-only tenants', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         Notification::fake();
 
@@ -537,6 +537,7 @@ describe('SendRentRemindersAction', function () {
                     ->toContain($invoice->period_end->format('d M Y'))
                     ->toContain($invoice->due_date->format('d M Y'))
                     ->toContain('1.500.000')
+                    ->toMatch('#/pay/invoices/[A-Za-z0-9_-]+\?signature=[a-f0-9]+#')
                     ->not->toContain(route('portal.billing.invoices.show', $invoice));
 
                 $attachment = $content->attachment;
@@ -639,7 +640,7 @@ describe('SendRentRemindersAction', function () {
         Carbon::setTestNow();
     });
 
-    it('omits portal links for users without portal access', function (array $userAttributes) {
+    it('uses signed links for users without portal access', function (array $userAttributes) {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         Notification::fake();
 
@@ -657,6 +658,7 @@ describe('SendRentRemindersAction', function () {
             RentReminder::class,
             function (RentReminder $notification) use ($invoice, $tenant): bool {
                 expect($notification->toWhatsAppChannel($tenant)->message)
+                    ->toMatch('#/pay/invoices/[A-Za-z0-9_-]+\?signature=[a-f0-9]+#')
                     ->not->toContain(route('portal.billing.invoices.show', $invoice));
                 expect($notification->toArray($tenant)['url'])->toBeNull();
 

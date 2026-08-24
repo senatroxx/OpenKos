@@ -12,6 +12,7 @@ use App\Notifications\Channels\MailChannel;
 use App\Notifications\Channels\WhatsAppChannel;
 use App\Services\Invoices\InvoicePdfArtifact;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Payments\SignedInvoicePaymentLink;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -125,7 +126,7 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
         }
 
         return new WhatsAppContent(
-            message: $this->renderMessage($notifiable),
+            message: $this->renderMessage($notifiable, useSignedInvoiceLink: true),
             attachment: $attachment,
         );
     }
@@ -157,10 +158,10 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
 
     public function toWhatsApp(object $notifiable): string
     {
-        return $this->renderMessage($notifiable);
+        return $this->renderMessage($notifiable, useSignedInvoiceLink: true);
     }
 
-    private function renderMessage(object $notifiable): string
+    private function renderMessage(object $notifiable, bool $useSignedInvoiceLink = false): string
     {
         $days = $this->event->overdueDays
             ?? (int) now()->startOfDay()->diffInDays(Carbon::parse($this->event->dueDate), false);
@@ -189,7 +190,7 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
                 'amount' => $amount,
             ])
             : '';
-        $invoiceUrl = $this->invoiceUrl($notifiable);
+        $invoiceUrl = $this->invoiceUrl($notifiable, $useSignedInvoiceLink);
         $invoiceLink = $invoiceUrl
             ? __('notifications.rent.view_invoice').': '.$invoiceUrl
             : '';
@@ -218,9 +219,16 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
         return isset($this->event->invoice) ? $this->event->invoice : null;
     }
 
-    private function invoiceUrl(object $notifiable): ?string
+    private function invoiceUrl(object $notifiable, bool $useSignedInvoiceLink = false): ?string
     {
-        return $this->portalUrl($notifiable, $this->invoice());
+        $invoice = $this->invoice();
+        $portalUrl = $this->portalUrl($notifiable, $invoice);
+
+        if ($portalUrl || ! $useSignedInvoiceLink || ! $invoice || ! ($notifiable instanceof Tenant)) {
+            return $portalUrl;
+        }
+
+        return app(SignedInvoicePaymentLink::class)->url($invoice);
     }
 
     private function portalUrl(object $notifiable, ?Invoice $invoice = null): ?string
