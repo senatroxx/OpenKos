@@ -31,6 +31,7 @@ class UnitController extends Controller
 {
     public function __construct(
         private InstallationCurrencySettings $currencies,
+        private MoneyConverter $money,
     ) {}
 
     public function show(Property $property, Unit $unit): Response
@@ -371,18 +372,31 @@ class UnitController extends Controller
      */
     private function assertNewRateCurrenciesSupported(array $rates): void
     {
-        foreach ($rates as $rate) {
+        $this->currencies->lockForUpdate();
+
+        $defaultCurrency = $this->currencies->default(fresh: true);
+        $supportedCurrencies = $this->currencies->freshSupported();
+
+        foreach ($rates as $index => $rate) {
             if (isset($rate['id'])) {
                 continue;
             }
 
             $currency = isset($rate['currency'])
-                ? app(MoneyConverter::class)->normalizeCurrency($rate['currency'])
-                : $this->currencies->default(fresh: true);
+                ? $this->money->normalizeCurrency($rate['currency'])
+                : $defaultCurrency;
 
-            if (! $this->currencies->supports($currency, fresh: true)) {
+            if (! in_array($currency, $supportedCurrencies, true)) {
                 throw ValidationException::withMessages([
-                    'rates' => __('This currency is not enabled for new pricing rates.'),
+                    "rates.{$index}.currency" => __('This currency is not enabled for new pricing rates.'),
+                ]);
+            }
+
+            try {
+                $this->money->normalizeAmount((string) $rate['amount'], $currency);
+            } catch (\Throwable) {
+                throw ValidationException::withMessages([
+                    "rates.{$index}.amount" => __('The amount has too many decimal places for this currency.'),
                 ]);
             }
         }

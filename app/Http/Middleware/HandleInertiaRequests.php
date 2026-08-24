@@ -64,6 +64,7 @@ class HandleInertiaRequests extends Middleware
                         'branding_favicon_path',
                     ])
                     ->all(),
+                'currency' => app(InstallationCurrencySettings::class)->default(),
                 'supported_currencies' => app(InstallationCurrencySettings::class)->supported(),
             ],
             'branding' => fn () => $this->branding(),

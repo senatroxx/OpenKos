@@ -12,6 +12,7 @@ use App\Services\Payments\MoneyConverter;
 use App\Services\Settings\InstallationCurrencySettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -37,6 +38,7 @@ class GeneralController extends Controller
             'invoice_id_prefix',
             'invoice_pdf_enabled',
         ]);
+        $settings['currency'] = $this->currencies->default();
         $settings['supported_currencies'] = $this->currencies->supported();
 
         return Inertia::render('settings/general', [
@@ -49,6 +51,19 @@ class GeneralController extends Controller
     {
         $this->normalizeCurrencyInput($request);
 
+        if ($request->exists('currency') || $request->exists('supported_currencies')) {
+            return DB::transaction(function () use ($request): RedirectResponse {
+                $this->currencies->lockForUpdate();
+
+                return $this->persistUpdate($request);
+            });
+        }
+
+        return $this->persistUpdate($request);
+    }
+
+    private function persistUpdate(Request $request): RedirectResponse
+    {
         $previousSupported = $this->currencies->supported();
         $hasStoredSupportedCurrencies = $this->currencies->hasStoredSupportedCurrencies();
 

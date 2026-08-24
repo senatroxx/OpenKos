@@ -66,6 +66,20 @@ describe('General settings page', function () {
             );
     });
 
+    it('exposes the canonical currency when persisted storage is non-canonical', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', ' usd ');
+
+        $this->actingAs($owner)
+            ->get(route('settings.general.edit'))
+            ->assertInertia(fn ($page) => $page
+                ->where('settings.currency', 'USD')
+                ->where('settings.supported_currencies', ['USD'])
+                ->where('setting.currency', 'USD')
+                ->where('setting.supported_currencies', ['USD'])
+            );
+    });
+
     it('updates all general settings', function () {
         $owner = User::factory()->owner()->create();
 

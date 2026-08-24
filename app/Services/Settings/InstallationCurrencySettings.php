@@ -49,6 +49,14 @@ final class InstallationCurrencySettings
         return $this->resolveSupported($configured, $default);
     }
 
+    public function lockForUpdate(): void
+    {
+        Setting::query()
+            ->whereIn('key', ['currency', 'supported_currencies'])
+            ->lockForUpdate()
+            ->get();
+    }
+
     public function hasStoredSupportedCurrencies(): bool
     {
         $configured = Setting::get('supported_currencies');
