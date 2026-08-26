@@ -48,6 +48,7 @@ const settingsPageIconMap: Record<string, LucideIcon> = {
     mail: Mail,
     whatsapp: MessageCircle,
     'payment-gateway': Plug,
+    plugins: Puzzle,
 };
 
 export function canSee(permission: string | null, auth: Auth): boolean {

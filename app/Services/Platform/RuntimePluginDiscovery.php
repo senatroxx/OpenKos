@@ -12,6 +12,7 @@ final class RuntimePluginDiscovery
     public function __construct(
         private RuntimePluginStore $store,
         private RuntimePluginArtifactValidator $validator,
+        private RuntimePluginGraphValidator $graph,
     ) {}
 
     /**
@@ -28,32 +29,52 @@ final class RuntimePluginDiscovery
             return $this->store->withLock(function (RuntimePluginStore $store) use ($existingClasses): array {
                 $state = $store->readState();
                 $packages = $store->installedPackages();
-                $this->assertNoComposerConflicts($packages, $state, $existingClasses);
-                $plugins = [];
+                $conflictingIds = $this->assertNoComposerConflicts($packages, $state, $existingClasses);
+                $runtime = [];
 
                 foreach ($packages as $id => $path) {
-                    if (! ($state[$id]['enabled'] ?? false)) {
-                        continue;
-                    }
+                    $enabled = $state[$id]['enabled'] ?? false;
 
                     try {
-                        $plugins[] = $this->validator->validate($path, $id)['entry_class'];
+                        $runtime[$id] = [
+                            'metadata' => $this->validator->validate($path, $id),
+                            'enabled' => $enabled,
+                        ];
                     } catch (Throwable $exception) {
                         Log::error('Runtime plugin could not be loaded.', [
                             'plugin' => $id,
                             'path' => $path,
                             'exception' => $exception,
                         ]);
+                        $runtime[$id] = [
+                            'metadata' => null,
+                            'enabled' => $enabled,
+                            'status' => 'broken',
+                            'error' => 'Runtime plugin artifact validation failed.',
+                        ];
                     }
+                }
+
+                $report = $this->graph->validate($runtime, $existingClasses);
+                $plugins = [];
+
+                foreach ($report['issues'] as $id => $issue) {
+                    if (($runtime[$id]['enabled'] ?? false) && ! in_array($id, $conflictingIds, true)) {
+                        Log::error('Runtime plugin skipped because its boot graph is invalid.', [
+                            'plugin' => $id,
+                            'status' => $issue['status'],
+                            'error' => $issue['error'],
+                        ]);
+                    }
+                }
+
+                foreach ($report['loadable'] as $id) {
+                    $plugins[] = $runtime[$id]['metadata']['entry_class'];
                 }
 
                 return $plugins;
             });
         } catch (Throwable $exception) {
-            if ($exception instanceof RuntimePluginConflictException) {
-                throw $exception;
-            }
-
             Log::error('Runtime plugin discovery failed.', [
                 'path' => $this->store->rootPath(),
                 'exception' => $exception,
@@ -67,10 +88,12 @@ final class RuntimePluginDiscovery
      * @param  array<string, string>  $packages
      * @param  array<string, array{enabled: bool}>  $state
      * @param  array<int, string>  $existingClasses
+     * @return array<int, string>
      */
-    private function assertNoComposerConflicts(array $packages, array $state, array $existingClasses): void
+    private function assertNoComposerConflicts(array $packages, array $state, array $existingClasses): array
     {
         $existingIds = [];
+        $conflictingIds = [];
         foreach ($existingClasses as $class) {
             if (! is_string($class) || ! class_exists($class) || ! is_a($class, Plugin::class, true)) {
                 continue;
@@ -101,11 +124,15 @@ final class RuntimePluginDiscovery
             }
 
             if (in_array($entryClass, $existingClasses, true) || isset($existingIds[$id])) {
-                throw new RuntimePluginConflictException(
-                    "Runtime plugin [{$id}] conflicts with a Composer or explicit plugin. Neither copy will load.",
-                );
+                $conflictingIds[] = $id;
+                Log::warning('Runtime plugin skipped because a Composer or explicit plugin takes precedence.', [
+                    'plugin' => $id,
+                    'path' => $path,
+                ]);
             }
         }
+
+        return $conflictingIds;
     }
 
     private function readEntryClass(string $path): string

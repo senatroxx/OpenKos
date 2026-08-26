@@ -142,14 +142,16 @@ it('reports an enabled package with a malformed manifest without booting it', fu
         ->expectsOutputToContain('Invalid (enabled)');
 });
 
-it('rejects a runtime plugin that conflicts with an explicit plugin', function (): void {
+it('skips a runtime plugin that conflicts with an explicit plugin', function (): void {
     $artifact = makeRuntimePluginArtifact();
 
     $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+    require_once $this->runtimePluginPath.'/'.$artifact['id'].'/vendor/autoload.php';
     config(['platform.plugins' => [$artifact['class']]]);
 
     expect(fn (): mixed => $this->bootPlatformWithIsolatedRegistries())
-        ->toThrow(RuntimeException::class, 'conflicts');
+        ->not->toThrow(RuntimeException::class);
+    expect(app(PermissionRegistry::class)->all())->toHaveKey('runtime-fixture.view');
 });
 
 it('rejects an entry-class conflict before activating a runtime plugin', function (): void {

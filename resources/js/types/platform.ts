@@ -25,6 +25,33 @@ export type PlatformPage = {
     group?: string | null;
 };
 
+export type PlatformPlugin = {
+    id: string;
+    managed_id: string;
+    declared_id: string | null;
+    name: string;
+    version: string | null;
+    description: string;
+    entry_class: string | null;
+    core_version: string | null;
+    php: string | null;
+    dependencies: string[];
+    source: 'runtime' | 'composer' | 'explicit';
+    status:
+        | 'enabled'
+        | 'disabled'
+        | 'legacy'
+        | 'incompatible'
+        | 'broken'
+        | 'conflict'
+        | 'missing';
+    enabled: boolean;
+    error: string | null;
+    can_enable: boolean;
+    can_disable: boolean;
+    can_remove: boolean;
+};
+
 export type Platform = {
     navigation: Record<string, PlatformNavigationItem[]>; // keyed by group, e.g. 'main'
     workspaces: Record<string, PlatformWorkspaceTab[]>; // keyed by workspace, e.g. 'property'

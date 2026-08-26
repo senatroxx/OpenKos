@@ -30,6 +30,7 @@ return [
     'runtime' => [
         'enabled' => true,
         'path' => env('OPENKOS_PLUGIN_PATH', storage_path('app/private/plugins')),
+        'max_upload_bytes' => 64 * 1024 * 1024,
         'max_files' => 5000,
         'max_uncompressed_bytes' => 268_435_456,
         'shared_packages' => [

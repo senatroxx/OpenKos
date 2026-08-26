@@ -3,10 +3,7 @@
 namespace App\Services\Platform;
 
 use InvalidArgumentException;
-use OpenKOS\Platform\OpenKOSManager;
 use OpenKOS\Platform\Plugin\Plugin;
-use OpenKOS\Platform\Plugin\PluginLoader;
-use OpenKOS\Platform\Plugin\PluginManifest;
 use RuntimeException;
 use Throwable;
 use ZipArchive;
@@ -16,6 +13,8 @@ final class PluginInstaller
     public function __construct(
         private RuntimePluginStore $store,
         private RuntimePluginArtifactValidator $validator,
+        private RuntimePluginGraphValidator $graph,
+        private ComposerPluginDiscovery $composer,
     ) {}
 
     /**
@@ -59,10 +58,9 @@ final class PluginInstaller
                 }
 
                 $metadata = $this->validator->validateInFreshProcess($stagingPath);
-                $this->validateBootSet($metadata, $store);
-
                 $state = $store->readState();
                 $enabled = ! isset($state[$metadata['id']]) || $state[$metadata['id']]['enabled'];
+                $this->graph->validateCandidate($metadata, $enabled, $store, $this->hostPluginClasses());
                 $store->promote($metadata['id'], $stagingPath, $enabled);
                 $stagingPath = null;
 
@@ -96,7 +94,7 @@ final class PluginInstaller
         return $this->store->withLock(function (RuntimePluginStore $store) use ($id): array {
             $path = $store->packagePath($id);
             $metadata = $this->validator->validateInFreshProcess($path, $id);
-            $this->validateBootSet($metadata, $store);
+            $this->graph->validateCandidate($metadata, true, $store, $this->hostPluginClasses());
             $store->setEnabled($id, true);
 
             return $metadata;
@@ -106,6 +104,7 @@ final class PluginInstaller
     public function disable(string $id): void
     {
         $this->store->withLock(function (RuntimePluginStore $store) use ($id): void {
+            $this->assertNoEnabledDependants($id, $store, 'disable');
             $store->setEnabled($id, false);
         });
     }
@@ -113,6 +112,7 @@ final class PluginInstaller
     public function remove(string $id): void
     {
         $this->store->withLock(function (RuntimePluginStore $store) use ($id): void {
+            $this->assertNoEnabledDependants($id, $store, 'remove');
             $store->remove($id);
         });
     }
@@ -201,96 +201,25 @@ final class PluginInstaller
         }
     }
 
-    /**
-     * @param  array{
-     *     id: string,
-     *     name: string,
-     *     version: string,
-     *     description: string,
-     *     entry_class: class-string<Plugin>,
-     *     core_version: string,
-     *     php: string,
-     *     dependencies: array<int, string>
-     * } $metadata
-     */
-    private function validateBootSet(array $metadata, RuntimePluginStore $store): void
+    /** @return array<int, string> */
+    private function hostPluginClasses(): array
     {
-        $hostClasses = [
-            ...config('platform.plugins', []),
-            ...app(ComposerPluginDiscovery::class)->discoverComposerOnly(),
+        return [
+            ...array_values(array_filter(config('platform.plugins', []), 'is_string')),
+            ...$this->composer->discoverComposerOnly(),
         ];
-        $runtimeMetadata = [];
-        $runtimeClasses = [];
-        $state = $store->readState();
+    }
 
-        foreach ($store->installedPackages() as $id => $path) {
-            if ($id === $metadata['id'] || ! ($state[$id]['enabled'] ?? false)) {
-                continue;
-            }
+    private function assertNoEnabledDependants(string $id, RuntimePluginStore $store, string $action): void
+    {
+        $dependants = $this->graph->enabledDependants($id, $store, $this->hostPluginClasses());
 
-            $runtimeMetadata[] = $this->validator->validateInFreshProcess($path, $id);
-            $runtimeClasses[] = $runtimeMetadata[array_key_last($runtimeMetadata)]['entry_class'];
+        if ($dependants === []) {
+            return;
         }
 
-        if (in_array($metadata['entry_class'], $hostClasses, true)) {
-            throw new RuntimePluginConflictException(
-                "Runtime plugin entry class [{$metadata['entry_class']}] conflicts with a Composer or explicit plugin. Neither copy will load.",
-            );
-        }
-
-        foreach ($runtimeClasses as $class) {
-            if (in_array($class, $hostClasses, true) || $class === $metadata['entry_class']) {
-                throw new RuntimePluginConflictException(
-                    "Runtime plugin entry class [{$class}] conflicts with a Composer or explicit plugin. Neither copy will load.",
-                );
-            }
-        }
-
-        $classes = [...$hostClasses, ...$runtimeClasses];
-        $classes = array_values(array_unique($classes));
-        $plugins = [];
-
-        foreach ($classes as $class) {
-            if (! is_string($class) || ! class_exists($class) || ! is_a($class, Plugin::class, true)) {
-                throw new InvalidArgumentException("Plugin class [{$class}] is invalid.");
-            }
-
-            $plugins[] = app()->make($class);
-        }
-
-        foreach ([...$runtimeMetadata, $metadata] as $pluginMetadata) {
-            $plugins[] = new class($pluginMetadata) extends Plugin
-            {
-                /**
-                 * @param  array{
-                 *     id: string,
-                 *     name: string,
-                 *     version: string,
-                 *     description: string,
-                 *     entry_class: class-string<Plugin>,
-                 *     core_version: string,
-                 *     php: string,
-                 *     dependencies: array<int, string>
-                 * }  $metadata
-                 */
-                public function __construct(private array $metadata) {}
-
-                public function manifest(): PluginManifest
-                {
-                    return new PluginManifest(
-                        id: $this->metadata['id'],
-                        name: $this->metadata['name'],
-                        version: $this->metadata['version'],
-                        description: $this->metadata['description'],
-                        coreVersion: $this->metadata['core_version'],
-                        dependencies: $this->metadata['dependencies'],
-                    );
-                }
-
-                public function register(OpenKOSManager $platform): void {}
-            };
-        }
-
-        (new PluginLoader)->prepare($plugins, config('platform.version', '0.2.0'));
+        throw new RuntimePluginDependencyException(
+            "Cannot {$action} {$id} because ".implode(', ', $dependants).' depends on it.',
+        );
     }
 }
