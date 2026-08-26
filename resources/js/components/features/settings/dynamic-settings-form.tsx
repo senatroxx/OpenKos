@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { t } from '@/lib/i18n';
 import type {
     DynamicSettingsFormProps,
     SettingDefinition,
@@ -71,10 +72,12 @@ function SettingCard({
             <CardHeader>
                 <CardTitle>{def.label}</CardTitle>
                 {def.type === 'encrypted' && (
-                    <CardDescription>Stored encrypted at rest.</CardDescription>
+                    <CardDescription>
+                        {t('Stored encrypted at rest.')}
+                    </CardDescription>
                 )}
                 {def.type === 'json' && (
-                    <CardDescription>Enter valid JSON.</CardDescription>
+                    <CardDescription>{t('Enter valid JSON.')}</CardDescription>
                 )}
             </CardHeader>
             <CardContent>
@@ -130,7 +133,7 @@ function SettingCard({
                             )}
                         </div>
                     )}
-                    <Button disabled={processing}>Save</Button>
+                    <Button disabled={processing}>{t('Save')}</Button>
                 </form>
             </CardContent>
         </Card>

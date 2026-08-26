@@ -21,6 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { t } from '@/lib/i18n';
 import { update as updatePaymentGateway } from '@/routes/settings/payment-gateway';
 import type {
     PaymentGateway,
@@ -100,30 +101,35 @@ export default function PaymentGateway({
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-lg font-medium">Payment Gateway</h2>
+                <h2 className="text-lg font-medium">{t('Payment Gateway')}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Configure the payment gateway used for online invoice
-                    payments.
+                    {t(
+                        'Configure the payment gateway used for online invoice payments.',
+                    )}
                 </p>
             </div>
 
             {activeStatus === 'unavailable' && (
                 <Alert variant="destructive">
-                    <AlertTitle>Payment gateway unavailable</AlertTitle>
+                    <AlertTitle>{t('Payment gateway unavailable')}</AlertTitle>
                     <AlertDescription>
-                        The configured gateway ({activeKey}) is not currently
-                        installed or could not be loaded. Select another gateway
-                        to recover.
+                        {t(
+                            'The configured gateway (:key) is not currently installed or could not be loaded. Select another gateway to recover.',
+                            { key: activeKey ?? '' },
+                        )}
                     </AlertDescription>
                 </Alert>
             )}
 
             {activeStatus === 'incomplete' && (
                 <Alert>
-                    <AlertTitle>Payment gateway needs configuration</AlertTitle>
+                    <AlertTitle>
+                        {t('Payment gateway needs configuration')}
+                    </AlertTitle>
                     <AlertDescription>
-                        Complete the required fields before online payments can
-                        use the active gateway.
+                        {t(
+                            'Complete the required fields before online payments can use the active gateway.',
+                        )}
                     </AlertDescription>
                 </Alert>
             )}
@@ -132,26 +138,33 @@ export default function PaymentGateway({
                 <Alert>
                     <Info />
                     <AlertTitle>
-                        Gateway changes are temporarily unavailable
+                        {t('Gateway changes are temporarily unavailable')}
                     </AlertTitle>
                     <AlertDescription>
-                        {activePaymentAttemptCount} active online payment{' '}
+                        {activePaymentAttemptCount} {t('active online payment')}{' '}
                         {activePaymentAttemptCount === 1
-                            ? 'attempt is'
-                            : 'attempts are'}{' '}
-                        in progress. Wait until{' '}
-                        {activePaymentAttemptCount === 1 ? 'it completes' : 'they complete'}{' '}
-                        or expire before switching or deactivating the gateway.
+                            ? t('attempt is')
+                            : t('attempts are')}{' '}
+                        {t('in progress. Wait until')}{' '}
+                        {activePaymentAttemptCount === 1
+                            ? t('it completes')
+                            : t('they complete')}{' '}
+                        {t(
+                            'or expire before switching or deactivating the gateway.',
+                        )}
                     </AlertDescription>
                 </Alert>
             )}
 
             {gateways.length === 0 ? (
                 <Alert>
-                    <AlertTitle>No payment gateways installed</AlertTitle>
+                    <AlertTitle>
+                        {t('No payment gateways installed')}
+                    </AlertTitle>
                     <AlertDescription>
-                        Install a payment gateway plugin before activating
-                        online invoice payments.
+                        {t(
+                            'Install a payment gateway plugin before activating online invoice payments.',
+                        )}
                     </AlertDescription>
                 </Alert>
             ) : (
@@ -165,16 +178,17 @@ export default function PaymentGateway({
                     >
                         <Card>
                             <CardHeader>
-                                <CardTitle>Payment gateway</CardTitle>
+                                <CardTitle>{t('Payment gateway')}</CardTitle>
                                 <CardDescription>
-                                    Only one installed and fully configured
-                                    gateway can be active at a time.
+                                    {t(
+                                        'Only one installed and fully configured gateway can be active at a time.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid max-w-md gap-2">
                                     <Label htmlFor="payment_gateway">
-                                        Active gateway
+                                        {t('Active gateway')}
                                     </Label>
                                     <Select
                                         value={data.gateway}
@@ -184,11 +198,15 @@ export default function PaymentGateway({
                                             id="payment_gateway"
                                             disabled={hasActivePaymentAttempts}
                                         >
-                                            <SelectValue placeholder="Select a gateway" />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select a gateway',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value={NONE}>
-                                                No active gateway
+                                                {t('No active gateway')}
                                             </SelectItem>
                                             {gateways.map((gateway) => (
                                                 <SelectItem
@@ -201,10 +219,10 @@ export default function PaymentGateway({
                                                             activeKey
                                                     }
                                                 >
-                                                    {gateway.label}
+                                                    {t(gateway.label)}
                                                     {gateway.status !==
                                                     'configured'
-                                                        ? ` (${gateway.status})`
+                                                        ? ` (${t(gateway.status)})`
                                                         : ''}
                                                 </SelectItem>
                                             ))}
@@ -215,15 +233,26 @@ export default function PaymentGateway({
                                             {errors.gateway}
                                         </p>
                                     )}
+                                    {selectedGateway &&
+                                        Array.isArray(
+                                            selectedGateway.supported_currencies,
+                                        ) && (
+                                            <p className="text-xs text-muted-foreground">
+                                                {t('Supported currencies:')}{' '}
+                                                {selectedGateway.supported_currencies.join(
+                                                    ', ',
+                                                ) || t('None')}
+                                            </p>
+                                        )}
                                 </div>
 
                                 {selectedGateway?.status === 'unavailable' && (
                                     <Alert variant="destructive">
                                         <AlertTitle>
-                                            {selectedGateway.label}
+                                            {t(selectedGateway.label)}
                                         </AlertTitle>
                                         <AlertDescription>
-                                            {selectedGateway.error}
+                                            {t(selectedGateway.error ?? '')}
                                         </AlertDescription>
                                     </Alert>
                                 )}
@@ -240,7 +269,9 @@ export default function PaymentGateway({
                                     )}
                             </CardContent>
                             <CardFooter>
-                                <Button disabled={processing}>Save</Button>
+                                <Button disabled={processing}>
+                                    {t('Save')}
+                                </Button>
                             </CardFooter>
                         </Card>
 
@@ -309,7 +340,7 @@ function GatewayConfiguration({
     if (fields.length === 0) {
         return (
             <p className="text-sm text-muted-foreground">
-                This gateway does not require additional configuration.
+                {t('This gateway does not require additional configuration.')}
             </p>
         );
     }
@@ -370,9 +401,13 @@ function GatewayField({
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">{field.label}</CardTitle>
+                    <CardTitle className="text-base">
+                        {t(field.label)}
+                    </CardTitle>
                     {field.description && (
-                        <CardDescription>{field.description}</CardDescription>
+                        <CardDescription>
+                            {t(field.description)}
+                        </CardDescription>
                     )}
                 </CardHeader>
                 {(field.instructions?.length || resolvedUrl || field.link) && (
@@ -381,7 +416,7 @@ function GatewayField({
                             <ol className="list-decimal space-y-2 pl-5 text-sm">
                                 {field.instructions.map(
                                     (instruction, index) => (
-                                        <li key={index}>{instruction}</li>
+                                        <li key={index}>{t(instruction)}</li>
                                     ),
                                 )}
                             </ol>
@@ -389,7 +424,7 @@ function GatewayField({
                         {resolvedUrl && (
                             <div className="space-y-1">
                                 <p className="text-sm font-medium">
-                                    Webhook URL
+                                    {t('Webhook URL')}
                                 </p>
                                 <code className="block rounded-md border bg-muted px-3 py-2 text-xs break-all">
                                     {resolvedUrl}
@@ -403,7 +438,7 @@ function GatewayField({
                                 rel="noreferrer"
                                 className="text-sm font-medium text-primary underline underline-offset-4"
                             >
-                                {field.link.label}
+                                {t(field.link.label)}
                             </a>
                         )}
                     </CardContent>
@@ -414,7 +449,7 @@ function GatewayField({
 
     const label = (
         <>
-            {field.label}
+            {t(field.label)}
             {field.required && <span className="text-destructive"> *</span>}
         </>
     );
@@ -445,13 +480,17 @@ function GatewayField({
                 >
                     <SelectTrigger id={`payment_gateway_${fieldKey}`}>
                         <SelectValue
-                            placeholder={field.placeholder ?? 'Select...'}
+                            placeholder={
+                                field.placeholder
+                                    ? t(field.placeholder)
+                                    : t('Select...')
+                            }
                         />
                     </SelectTrigger>
                     <SelectContent>
                         {field.options.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
-                                {option.label}
+                                {t(option.label)}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -475,7 +514,7 @@ function GatewayField({
             )}
             {field.description && (
                 <p className="text-sm text-muted-foreground">
-                    {field.description}
+                    {t(field.description)}
                 </p>
             )}
             {error && <p className="text-sm text-red-600">{error}</p>}

@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { BILLING_UNITS } from '@/lib/constants';
 import { formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
 import { UnitLayout } from './layout';
@@ -66,10 +67,10 @@ function formatRatePeriod(
     unit: UnitRate['billing_unit'],
 ): string {
     if (interval === 1) {
-        return billingUnitLabels[unit];
+        return t(billingUnitLabels[unit]);
     }
 
-    return `Every ${interval} ${unit}s`;
+    return `${t('Every')} ${interval} ${t(`${unit}s`)}`;
 }
 
 export default function UnitRates({
@@ -79,12 +80,15 @@ export default function UnitRates({
     property: Property;
     unit: Unit;
 }) {
-    const { app, setting } = usePage<{
-        app: { currency_scales: Record<string, number> };
-        setting: { currency: string };
+    const { setting } = usePage<{
+        setting: { currency: string; supported_currencies: string[] };
     }>().props;
-    const currencies = Object.keys(app.currency_scales).sort();
     const defaultCurrency = setting.currency.toUpperCase();
+    const supportedCurrencies = setting.supported_currencies.includes(
+        defaultCurrency,
+    )
+        ? setting.supported_currencies
+        : [defaultCurrency, ...setting.supported_currencies];
     const [currencyFilter, setCurrencyFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('active');
     const [editingRateId, setEditingRateId] = useState<number | null>(null);
@@ -109,6 +113,14 @@ export default function UnitRates({
             notes: unit.notes ?? '',
             updated_at: unit.updated_at ?? null,
         });
+    const currencies = Array.from(
+        new Set([
+            ...supportedCurrencies,
+            ...data.rates.map((rate) =>
+                (rate.currency ?? defaultCurrency).toUpperCase(),
+            ),
+        ]),
+    ).sort();
 
     const visibleRates = data.rates.filter((rate) => {
         const currency = (rate.currency ?? defaultCurrency).toUpperCase();
@@ -256,7 +268,11 @@ export default function UnitRates({
                                     : 'border-surface-green-border/80 bg-surface-green/70 text-surface-green-foreground'
                             }
                         >
-                            {rate.is_active === false ? 'Inactive' : 'Active'}
+                            {t(
+                                rate.is_active === false
+                                    ? 'Inactive'
+                                    : 'Active',
+                            )}
                         </Badge>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -267,7 +283,7 @@ export default function UnitRates({
                                     variant="ghost"
                                     size="icon-sm"
                                     disabled={processing}
-                                    aria-label={`Actions for ${currency} rate`}
+                                    aria-label={`${t('Actions for')} ${currency} ${t('rate')}`}
                                 >
                                     <Ellipsis />
                                 </Button>
@@ -277,7 +293,7 @@ export default function UnitRates({
                                     onSelect={() => editRate(rate)}
                                 >
                                     <Pencil />
-                                    Edit amount
+                                    {t('Edit amount')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     onSelect={() => toggleRate(rate)}
@@ -288,8 +304,8 @@ export default function UnitRates({
                                         <X />
                                     )}
                                     {rate.is_active === false
-                                        ? 'Reactivate'
-                                        : 'Deactivate'}
+                                        ? t('Reactivate')
+                                        : t('Deactivate')}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -301,7 +317,7 @@ export default function UnitRates({
                             <div className="flex flex-wrap items-end justify-between gap-4">
                                 <div className="grid w-full max-w-md gap-2">
                                     <Label htmlFor={`rate-${rate.id}-amount`}>
-                                        Amount
+                                        {t('Amount')}
                                     </Label>
                                     <Input
                                         id={`rate-${rate.id}-amount`}
@@ -327,14 +343,16 @@ export default function UnitRates({
                                         variant="outline"
                                         onClick={cancelEdit}
                                     >
-                                        Cancel
+                                        {t('Cancel')}
                                     </Button>
                                     <Button
                                         type="button"
                                         onClick={() => saveEdit(rate)}
                                         disabled={processing}
                                     >
-                                        {processing ? 'Saving...' : 'Save'}
+                                        {processing
+                                            ? t('Saving...')
+                                            : t('Save')}
                                     </Button>
                                 </div>
                             </div>
@@ -350,10 +368,13 @@ export default function UnitRates({
             <div className="w-full space-y-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                        <h2 className="text-lg font-semibold">Pricing Rates</h2>
+                        <h2 className="text-lg font-semibold">
+                            {t('Pricing Rates')}
+                        </h2>
                         <p className="text-sm text-muted-foreground">
-                            Compare and manage this unit&apos;s pricing
-                            variants.
+                            {t(
+                                "Compare and manage this unit's pricing variants.",
+                            )}
                         </p>
                     </div>
                     <Button
@@ -361,7 +382,7 @@ export default function UnitRates({
                         onClick={() => setAddDialogOpen(true)}
                     >
                         <Plus />
-                        Add Rate
+                        {t('Add Rate')}
                     </Button>
                 </div>
 
@@ -371,10 +392,12 @@ export default function UnitRates({
                         onValueChange={setCurrencyFilter}
                     >
                         <SelectTrigger className="w-44">
-                            <SelectValue placeholder="All currencies" />
+                            <SelectValue placeholder={t('All currencies')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All currencies</SelectItem>
+                            <SelectItem value="all">
+                                {t('All currencies')}
+                            </SelectItem>
                             {currencies.map((currency) => (
                                 <SelectItem key={currency} value={currency}>
                                     {currency}
@@ -390,9 +413,15 @@ export default function UnitRates({
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="all">All statuses</SelectItem>
+                            <SelectItem value="active">
+                                {t('Active')}
+                            </SelectItem>
+                            <SelectItem value="inactive">
+                                {t('Inactive')}
+                            </SelectItem>
+                            <SelectItem value="all">
+                                {t('All statuses')}
+                            </SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -402,19 +431,21 @@ export default function UnitRates({
                         <thead className="border-b bg-muted/40 text-left text-muted-foreground">
                             <tr>
                                 <th className="px-4 py-3 font-medium">
-                                    Currency
+                                    {t('Currency')}
                                 </th>
                                 <th className="px-4 py-3 text-right font-medium">
-                                    Amount
+                                    {t('Amount')}
                                 </th>
                                 <th className="px-4 py-3 font-medium">
-                                    Billing period
+                                    {t('Billing period')}
                                 </th>
                                 <th className="px-4 py-3 font-medium">
-                                    Status
+                                    {t('Status')}
                                 </th>
                                 <th className="px-4 py-3 text-right font-medium">
-                                    <span className="sr-only">Actions</span>
+                                    <span className="sr-only">
+                                        {t('Actions')}
+                                    </span>
                                 </th>
                             </tr>
                         </thead>
@@ -427,7 +458,7 @@ export default function UnitRates({
                                         colSpan={5}
                                         className="px-4 py-10 text-center text-muted-foreground"
                                     >
-                                        No rates match these filters.
+                                        {t('No rates match these filters.')}
                                     </td>
                                 </tr>
                             )}
@@ -442,16 +473,19 @@ export default function UnitRates({
             <Dialog open={addDialogOpen} onOpenChange={handleAddDialogChange}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Add Pricing Rate</DialogTitle>
+                        <DialogTitle>{t('Add Pricing Rate')}</DialogTitle>
                         <DialogDescription>
-                            Add a currency and billing-period variant for this
-                            unit.
+                            {t(
+                                'Add a currency and billing-period variant for this unit.',
+                            )}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleAddRate} className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="new-rate-currency">Currency</Label>
+                            <Label htmlFor="new-rate-currency">
+                                {t('Currency')}
+                            </Label>
                             <Select
                                 value={newRate.currency}
                                 onValueChange={(value) =>
@@ -465,7 +499,7 @@ export default function UnitRates({
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {currencies.map((currency) => (
+                                    {supportedCurrencies.map((currency) => (
                                         <SelectItem
                                             key={currency}
                                             value={currency}
@@ -485,7 +519,9 @@ export default function UnitRates({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="new-rate-amount">Amount</Label>
+                            <Label htmlFor="new-rate-amount">
+                                {t('Amount')}
+                            </Label>
                             <Input
                                 id="new-rate-amount"
                                 type="number"
@@ -500,7 +536,7 @@ export default function UnitRates({
                                         amount: event.target.value,
                                     }))
                                 }
-                                placeholder="e.g. 1500000"
+                                placeholder={t('e.g. 1500000')}
                             />
                             <InputError
                                 message={
@@ -510,10 +546,10 @@ export default function UnitRates({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Billing period</Label>
+                            <Label>{t('Billing period')}</Label>
                             <div className="grid grid-cols-[5rem_minmax(0,1fr)] gap-2">
                                 <Input
-                                    aria-label="Billing interval"
+                                    aria-label={t('Billing interval')}
                                     type="number"
                                     min={1}
                                     value={newRate.billing_interval}
@@ -537,7 +573,9 @@ export default function UnitRates({
                                         }))
                                     }
                                 >
-                                    <SelectTrigger aria-label="Billing unit">
+                                    <SelectTrigger
+                                        aria-label={t('Billing unit')}
+                                    >
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -575,7 +613,9 @@ export default function UnitRates({
                                     }))
                                 }
                             />
-                            <Label htmlFor="new-rate-active">Active</Label>
+                            <Label htmlFor="new-rate-active">
+                                {t('Active')}
+                            </Label>
                         </div>
 
                         <InputError message={errors.rates} />
@@ -587,7 +627,7 @@ export default function UnitRates({
                                 onClick={() => handleAddDialogChange(false)}
                                 disabled={processing}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                             <Button
                                 type="submit"
@@ -595,10 +635,12 @@ export default function UnitRates({
                                 data-keep-dialog-open="true"
                                 disabled={processing}
                             >
-                                {processing ? 'Adding...' : 'Add & Add Another'}
+                                {processing
+                                    ? t('Adding...')
+                                    : t('Add & Add Another')}
                             </Button>
                             <Button type="submit" disabled={processing}>
-                                {processing ? 'Adding...' : 'Add Rate'}
+                                {processing ? t('Adding...') : t('Add Rate')}
                             </Button>
                         </DialogFooter>
                     </form>

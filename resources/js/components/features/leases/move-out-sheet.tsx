@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { todayISO } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/leases';
 import type { AvailableUnit, LeaseData } from '@/types';
 
@@ -167,7 +168,7 @@ export default function MoveOutSheet({
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Move Out Tenant</SheetTitle>
+                    <SheetTitle>{t('Move Out Tenant')}</SheetTitle>
                     <SheetDescription>
                         {tenantName} · {unitLabel}
                     </SheetDescription>
@@ -210,7 +211,9 @@ export default function MoveOutSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="move_out_date">Move-out Date</Label>
+                            <Label htmlFor="move_out_date">
+                                {t('Move-out Date')}
+                            </Label>
                             <Input
                                 id="move_out_date"
                                 type="date"
@@ -224,13 +227,17 @@ export default function MoveOutSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="reason">Reason</Label>
+                            <Label htmlFor="reason">{t('Reason')}</Label>
                             <Select
                                 value={data.reason}
                                 onValueChange={(v) => setData('reason', v)}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select reason (optional)" />
+                                    <SelectValue
+                                        placeholder={t(
+                                            'Select reason (optional)',
+                                        )}
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {REASONS.map((r) => (
@@ -238,7 +245,7 @@ export default function MoveOutSheet({
                                             key={r.value}
                                             value={r.value}
                                         >
-                                            {r.label}
+                                            {t(r.label)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -247,7 +254,7 @@ export default function MoveOutSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Deposit Returned?</Label>
+                            <Label>{t('Deposit Returned?')}</Label>
                             <div className="flex items-center gap-4">
                                 <label className="flex items-center gap-2 text-sm">
                                     <input
@@ -259,7 +266,7 @@ export default function MoveOutSheet({
                                         }
                                         className="size-4"
                                     />
-                                    Yes
+                                    {t('Yes')}
                                 </label>
                                 <label className="flex items-center gap-2 text-sm">
                                     <input
@@ -271,7 +278,7 @@ export default function MoveOutSheet({
                                         }
                                         className="size-4"
                                     />
-                                    No
+                                    {t('No')}
                                 </label>
                             </div>
                             <InputError
@@ -285,7 +292,7 @@ export default function MoveOutSheet({
                         {depositReturned === 'yes' && (
                             <div className="grid gap-2">
                                 <Label htmlFor="deposit_refund_amount">
-                                    Refund Amount ({currency})
+                                    {t('Refund Amount')} ({currency})
                                 </Label>
                                 <Input
                                     id="deposit_refund_amount"
@@ -298,7 +305,9 @@ export default function MoveOutSheet({
                                             e.target.value,
                                         )
                                     }
-                                    placeholder="Leave empty for full deposit"
+                                    placeholder={t(
+                                        'Leave empty for full deposit',
+                                    )}
                                 />
                                 <InputError
                                     message={errors.deposit_refund_amount}
@@ -322,11 +331,12 @@ export default function MoveOutSheet({
                             />
                             <div>
                                 <span className="font-medium">
-                                    Moving to another unit?
+                                    {t('Moving to another unit?')}
                                 </span>
                                 <p className="text-xs text-muted-foreground">
-                                    Terminate this lease and create a new one in
-                                    a different unit. Deposit carries forward.
+                                    {t(
+                                        'Terminate this lease and create a new one in a different unit. Deposit carries forward.',
+                                    )}
                                 </p>
                             </div>
                         </label>
@@ -334,7 +344,7 @@ export default function MoveOutSheet({
                         {moveToAnotherUnit && (
                             <div className="space-y-3 rounded-md border p-3">
                                 <div className="grid gap-2">
-                                    <Label>Property</Label>
+                                    <Label>{t('Property')}</Label>
                                     <SearchableSelect
                                         options={propertyOptions.map((p) => ({
                                             value: p.propertyId,
@@ -342,14 +352,16 @@ export default function MoveOutSheet({
                                         }))}
                                         value={selectedPropertyId}
                                         onChange={handlePropertyChange}
-                                        placeholder="Select property..."
-                                        searchPlaceholder="Search property..."
-                                        emptyText="No available units."
+                                        placeholder={t('Select property...')}
+                                        searchPlaceholder={t(
+                                            'Search property...',
+                                        )}
+                                        emptyText={t('No available units.')}
                                     />
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label>Target Unit</Label>
+                                    <Label>{t('Target Unit')}</Label>
                                     <SearchableSelect
                                         key={selectedPropertyId ?? 'none'}
                                         options={targetUnitOptions}
@@ -361,11 +373,11 @@ export default function MoveOutSheet({
                                         }
                                         placeholder={
                                             selectedPropertyId
-                                                ? 'Select unit...'
-                                                : 'Choose a property first'
+                                                ? t('Select unit...')
+                                                : t('Choose a property first')
                                         }
-                                        searchPlaceholder="Search unit..."
-                                        emptyText="No available units."
+                                        searchPlaceholder={t('Search unit...')}
+                                        emptyText={t('No available units.')}
                                         disabled={!selectedPropertyId}
                                     />
                                     <InputError
@@ -379,14 +391,14 @@ export default function MoveOutSheet({
                         )}
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 value={data.notes}
                                 onChange={(e) =>
                                     setData('notes', e.target.value)
                                 }
-                                placeholder="Additional notes"
+                                placeholder={t('Additional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
@@ -398,9 +410,9 @@ export default function MoveOutSheet({
                             onClick={handleClose}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
-                        <Button disabled={processing}>Move Out</Button>
+                        <Button disabled={processing}>{t('Move Out')}</Button>
                     </div>
                 </form>
             </SheetContent>

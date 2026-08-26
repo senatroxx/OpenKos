@@ -34,6 +34,7 @@ import {
 import { useTable } from '@/hooks/use-table';
 import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/leases';
 import units from '@/routes/properties/units';
 import type {
@@ -63,7 +64,11 @@ type PageProps = {
 };
 
 function formatMoneyGroups(groups: MoneyAggregate[]): string {
-    return groups.map((group) => formatPrice(group.amount, group.currency)).join(' · ') || '—';
+    return (
+        groups
+            .map((group) => formatPrice(group.amount, group.currency))
+            .join(' · ') || '—'
+    );
 }
 
 export default function Index({
@@ -113,7 +118,7 @@ export default function Index({
     const columns: TableColumn<Lease>[] = [
         {
             key: 'reference',
-            label: 'Reference',
+            label: t('Reference'),
             className: 'font-mono text-xs',
             render: (lease) => (
                 <div className="flex items-center gap-2">
@@ -121,7 +126,7 @@ export default function Index({
                     {lease.pending_payment_review_count ? (
                         <span
                             className="relative inline-flex size-2"
-                            title={`${lease.pending_payment_review_count} payment review pending`}
+                            title={`${lease.pending_payment_review_count} ${t('payment review pending')}`}
                         >
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-surface-purple-foreground opacity-75" />
                             <span className="relative inline-flex size-2 rounded-full bg-surface-purple-foreground" />
@@ -132,7 +137,7 @@ export default function Index({
         },
         {
             key: '_tenant',
-            label: 'Tenant',
+            label: t('Tenant'),
             className: 'font-medium',
             render: (lease) => (
                 <div>
@@ -164,21 +169,21 @@ export default function Index({
         },
         {
             key: 'start_date',
-            label: 'Start',
+            label: t('Start'),
             sortable: true,
             className: 'tabular-nums',
             render: (lease) => formatDate(lease.start_date),
         },
         {
             key: 'end_date',
-            label: 'End',
+            label: t('End'),
             sortable: true,
             className: 'text-muted-foreground tabular-nums',
             render: (lease) => formatDate(lease.end_date),
         },
         {
             key: 'rent_amount',
-            label: 'Rent',
+            label: t('Rent'),
             sortable: true,
             className: 'tabular-nums',
             render: (lease) =>
@@ -186,7 +191,7 @@ export default function Index({
         },
         {
             key: 'rent_due_day',
-            label: 'Due',
+            label: t('Due'),
             sortable: true,
             className: 'tabular-nums',
             render: (lease) =>
@@ -197,7 +202,7 @@ export default function Index({
         },
         {
             key: 'payment_status',
-            label: 'Payment',
+            label: t('Payment'),
             render: (lease) =>
                 lease.status === 'active' && lease.payment_status ? (
                     <StatusBadge domain="rent" value={lease.payment_status} />
@@ -207,7 +212,7 @@ export default function Index({
         },
         {
             key: 'status',
-            label: 'Status',
+            label: t('Status'),
             sortable: true,
             render: (lease) => (
                 <StatusBadge domain="lease" value={lease.status} />
@@ -234,11 +239,11 @@ export default function Index({
                             onClick={() => router.get(leases.show.url(lease))}
                         >
                             <ExternalLink className="size-4" />
-                            Open Workspace
+                            {t('Open Workspace')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetail(lease)}>
                             <Eye className="size-4" />
-                            View
+                            {t('View')}
                         </DropdownMenuItem>
                         {/* <DropdownMenuItem
                             onClick={() => {
@@ -248,7 +253,7 @@ export default function Index({
                             }}
                         >
                             <Pencil className="size-4" />
-                            Edit
+                                    {t('Edit')}
                         </DropdownMenuItem> */}
                         {lease.status === 'active' && (
                             <>
@@ -260,7 +265,7 @@ export default function Index({
                                     }}
                                 >
                                     <RefreshCw className="size-4" />
-                                    Renew
+                                    {t('Renew')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     variant="destructive"
@@ -271,7 +276,7 @@ export default function Index({
                                     }}
                                 >
                                     <LogOut className="size-4" />
-                                    Move Out
+                                    {t('Move Out')}
                                 </DropdownMenuItem>
                             </>
                         )}
@@ -283,13 +288,13 @@ export default function Index({
 
     return (
         <>
-            <Head title="Leases" />
+            <Head title={t('Leases')} />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <Heading
-                        title="Leases"
-                        description="View all leases across properties"
+                        title={t('Leases')}
+                        description={t('View all leases across properties')}
                     />
                 </div>
 
@@ -300,7 +305,7 @@ export default function Index({
                                 <Building2 className="size-10 shrink-0 text-blue-600" />
                                 <div className="min-w-0">
                                     <p className="text-sm text-muted-foreground">
-                                        Active Leases
+                                        {t('Active Leases')}
                                     </p>
                                     <p className="truncate text-2xl font-bold tabular-nums">
                                         {stats.active_leases}
@@ -314,10 +319,12 @@ export default function Index({
                                 <Banknote className="size-10 shrink-0 text-green-600" />
                                 <div className="min-w-0">
                                     <p className="text-sm text-muted-foreground">
-                                        Collected This Month
+                                        {t('Collected This Month')}
                                     </p>
                                     <p className="truncate text-2xl font-bold tabular-nums">
-                                        {formatMoneyGroups(stats.collected_this_month)}
+                                        {formatMoneyGroups(
+                                            stats.collected_this_month,
+                                        )}
                                     </p>
                                 </div>
                             </CardContent>
@@ -328,10 +335,12 @@ export default function Index({
                                 <AlertTriangle className="size-10 shrink-0 text-red-600" />
                                 <div className="min-w-0">
                                     <p className="text-sm text-muted-foreground">
-                                        Overdue
+                                        {t('Overdue')}
                                     </p>
                                     <p className="truncate text-2xl font-bold tabular-nums">
-                                        {formatMoneyGroups(stats.overdue_amount)}
+                                        {formatMoneyGroups(
+                                            stats.overdue_amount,
+                                        )}
                                     </p>
                                 </div>
                             </CardContent>
@@ -342,7 +351,7 @@ export default function Index({
                                 <Clock3 className="size-10 shrink-0 text-violet-600" />
                                 <div className="min-w-0">
                                     <p className="text-sm text-muted-foreground">
-                                        Pending Review
+                                        {t('Pending Review')}
                                     </p>
                                     <p className="truncate text-2xl font-bold tabular-nums">
                                         {stats.pending_payment_verification}
@@ -364,7 +373,7 @@ export default function Index({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search tenant, unit, property..."
+                            placeholder={t('Search tenant, unit, property...')}
                         />
                     }
                 />
@@ -379,9 +388,9 @@ export default function Index({
                     perPage={currentPerPage}
                     onPageChange={table.goToPage}
                     onPerPageChange={table.setPerPage}
-                    noun="leases"
+                    noun={t('leases')}
                     empty={{
-                        message: 'No leases found.',
+                        message: t('No leases found.'),
                     }}
                 />
             </div>

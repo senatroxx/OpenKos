@@ -7,6 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { t } from '@/lib/i18n';
 import { license } from '@/routes/settings/about';
 
 type Props = {
@@ -31,18 +32,19 @@ export default function About({ build, product }: Props) {
     );
     const displayVersion = gitDescription?.[1] ?? build.version;
     const buildLabel = gitDescription
-        ? `${gitDescription[2]} commits after release · ${gitDescription[3]}${gitDescription[4] ? ' · Modified' : ''}`
+        ? `${gitDescription[2]} ${t('commits after release')} · ${gitDescription[3]}${gitDescription[4] ? ` · ${t('Modified')}` : ''}`
         : build.commitSha?.slice(0, 12);
 
     return (
         <div className="space-y-6">
-            <Head title="About" />
+            <Head title={t('About')} />
 
             <div>
-                <h2 className="text-lg font-medium">About OpenKOS</h2>
+                <h2 className="text-lg font-medium">{t('About OpenKOS')}</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Information about the OpenKOS software running this
-                    installation.
+                    {t(
+                        'Information about the OpenKOS software running this installation.',
+                    )}
                 </p>
             </div>
 
@@ -51,10 +53,10 @@ export default function About({ build, product }: Props) {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Package className="size-4" aria-hidden="true" />
-                            OpenKOS software
+                            {t('OpenKOS software')}
                         </CardTitle>
                         <CardDescription>
-                            Open-source property management software.
+                            {t('Open-source property management software.')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -77,7 +79,7 @@ export default function About({ build, product }: Props) {
                         <dl className="grid gap-4 sm:grid-cols-2">
                             <div>
                                 <dt className="text-sm text-muted-foreground">
-                                    Version
+                                    {t('Version')}
                                 </dt>
                                 <dd
                                     className="font-mono text-sm"
@@ -88,7 +90,7 @@ export default function About({ build, product }: Props) {
                             </div>
                             <div>
                                 <dt className="text-sm text-muted-foreground">
-                                    Release channel
+                                    {t('Release channel')}
                                 </dt>
                                 <dd className="text-sm capitalize">
                                     {build.channel}
@@ -97,7 +99,7 @@ export default function About({ build, product }: Props) {
                             {buildLabel && (
                                 <div className="sm:col-span-2">
                                     <dt className="text-sm text-muted-foreground">
-                                        Build
+                                        {t('Build')}
                                     </dt>
                                     <dd
                                         className="font-mono text-sm"
@@ -115,16 +117,18 @@ export default function About({ build, product }: Props) {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Info className="size-4" aria-hidden="true" />
-                            Installation details
+                            {t('Installation details')}
                         </CardTitle>
                         <CardDescription>
-                            Safe information about this OpenKOS installation.
+                            {t(
+                                'Safe information about this OpenKOS installation.',
+                            )}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-5">
                         <div>
                             <p className="text-sm text-muted-foreground">
-                                Site name
+                                {t('Site name')}
                             </p>
                             <p className="font-medium">
                                 {setting.site_name || product.name}
@@ -142,7 +146,7 @@ export default function About({ build, product }: Props) {
                                     className="size-4"
                                     aria-hidden="true"
                                 />
-                                OpenKOS project repository
+                                {t('OpenKOS project repository')}
                             </a>
                             <a
                                 href={license.url()}

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { t } from '@/lib/i18n';
 import type { PermissionGroup } from '@/types';
 
 const PERMISSION_LABELS: Record<string, string> = {
@@ -111,7 +112,7 @@ export default function RoleForm({
                 {!isEdit && recommendations && recommendations.length > 0 && (
                     <section>
                         <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                            Quick start templates
+                            {t('Quick start templates')}
                         </h3>
                         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                             {recommendations.map((rec) => (
@@ -144,7 +145,7 @@ export default function RoleForm({
                 <section className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                         <Label htmlFor="name">
-                            {isEdit ? 'Identifier' : 'Role identifier'}
+                            {t(isEdit ? 'Identifier' : 'Role identifier')}
                         </Label>
                         {isEdit ? (
                             <Input
@@ -171,7 +172,7 @@ export default function RoleForm({
                                                   ),
                                     }));
                                 }}
-                                placeholder="e.g. finance-staff"
+                                placeholder={t('e.g. finance-staff')}
                                 required
                             />
                         )}
@@ -179,12 +180,12 @@ export default function RoleForm({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="label">Display name</Label>
+                        <Label htmlFor="label">{t('Display name')}</Label>
                         <Input
                             id="label"
                             value={data.label}
                             onChange={(e) => setData('label', e.target.value)}
-                            placeholder="e.g. Finance Staff"
+                            placeholder={t('e.g. Finance Staff')}
                             disabled={isSystem}
                             required
                         />
@@ -192,21 +193,21 @@ export default function RoleForm({
                     </div>
 
                     <div className="grid gap-2 sm:col-span-2">
-                        <Label htmlFor="description">Description</Label>
+                        <Label htmlFor="description">{t('Description')}</Label>
                         <Input
                             id="description"
                             value={data.description}
                             onChange={(e) =>
                                 setData('description', e.target.value)
                             }
-                            placeholder="What this role can do..."
+                            placeholder={t('What this role can do...')}
                             disabled={isSystem}
                         />
                         <InputError message={errors.description} />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label>Color</Label>
+                        <Label>{t('Color')}</Label>
                         <div className="flex flex-wrap gap-2">
                             {COLOR_SWATCHES.map((swatch) => (
                                 <button
@@ -232,25 +233,28 @@ export default function RoleForm({
                                 checked={data.is_active}
                                 onCheckedChange={(v) => setData('is_active', v)}
                             />
-                            <Label className="cursor-pointer">Active</Label>
+                            <Label className="cursor-pointer">
+                                {t('Active')}
+                            </Label>
                         </div>
                     )}
                 </section>
 
                 <div className="flex items-center justify-end">
                     <Button disabled={processing}>
-                        {isEdit ? 'Save Changes' : 'Create Role'}
+                        {t(isEdit ? 'Save Changes' : 'Create Role')}
                     </Button>
                 </div>
 
                 <section>
                     <h3 className="mb-4 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        Permissions
+                        {t('Permissions')}
                     </h3>
                     {isSystem && (
                         <p className="mb-4 text-sm text-muted-foreground">
-                            System roles have all permissions and cannot be
-                            modified.
+                            {t(
+                                'System roles have all permissions and cannot be modified.',
+                            )}
                         </p>
                     )}
                     <div className="space-y-6 rounded-lg border p-4">

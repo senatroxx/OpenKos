@@ -67,6 +67,7 @@ export type PaymentGateway = {
     secret_fields: string[];
     status: 'configured' | 'incomplete' | 'unavailable';
     missing_fields: string[];
+    supported_currencies: string[] | null;
     error: string | null;
 };
 

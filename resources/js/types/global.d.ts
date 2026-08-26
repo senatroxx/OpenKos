@@ -31,6 +31,7 @@ declare module '@inertiajs/core' {
                 country_code: string;
                 locale: string;
                 currency: string;
+                supported_currencies: string[];
                 timezone: string;
             };
             branding: {

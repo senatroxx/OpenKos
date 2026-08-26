@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { DataTablePagination } from '@/components/data-table/pagination';
 import { SortHeader } from '@/components/data-table/sort-header';
 import { EmptyState } from '@/components/shared';
+import { t } from '@/lib/i18n';
 import type { PaginatedData } from '@/types';
 
 export type TableColumn<T> = {
@@ -63,7 +64,7 @@ export function DataTable<T>({
                                         <SortHeader
                                             key={col.key}
                                             column={col.key}
-                                            label={col.label}
+                                            label={t(col.label)}
                                             currentSort={currentSort}
                                             onToggle={onSort}
                                         />
@@ -72,7 +73,7 @@ export function DataTable<T>({
                                             key={col.key}
                                             className={`px-4 py-3 font-medium ${col.className ?? ''}`}
                                         >
-                                            {col.label}
+                                            {t(col.label)}
                                         </th>
                                     ),
                                 )}

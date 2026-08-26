@@ -7,11 +7,15 @@ use App\Actions\Settings\UpdateSettings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateBrandingRequest;
 use App\Models\Setting;
+use App\Models\UnitRate;
 use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,6 +25,7 @@ class GeneralController extends Controller
         private UpdateSettings $updateSettings,
         private UpdateBranding $updateBranding,
         private ApplicationLocale $locale,
+        private InstallationCurrencySettings $currencies,
     ) {}
 
     public function edit(): Response
@@ -36,6 +41,8 @@ class GeneralController extends Controller
             'invoice_pdf_enabled',
         ]);
         $settings['locale'] = $this->locale->resolve($settings['locale'] ?? null);
+        $settings['currency'] = $this->currencies->default();
+        $settings['supported_currencies'] = $this->currencies->supported();
 
         return Inertia::render('settings/general', [
             'settings' => $settings,
@@ -54,6 +61,28 @@ class GeneralController extends Controller
             }
         }
 
+        $this->normalizeCurrencyInput($request);
+
+        if ($request->exists('currency') || $request->exists('supported_currencies')) {
+            return DB::transaction(function () use ($request): RedirectResponse {
+                $this->currencies->lockForUpdate();
+
+                return $this->persistUpdate($request, useFreshCurrencySettings: true);
+            });
+        }
+
+        return $this->persistUpdate($request);
+    }
+
+    private function persistUpdate(Request $request, bool $useFreshCurrencySettings = false): RedirectResponse
+    {
+        $previousSupported = $useFreshCurrencySettings
+            ? $this->currencies->freshSupported()
+            : $this->currencies->supported();
+        $hasStoredSupportedCurrencies = $this->currencies->hasStoredSupportedCurrencies(
+            fresh: $useFreshCurrencySettings,
+        );
+
         $validated = $request->validate([
             'site_name' => ['sometimes', 'required', 'string', 'max:255'],
             'country_code' => ['sometimes', 'required', 'string', 'size:2', 'regex:/^[A-Z]+$/'],
@@ -64,20 +93,9 @@ class GeneralController extends Controller
                 'max:10',
                 Rule::in(array_keys($this->locale->options())),
             ],
-            'currency' => [
-                'sometimes',
-                'required',
-                'string',
-                'size:3',
-                'regex:/^[A-Z]+$/',
-                function (string $attribute, mixed $value, \Closure $fail): void {
-                    try {
-                        app(MoneyConverter::class)->normalizeCurrency((string) $value);
-                    } catch (\Throwable) {
-                        $fail(__('This currency is not supported.'));
-                    }
-                },
-            ],
+            'currency' => ['sometimes', 'required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/', Rule::in(array_keys(app(MoneyConverter::class)->scales()))],
+            'supported_currencies' => ['sometimes', 'required', 'array', 'list', 'min:1'],
+            'supported_currencies.*' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/', 'distinct:strict', Rule::in(array_keys(app(MoneyConverter::class)->scales()))],
             'timezone' => ['sometimes', 'required', 'string', Rule::in(timezone_identifiers_list())],
             'lease_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
             'invoice_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
@@ -88,13 +106,76 @@ class GeneralController extends Controller
             $validated['locale'] = $this->locale->normalize($validated['locale']);
         }
 
+        $nextDefault = $validated['currency'] ?? (
+            $useFreshCurrencySettings
+                ? $this->currencies->default(fresh: true)
+                : $this->currencies->default()
+        );
+        if (array_key_exists('supported_currencies', $validated)) {
+            try {
+                $validated['supported_currencies'] = $this->currencies->normalize(
+                    $validated['supported_currencies'],
+                );
+                $this->currencies->normalize($validated['supported_currencies'], $nextDefault);
+            } catch (\Throwable $exception) {
+                throw ValidationException::withMessages([
+                    'supported_currencies' => __($exception->getMessage()),
+                ]);
+            }
+        } elseif ($hasStoredSupportedCurrencies && ! in_array($nextDefault, $previousSupported, true)) {
+            throw ValidationException::withMessages([
+                'currency' => __('The default currency must be included in supported currencies.'),
+            ]);
+        }
+
+        $nextSupported = $validated['supported_currencies']
+            ?? ($hasStoredSupportedCurrencies ? $previousSupported : [$nextDefault]);
+        $removedCurrencies = array_values(array_diff($previousSupported, $nextSupported));
+
         $this->updateSettings->execute($validated, $request->user());
 
         $this->locale->apply($validated['locale'] ?? null);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('General settings updated.')]);
+        $activeRemovedCurrencies = empty($removedCurrencies)
+            ? []
+            : UnitRate::query()
+                ->whereIn('currency', $removedCurrencies)
+                ->where('is_active', true)
+                ->distinct()
+                ->orderBy('currency')
+                ->pluck('currency')
+                ->all();
+
+        if ($activeRemovedCurrencies !== []) {
+            Inertia::flash('toast', [
+                'type' => 'warning',
+                'message' => __('General settings updated. Active rates still use: :currencies.', [
+                    'currencies' => implode(', ', $activeRemovedCurrencies),
+                ]),
+            ]);
+        } else {
+            Inertia::flash('toast', ['type' => 'success', 'message' => __('General settings updated.')]);
+        }
 
         return back();
+    }
+
+    private function normalizeCurrencyInput(Request $request): void
+    {
+        if ($request->exists('currency') && is_string($request->input('currency'))) {
+            $request->merge(['currency' => strtoupper(trim($request->input('currency')))]);
+        }
+
+        if ($request->exists('supported_currencies') && is_array($request->input('supported_currencies'))) {
+            $request->merge([
+                'supported_currencies' => array_map(
+                    static fn (mixed $currency): mixed => is_string($currency)
+                        ? strtoupper(trim($currency))
+                        : $currency,
+                    $request->input('supported_currencies'),
+                ),
+            ]);
+        }
     }
 
     public function updateBranding(UpdateBrandingRequest $request, string $asset): RedirectResponse

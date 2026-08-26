@@ -16,6 +16,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PAYMENT_METHODS } from '@/lib/constants/billing';
 import { formatDate, formatPrice, todayISO } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { store } from '@/routes/portal/billing';
 import type { Invoice } from '@/types';
 
@@ -68,21 +69,23 @@ export default function SubmitPortalPaymentForm({
                     aria-live="polite"
                 >
                     <p className="font-medium">
-                        Outstanding balance:{' '}
+                        {t('Outstanding balance')}:{' '}
                         <span className="tabular-nums">
                             {formatPrice(payableAmount, invoice.currency)}
                         </span>
                     </p>
                     <p className="text-muted-foreground">
-                        Due {formatDate(invoice.due_date)}. Your payment will be
-                        submitted for verification.
+                        {t('Due')} {formatDate(invoice.due_date)}.{' '}
+                        {t('Your payment will be submitted for verification.')}
                     </p>
                 </div>
 
                 <InputError message={errors.invoice_id} />
 
                 <div className="grid gap-2">
-                    <Label htmlFor="amount">Amount ({invoice.currency})</Label>
+                    <Label htmlFor="amount">
+                        {t('Amount')} ({invoice.currency})
+                    </Label>
                     <Input
                         id="amount"
                         name="amount"
@@ -99,20 +102,23 @@ export default function SubmitPortalPaymentForm({
                         id="amount-help"
                         className="text-sm text-muted-foreground"
                     >
-                        Enter up to {formatPrice(payableAmount, invoice.currency)}.
+                        {t('Enter up to')}{' '}
+                        {formatPrice(payableAmount, invoice.currency)}.
                     </p>
                     <InputError message={errors.amount} />
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
-                        <Label htmlFor="payment_method">Payment Method</Label>
+                        <Label htmlFor="payment_method">
+                            {t('Payment Method')}
+                        </Label>
                         <Select name="payment_method" defaultValue="transfer">
                             <SelectTrigger
                                 id="payment_method"
                                 className="w-full"
                             >
-                                <SelectValue placeholder="Select method" />
+                                <SelectValue placeholder={t('Select method')} />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
@@ -131,7 +137,7 @@ export default function SubmitPortalPaymentForm({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="paid_at">Paid At</Label>
+                        <Label htmlFor="paid_at">{t('Paid At')}</Label>
                         <Input
                             id="paid_at"
                             name="paid_at"
@@ -144,17 +150,19 @@ export default function SubmitPortalPaymentForm({
                 </div>
 
                 <div className="grid gap-2">
-                    <Label htmlFor="notes">Notes</Label>
+                    <Label htmlFor="notes">{t('Notes')}</Label>
                     <Textarea
                         id="notes"
                         name="notes"
-                        placeholder="Optional notes"
+                        placeholder={t('Optional notes')}
                     />
                     <InputError message={errors.notes} />
                 </div>
 
                 <div className="grid gap-2">
-                    <Label htmlFor="proof">Payment Proof (optional)</Label>
+                    <Label htmlFor="proof">
+                        {t('Payment Proof (optional)')}
+                    </Label>
                     <Input
                         id="proof"
                         name="proof"
@@ -170,11 +178,11 @@ export default function SubmitPortalPaymentForm({
                         id="proof-help"
                         className="text-sm text-muted-foreground"
                     >
-                        JPG, PNG, or PDF up to 10 MB.
+                        {t('JPG, PNG, or PDF up to 10 MB.')}
                     </p>
                     {fileName && (
                         <p className="truncate text-xs text-muted-foreground">
-                            Selected: {fileName}
+                            {t('Selected:')} {fileName}
                         </p>
                     )}
                     <InputError message={errors.proof} />
@@ -189,11 +197,11 @@ export default function SubmitPortalPaymentForm({
                         onClick={onCancel}
                         disabled={processing}
                     >
-                        Cancel
+                        {t('Cancel')}
                     </Button>
                 )}
                 <Button disabled={processing}>
-                    {processing ? 'Submitting...' : 'Submit Payment'}
+                    {processing ? t('Submitting...') : t('Submit Payment')}
                 </Button>
             </div>
         </form>

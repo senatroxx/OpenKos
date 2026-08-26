@@ -10,6 +10,7 @@ use App\Enums\PaymentStatus;
 use App\Events\Payment\PaymentRecorded;
 use App\Exceptions\InvoiceNotPayableException;
 use App\Exceptions\PaymentGatewayCreationException;
+use App\Exceptions\PaymentGatewayCurrencyUnsupportedException;
 use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Exceptions\PaymentOverflowException;
 use App\Http\Requests\Payment\StoreTenantPortalPaymentRequest;
@@ -27,6 +28,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use OpenKOS\Core\Enums\PaymentStatus as GatewayPaymentStatus;
@@ -218,12 +220,25 @@ class PaymentController extends TenantPortalController
         $hasResumableAttempt = $gatewayAttempts->contains(
             fn (PaymentAttempt $attempt): bool => $attempt->resumable,
         );
+        $activeGateway = $hasResumableAttempt ? null : $gateways->active();
+        $currencySupported = $activeGateway === null
+            ? false
+            : $gateways->supportsCurrency($activeGateway, $invoice->currency) !== false;
+        $onlinePaymentUnavailableReason = ! $hasResumableAttempt
+            && $activeGateway !== null
+            && ! $currencySupported
+            ? __(':gateway is not available for :currency payments.', [
+                'gateway' => Str::headline($gateways->activeKey() ?? 'The active gateway'),
+                'currency' => $invoice->currency,
+            ])
+            : null;
 
         return Inertia::render('tenant-portal/payments/invoice', [
             'invoice' => $invoice,
             'invoicePdf' => ['status' => $invoicePdfStatus],
             'gatewayAttempts' => $gatewayAttempts,
-            'onlinePaymentAvailable' => $hasResumableAttempt || $gateways->active() !== null,
+            'onlinePaymentAvailable' => $hasResumableAttempt || $currencySupported,
+            'onlinePaymentUnavailableReason' => $onlinePaymentUnavailableReason,
             'lease' => [
                 'reference' => $invoice->lease->reference,
                 'unit_name' => $invoice->lease->unit?->name,
@@ -238,6 +253,8 @@ class PaymentController extends TenantPortalController
 
         try {
             $result = $action->execute($invoice, $request->user());
+        } catch (PaymentGatewayCurrencyUnsupportedException $exception) {
+            return $this->gatewayPaymentError($exception->getMessage());
         } catch (InvoiceNotPayableException|PaymentGatewayUnavailableException) {
             return $this->gatewayPaymentError(__('Online payment is not available for this invoice.'));
         } catch (PaymentGatewayCreationException $exception) {

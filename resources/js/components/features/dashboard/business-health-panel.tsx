@@ -1,5 +1,6 @@
 import { AlertCircle, Building2, TrendingUp } from 'lucide-react';
 import { formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { Finance } from '@/types';
 import { CurrencyAmountList } from './currency-amount-list';
@@ -89,14 +90,14 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
     return (
         <section className="mb-10 flex flex-col gap-3">
             <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                Business Health
+                {t('Business Health')}
             </h2>
             <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
                 <div className="grid gap-3 divide-y divide-border sm:grid-cols-2 sm:gap-4 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
                     <div className="pt-2 pb-2 first:pl-0 sm:px-4 sm:pt-0 sm:pb-0 sm:pl-0">
                         <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                             <TrendingUp className="size-3.5 text-surface-green-foreground" />
-                            <span>Revenue This Month</span>
+                            <span>{t('Revenue This Month')}</span>
                         </div>
                         <CurrencyAmountList
                             groups={finance.revenue_this_month}
@@ -114,7 +115,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                     <div className="pt-3 pb-2 sm:px-4 sm:pt-0 sm:pb-0">
                         <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                             <Building2 className="size-3.5 text-muted-foreground" />
-                            <span>Monthly Potential</span>
+                            <span>{t('Monthly Potential')}</span>
                         </div>
                         <CurrencyAmountList
                             groups={finance.monthly_potential}
@@ -132,7 +133,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                     <div className="pt-3 pb-2 sm:px-4 sm:pt-0 sm:pb-0 sm:pl-0 xl:pl-4">
                         <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                             <AlertCircle className="size-3.5 text-surface-red-foreground" />
-                            <span>Outstanding</span>
+                            <span>{t('Outstanding')}</span>
                         </div>
                         <CurrencyAmountList
                             groups={finance.outstanding}
@@ -149,7 +150,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
                     </div>
                     <div className="pt-3 sm:px-4 sm:pt-0">
                         <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                            <span>Collection Rate</span>
+                            <span>{t('Collection Rate')}</span>
                         </div>
                         <CollectionRateValue rates={finance.collection_rate} />
                     </div>

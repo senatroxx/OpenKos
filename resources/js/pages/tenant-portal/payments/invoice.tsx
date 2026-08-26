@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { index } from '@/routes/portal/billing';
 import { download, pay, print } from '@/routes/portal/billing/invoices';
 import type { GatewayPaymentAttempt, Invoice, Payment } from '@/types';
@@ -23,6 +24,7 @@ export default function InvoiceDetail({
     invoicePdf,
     gatewayAttempts,
     onlinePaymentAvailable,
+    onlinePaymentUnavailableReason,
 }: {
     invoice: Invoice;
     lease: InvoiceLease;
@@ -31,6 +33,7 @@ export default function InvoiceDetail({
     };
     gatewayAttempts: GatewayPaymentAttempt[];
     onlinePaymentAvailable: boolean;
+    onlinePaymentUnavailableReason?: string | null;
 }) {
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [gatewayProcessing, setGatewayProcessing] = useState(false);
@@ -53,20 +56,20 @@ export default function InvoiceDetail({
 
     return (
         <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-            <Head title={`Invoice ${invoice.reference ?? ''}`} />
+            <Head title={`${t('Invoice')} ${invoice.reference ?? ''}`} />
 
             <Link
                 href={index()}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
-                Back to billing
+                {t('Back to billing')}
             </Link>
 
             <div className="space-y-6">
                 <header>
                     <h1 className="text-xl font-semibold">
-                        {invoice.reference ?? 'Invoice'}
+                        {invoice.reference ?? t('Invoice')}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {formatPeriod(invoice.period_start)}
@@ -102,7 +105,7 @@ export default function InvoiceDetail({
                     <div className="space-y-6">
                         <section className="rounded-lg border">
                             <h2 className="border-b px-4 py-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                What this invoice covers
+                                {t('What this invoice covers')}
                             </h2>
                             {invoice.line_items &&
                             invoice.line_items.length > 0 ? (
@@ -124,7 +127,7 @@ export default function InvoiceDetail({
                                 </div>
                             ) : (
                                 <p className="px-4 py-6 text-sm text-muted-foreground">
-                                    No itemized charges.
+                                    {t('No itemized charges.')}
                                 </p>
                             )}
                         </section>
@@ -133,11 +136,12 @@ export default function InvoiceDetail({
                             <section className="rounded-lg border">
                                 <div className="border-b px-4 py-3">
                                     <h2 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                        Online payment attempts
+                                        {t('Online payment attempts')}
                                     </h2>
                                     <p className="mt-1 text-xs text-muted-foreground">
-                                        Payment status is updated after provider
-                                        confirmation.
+                                        {t(
+                                            'Payment status is updated after provider confirmation.',
+                                        )}
                                     </p>
                                 </div>
                                 <div className="divide-y">
@@ -154,7 +158,7 @@ export default function InvoiceDetail({
                         {payments.length > 0 && (
                             <section className="rounded-lg border">
                                 <h2 className="border-b px-4 py-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Payment history
+                                    {t('Payment history')}
                                 </h2>
                                 <div className="divide-y">
                                     {payments.map((payment) => (
@@ -178,7 +182,9 @@ export default function InvoiceDetail({
                                                     payment.notes && (
                                                         <p className="mt-2 text-xs text-destructive">
                                                             <span className="font-medium">
-                                                                Reason:{' '}
+                                                                {t(
+                                                                    'Reason:',
+                                                                )}{' '}
                                                             </span>
                                                             {payment.notes}
                                                         </p>
@@ -205,7 +211,7 @@ export default function InvoiceDetail({
 
                     <aside className="order-first rounded-lg border p-5 lg:sticky lg:top-16 lg:order-none">
                         <p className="text-sm text-muted-foreground">
-                            Outstanding balance
+                            {t('Outstanding balance')}
                         </p>
                         <p className="mt-1 text-2xl font-semibold tabular-nums">
                             {formatPrice(
@@ -215,17 +221,17 @@ export default function InvoiceDetail({
                         </p>
                         <div className="mt-5 grid gap-4 text-sm">
                             <Detail
-                                label="Due date"
+                                label={t('Due date')}
                                 value={formatDate(invoice.due_date)}
                             />
                             <StatusDetail
-                                label="Invoice status"
+                                label={t('Invoice status')}
                                 domain="tenant_invoice"
                                 value={invoiceStatus}
                             />
                             <div>
                                 <p className="text-muted-foreground">
-                                    Latest payment
+                                    {t('Latest payment')}
                                 </p>
                                 <div className="mt-1">
                                     {latestPayment ? (
@@ -235,7 +241,7 @@ export default function InvoiceDetail({
                                                 value={latestPayment.status}
                                             />
                                             <p className="mt-1 text-xs text-muted-foreground">
-                                                Submitted{' '}
+                                                {t('Submitted')}{' '}
                                                 {formatDate(
                                                     latestPayment.payment_date,
                                                 )}
@@ -243,7 +249,7 @@ export default function InvoiceDetail({
                                         </>
                                     ) : (
                                         <p className="font-medium">
-                                            No payment submitted
+                                            {t('No payment submitted')}
                                         </p>
                                     )}
                                 </div>
@@ -267,11 +273,16 @@ export default function InvoiceDetail({
                                     }}
                                 >
                                     {gatewayProcessing
-                                        ? 'Opening checkout...'
+                                        ? t('Opening checkout...')
                                         : resumableGatewayAttempt
-                                          ? 'Continue online payment'
-                                          : 'Pay online'}
+                                          ? t('Continue online payment')
+                                          : t('Pay online')}
                                 </Button>
+                            )}
+                            {isPayable && onlinePaymentUnavailableReason && (
+                                <p className="text-xs text-muted-foreground">
+                                    {onlinePaymentUnavailableReason}
+                                </p>
                             )}
                             {isPayable && (
                                 <Button
@@ -279,7 +290,7 @@ export default function InvoiceDetail({
                                     variant="outline"
                                     onClick={() => setPaymentOpen(true)}
                                 >
-                                    Submit manual payment
+                                    {t('Submit manual payment')}
                                 </Button>
                             )}
                             {invoicePdf.status === 'available' ? (
@@ -290,7 +301,7 @@ export default function InvoiceDetail({
                                 >
                                     <a href={download.url(invoice)}>
                                         <Download className="size-4" />
-                                        Download PDF
+                                        {t('Download PDF')}
                                     </a>
                                 </Button>
                             ) : invoicePdf.status === 'pending' ? (
@@ -300,11 +311,12 @@ export default function InvoiceDetail({
                                         variant="outline"
                                         disabled
                                     >
-                                        PDF pending
+                                        {t('PDF pending')}
                                     </Button>
                                     <p className="text-xs text-muted-foreground">
-                                        A queue worker is preparing this PDF.
-                                        Refresh this page when it is ready.
+                                        {t(
+                                            'A queue worker is preparing this PDF. Refresh this page when it is ready.',
+                                        )}
                                     </p>
                                 </>
                             ) : (
@@ -319,7 +331,7 @@ export default function InvoiceDetail({
                                         target="_blank"
                                     >
                                         <Printer className="size-4" />
-                                        Print / Save as PDF
+                                        {t('Print / Save as PDF')}
                                     </a>
                                 </Button>
                             )}
@@ -350,7 +362,7 @@ function getPrimaryContext(
 ): PrimaryContext | null {
     if (latestGatewayAttempt?.status === 'pending') {
         return {
-            title: 'Online payment in progress',
+            title: t('Online payment in progress'),
             description:
                 'Complete the checkout or return here later. The invoice will update after the provider confirms payment.',
             variant: 'warning',
@@ -359,7 +371,7 @@ function getPrimaryContext(
 
     if (latestGatewayAttempt?.status === 'failed') {
         return {
-            title: 'Online payment failed',
+            title: t('Online payment failed'),
             description:
                 'Start a new online payment or submit a manual payment to keep this invoice on track.',
             variant: 'destructive',
@@ -368,7 +380,7 @@ function getPrimaryContext(
 
     if (latestGatewayAttempt?.status === 'expired') {
         return {
-            title: 'Online payment expired',
+            title: t('Online payment expired'),
             description:
                 'Start a new online payment or submit a manual payment to keep this invoice on track.',
             variant: 'warning',
@@ -377,7 +389,7 @@ function getPrimaryContext(
 
     if (latestPayment?.status === 'pending') {
         return {
-            title: 'Payment Under Review',
+            title: t('Payment Under Review'),
             description:
                 'Your payment has been submitted and is awaiting verification. Your invoice will update automatically after verification.',
             variant: 'warning',
@@ -386,7 +398,7 @@ function getPrimaryContext(
 
     if (latestPayment?.status === 'cancelled') {
         return {
-            title: 'Payment Rejected',
+            title: t('Payment Rejected'),
             description:
                 latestPayment.notes ||
                 'Your payment was not accepted. Submit a new payment to keep this invoice on track.',
@@ -396,7 +408,7 @@ function getPrimaryContext(
 
     if (invoiceStatus === 'overdue') {
         return {
-            title: 'Invoice Overdue',
+            title: t('Invoice Overdue'),
             description:
                 'This invoice is still outstanding. Submit a payment to bring it up to date.',
             variant: 'destructive',
@@ -405,16 +417,18 @@ function getPrimaryContext(
 
     if (invoiceStatus === 'pending') {
         return {
-            title: 'Payment Due',
-            description: 'No payment has been submitted for this invoice yet.',
+            title: t('Payment Due'),
+            description: t(
+                'No payment has been submitted for this invoice yet.',
+            ),
             variant: 'warning',
         };
     }
 
     if (invoiceStatus === 'paid') {
         return {
-            title: 'Invoice Paid',
-            description: 'This invoice has been fully paid.',
+            title: t('Invoice Paid'),
+            description: t('This invoice has been fully paid.'),
             variant: 'default',
         };
     }
@@ -465,7 +479,7 @@ function GatewayAttemptRow({ attempt }: { attempt: GatewayPaymentAttempt }) {
                                 rel="noreferrer"
                                 target="_blank"
                             >
-                                Continue checkout
+                                {t('Continue checkout')}
                             </a>
                         </Button>
                     )}

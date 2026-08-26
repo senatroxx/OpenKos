@@ -11,6 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -43,6 +44,7 @@ export default function General({
         country_code: string;
         locale: string;
         currency: string;
+        supported_currencies: string[];
         timezone: string;
         lease_id_prefix: string;
         invoice_id_prefix: string;
@@ -51,7 +53,8 @@ export default function General({
     locale_options: Record<string, string>;
     timezone_list: string[];
 }) {
-    const { branding } = usePage<{
+    const { app, branding } = usePage<{
+        app: { currency_scales: Record<string, number> };
         branding: {
             logoUrl: string;
             faviconUrl: string;
@@ -61,6 +64,12 @@ export default function General({
             hasConfiguredFavicon: boolean;
         };
     }>().props;
+    const currencyOptions = Object.keys(app.currency_scales).sort();
+    const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' });
+
+    function currencyLabel(currency: string): string {
+        return `${currency} — ${currencyNames.of(currency) ?? currency}`;
+    }
     const [uploadingBranding, setUploadingBranding] =
         useState<BrandingAsset | null>(null);
     const [brandingErrors, setBrandingErrors] = useState<
@@ -75,8 +84,41 @@ export default function General({
         country_code: settings.country_code,
         locale: settings.locale,
         currency: settings.currency,
+        supported_currencies: settings.supported_currencies,
         timezone: settings.timezone,
     });
+
+    function setDefaultCurrency(currency: string): void {
+        localizationForm.setData((current) => ({
+            ...current,
+            currency,
+            supported_currencies: current.supported_currencies.includes(
+                currency,
+            )
+                ? current.supported_currencies
+                : [...current.supported_currencies, currency],
+        }));
+    }
+
+    function toggleSupportedCurrency(currency: string, checked: boolean): void {
+        if (!checked && currency === localizationForm.data.currency) {
+            return;
+        }
+
+        localizationForm.setData(
+            'supported_currencies',
+            checked
+                ? Array.from(
+                      new Set([
+                          ...localizationForm.data.supported_currencies,
+                          currency,
+                      ]),
+                  )
+                : localizationForm.data.supported_currencies.filter(
+                      (item) => item !== currency,
+                  ),
+        );
+    }
 
     const referenceForm = useForm({
         lease_id_prefix: settings.lease_id_prefix,
@@ -130,10 +172,11 @@ export default function General({
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Branding</CardTitle>
+                    <CardTitle>{t('Branding')}</CardTitle>
                     <CardDescription>
-                        Customize the logo and favicon used by this
-                        installation.
+                        {t(
+                            'Customize the logo and favicon used by this installation.',
+                        )}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-6 lg:grid-cols-2">
@@ -171,21 +214,21 @@ export default function General({
                                 <div className="flex size-20 items-center justify-center rounded-md border bg-muted/30 p-2">
                                     <img
                                         src={item.url}
-                                        alt={`${item.title} preview`}
+                                        alt={t(`${item.title} preview`)}
                                         className="size-full object-contain"
                                     />
                                 </div>
                                 <div>
                                     <h3 className="font-medium">
-                                        {item.title}
+                                        {t(item.title)}
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
-                                        {item.description}
+                                        {t(item.description)}
                                     </p>
                                     <p className="mt-1 text-xs text-muted-foreground">
                                         {item.hasCustom
-                                            ? 'Using custom asset'
-                                            : 'Using bundled default'}
+                                            ? t('Using custom asset')
+                                            : t('Using bundled default')}
                                     </p>
                                 </div>
                             </div>
@@ -198,7 +241,7 @@ export default function General({
                             >
                                 <div className="grid gap-2">
                                     <Label htmlFor={`${item.asset}-file`}>
-                                        Upload replacement
+                                        {t('Upload replacement')}
                                     </Label>
                                     <Input
                                         id={`${item.asset}-file`}
@@ -212,7 +255,7 @@ export default function General({
                                         id={`${item.asset}-formats`}
                                         className="text-xs text-muted-foreground"
                                     >
-                                        {item.formats}
+                                        {t(item.formats)}
                                     </p>
                                     <InputError message={brandingErrors.file} />
                                 </div>
@@ -223,8 +266,8 @@ export default function General({
                                         disabled={uploadingBranding !== null}
                                     >
                                         {uploadingBranding === item.asset
-                                            ? 'Uploading...'
-                                            : 'Upload'}
+                                            ? t('Uploading...')
+                                            : t('Upload')}
                                     </Button>
                                     <Button
                                         type="button"
@@ -237,7 +280,7 @@ export default function General({
                                             removeBranding(item.asset)
                                         }
                                     >
-                                        Restore default
+                                        {t('Restore default')}
                                     </Button>
                                 </div>
                             </form>
@@ -256,15 +299,18 @@ export default function General({
                     >
                         <Card>
                             <CardHeader>
-                                <CardTitle>Site</CardTitle>
+                                <CardTitle>{t('Site')}</CardTitle>
                                 <CardDescription>
-                                    The name displayed throughout the
-                                    application.
+                                    {t(
+                                        'The name displayed throughout the application.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="site_name">Site name</Label>
+                                    <Label htmlFor="site_name">
+                                        {t('Site name')}
+                                    </Label>
                                     <Input
                                         id="site_name"
                                         name="site_name"
@@ -286,7 +332,7 @@ export default function General({
                                     )}
                                 </div>
                                 <Button disabled={siteForm.processing}>
-                                    Save
+                                    {t('Save')}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -310,7 +356,7 @@ export default function General({
                             <CardContent className="space-y-4">
                                 <div className="grid max-w-xs gap-2">
                                     <Label htmlFor="country_code">
-                                        Country
+                                        {t('Country')}
                                     </Label>
                                     <Input
                                         id="country_code"
@@ -375,23 +421,26 @@ export default function General({
                                     )}
                                 </div>
 
-                                <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="currency">Currency</Label>
-                                    <Input
-                                        id="currency"
-                                        name="currency"
+                                <div className="grid max-w-md gap-2">
+                                    <Label htmlFor="currency">{t('Default currency')}</Label>
+                                    <Select
                                         value={localizationForm.data.currency}
-                                        onChange={(e) =>
-                                            localizationForm.setData(
-                                                'currency',
-                                                e.target.value.toUpperCase(),
-                                            )
-                                        }
-                                        maxLength={3}
-                                        className="font-mono uppercase"
-                                        placeholder="ISO 4217"
-                                        required
-                                    />
+                                        onValueChange={setDefaultCurrency}
+                                    >
+                                        <SelectTrigger id="currency">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencyOptions.map((currency) => (
+                                                <SelectItem
+                                                    key={currency}
+                                                    value={currency}
+                                                >
+                                                    {currencyLabel(currency)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     {localizationForm.errors.currency && (
                                         <p className="text-sm text-red-600">
                                             {localizationForm.errors.currency}
@@ -399,8 +448,67 @@ export default function General({
                                     )}
                                 </div>
 
+                                <div className="grid max-w-md gap-2">
+                                    <div>
+                                        <Label>{t('Supported currencies')}</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            {t('Available for new pricing and billing rates.')} {t('Existing records keep their original currency.')}
+                                        </p>
+                                    </div>
+                                    <div className="grid max-h-72 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
+                                        {currencyOptions.map((currency) => {
+                                            const isSupported =
+                                                localizationForm.data.supported_currencies.includes(
+                                                    currency,
+                                                );
+                                            const isDefault =
+                                                localizationForm.data
+                                                    .currency === currency;
+
+                                            return (
+                                                <label
+                                                    key={currency}
+                                                    className="flex items-start gap-2 rounded-md p-2 text-sm hover:bg-muted/50"
+                                                >
+                                                    <Checkbox
+                                                        checked={isSupported}
+                                                        disabled={isDefault}
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            toggleSupportedCurrency(
+                                                                currency,
+                                                                checked ===
+                                                                    true,
+                                                            )
+                                                        }
+                                                    />
+                                                    <span>
+                                                        <span className="block font-mono font-medium">
+                                                            {currency}
+                                                        </span>
+                                                        <span className="block text-xs text-muted-foreground">
+                                                            {currencyNames.of(
+                                                                currency,
+                                                            ) ?? currency}
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    <InputError
+                                        message={
+                                            localizationForm.errors
+                                                .supported_currencies
+                                        }
+                                    />
+                                </div>
+
                                 <div className="grid max-w-xs gap-2">
-                                    <Label htmlFor="timezone">Timezone</Label>
+                                    <Label htmlFor="timezone">
+                                        {t('Timezone')}
+                                    </Label>
                                     <Select
                                         value={localizationForm.data.timezone}
                                         onValueChange={(value) =>
@@ -429,7 +537,7 @@ export default function General({
                                 </div>
 
                                 <Button disabled={localizationForm.processing}>
-                                    Save
+                                    {t('Save')}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -439,9 +547,9 @@ export default function General({
                 <div className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Appearance</CardTitle>
+                            <CardTitle>{t('Appearance')}</CardTitle>
                             <CardDescription>
-                                Choose how the application looks for you.
+                                {t('Choose how the application looks for you.')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -462,10 +570,11 @@ export default function General({
                     >
                         <Card>
                             <CardHeader>
-                                <CardTitle>Invoice PDFs</CardTitle>
+                                <CardTitle>{t('Invoice PDFs')}</CardTitle>
                                 <CardDescription>
-                                    PDF generation runs in the queue and needs a
-                                    running worker when enabled.
+                                    {t(
+                                        'PDF generation runs in the queue and needs a running worker when enabled.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -485,17 +594,25 @@ export default function General({
                                     />
                                     <Label htmlFor="invoice_pdf_enabled">
                                         {invoicePdfForm.data.invoice_pdf_enabled
-                                            ? 'Invoice PDF generation is enabled'
-                                            : 'Invoice PDF generation is disabled'}
+                                            ? t(
+                                                  'Invoice PDF generation is enabled',
+                                              )
+                                            : t(
+                                                  'Invoice PDF generation is disabled',
+                                              )}
                                     </Label>
                                 </div>
                                 <p className="text-sm text-muted-foreground">
                                     {invoicePdfForm.data.invoice_pdf_enabled
-                                        ? 'Invoice PDFs are generated in the background, stored privately, and reused for downloads and supported reminders.'
-                                        : 'Invoices remain available as web pages. Use the browser print or save-as-PDF flow; reminders include the invoice link without an attachment.'}
+                                        ? t(
+                                              'Invoice PDFs are generated in the background, stored privately, and reused for downloads and supported reminders.',
+                                          )
+                                        : t(
+                                              'Invoices remain available as web pages. Use the browser print or save-as-PDF flow; reminders include the invoice link without an attachment.',
+                                          )}
                                 </p>
                                 <Button disabled={invoicePdfForm.processing}>
-                                    Save
+                                    {t('Save')}
                                 </Button>
                             </CardContent>
                         </Card>
@@ -509,16 +626,17 @@ export default function General({
                     >
                         <Card>
                             <CardHeader>
-                                <CardTitle>References</CardTitle>
+                                <CardTitle>{t('References')}</CardTitle>
                                 <CardDescription>
-                                    Prefixes used for auto-generated reference
-                                    numbers.
+                                    {t(
+                                        'Prefixes used for auto-generated reference numbers.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid max-w-xs gap-2">
                                     <Label htmlFor="lease_id_prefix">
-                                        Lease prefix
+                                        {t('Lease prefix')}
                                     </Label>
                                     <Input
                                         id="lease_id_prefix"
@@ -538,7 +656,7 @@ export default function General({
                                         required
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Format:{' '}
+                                        {t('Format:')}{' '}
                                         <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
                                             {referenceForm.data.lease_id_prefix}
                                             20260001
@@ -556,7 +674,7 @@ export default function General({
 
                                 <div className="grid max-w-xs gap-2">
                                     <Label htmlFor="invoice_id_prefix">
-                                        Invoice prefix
+                                        {t('Invoice prefix')}
                                     </Label>
                                     <Input
                                         id="invoice_id_prefix"
@@ -576,7 +694,7 @@ export default function General({
                                         required
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Format:{' '}
+                                        {t('Format:')}{' '}
                                         <code className="rounded bg-muted px-1.5 py-0.5 font-mono">
                                             {
                                                 referenceForm.data
@@ -596,7 +714,7 @@ export default function General({
                                 </div>
 
                                 <Button disabled={referenceForm.processing}>
-                                    Save
+                                    {t('Save')}
                                 </Button>
                             </CardContent>
                         </Card>

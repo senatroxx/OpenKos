@@ -23,6 +23,7 @@ import {
     PAYMENT_METHOD_LABELS,
 } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/leases';
 import type { Lease, Payment } from '@/types';
 
@@ -79,7 +80,7 @@ export default function LeaseDetailSheet({
             >
                 <SheetHeader>
                     <SheetTitle>
-                        {isActive ? 'Active Lease' : 'Lease Details'}
+                        {isActive ? t('Active Lease') : t('Lease Details')}
                     </SheetTitle>
                 </SheetHeader>
 
@@ -89,7 +90,7 @@ export default function LeaseDetailSheet({
                             {/* Status */}
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Status
+                                    {t('Status')}
                                 </h3>
                                 <StatusBadge
                                     domain="lease"
@@ -102,7 +103,7 @@ export default function LeaseDetailSheet({
                                 <section>
                                     <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Occupancy
+                                            {t('Occupancy')}
                                         </h3>
                                         <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
@@ -110,35 +111,39 @@ export default function LeaseDetailSheet({
                                         <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                             <div>
                                                 <p className="mb-2 text-xs text-muted-foreground">
-                                                    Tenants
+                                                    {t('Tenants')}
                                                 </p>
                                                 <div className="space-y-2">
                                                     {(lease?.tenants ?? [])
                                                         .length > 0
                                                         ? lease!.tenants.map(
-                                                              (t) => (
+                                                              (tenant) => (
                                                                   <div
-                                                                      key={t.id}
+                                                                      key={
+                                                                          tenant.id
+                                                                      }
                                                                       className="flex items-center justify-between"
                                                                   >
                                                                       <div>
                                                                           <span className="text-sm font-medium">
                                                                               {
-                                                                                  t.name
+                                                                                  tenant.name
                                                                               }
                                                                           </span>
-                                                                          {t
+                                                                          {tenant
                                                                               .pivot
                                                                               ?.is_primary && (
-                                                                              <span className="ml-2 text-[10px] font-medium text-primary uppercase">
-                                                                                  Primary
+                                                                              <span className="ml-2 text-xs font-medium text-primary uppercase">
+                                                                                  {t(
+                                                                                      'Primary',
+                                                                                  )}
                                                                               </span>
                                                                           )}
                                                                       </div>
-                                                                      {t.phone && (
+                                                                      {tenant.phone && (
                                                                           <span className="text-xs text-muted-foreground">
                                                                               {
-                                                                                  t.phone
+                                                                                  tenant.phone
                                                                               }
                                                                           </span>
                                                                       )}
@@ -171,7 +176,7 @@ export default function LeaseDetailSheet({
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-sm text-muted-foreground">
-                                                    Unit
+                                                    {t('Unit')}
                                                 </span>
                                                 <span className="text-sm">
                                                     {unitLabel}
@@ -179,7 +184,7 @@ export default function LeaseDetailSheet({
                                             </div>
                                             <div className="flex items-center justify-between">
                                                 <span className="text-sm text-muted-foreground">
-                                                    Property
+                                                    {t('Property')}
                                                 </span>
                                                 <span className="text-sm">
                                                     {propertyName}
@@ -197,7 +202,7 @@ export default function LeaseDetailSheet({
                                 <section>
                                     <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Agreement
+                                            {t('Agreement')}
                                         </h3>
                                         <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
@@ -206,7 +211,7 @@ export default function LeaseDetailSheet({
                                             {lease.reference && (
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-muted-foreground">
-                                                        Reference
+                                                        {t('Reference')}
                                                     </span>
                                                     <span className="font-mono text-xs">
                                                         {lease.reference}
@@ -215,7 +220,7 @@ export default function LeaseDetailSheet({
                                             )}
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    Start date
+                                                    {t('Start date')}
                                                 </span>
                                                 <span className="tabular-nums">
                                                     {formatDate(
@@ -225,7 +230,7 @@ export default function LeaseDetailSheet({
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    End date
+                                                    {t('End date')}
                                                 </span>
                                                 <span className="tabular-nums">
                                                     {lease.termination_date
@@ -240,7 +245,7 @@ export default function LeaseDetailSheet({
                                             {lease.termination_reason && (
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-muted-foreground">
-                                                        Reason
+                                                        {t('Reason')}
                                                     </span>
                                                     <span className="text-right text-sm capitalize">
                                                         {lease.termination_reason.replace(
@@ -260,7 +265,7 @@ export default function LeaseDetailSheet({
                                 <section>
                                     <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Rent
+                                            {t('Rent')}
                                         </h3>
                                         <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
@@ -268,7 +273,7 @@ export default function LeaseDetailSheet({
                                         <div className="space-y-2 rounded-lg border p-4">
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    Billing rate
+                                                    {t('Billing rate')}
                                                 </span>
                                                 <span className="tabular-nums">
                                                     {formatPrice(
@@ -280,20 +285,22 @@ export default function LeaseDetailSheet({
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    Billing strategy
+                                                    {t('Billing strategy')}
                                                 </span>
                                                 <span className="text-xs font-medium">
-                                                    {BILLING_STRATEGIES.find(
-                                                        (s) =>
-                                                            s.value ===
-                                                            lease.billing_strategy,
-                                                    )?.label ??
-                                                        'Advance (due within period)'}
+                                                    {t(
+                                                        BILLING_STRATEGIES.find(
+                                                            (s) =>
+                                                                s.value ===
+                                                                lease.billing_strategy,
+                                                        )?.label ??
+                                                            'Advance (due within period)',
+                                                    )}
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    Monthly equivalent
+                                                    {t('Monthly equivalent')}
                                                 </span>
                                                 <span className="tabular-nums">
                                                     {formatPrice(
@@ -305,7 +312,7 @@ export default function LeaseDetailSheet({
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    Due every month
+                                                    {t('Due every month')}
                                                 </span>
                                                 <span className="tabular-nums">
                                                     {DUE_DAY_LABELS[
@@ -323,7 +330,7 @@ export default function LeaseDetailSheet({
                                 <section>
                                     <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Deposit
+                                            {t('Deposit')}
                                         </h3>
                                         <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
@@ -331,7 +338,7 @@ export default function LeaseDetailSheet({
                                         <div className="space-y-2 rounded-lg border p-4">
                                             <div className="flex items-center justify-between text-sm">
                                                 <span className="text-muted-foreground">
-                                                    Amount
+                                                    {t('Amount')}
                                                 </span>
                                                 <span className="tabular-nums">
                                                     {formatPrice(
@@ -343,7 +350,7 @@ export default function LeaseDetailSheet({
                                             {lease.deposit_paid_at && (
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-muted-foreground">
-                                                        Paid at
+                                                        {t('Paid at')}
                                                     </span>
                                                     <span className="tabular-nums">
                                                         {formatDate(
@@ -355,7 +362,7 @@ export default function LeaseDetailSheet({
                                             {lease.deposit_refund_amount && (
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-muted-foreground">
-                                                        Refund
+                                                        {t('Refund')}
                                                     </span>
                                                     <span className="tabular-nums">
                                                         {formatPrice(
@@ -368,7 +375,7 @@ export default function LeaseDetailSheet({
                                             {lease.deposit_refunded_at && (
                                                 <div className="flex items-center justify-between text-sm">
                                                     <span className="text-muted-foreground">
-                                                        Refunded at
+                                                        {t('Refunded at')}
                                                     </span>
                                                     <span className="tabular-nums">
                                                         {formatDate(
@@ -387,14 +394,14 @@ export default function LeaseDetailSheet({
                                 <section>
                                     <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Payment History
+                                            {t('Payment History')}
                                         </h3>
                                         <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                     </CollapsibleTrigger>
                                     <CollapsibleContent className="mt-3">
                                         {payments.length === 0 ? (
                                             <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                                                No payments recorded yet.
+                                                {t('No payments recorded yet.')}
                                             </p>
                                         ) : (
                                             <div className="space-y-2">
@@ -482,7 +489,7 @@ export default function LeaseDetailSheet({
                                                                             <Button
                                                                                 size="sm"
                                                                                 variant="outline"
-                                                                                className="h-6 px-2 text-[10px]"
+                                                                                className="h-6 px-2 text-xs"
                                                                                 disabled={
                                                                                     verifyingId ===
                                                                                     payment.id
@@ -497,12 +504,14 @@ export default function LeaseDetailSheet({
                                                                                     );
                                                                                 }}
                                                                             >
-                                                                                Verify
+                                                                                {t(
+                                                                                    'Verify',
+                                                                                )}
                                                                             </Button>
                                                                             <Button
                                                                                 size="sm"
                                                                                 variant="destructive"
-                                                                                className="h-6 px-2 text-[10px]"
+                                                                                className="h-6 px-2 text-xs"
                                                                                 disabled={
                                                                                     verifyingId ===
                                                                                     payment.id
@@ -517,7 +526,9 @@ export default function LeaseDetailSheet({
                                                                                     );
                                                                                 }}
                                                                             >
-                                                                                Reject
+                                                                                {t(
+                                                                                    'Reject',
+                                                                                )}
                                                                             </Button>
                                                                         </div>
                                                                     )}
@@ -537,7 +548,7 @@ export default function LeaseDetailSheet({
                                     <section>
                                         <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                             <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                                Notes
+                                                {t('Notes')}
                                             </h3>
                                             <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                         </CollapsibleTrigger>
@@ -557,7 +568,7 @@ export default function LeaseDetailSheet({
                                         <section>
                                             <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between gap-2">
                                                 <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                                    Unit History
+                                                    {t('Unit History')}
                                                 </h3>
                                                 <ChevronDown className="ui-open:rotate-180 size-3 text-muted-foreground transition-transform" />
                                             </CollapsibleTrigger>
@@ -596,7 +607,7 @@ export default function LeaseDetailSheet({
                                                                         {h.reason && (
                                                                             <Badge
                                                                                 variant="outline"
-                                                                                className="h-4 px-1.5 py-0 text-[10px]"
+                                                                                className="h-4 px-1.5 py-0 text-xs"
                                                                             >
                                                                                 {
                                                                                     h.reason
@@ -610,7 +621,9 @@ export default function LeaseDetailSheet({
                                                                         </span>
                                                                         {h.transferred_by && (
                                                                             <span>
-                                                                                by{' '}
+                                                                                {t(
+                                                                                    'by',
+                                                                                )}{' '}
                                                                                 {
                                                                                     h
                                                                                         .transferred_by
@@ -645,7 +658,7 @@ export default function LeaseDetailSheet({
                                     }}
                                 >
                                     <Banknote className="mr-1.5 size-4" />
-                                    Record Payment
+                                    {t('Record Payment')}
                                 </Button>
                             )}
                             {isActive && onMoveOut && (
@@ -653,12 +666,12 @@ export default function LeaseDetailSheet({
                                     variant="destructive"
                                     onClick={onMoveOut}
                                 >
-                                    Move Out Tenant
+                                    {t('Move Out Tenant')}
                                 </Button>
                             )}
                             {isActive && onMoveUnit && (
                                 <Button variant="outline" onClick={onMoveUnit}>
-                                    Move Unit
+                                    {t('Move Unit')}
                                 </Button>
                             )}
                             {isActive && canSendReminder && (
@@ -670,14 +683,14 @@ export default function LeaseDetailSheet({
                                         )
                                     }
                                 >
-                                    Send Reminder
+                                    {t('Send Reminder')}
                                 </Button>
                             )}
                             <Button
                                 variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Close
+                                {t('Close')}
                             </Button>
                         </div>
                     </div>
@@ -695,7 +708,7 @@ export default function LeaseDetailSheet({
                     src={previewProof.src}
                     mimeType={previewProof.mimeType}
                     title={previewProof.name}
-                    subtitle="Payment Proof"
+                    subtitle={t('Payment Proof')}
                     onClose={() => setPreviewProof(null)}
                 />
             )}

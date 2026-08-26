@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { RoleForm } from '@/components/features';
 import { Heading } from '@/components/shared';
+import { t } from '@/lib/i18n';
 import roles from '@/routes/roles';
 import type { PermissionGroup } from '@/types';
 
@@ -19,12 +20,14 @@ export default function Create({
 }) {
     return (
         <>
-            <Head title="Create Role" />
+            <Head title={t('Create Role')} />
 
             <div className="flex h-full flex-1 flex-col gap-4 rounded-xl p-4">
                 <Heading
-                    title="Create Role"
-                    description="Define a new custom role and its permissions"
+                    title={t('Create Role')}
+                    description={t(
+                        'Define a new custom role and its permissions',
+                    )}
                 />
 
                 <RoleForm

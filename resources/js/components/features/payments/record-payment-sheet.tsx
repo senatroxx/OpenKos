@@ -22,6 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PAYABLE_STATUSES, PAYMENT_METHODS } from '@/lib/constants/billing';
 import { formatPeriod, formatPrice, todayISO } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/leases';
 import type { Lease, RentScheduleEntry } from '@/types';
 
@@ -104,20 +105,22 @@ function RecordPaymentForm({
             <div className="space-y-6">
                 <section>
                     <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                        Invoice
+                        {t('Invoice')}
                     </h3>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="invoice_id">Billing Period</Label>
+                        <Label htmlFor="invoice_id">
+                            {t('Billing Period')}
+                        </Label>
                         {invoices === null ? (
                             <p className="text-sm text-muted-foreground">
                                 {fetchError
-                                    ? 'Failed to load invoices.'
-                                    : 'Loading invoices...'}
+                                    ? t('Failed to load invoices.')
+                                    : t('Loading invoices...')}
                             </p>
                         ) : invoices.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
-                                No payable invoices for this lease.
+                                {t('No payable invoices for this lease.')}
                             </p>
                         ) : (
                             <Select
@@ -126,7 +129,9 @@ function RecordPaymentForm({
                                 onValueChange={setSelectedInvoiceId}
                             >
                                 <SelectTrigger id="invoice_id">
-                                    <SelectValue placeholder="Select invoice" />
+                                    <SelectValue
+                                        placeholder={t('Select invoice')}
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {invoices.map((entry) => (
@@ -136,9 +141,12 @@ function RecordPaymentForm({
                                         >
                                             {formatPeriod(entry.period_start)}
                                             {' — '}
-                                            {formatPrice(entry.outstanding, entry.currency)}
+                                            {formatPrice(
+                                                entry.outstanding,
+                                                entry.currency,
+                                            )}
                                             {entry.status === 'partial' &&
-                                                ' outstanding'}
+                                                ` ${t('outstanding')}`}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -150,13 +158,14 @@ function RecordPaymentForm({
 
                 <section>
                     <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                        Payment Details
+                        {t('Payment Details')}
                     </h3>
 
                     <div className="grid gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="amount">
-                                Amount ({selectedInvoice?.currency ?? lease.currency})
+                                Amount (
+                                {selectedInvoice?.currency ?? lease.currency})
                             </Label>
                             <Input
                                 id="amount"
@@ -179,7 +188,7 @@ function RecordPaymentForm({
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div className="grid gap-2">
                                 <Label htmlFor="payment_method">
-                                    Payment Method
+                                    {t('Payment Method')}
                                 </Label>
                                 <Select
                                     name="payment_method"
@@ -189,7 +198,9 @@ function RecordPaymentForm({
                                         id="payment_method"
                                         className="w-full"
                                     >
-                                        <SelectValue placeholder="Select method" />
+                                        <SelectValue
+                                            placeholder={t('Select method')}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {PAYMENT_METHODS.map((m) => (
@@ -206,7 +217,7 @@ function RecordPaymentForm({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="paid_at">Paid At</Label>
+                                <Label htmlFor="paid_at">{t('Paid At')}</Label>
                                 <Input
                                     id="paid_at"
                                     name="paid_at"
@@ -219,18 +230,18 @@ function RecordPaymentForm({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 name="notes"
-                                placeholder="Optional notes"
+                                placeholder={t('Optional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
 
                         <div className="grid gap-2">
                             <Label htmlFor="proof">
-                                Payment Proof (optional)
+                                {t('Payment Proof (optional)')}
                             </Label>
                             <Input
                                 id="proof"
@@ -260,14 +271,14 @@ function RecordPaymentForm({
                     onClick={() => onOpenChange(false)}
                     disabled={processing}
                 >
-                    Cancel
+                    {t('Cancel')}
                 </Button>
                 <Button
                     disabled={
                         processing || invoices === null || invoices.length === 0
                     }
                 >
-                    {processing ? 'Recording...' : 'Record Payment'}
+                    {processing ? t('Recording...') : t('Record Payment')}
                 </Button>
             </div>
         </form>
@@ -287,9 +298,9 @@ export default function RecordPaymentSheet({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Record Payment</SheetTitle>
+                    <SheetTitle>{t('Record Payment')}</SheetTitle>
                     <SheetDescription>
-                        Record a rent payment for this lease.
+                        {t('Record a rent payment for this lease.')}
                     </SheetDescription>
                 </SheetHeader>
 

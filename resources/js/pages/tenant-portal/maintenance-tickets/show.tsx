@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 
 type Ticket = {
     id: number;
@@ -33,21 +34,21 @@ function Detail({ label, value }: { label: string; value: string }) {
 export default function ShowTicket({ ticket }: Props) {
     return (
         <div className="flex flex-1 flex-col gap-6 p-4">
-            <Head title={`Ticket ${ticket.reference}`} />
+            <Head title={`${t('Ticket')} ${ticket.reference}`} />
 
             <Link
                 href="/portal/maintenance-tickets"
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
-                Back to maintenance list
+                {t('Back to maintenance list')}
             </Link>
 
             <div className="space-y-6">
                 <div>
                     <h1 className="text-xl font-semibold">{ticket.title}</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Ticket {ticket.reference} · Created{' '}
+                        {t('Ticket')} {ticket.reference} · {t('Created')}{' '}
                         {formatDate(ticket.created_at)}
                     </p>
                 </div>
@@ -56,18 +57,18 @@ export default function ShowTicket({ ticket }: Props) {
                     <div className="space-y-6 md:col-span-2">
                         <section className="space-y-2 rounded-lg border p-4">
                             <h2 className="text-sm font-semibold">
-                                Description
+                                {t('Description')}
                             </h2>
                             <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                                 {ticket.description ||
-                                    'No description provided.'}
+                                    t('No description provided.')}
                             </p>
                         </section>
 
                         {ticket.resolution_notes && (
                             <section className="space-y-2 rounded-lg border bg-accent/20 p-4">
                                 <h2 className="text-sm font-semibold">
-                                    Resolution Notes
+                                    {t('Resolution Notes')}
                                 </h2>
                                 <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                                     {ticket.resolution_notes}
@@ -79,41 +80,41 @@ export default function ShowTicket({ ticket }: Props) {
                     <div className="space-y-4">
                         <section className="divide-y rounded-lg border p-4 text-sm">
                             <Detail
-                                label="Status"
+                                label={t('Status')}
                                 value={
                                     ticket.status.charAt(0).toUpperCase() +
                                     ticket.status.slice(1).replace('_', ' ')
                                 }
                             />
                             <Detail
-                                label="Priority"
+                                label={t('Priority')}
                                 value={
                                     ticket.priority.charAt(0).toUpperCase() +
                                     ticket.priority.slice(1)
                                 }
                             />
                             <Detail
-                                label="Property"
+                                label={t('Property')}
                                 value={ticket.property_name || '—'}
                             />
                             {ticket.unit_name ? (
                                 <Detail
-                                    label="Location"
-                                    value={`Unit ${ticket.unit_name}`}
+                                    label={t('Location')}
+                                    value={`${t('Unit')} ${ticket.unit_name}`}
                                 />
                             ) : (
                                 <Detail
-                                    label="Location"
+                                    label={t('Location')}
                                     value={
                                         ticket.location
-                                            ? `Common Area (${ticket.location})`
-                                            : 'Common Area'
+                                            ? `${t('Common Area')} (${ticket.location})`
+                                            : t('Common Area')
                                     }
                                 />
                             )}
                             <Detail
-                                label="Assignee"
-                                value={ticket.assignee_name || 'Unassigned'}
+                                label={t('Assignee')}
+                                value={ticket.assignee_name || t('Unassigned')}
                             />
                         </section>
                     </div>

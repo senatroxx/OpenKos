@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "884817dcf51c9ddd4d0e4f3b1b1b6157",
+    "content-hash": "46947d45ea007b765375f3d9a8ce0515",
     "packages": [
         {
             "name": "bacon/bacon-qr-code",
@@ -3317,16 +3317,16 @@
         },
         {
             "name": "openkos/platform",
-            "version": "0.2.2",
+            "version": "0.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/senatroxx/openkos-platform.git",
-                "reference": "3669d1d825c3c22b462088602b9a5ef2c15b42f0"
+                "reference": "e205d385b086a29db98441e961c271b54cd891fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/senatroxx/openkos-platform/zipball/3669d1d825c3c22b462088602b9a5ef2c15b42f0",
-                "reference": "3669d1d825c3c22b462088602b9a5ef2c15b42f0",
+                "url": "https://api.github.com/repos/senatroxx/openkos-platform/zipball/e205d385b086a29db98441e961c271b54cd891fe",
+                "reference": "e205d385b086a29db98441e961c271b54cd891fe",
                 "shasum": ""
             },
             "require": {
@@ -3364,9 +3364,9 @@
             "description": "The OpenKOS platform and plugin SDK.",
             "support": {
                 "issues": "https://github.com/senatroxx/openkos-platform/issues",
-                "source": "https://github.com/senatroxx/openkos-platform/tree/v0.2.2"
+                "source": "https://github.com/senatroxx/openkos-platform/tree/v0.2.3"
             },
-            "time": "2026-08-18T11:04:43+00:00"
+            "time": "2026-08-24T04:26:34+00:00"
         },
         {
             "name": "paragonie/constant_time_encoding",

@@ -5,6 +5,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { t } from '@/lib/i18n';
 import type { Invoice } from '@/types';
 import SubmitPortalPaymentForm from './submit-portal-payment-form';
 
@@ -21,10 +22,11 @@ export default function SubmitPortalPaymentSheet({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Submit Payment</SheetTitle>
+                    <SheetTitle>{t('Submit Payment')}</SheetTitle>
                     <SheetDescription>
-                        Your payment will be reviewed before it is applied to
-                        this invoice.
+                        {t(
+                            'Your payment will be reviewed before it is applied to this invoice.',
+                        )}
                     </SheetDescription>
                 </SheetHeader>
 

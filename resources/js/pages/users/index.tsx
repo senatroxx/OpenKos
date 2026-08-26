@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/sheet';
 import { useTable } from '@/hooks/use-table';
 import { formatDateTime } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import users, {
     destroy,
     resendInvitation,
@@ -86,7 +87,7 @@ function StatusBadge({ user }: { user: ManagedUser }) {
 
 function formatLastLogin(value: string | null) {
     if (!value) {
-        return 'Never';
+        return t('Never');
     }
 
     return formatDateTime(value);
@@ -175,26 +176,26 @@ export default function Index({
     const columns: TableColumn<ManagedUser>[] = [
         {
             key: 'name',
-            label: 'Name',
+            label: t('Name'),
             sortable: true,
             className: 'font-medium',
         },
         {
             key: 'email',
-            label: 'Email',
+            label: t('Email'),
             sortable: true,
             className: 'text-muted-foreground',
         },
         {
             key: 'last_login_at',
-            label: 'Last Login',
+            label: t('Last Login'),
             sortable: true,
             className: 'text-muted-foreground',
             render: (u) => formatLastLogin(u.last_login_at),
         },
         {
             key: '_roles',
-            label: 'Roles',
+            label: t('Roles'),
             render: (u) =>
                 u.roles.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
@@ -206,24 +207,24 @@ export default function Index({
                     </div>
                 ) : (
                     <span className="text-sm text-muted-foreground">
-                        No roles
+                        {t('No roles')}
                     </span>
                 ),
         },
         {
             key: '_properties',
-            label: 'Assigned Properties',
+            label: t('Assigned Properties'),
             className: 'text-muted-foreground',
             render: (u) =>
                 u.properties.length > 0
                     ? u.properties.map((p) => p.name).join(', ')
                     : u.role === 'owner'
-                      ? 'All properties'
-                      : 'No properties',
+                      ? t('All properties')
+                      : t('No properties'),
         },
         {
             key: '_status',
-            label: 'Status',
+            label: t('Status'),
             render: (u) => <StatusBadge user={u} />,
         },
         {
@@ -247,22 +248,22 @@ export default function Index({
                             onClick={() => router.visit(`/users/${u.id}`)}
                         >
                             <Eye className="size-4" />
-                            View
+                            {t('View')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(u)}>
                             <Pencil className="size-4" />
-                            Edit / Assign Property
+                            {t('Edit / Assign Property')}
                         </DropdownMenuItem>
                         {u.status === 'active' && (
                             <DropdownMenuItem onClick={() => sendReset(u)}>
                                 <KeyRound className="size-4" />
-                                Reset Password
+                                {t('Reset Password')}
                             </DropdownMenuItem>
                         )}
                         {u.status === 'invited' && (
                             <DropdownMenuItem onClick={() => resendInvite(u)}>
                                 <UserPlus className="size-4" />
-                                Resend Invite Link
+                                {t('Resend Invite Link')}
                             </DropdownMenuItem>
                         )}
                         {u.status !== 'disabled' && (
@@ -271,7 +272,7 @@ export default function Index({
                                 onClick={() => disableAccess(u)}
                             >
                                 <ShieldOff className="size-4" />
-                                Disable Access
+                                {t('Disable Access')}
                             </DropdownMenuItem>
                         )}
                     </DropdownMenuContent>
@@ -282,17 +283,17 @@ export default function Index({
 
     return (
         <>
-            <Head title="Users" />
+            <Head title={t('Users')} />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between gap-4">
                     <Heading
-                        title="Users"
-                        description="Invite staff and manage access"
+                        title={t('Users')}
+                        description={t('Invite staff and manage access')}
                     />
                     <Button onClick={openInvite}>
                         <UserPlus className="size-4" />
-                        Invite User
+                        {t('Invite User')}
                     </Button>
                 </div>
 
@@ -307,7 +308,7 @@ export default function Index({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search by name or email..."
+                            placeholder={t('Search by name or email...')}
                         />
                     }
                 />
@@ -322,10 +323,10 @@ export default function Index({
                     perPage={currentPerPage}
                     onPageChange={table.goToPage}
                     onPerPageChange={table.setPerPage}
-                    noun="users"
+                    noun={t('users')}
                     empty={{
-                        message: 'No users yet.',
-                        createLabel: 'Invite a user',
+                        message: t('No users yet.'),
+                        createLabel: t('Invite a user'),
                         onCreate: openInvite,
                     }}
                 />
@@ -360,15 +361,15 @@ export default function Index({
                     <DialogHeader>
                         <DialogTitle>
                             {confirmState?.action === 'disable'
-                                ? 'Disable access'
+                                ? t('Disable access')
                                 : confirmState?.action === 'reset'
-                                  ? 'Reset password'
-                                  : 'Resend invitation'}
+                                  ? t('Reset password')
+                                  : t('Resend invitation')}
                         </DialogTitle>
                         <DialogDescription>
                             {confirmState?.action === 'disable' && (
                                 <>
-                                    Disable access for{' '}
+                                    {t('Disable access for')}{' '}
                                     <span className="font-medium">
                                         {confirmState.user.name}
                                     </span>
@@ -377,7 +378,7 @@ export default function Index({
                             )}
                             {confirmState?.action === 'reset' && (
                                 <>
-                                    Send password reset to{' '}
+                                    {t('Send password reset to')}{' '}
                                     <span className="font-medium">
                                         {confirmState.user.email}
                                     </span>
@@ -386,7 +387,7 @@ export default function Index({
                             )}
                             {confirmState?.action === 'resend' && (
                                 <>
-                                    Resend invitation to{' '}
+                                    {t('Resend invitation to')}{' '}
                                     <span className="font-medium">
                                         {confirmState.user.email}
                                     </span>
@@ -400,7 +401,7 @@ export default function Index({
                             variant="outline"
                             onClick={() => setConfirmState(null)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button
                             variant={
@@ -411,10 +412,10 @@ export default function Index({
                             onClick={executeConfirmed}
                         >
                             {confirmState?.action === 'disable'
-                                ? 'Disable'
+                                ? t('Disable')
                                 : confirmState?.action === 'reset'
-                                  ? 'Send Reset'
-                                  : 'Resend'}
+                                  ? t('Send Reset')
+                                  : t('Resend')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -487,19 +488,19 @@ function UserFormSheet({
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        {isEdit ? 'Edit User' : 'Invite User'}
+                        {t(isEdit ? 'Edit User' : 'Invite User')}
                     </SheetTitle>
                     <SheetDescription>
                         {isEdit
-                            ? 'Update access and property assignments'
-                            : 'Invite a team member'}
+                            ? t('Update access and property assignments')
+                            : t('Invite a team member')}
                     </SheetDescription>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
                     <form onSubmit={handleSubmit} className="space-y-6 pt-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="name">{t('Name')}</Label>
                             <Input
                                 id="name"
                                 value={data.name}
@@ -512,7 +513,7 @@ function UserFormSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">{t('Email')}</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -526,7 +527,7 @@ function UserFormSheet({
                         </div>
 
                         <div className="grid gap-3">
-                            <Label>Roles</Label>
+                            <Label>{t('Roles')}</Label>
                             <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border p-3">
                                 {canEditRole ? (
                                     roles.map((role) => (
@@ -550,7 +551,7 @@ function UserFormSheet({
                                     ))
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        Owner
+                                        {t('Owner')}
                                     </p>
                                 )}
                             </div>
@@ -558,7 +559,7 @@ function UserFormSheet({
                         </div>
 
                         <div className="grid gap-3">
-                            <Label>Assigned Properties</Label>
+                            <Label>{t('Assigned Properties')}</Label>
                             <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-3">
                                 {properties.map((property) => (
                                     <label
@@ -590,10 +591,10 @@ function UserFormSheet({
                                 onClick={() => handleOpenChange(false)}
                                 disabled={processing}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                             <Button disabled={processing}>
-                                {isEdit ? 'Save' : 'Send Invite'}
+                                {t(isEdit ? 'Save' : 'Send Invite')}
                             </Button>
                         </div>
                     </form>
@@ -624,7 +625,7 @@ function UserDetailSheet({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>{user?.name ?? 'User'}</SheetTitle>
+                    <SheetTitle>{user?.name ?? t('User')}</SheetTitle>
                     <SheetDescription>{user?.email}</SheetDescription>
                 </SheetHeader>
 
@@ -633,19 +634,19 @@ function UserDetailSheet({
                         <div className="space-y-6">
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Status
+                                    {t('Status')}
                                 </h3>
                                 <StatusBadge user={user} />
                             </section>
 
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Account
+                                    {t('Account')}
                                 </h3>
                                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            Name
+                                            {t('Name')}
                                         </span>
                                         <span className="text-sm font-medium">
                                             {user.name}
@@ -653,7 +654,7 @@ function UserDetailSheet({
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            Email
+                                            {t('Email')}
                                         </span>
                                         <span className="text-sm">
                                             {user.email}
@@ -661,7 +662,7 @@ function UserDetailSheet({
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            Roles
+                                            {t('Roles')}
                                         </span>
                                         <div className="flex flex-wrap gap-1">
                                             {user.roles.length > 0 ? (
@@ -675,24 +676,24 @@ function UserDetailSheet({
                                                 ))
                                             ) : (
                                                 <span className="text-sm text-muted-foreground">
-                                                    None
+                                                    {t('None')}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            Email verified
+                                            {t('Email verified')}
                                         </span>
                                         <span className="text-sm">
                                             {user.email_verified_at
-                                                ? 'Yes'
-                                                : 'No'}
+                                                ? t('Yes')
+                                                : t('No')}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-sm text-muted-foreground">
-                                            Last login
+                                            {t('Last login')}
                                         </span>
                                         <span className="text-sm tabular-nums">
                                             {formatLastLogin(
@@ -705,7 +706,7 @@ function UserDetailSheet({
 
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Properties
+                                    {t('Properties')}
                                 </h3>
                                 <div className="rounded-lg border p-4">
                                     <p className="text-sm text-muted-foreground">
@@ -717,8 +718,8 @@ function UserDetailSheet({
                                                   )
                                                   .join(', ')
                                             : user.role === 'owner'
-                                              ? 'All properties'
-                                              : 'No properties assigned'}
+                                              ? t('All properties')
+                                              : t('No properties assigned')}
                                     </p>
                                 </div>
                             </section>
@@ -731,7 +732,7 @@ function UserDetailSheet({
                                     onClick={() => onResendInvitation(user)}
                                 >
                                     <UserPlus className="size-4" />
-                                    Resend Invite Link
+                                    {t('Resend Invite Link')}
                                 </Button>
                             )}
 
@@ -740,7 +741,7 @@ function UserDetailSheet({
                                 onClick={() => onEdit(user)}
                             >
                                 <Pencil className="size-4" />
-                                Edit / Assign Property
+                                {t('Edit / Assign Property')}
                             </Button>
 
                             {user.status === 'active' && (
@@ -749,7 +750,7 @@ function UserDetailSheet({
                                     onClick={() => onResetPassword(user)}
                                 >
                                     <KeyRound className="size-4" />
-                                    Reset Password
+                                    {t('Reset Password')}
                                 </Button>
                             )}
 
@@ -759,7 +760,7 @@ function UserDetailSheet({
                                     onClick={() => onDisable(user)}
                                 >
                                     <ShieldOff className="size-4" />
-                                    Disable Access
+                                    {t('Disable Access')}
                                 </Button>
                             )}
                         </div>

@@ -22,6 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { PAYMENT_METHODS } from '@/lib/constants/billing';
 import { formatDate, formatPrice, todayISO } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/leases';
 import type { NeedsAttentionInvoice } from '@/types';
 
@@ -77,21 +78,24 @@ export default function QueuePaymentSheet({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Record Payment</SheetTitle>
+                    <SheetTitle>{t('Record Payment')}</SheetTitle>
                     <SheetDescription>
                         {invoice ? (
                             <>
                                 {invoice.tenant_name} — {invoice.reference}
                                 <br />
-                                {formatPrice(invoice.total, invoice.currency)} · Due{' '}
-                                {formatDate(invoice.due_date)} ·{' '}
+                                {formatPrice(invoice.total, invoice.currency)} ·
+                                {t('Due')} {formatDate(invoice.due_date)} ·{' '}
                                 <span className="text-red-600">
-                                    {formatPrice(invoice.outstanding, invoice.currency)}{' '}
-                                    outstanding
+                                    {formatPrice(
+                                        invoice.outstanding,
+                                        invoice.currency,
+                                    )}{' '}
+                                    {t('outstanding')}
                                 </span>
                             </>
                         ) : (
-                            'Record a rent payment.'
+                            t('Record a rent payment.')
                         )}
                     </SheetDescription>
                 </SheetHeader>
@@ -124,7 +128,7 @@ export default function QueuePaymentSheet({
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div className="grid gap-2">
                                 <Label htmlFor="payment_method">
-                                    Payment Method
+                                    {t('Payment Method')}
                                 </Label>
                                 <Select
                                     name="payment_method"
@@ -134,7 +138,9 @@ export default function QueuePaymentSheet({
                                         id="payment_method"
                                         className="w-full"
                                     >
-                                        <SelectValue placeholder="Select method" />
+                                        <SelectValue
+                                            placeholder={t('Select method')}
+                                        />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {PAYMENT_METHODS.map((m) => (
@@ -151,7 +157,7 @@ export default function QueuePaymentSheet({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="paid_at">Paid At</Label>
+                                <Label htmlFor="paid_at">{t('Paid At')}</Label>
                                 <Input
                                     id="paid_at"
                                     name="paid_at"
@@ -164,18 +170,18 @@ export default function QueuePaymentSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 name="notes"
-                                placeholder="Optional notes"
+                                placeholder={t('Optional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
 
                         <div className="grid gap-2">
                             <Label htmlFor="proof">
-                                Payment Proof (optional)
+                                {t('Payment Proof (optional)')}
                             </Label>
                             <Input
                                 id="proof"
@@ -204,10 +210,12 @@ export default function QueuePaymentSheet({
                             onClick={() => onOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button disabled={processing}>
-                            {processing ? 'Recording...' : 'Record Payment'}
+                            {processing
+                                ? t('Recording...')
+                                : t('Record Payment')}
                         </Button>
                     </div>
                 </form>

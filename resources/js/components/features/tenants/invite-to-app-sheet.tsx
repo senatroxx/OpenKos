@@ -12,6 +12,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
+import { t } from '@/lib/i18n';
 import tenants from '@/routes/tenants';
 
 export default function InviteToAppSheet({
@@ -54,7 +55,7 @@ export default function InviteToAppSheet({
         }
 
         if (!email) {
-            setError('Email is required');
+            setError(t('Email is required'));
 
             return;
         }
@@ -70,7 +71,7 @@ export default function InviteToAppSheet({
                     onOpenChange(false);
                 },
                 onError: (errors) => {
-                    setError(errors.email ?? 'Failed to send invitation');
+                    setError(errors.email ?? t('Failed to send invitation'));
                     setSending(false);
                 },
             },
@@ -81,18 +82,18 @@ export default function InviteToAppSheet({
         <Sheet open={open} onOpenChange={close}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Invite to App</SheetTitle>
+                    <SheetTitle>{t('Invite to App')}</SheetTitle>
                     <SheetDescription>
-                        Add an email to send this tenant notifications.
-                        Optionally invite them to activate a portal account for
-                        payments, invoices, and lease details.
+                        {t(
+                            'Add an email to send this tenant notifications. Optionally invite them to activate a portal account for payments, invoices, and lease details.',
+                        )}
                     </SheetDescription>
                 </SheetHeader>
 
                 <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                     <div className="grid gap-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="invite-email">Email</Label>
+                            <Label htmlFor="invite-email">{t('Email')}</Label>
                             <Input
                                 id="invite-email"
                                 type="email"
@@ -101,7 +102,7 @@ export default function InviteToAppSheet({
                                     setEmail(e.target.value);
                                     setError('');
                                 }}
-                                placeholder="e.g. tenant@example.com"
+                                placeholder={t('e.g. tenant@example.com')}
                             />
                             <InputError message={error} />
                         </div>
@@ -109,12 +110,12 @@ export default function InviteToAppSheet({
                         <div className="flex items-start justify-between gap-4">
                             <div className="grid gap-1">
                                 <Label htmlFor="invite-send">
-                                    Send activation invite
+                                    {t('Send activation invite')}
                                 </Label>
                                 <p className="text-xs text-muted-foreground">
-                                    Emails the tenant a link to set a password
-                                    and access the portal. Leave off to only
-                                    save the email for notifications.
+                                    {t(
+                                        'Emails the tenant a link to set a password and access the portal. Leave off to only save the email for notifications.',
+                                    )}
                                 </p>
                             </div>
                             <Switch
@@ -132,17 +133,17 @@ export default function InviteToAppSheet({
                             onClick={() => close(false)}
                             disabled={sending}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button
                             disabled={sending || !email}
                             onClick={handleSend}
                         >
                             {sending
-                                ? 'Saving...'
+                                ? t('Saving...')
                                 : sendInvite
-                                  ? 'Send Invitation'
-                                  : 'Save Email'}
+                                  ? t('Send Invitation')
+                                  : t('Save Email')}
                         </Button>
                     </div>
                 </div>

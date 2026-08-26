@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/i18n';
 import type { AttentionData } from '@/types';
 
 function getGreeting(): string {
@@ -32,28 +33,34 @@ export function OperationalBriefingCard({
 
     return (
         <section className="mb-8">
-            <div className="rounded-xl border border-l-4 border-border border-l-primary bg-card p-5 shadow-xs transition-all">
+            <div className="rounded-xl border border-border bg-card p-5 shadow-xs transition-all">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="space-y-2">
                         <div className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                             <Sparkles className="size-3 text-primary" />
-                            <span>Operational Briefing</span>
+                            <span>{t('Operational Briefing')}</span>
                         </div>
                         <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-                            {greeting}.
+                            {t(greeting)}.
                         </h2>
                         <p className="text-xs font-medium text-muted-foreground sm:text-sm">
                             {totalAttention > 0 ? (
                                 <>
-                                    You have{' '}
+                                    {t('You have')}{' '}
                                     <span className="font-bold text-foreground tabular-nums">
-                                        {totalAttention} operational item
-                                        {totalAttention !== 1 ? 's' : ''}
+                                        {totalAttention}{' '}
+                                        {t(
+                                            totalAttention === 1
+                                                ? 'operational item'
+                                                : 'operational items',
+                                        )}
                                     </span>{' '}
-                                    requiring attention today.
+                                    {t('requiring attention today.')}
                                 </>
                             ) : (
-                                'All operational items are currently up to date.'
+                                t(
+                                    'All operational items are currently up to date.',
+                                )
                             )}
                         </p>
 
@@ -68,12 +75,12 @@ export function OperationalBriefingCard({
                                                     attention.pending_payment_verification
                                                 }
                                             </strong>{' '}
-                                            payment
-                                            {attention.pending_payment_verification !==
-                                            1
-                                                ? 's'
-                                                : ''}{' '}
-                                            awaiting verification
+                                            {t(
+                                                attention.pending_payment_verification ===
+                                                    1
+                                                    ? 'payment awaiting verification'
+                                                    : 'payments awaiting verification',
+                                            )}
                                         </span>
                                     </li>
                                 )}
@@ -87,11 +94,12 @@ export function OperationalBriefingCard({
                                                         .count
                                                 }
                                             </strong>{' '}
-                                            overdue invoice
-                                            {attention.overdue_invoices
-                                                .count !== 1
-                                                ? 's'
-                                                : ''}
+                                            {t(
+                                                attention.overdue_invoices
+                                                    .count === 1
+                                                    ? 'overdue invoice'
+                                                    : 'overdue invoices',
+                                            )}
                                         </span>
                                     </li>
                                 )}
@@ -102,10 +110,11 @@ export function OperationalBriefingCard({
                                             <strong className="font-bold tabular-nums">
                                                 {attention.open_maintenance}
                                             </strong>{' '}
-                                            open maintenance ticket
-                                            {attention.open_maintenance !== 1
-                                                ? 's'
-                                                : ''}
+                                            {t(
+                                                attention.open_maintenance === 1
+                                                    ? 'open maintenance ticket'
+                                                    : 'open maintenance tickets',
+                                            )}
                                         </span>
                                     </li>
                                 )}
@@ -116,11 +125,12 @@ export function OperationalBriefingCard({
                                             <strong className="font-bold tabular-nums">
                                                 {attention.leases_ending_soon}
                                             </strong>{' '}
-                                            lease
-                                            {attention.leases_ending_soon !== 1
-                                                ? 's'
-                                                : ''}{' '}
-                                            ending soon
+                                            {t(
+                                                attention.leases_ending_soon ===
+                                                    1
+                                                    ? 'lease ending soon'
+                                                    : 'leases ending soon',
+                                            )}
                                         </span>
                                     </li>
                                 )}
@@ -136,7 +146,7 @@ export function OperationalBriefingCard({
                             className="cursor-pointer gap-2 shadow-xs"
                         >
                             <Link href="/dashboard/rent">
-                                Review Attention Queue
+                                {t('Review Attention Queue')}
                                 <ArrowRight className="size-4" />
                             </Link>
                         </Button>
@@ -144,7 +154,7 @@ export function OperationalBriefingCard({
                             href="/dashboard/rent"
                             className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:underline"
                         >
-                            View Billing Collection →
+                            {t('View Billing Collection')} →
                         </Link>
                     </div>
                 </div>

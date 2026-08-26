@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { t } from '@/lib/i18n';
 import type { PropertyStats } from '@/types';
 
 export function PropertyOverviewCard({
@@ -16,17 +17,17 @@ export function PropertyOverviewCard({
                     {property.name}
                 </h3>
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                    {property.total_units} Units
+                    {property.total_units} {t('Units')}
                 </span>
             </div>
 
             <div className="my-3 space-y-1.5">
                 <div className="flex min-w-0 items-center justify-between gap-2 text-xs font-medium">
                     <span className="min-w-0 truncate text-muted-foreground">
-                        Occupancy Rate
+                        {t('Occupancy Rate')}
                     </span>
                     <span className="shrink-0 font-bold text-primary tabular-nums">
-                        {property.occupancy_percentage}% Occupied
+                        {property.occupancy_percentage}% {t('Occupied')}
                     </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -43,21 +44,21 @@ export function PropertyOverviewCard({
                     <strong className="font-bold text-foreground tabular-nums">
                         {property.occupied_units}
                     </strong>
-                    Occupied
+                    {t('Occupied')}
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
                     <span className="size-2 shrink-0 rounded-full bg-surface-green-foreground" />
                     <strong className="font-bold text-foreground tabular-nums">
                         {property.available_units}
                     </strong>
-                    Vacant
+                    {t('Vacant')}
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
                     <span className="size-2 shrink-0 rounded-full bg-surface-amber-foreground" />
                     <strong className="font-bold text-foreground tabular-nums">
                         {property.maintenance_units}
                     </strong>
-                    Maintenance
+                    {t('Maintenance')}
                 </span>
             </div>
         </Link>

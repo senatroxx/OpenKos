@@ -19,6 +19,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { formatDate } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
@@ -113,7 +114,7 @@ export default function TicketDetailSheet({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Property
+                                        {t('Property')}
                                     </p>
                                     <p className="text-sm">
                                         {ticket.property?.name ?? '—'}
@@ -121,7 +122,7 @@ export default function TicketDetailSheet({
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Location
+                                        {t('Location')}
                                     </p>
                                     <p className="text-sm">
                                         {ticket.unit?.name ??
@@ -131,16 +132,20 @@ export default function TicketDetailSheet({
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Priority
+                                        {t('Priority')}
                                     </p>
                                     <p className="text-sm">
                                         {priorityLabel[ticket.priority] ??
-                                            ticket.priority}
+                                            t(
+                                                priorityLabel[
+                                                    ticket.priority
+                                                ] ?? ticket.priority,
+                                            )}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Assigned To
+                                        {t('Assigned To')}
                                     </p>
                                     <p className="text-sm">
                                         {roleLabel(
@@ -151,7 +156,7 @@ export default function TicketDetailSheet({
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Created By
+                                        {t('Created By')}
                                     </p>
                                     <p className="text-sm">
                                         {roleLabel(
@@ -162,7 +167,7 @@ export default function TicketDetailSheet({
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Created At
+                                        {t('Created At')}
                                     </p>
                                     <p className="text-sm">
                                         {formatDate(ticket.created_at)}
@@ -173,14 +178,14 @@ export default function TicketDetailSheet({
                             {ticket.maintenance_transfer_to && (
                                 <div className="rounded-lg border p-3 text-sm">
                                     <span className="text-muted-foreground">
-                                        Occupant moved to{' '}
+                                        {t('Occupant moved to')}{' '}
                                     </span>
                                     <span className="font-medium">
                                         {ticket.maintenance_transfer_to}
                                     </span>
                                     <span className="text-muted-foreground">
                                         {' '}
-                                        during maintenance
+                                        {t('during maintenance')}
                                     </span>
                                 </div>
                             )}
@@ -188,7 +193,7 @@ export default function TicketDetailSheet({
                             {ticket.description && (
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Description
+                                        {t('Description')}
                                     </p>
                                     <p className="mt-1 text-sm whitespace-pre-wrap">
                                         {ticket.description}
@@ -199,7 +204,7 @@ export default function TicketDetailSheet({
                             {ticket.resolution_notes && (
                                 <div>
                                     <p className="text-xs text-muted-foreground">
-                                        Resolution
+                                        {t('Resolution')}
                                     </p>
                                     <p className="mt-1 text-sm whitespace-pre-wrap">
                                         {ticket.resolution_notes}
@@ -217,7 +222,7 @@ export default function TicketDetailSheet({
                                 onClick={onEdit}
                             >
                                 <Pencil className="size-3.5" />
-                                <span className="ml-1">Edit</span>
+                                <span className="ml-1">{t('Edit')}</span>
                             </Button>
                         )}
                         {ticket.status === 'reported' && canUpdate && (
@@ -227,7 +232,7 @@ export default function TicketDetailSheet({
                                     handleStatusChange('in_progress')
                                 }
                             >
-                                Start
+                                {t('Start')}
                             </Button>
                         )}
                         {ticket.status === 'in_progress' && canUpdate && (
@@ -236,7 +241,7 @@ export default function TicketDetailSheet({
                                 onClick={() => handleStatusChange('resolved')}
                             >
                                 <Check className="size-3.5" />
-                                <span className="ml-1">Resolve</span>
+                                <span className="ml-1">{t('Resolve')}</span>
                             </Button>
                         )}
                         {(ticket.status === 'reported' ||
@@ -249,7 +254,7 @@ export default function TicketDetailSheet({
                                         handleStatusChange('cancelled')
                                     }
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                             )}
                         {canUpdate && (
@@ -259,7 +264,9 @@ export default function TicketDetailSheet({
                                 onClick={handleAssignToMe}
                             >
                                 <UserPlus className="size-3.5" />
-                                <span className="ml-1">Assign to me</span>
+                                <span className="ml-1">
+                                    {t('Assign to me')}
+                                </span>
                             </Button>
                         )}
                         {canAssign && (
@@ -269,7 +276,9 @@ export default function TicketDetailSheet({
                                 onClick={onAssignTo}
                             >
                                 <UserPlus className="size-3.5" />
-                                <span className="ml-1">Assign to...</span>
+                                <span className="ml-1">
+                                    {t('Assign to...')}
+                                </span>
                             </Button>
                         )}
                         {canDelete && (
@@ -279,7 +288,7 @@ export default function TicketDetailSheet({
                                 onClick={handleDelete}
                             >
                                 <Trash2 className="size-3.5" />
-                                <span className="ml-1">Delete</span>
+                                <span className="ml-1">{t('Delete')}</span>
                             </Button>
                         )}
                     </div>
@@ -289,9 +298,9 @@ export default function TicketDetailSheet({
             <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete ticket</DialogTitle>
+                        <DialogTitle>{t('Delete ticket')}</DialogTitle>
                         <DialogDescription>
-                            Delete this ticket? This cannot be undone.
+                            {t('Delete this ticket? This cannot be undone.')}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -299,10 +308,10 @@ export default function TicketDetailSheet({
                             variant="outline"
                             onClick={() => setDeleteConfirm(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmDelete}>
-                            Delete
+                            {t('Delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

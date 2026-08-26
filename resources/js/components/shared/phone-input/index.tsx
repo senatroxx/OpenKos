@@ -14,6 +14,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { countryCodes, parseE164 } from './country-codes';
 
@@ -107,12 +108,12 @@ export default function PhoneInput({
                         defaultValue={selected.iso2 + selected.dialCode}
                     >
                         <CommandInput
-                            placeholder="Search country or code"
+                            placeholder={t('Search country or code')}
                             value={search}
                             onValueChange={setSearch}
                         />
                         <CommandList>
-                            <CommandEmpty>No country found</CommandEmpty>
+                            <CommandEmpty>{t('No country found')}</CommandEmpty>
                             <CommandGroup>
                                 {filtered.map((c) => (
                                     <CommandItem

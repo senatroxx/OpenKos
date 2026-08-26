@@ -18,6 +18,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 
 import type { Property } from '@/types';
@@ -75,7 +76,7 @@ export default function PropertyDetailSheet({
                 <SheetHeader>
                     <SheetTitle>{property?.name}</SheetTitle>
                     <SheetDescription>
-                        {city?.name ?? 'Property details'}
+                        {city?.name ?? t('Property details')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -83,7 +84,7 @@ export default function PropertyDetailSheet({
                     <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-5">
                             <div className="flex items-center gap-2">
-                                <span>Status:</span>
+                                <span>{t('Status:')}</span>
                                 <StatusBadge
                                     domain="property"
                                     value={
@@ -102,7 +103,7 @@ export default function PropertyDetailSheet({
                             {property.address && (
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Address
+                                        {t('Address')}
                                     </p>
                                     <p className="mt-1 text-sm">
                                         {property.address}
@@ -118,7 +119,7 @@ export default function PropertyDetailSheet({
                             {!property.address && city && (
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        City
+                                        {t('City')}
                                     </p>
                                     <p className="mt-1 text-sm">{city.name}</p>
                                 </div>
@@ -127,7 +128,7 @@ export default function PropertyDetailSheet({
                             {property.phone && (
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Phone
+                                        {t('Phone')}
                                     </p>
                                     <p className="mt-1 text-sm">
                                         {property.phone}
@@ -137,7 +138,7 @@ export default function PropertyDetailSheet({
 
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground uppercase">
-                                    Statistics
+                                    {t('Statistics')}
                                 </p>
                                 <div className="mt-1 grid grid-cols-3 gap-4">
                                     <div>
@@ -145,7 +146,7 @@ export default function PropertyDetailSheet({
                                             {property.units_count}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Total Units
+                                            {t('Total Units')}
                                         </p>
                                     </div>
                                     <div>
@@ -153,7 +154,7 @@ export default function PropertyDetailSheet({
                                             {property.occupied_units_count}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Occupied
+                                            {t('Occupied')}
                                         </p>
                                     </div>
                                     <div>
@@ -161,7 +162,7 @@ export default function PropertyDetailSheet({
                                             {property.tenants_count}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Tenants
+                                            {t('Tenants')}
                                         </p>
                                     </div>
                                 </div>
@@ -174,7 +175,7 @@ export default function PropertyDetailSheet({
                                 className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Manage Units ({property.units_count})
+                                {t('Manage Units')} ({property.units_count})
                             </Link>
                         </div>
 
@@ -185,12 +186,12 @@ export default function PropertyDetailSheet({
                                 variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Close
+                                {t('Close')}
                             </Button>
                             <Button variant="destructive" onClick={archive}>
-                                Archive
+                                {t('Archive')}
                             </Button>
-                            <Button onClick={onEdit}>Edit</Button>
+                            <Button onClick={onEdit}>{t('Edit')}</Button>
                         </div>
                     </div>
                 )}
@@ -199,9 +200,9 @@ export default function PropertyDetailSheet({
             <Dialog open={archiveConfirm} onOpenChange={setArchiveConfirm}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Archive property</DialogTitle>
+                        <DialogTitle>{t('Archive property')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to archive{' '}
+                            {t('Are you sure you want to archive')}{' '}
                             <span className="font-medium">
                                 {property?.name}
                             </span>
@@ -213,10 +214,10 @@ export default function PropertyDetailSheet({
                             variant="outline"
                             onClick={() => setArchiveConfirm(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmArchive}>
-                            Archive
+                            {t('Archive')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

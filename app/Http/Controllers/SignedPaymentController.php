@@ -6,6 +6,7 @@ use App\Actions\Payments\StartGatewayPayment;
 use App\Enums\InvoiceStatus;
 use App\Exceptions\InvoiceNotPayableException;
 use App\Exceptions\PaymentGatewayCreationException;
+use App\Exceptions\PaymentGatewayCurrencyUnsupportedException;
 use App\Exceptions\PaymentGatewayUnavailableException;
 use App\Models\Invoice;
 use App\Models\PaymentAttempt;
@@ -36,6 +37,10 @@ class SignedPaymentController extends Controller
         $hasResumableAttempt = $gatewayAttempts->contains(
             fn (PaymentAttempt $attempt): bool => $attempt->resumable,
         );
+        $activeGateway = $hasResumableAttempt ? null : $gateways->active();
+        $currencySupported = $activeGateway === null
+            ? false
+            : $gateways->supportsCurrency($activeGateway, $invoice->currency) !== false;
 
         return Inertia::render('payments/signed-invoice', [
             'invoice' => [
@@ -73,7 +78,7 @@ class SignedPaymentController extends Controller
                 'initiated_at' => DateTimeFormatter::iso($attempt->initiated_at),
             ])->values()->all(),
             'onlinePaymentAvailable' => $this->isPayable($invoice)
-                && ($hasResumableAttempt || $gateways->active() !== null),
+                && ($hasResumableAttempt || $currencySupported),
             'paymentUrl' => $request->fullUrl(),
             'csrfToken' => csrf_token(),
         ]);
@@ -89,6 +94,8 @@ class SignedPaymentController extends Controller
 
         try {
             $result = $action->executeViaSignedLink($invoice);
+        } catch (PaymentGatewayCurrencyUnsupportedException) {
+            return $this->gatewayPaymentError($request, __('Online payment is not available for this invoice.'));
         } catch (InvoiceNotPayableException|PaymentGatewayUnavailableException) {
             return $this->gatewayPaymentError($request, __('Online payment is not available for this invoice.'));
         } catch (PaymentGatewayCreationException $exception) {

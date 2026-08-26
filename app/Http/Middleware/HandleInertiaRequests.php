@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Setting;
 use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Settings\InstallationCurrencySettings;
 use Closure;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
@@ -107,6 +108,8 @@ class HandleInertiaRequests extends Middleware
             ->all();
 
         $settings['locale'] = $this->locale->current();
+        $settings['currency'] = app(InstallationCurrencySettings::class)->default();
+        $settings['supported_currencies'] = app(InstallationCurrencySettings::class)->supported();
 
         return $settings;
     }

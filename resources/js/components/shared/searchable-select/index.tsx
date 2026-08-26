@@ -10,6 +10,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export type Option = {
@@ -63,7 +64,7 @@ export default function SearchableSelect({
                         selected.label
                     ) : (
                         <span className="text-muted-foreground">
-                            {placeholder}
+                            {t(placeholder)}
                         </span>
                     )}
                     <ChevronsUpDown
@@ -76,7 +77,7 @@ export default function SearchableSelect({
                 <div className="flex items-center border-b px-3">
                     <SearchIcon className="mr-2 size-4 shrink-0 opacity-50" />
                     <Input
-                        placeholder={searchPlaceholder}
+                        placeholder={t(searchPlaceholder)}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="h-10 border-0 bg-transparent shadow-none focus-visible:ring-0"
@@ -88,7 +89,7 @@ export default function SearchableSelect({
                 >
                     {filtered.length === 0 ? (
                         <div className="py-6 text-center text-sm text-muted-foreground">
-                            {emptyText}
+                            {t(emptyText)}
                         </div>
                     ) : (
                         filtered.map((option) => (

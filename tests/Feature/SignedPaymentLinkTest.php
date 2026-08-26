@@ -20,11 +20,12 @@ uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
 });
 
-function bindSignedPaymentGateway(?PaymentGateway $gateway): void
+function bindSignedPaymentGateway(?PaymentGateway $gateway, ?bool $currencySupport = null): void
 {
     $manager = Mockery::mock(PaymentGatewayManager::class);
     $manager->shouldReceive('activeKey')->andReturn($gateway ? 'test-gateway' : null);
     $manager->shouldReceive('active')->andReturn($gateway);
+    $manager->shouldReceive('supportsCurrency')->zeroOrMoreTimes()->andReturn($currencySupport);
 
     app()->instance(PaymentGatewayManager::class, $manager);
 }
@@ -115,6 +116,29 @@ it('starts checkout from a signed link without authentication', function () {
 
     expect($invoice->fresh()->status)->toBe(InvoiceStatus::Pending)
         ->and($invoice->paymentAttempts()->sole()->status)->toBe(GatewayPaymentStatus::Pending);
+});
+
+it('hides signed checkout when the gateway rejects the invoice currency', function () {
+    $invoice = Invoice::factory()->create(['currency' => 'USD']);
+    bindSignedPaymentGateway(Mockery::mock(PaymentGateway::class), currencySupport: false);
+
+    $this->get(signedInvoiceUrl($invoice))
+        ->assertInertia(fn ($page) => $page
+            ->where('onlinePaymentAvailable', false));
+});
+
+it('rejects unsupported signed checkout without creating an attempt', function () {
+    $invoice = Invoice::factory()->create(['currency' => 'USD']);
+    bindSignedPaymentGateway(Mockery::mock(PaymentGateway::class), currencySupport: false);
+
+    $this->post(signedInvoiceUrl($invoice))
+        ->assertRedirect()
+        ->assertInertiaFlash('toast', [
+            'type' => 'error',
+            'message' => 'Online payment is not available for this invoice.',
+        ]);
+
+    expect($invoice->paymentAttempts()->count())->toBe(0);
 });
 
 it('reuses persisted checkout instructions when no gateway is active', function () {

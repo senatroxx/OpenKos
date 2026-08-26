@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { t } from '@/lib/i18n';
 import {
     edit as editReminders,
     update as updateReminders,
@@ -96,7 +97,7 @@ export default function Reminders({
     }
 
     const preview = {
-        name: 'John',
+        name: 'Budi',
         unit: 'Unit A-02',
         days: settings.reminder_days_before,
         amount: previewAmount,
@@ -124,11 +125,12 @@ export default function Reminders({
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <h2 className="text-lg font-medium">
-                        Default reminder settings
+                        {t('Default reminder settings')}
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Configure when and how rent reminders are sent to
-                        tenants.
+                        {t(
+                            'Configure when and how rent reminders are sent to tenants.',
+                        )}
                     </p>
                 </div>
                 <Button
@@ -136,7 +138,7 @@ export default function Reminders({
                     form="reminder-settings-form"
                     disabled={!isDirty || processing}
                 >
-                    Save
+                    {t('Save')}
                 </Button>
             </div>
 
@@ -145,10 +147,11 @@ export default function Reminders({
                     <div className="space-y-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Enable Reminders</CardTitle>
+                                <CardTitle>{t('Enable Reminders')}</CardTitle>
                                 <CardDescription>
-                                    Automatically send rent reminders to tenants
-                                    via WhatsApp.
+                                    {t(
+                                        'Automatically send rent reminders to tenants via WhatsApp.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -161,8 +164,8 @@ export default function Reminders({
                                     />
                                     <span className="text-sm text-muted-foreground">
                                         {data.reminder_enabled
-                                            ? 'Reminders are active'
-                                            : 'Reminders are disabled'}
+                                            ? t('Reminders are active')
+                                            : t('Reminders are disabled')}
                                     </span>
                                 </div>
                             </CardContent>
@@ -170,11 +173,13 @@ export default function Reminders({
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Notification Channels</CardTitle>
+                                <CardTitle>
+                                    {t('Notification Channels')}
+                                </CardTitle>
                                 <CardDescription>
-                                    Choose how reminders are delivered.
-                                    Reminders are always logged regardless of
-                                    channel selection.
+                                    {t(
+                                        'Choose how reminders are delivered. Reminders are always logged regardless of channel selection.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -206,7 +211,7 @@ export default function Reminders({
                                                     );
                                                 }}
                                             />
-                                            {label}
+                                            {t(label)}
                                         </label>
                                     ))}
                                 </div>
@@ -215,15 +220,19 @@ export default function Reminders({
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Message Templates</CardTitle>
+                                <CardTitle>{t('Message Templates')}</CardTitle>
                                 <CardDescription>
-                                    Customize each reminder message. Available
-                                    placeholders: <code>:name</code>,{' '}
-                                    <code>:unit</code>, <code>:days</code>,{' '}
-                                    <code>:amount</code>, <code>:date</code>,{' '}
+                                    {t(
+                                        'Customize each reminder message. Available placeholders:',
+                                    )}{' '}
+                                    <code>:name</code>, <code>:unit</code>,{' '}
+                                    <code>:days</code>, <code>:amount</code>,{' '}
+                                    <code>:date</code>,{' '}
                                     <code>:invoice_context</code>, and{' '}
-                                    <code>:invoice_link</code>. The invoice
-                                    placeholders are optional.
+                                    <code>:invoice_link</code>.{' '}
+                                    {t(
+                                        'The invoice placeholders are optional.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="grid gap-6">
@@ -232,7 +241,7 @@ export default function Reminders({
                                         <Label
                                             htmlFor={`reminder_${value}_template`}
                                         >
-                                            {label}
+                                            {t(label)}
                                         </Label>
                                         <Textarea
                                             id={`reminder_${value}_template`}
@@ -274,16 +283,17 @@ export default function Reminders({
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Overdue Follow-ups</CardTitle>
+                                <CardTitle>{t('Overdue Follow-ups')}</CardTitle>
                                 <CardDescription>
-                                    Send follow-up reminders at these intervals
-                                    (in days) after the due date passes.
+                                    {t(
+                                        'Send follow-up reminders at these intervals (in days) after the due date passes.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid max-w-xs gap-2">
                                     <Label htmlFor="reminder_overdue_intervals">
-                                        Intervals (days)
+                                        {t('Intervals (days)')}
                                     </Label>
                                     <Input
                                         id="reminder_overdue_intervals"
@@ -298,8 +308,9 @@ export default function Reminders({
                                         placeholder="1, 3, 7"
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Comma-separated list of days after due
-                                        date to send reminders.
+                                        {t(
+                                            'Comma-separated list of days after due date to send reminders.',
+                                        )}
                                     </p>
                                     {errors.reminder_overdue_intervals && (
                                         <p className="text-sm text-red-600">
@@ -310,7 +321,7 @@ export default function Reminders({
                                 {data.reminder_enabled && (
                                     <div className="mt-6 rounded-lg border bg-muted/50 p-4">
                                         <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Preview (overdue)
+                                            {t('Preview (overdue)')}
                                         </p>
                                         <pre className="text-sm whitespace-pre-wrap">
                                             {renderTemplate(
@@ -329,16 +340,17 @@ export default function Reminders({
                     <div className="space-y-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Upcoming Reminder</CardTitle>
+                                <CardTitle>{t('Upcoming Reminder')}</CardTitle>
                                 <CardDescription>
-                                    Send a reminder this many days before rent
-                                    is due.
+                                    {t(
+                                        'Send a reminder this many days before rent is due.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid max-w-xs gap-2">
                                     <Label htmlFor="reminder_days_before">
-                                        Days before due
+                                        {t('Days before due')}
                                     </Label>
                                     <Input
                                         id="reminder_days_before"
@@ -363,7 +375,7 @@ export default function Reminders({
                                 {data.reminder_enabled && (
                                     <div className="mt-6 rounded-lg border bg-muted/50 p-4">
                                         <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Preview (upcoming)
+                                            {t('Preview (upcoming)')}
                                         </p>
                                         <pre className="text-sm whitespace-pre-wrap">
                                             {renderTemplate(
@@ -380,17 +392,18 @@ export default function Reminders({
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Due Today</CardTitle>
+                                <CardTitle>{t('Due Today')}</CardTitle>
                                 <CardDescription>
-                                    Preview the reminder sent on the rent due
-                                    date.
+                                    {t(
+                                        'Preview the reminder sent on the rent due date.',
+                                    )}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 {data.reminder_enabled && (
                                     <div className="rounded-lg border bg-muted/50 p-4">
                                         <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                            Preview (due today)
+                                            {t('Preview (due today)')}
                                         </p>
                                         <pre className="text-sm whitespace-pre-wrap">
                                             {renderTemplate(

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { formatDate } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import type { TenantLeaseContext as LeaseContext } from '@/types';
 
 export default function TenantLeaseContext({
@@ -54,9 +55,9 @@ export default function TenantLeaseContext({
                 </button>
                 <SheetContent side="bottom" className="max-h-[80vh]">
                     <SheetHeader>
-                        <SheetTitle>Choose a lease</SheetTitle>
+                        <SheetTitle>{t('Choose a lease')}</SheetTitle>
                         <SheetDescription>
-                            Your billing and records will use this lease.
+                            {t('Your billing and records will use this lease.')}
                         </SheetDescription>
                     </SheetHeader>
                     <LeaseOptions
@@ -98,14 +99,16 @@ function LeaseContextCard({
     return (
         <div className="flex items-center justify-between gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50">
             <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Current lease</p>
+                <p className="text-sm text-muted-foreground">
+                    {t('Current lease')}
+                </p>
                 <p className="mt-1 truncate font-medium">
-                    {lease.unit_name ?? 'Unit'}
+                    {lease.unit_name ?? t('Unit')}
                     {lease.property_name && ` · ${lease.property_name}`}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                     {formatDate(lease.start_date)} —{' '}
-                    {lease.end_date ? formatDate(lease.end_date) : 'Ongoing'}
+                    {lease.end_date ? formatDate(lease.end_date) : t('Ongoing')}
                 </p>
             </div>
             {canSwitch && (
@@ -132,14 +135,14 @@ function LeaseOptions({
     return (
         <div className="space-y-3">
             <LeaseOptionGroup
-                label="Current"
+                label={t('Current')}
                 leases={currentLeases}
                 selectedLeaseId={leaseContext.selected?.id}
                 hrefForLease={hrefForLease}
             />
             {historicalLeases.length > 0 && (
                 <LeaseOptionGroup
-                    label="History"
+                    label={t('History')}
                     leases={historicalLeases}
                     selectedLeaseId={leaseContext.selected?.id}
                     hrefForLease={hrefForLease}
@@ -182,7 +185,7 @@ function LeaseOptionGroup({
                         <Link href={hrefForLease(lease.id)}>
                             <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-medium">
-                                    {lease.unit_name ?? 'Unit'}
+                                    {lease.unit_name ?? t('Unit')}
                                     {lease.property_name &&
                                         ` · ${lease.property_name}`}
                                 </span>
@@ -190,7 +193,7 @@ function LeaseOptionGroup({
                                     {formatDate(lease.start_date)} —{' '}
                                     {lease.end_date
                                         ? formatDate(lease.end_date)
-                                        : 'Ongoing'}
+                                        : t('Ongoing')}
                                 </span>
                             </span>
                             {lease.id === selectedLeaseId && (

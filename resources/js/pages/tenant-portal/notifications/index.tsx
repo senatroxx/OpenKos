@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { read, readAll } from '@/routes/portal/notifications';
 
 type Notification = {
@@ -27,13 +28,15 @@ type Props = {
 export default function Notifications({ notifications, unreadCount }: Props) {
     return (
         <>
-            <Head title="Notifications" />
+            <Head title={t('Notifications')} />
             <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 p-4">
                 <div className="flex items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-xl font-semibold">Notifications</h1>
+                        <h1 className="text-xl font-semibold">
+                            {t('Notifications')}
+                        </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Stay up to date with your tenancy.
+                            {t('Stay up to date with your tenancy.')}
                         </p>
                     </div>
                     {unreadCount > 0 && (
@@ -43,7 +46,7 @@ export default function Notifications({ notifications, unreadCount }: Props) {
                             onClick={() => router.post(readAll.url())}
                         >
                             <CheckCheck />
-                            Mark all as read
+                            {t('Mark all as read')}
                         </Button>
                     )}
                 </div>
@@ -52,16 +55,18 @@ export default function Notifications({ notifications, unreadCount }: Props) {
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Bell className="size-5" />
-                            History
+                            {t('History')}
                             {unreadCount > 0 && (
-                                <Badge variant="secondary">{unreadCount} unread</Badge>
+                                <Badge variant="secondary">
+                                    {unreadCount} {t('unread')}
+                                </Badge>
                             )}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
                         {notifications.data.length === 0 ? (
                             <div className="flex min-h-40 items-center justify-center p-6 text-sm text-muted-foreground">
-                                No notifications yet.
+                                {t('No notifications yet.')}
                             </div>
                         ) : (
                             <div className="divide-y">
@@ -72,22 +77,36 @@ export default function Notifications({ notifications, unreadCount }: Props) {
                                     >
                                         <div className="min-w-0 flex-1 space-y-1">
                                             <div className="flex items-center gap-2">
-                                                <p className="font-medium">{notification.title}</p>
+                                                <p className="font-medium">
+                                                    {notification.title}
+                                                </p>
                                                 {!notification.read_at && (
-                                                    <Badge variant="default">Unread</Badge>
+                                                    <Badge variant="default">
+                                                        {t('Unread')}
+                                                    </Badge>
                                                 )}
                                             </div>
                                             <p className="text-sm text-muted-foreground">
                                                 {notification.message}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
-                                                {formatDate(notification.created_at)}
+                                                {formatDate(
+                                                    notification.created_at,
+                                                )}
                                             </p>
                                         </div>
                                         <div className="flex shrink-0 items-start gap-2">
                                             {notification.url && (
-                                                <Button asChild size="sm" variant="outline">
-                                                    <Link href={notification.url}>View</Link>
+                                                <Button
+                                                    asChild
+                                                    size="sm"
+                                                    variant="outline"
+                                                >
+                                                    <Link
+                                                        href={notification.url}
+                                                    >
+                                                        {t('View')}
+                                                    </Link>
                                                 </Button>
                                             )}
                                             {!notification.read_at && (
@@ -95,12 +114,18 @@ export default function Notifications({ notifications, unreadCount }: Props) {
                                                     size="sm"
                                                     variant="ghost"
                                                     onClick={() =>
-                                                        router.post(read.url(notification.id), {}, {
-                                                            preserveScroll: true,
-                                                        })
+                                                        router.post(
+                                                            read.url(
+                                                                notification.id,
+                                                            ),
+                                                            {},
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        )
                                                     }
                                                 >
-                                                    Read
+                                                    {t('Read')}
                                                 </Button>
                                             )}
                                         </div>
@@ -121,7 +146,11 @@ export default function Notifications({ notifications, unreadCount }: Props) {
                                 size="sm"
                                 disabled={!link.url}
                             >
-                                {link.url ? <Link href={link.url}>{link.label}</Link> : link.label}
+                                {link.url ? (
+                                    <Link href={link.url}>{link.label}</Link>
+                                ) : (
+                                    link.label
+                                )}
                             </Button>
                         ))}
                     </div>

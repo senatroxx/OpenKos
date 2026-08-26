@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import type { Invoice } from '@/types';
 
@@ -22,22 +23,22 @@ export default function InvoiceActionItem({
             <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                     <p className="min-w-0 truncate font-medium">
-                        {formatPeriod(invoice.period_start)} Rent
+                        {formatPeriod(invoice.period_start)} {t('Rent')}
                     </p>
                     <StatusBadge domain="tenant_invoice" value={status} />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                    Due {formatDate(invoice.due_date)}
+                    {t('Due')} {formatDate(invoice.due_date)}
                     {invoice.reference && (
                         <span className="hidden sm:inline">
                             {' '}
-                            · Invoice {invoice.reference}
+                            · {t('Invoice')} {invoice.reference}
                         </span>
                     )}
                 </p>
                 {invoice.reference && (
                     <p className="text-xs text-muted-foreground sm:hidden">
-                        Invoice {invoice.reference}
+                        {t('Invoice')} {invoice.reference}
                     </p>
                 )}
             </div>
@@ -49,7 +50,7 @@ export default function InvoiceActionItem({
             <div className="grid w-full gap-1 sm:flex sm:w-auto sm:items-center sm:gap-2">
                 {onPay && (
                     <Button className="w-full sm:h-8 sm:w-auto" onClick={onPay}>
-                        Pay invoice
+                        {t('Pay invoice')}
                     </Button>
                 )}
                 <Button
@@ -58,7 +59,8 @@ export default function InvoiceActionItem({
                     asChild
                 >
                     <Link href={showInvoice(invoice)}>
-                        View details <ChevronRight className="sm:hidden" />
+                        {t('View details')}{' '}
+                        <ChevronRight className="sm:hidden" />
                     </Link>
                 </Button>
             </div>
