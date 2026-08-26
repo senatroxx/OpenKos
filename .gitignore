@@ -36,17 +36,17 @@ testing_test_*
 # Local developer tooling
 /AGENTS.md
 /GEMINI.md
-/.agents/
-/.gemini/
-/.opencode/
-/.codex/
+/.agents
+/.gemini
+/.opencode
+/.codex
 /opencode.json
 /skills-lock.json
 /prompts/create-fonnte-package.md
 /graphify-out
 /boost.json
-/data/
+/data
 DESIGN.md
 PRODUCT.md
 /FINDINGS.md
-/.impeccable/
+/.impeccable
