@@ -2,6 +2,8 @@
 
 namespace Tests;
 
+use App\Services\Platform\RuntimePluginDiscovery;
+use App\Services\Platform\RuntimePluginStore;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;
 use OpenKOS\Platform\Dashboard\DashboardRegistry;
@@ -29,6 +31,8 @@ abstract class TestCase extends BaseTestCase
             PaymentRegistry::class,
             PermissionRegistry::class,
             OpenKOSManager::class,
+            RuntimePluginDiscovery::class,
+            RuntimePluginStore::class,
         ] as $singleton) {
             app()->forgetInstance($singleton);
         }

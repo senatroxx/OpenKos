@@ -27,6 +27,22 @@ return [
         'disabled_packages' => [],
     ],
 
+    'runtime' => [
+        'enabled' => true,
+        'path' => env('OPENKOS_PLUGIN_PATH', storage_path('app/private/plugins')),
+        'max_files' => 5000,
+        'max_uncompressed_bytes' => 268_435_456,
+        'shared_packages' => [
+            'composer/semver',
+            'laravel/framework',
+            'openkos/platform',
+        ],
+        'shared_package_prefixes' => [
+            'illuminate/',
+            'laravel/',
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Plugins

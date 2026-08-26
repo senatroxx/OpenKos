@@ -80,6 +80,12 @@ backup process before replacing the host. If the application is later scaled
 across hosts, move these uploads to shared object storage or shared storage
 before doing so.
 
+Runtime plugin packages use the same private persistent storage under
+`storage/app/private/plugins`. Keep that path available to the web, queue, and scheduler
+containers. After installing, enabling, disabling, or updating a runtime plugin, restart
+FrankenPHP workers, queue workers, and the scheduler so each process boots the new plugin
+set. Runtime plugin installation never changes the root Composer files.
+
 ## Image tags
 
 Stable version tags publish `1.2.3`, `1.2`, `1`, and `latest`.
