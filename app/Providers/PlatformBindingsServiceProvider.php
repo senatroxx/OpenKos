@@ -34,6 +34,7 @@ class PlatformBindingsServiceProvider extends ServiceProvider
             ->registerPage(new SettingsPage('payment-gateway', 'Payment Gateway', '/settings/payment-gateway', group: 'Integrations', order: 150, routeName: 'settings.payment-gateway.edit'))
             ->registerPage(new SettingsPage('reminders', 'Reminders', '/settings/reminders', group: 'Notifications', order: 100, routeName: 'settings.reminders.edit'))
             ->registerPage(new SettingsPage('mail', 'Mail', '/settings/mail', group: 'Integrations', order: 100, routeName: 'settings.mail.edit'))
+            ->registerPage(new SettingsPage('plugins', 'Plugins', '/settings/plugins', order: 300, routeName: 'settings.plugins.index'))
             ->registerSetting(new SettingDefinition(
                 key: PaymentGatewayManager::ACTIVE_KEY,
                 label: 'Active payment gateway',

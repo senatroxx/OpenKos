@@ -5,6 +5,7 @@ use App\Http\Controllers\Settings\AboutController;
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\MailController;
 use App\Http\Controllers\Settings\PaymentGatewayController;
+use App\Http\Controllers\Settings\PluginController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\PropertyTypeController;
 use App\Http\Controllers\Settings\ReminderController;
@@ -69,6 +70,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/property-types', [PropertyTypeController::class, 'store'])->name('settings.property-types.store');
         Route::patch('settings/property-types/{propertyType}', [PropertyTypeController::class, 'update'])->name('settings.property-types.update');
         Route::delete('settings/property-types/{propertyType}', [PropertyTypeController::class, 'destroy'])->name('settings.property-types.destroy');
+
+        Route::get('settings/plugins', [PluginController::class, 'index'])->name('settings.plugins.index');
+        Route::post('settings/plugins', [PluginController::class, 'install'])->name('settings.plugins.install');
+        Route::post('settings/plugins/{vendor}/{package}/enable', [PluginController::class, 'enable'])
+            ->where(['vendor' => '[a-z0-9][a-z0-9._-]*', 'package' => '[a-z0-9][a-z0-9._-]*'])
+            ->name('settings.plugins.enable');
+        Route::post('settings/plugins/{vendor}/{package}/disable', [PluginController::class, 'disable'])
+            ->where(['vendor' => '[a-z0-9][a-z0-9._-]*', 'package' => '[a-z0-9][a-z0-9._-]*'])
+            ->name('settings.plugins.disable');
+        Route::delete('settings/plugins/{vendor}/{package}', [PluginController::class, 'destroy'])
+            ->where(['vendor' => '[a-z0-9][a-z0-9._-]*', 'package' => '[a-z0-9][a-z0-9._-]*'])
+            ->name('settings.plugins.destroy');
 
         // Catch-all for plugin-defined settings pages — must be last so explicit routes match first.
         Route::get('settings/{page}', [SettingValuesController::class, 'edit'])->name('settings.dynamic.edit');

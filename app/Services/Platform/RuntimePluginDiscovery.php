@@ -28,11 +28,11 @@ final class RuntimePluginDiscovery
             return $this->store->withLock(function (RuntimePluginStore $store) use ($existingClasses): array {
                 $state = $store->readState();
                 $packages = $store->installedPackages();
-                $this->assertNoComposerConflicts($packages, $state, $existingClasses);
+                $conflictingIds = $this->assertNoComposerConflicts($packages, $state, $existingClasses);
                 $plugins = [];
 
                 foreach ($packages as $id => $path) {
-                    if (! ($state[$id]['enabled'] ?? false)) {
+                    if (! ($state[$id]['enabled'] ?? false) || in_array($id, $conflictingIds, true)) {
                         continue;
                     }
 
@@ -50,10 +50,6 @@ final class RuntimePluginDiscovery
                 return $plugins;
             });
         } catch (Throwable $exception) {
-            if ($exception instanceof RuntimePluginConflictException) {
-                throw $exception;
-            }
-
             Log::error('Runtime plugin discovery failed.', [
                 'path' => $this->store->rootPath(),
                 'exception' => $exception,
@@ -67,10 +63,12 @@ final class RuntimePluginDiscovery
      * @param  array<string, string>  $packages
      * @param  array<string, array{enabled: bool}>  $state
      * @param  array<int, string>  $existingClasses
+     * @return array<int, string>
      */
-    private function assertNoComposerConflicts(array $packages, array $state, array $existingClasses): void
+    private function assertNoComposerConflicts(array $packages, array $state, array $existingClasses): array
     {
         $existingIds = [];
+        $conflictingIds = [];
         foreach ($existingClasses as $class) {
             if (! is_string($class) || ! class_exists($class) || ! is_a($class, Plugin::class, true)) {
                 continue;
@@ -101,11 +99,15 @@ final class RuntimePluginDiscovery
             }
 
             if (in_array($entryClass, $existingClasses, true) || isset($existingIds[$id])) {
-                throw new RuntimePluginConflictException(
-                    "Runtime plugin [{$id}] conflicts with a Composer or explicit plugin. Neither copy will load.",
-                );
+                $conflictingIds[] = $id;
+                Log::warning('Runtime plugin skipped because a Composer or explicit plugin takes precedence.', [
+                    'plugin' => $id,
+                    'path' => $path,
+                ]);
             }
         }
+
+        return $conflictingIds;
     }
 
     private function readEntryClass(string $path): string

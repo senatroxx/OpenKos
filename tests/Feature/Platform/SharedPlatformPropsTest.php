@@ -27,5 +27,9 @@ it('shares platform registry data with every Inertia page', function () {
             ->where('platform.settings.4.key', 'mail')
             ->where('platform.settings.4.group', 'Integrations')
             ->where('platform.settings.5.key', 'payment-gateway')
-            ->where('platform.settings.5.group', 'Integrations'));
+            ->where('platform.settings.5.group', 'Integrations')
+            ->where('platform.settings.6.key', 'security')
+            ->where('platform.settings.6.group', 'Account')
+            ->where('platform.settings.7.key', 'plugins')
+            ->where('platform.settings.7.group', null));
 });
