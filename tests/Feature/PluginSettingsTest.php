@@ -2,6 +2,9 @@
 
 use App\Models\User;
 use App\Services\Platform\PluginInstaller;
+use App\Services\Platform\RuntimePluginDiscovery;
+use App\Services\Platform\RuntimePluginGraphValidator;
+use App\Services\Platform\RuntimePluginStore;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -193,8 +196,178 @@ it('shows incomplete runtime packages with safe recovery guidance', function ():
     $response->assertDontSee($this->runtimePluginPath);
 });
 
+it('rejects disabling or removing a runtime dependency of an enabled plugin', function (): void {
+    $dependency = makePluginSettingsArtifact();
+    $dependent = makePluginSettingsArtifact(['dependencies' => [$dependency['id']]]);
+    app(PluginInstaller::class)->install($dependency['zip']);
+    app(PluginInstaller::class)->install($dependent['zip']);
+    $owner = User::factory()->owner()->create();
+    [$vendor, $package] = explode('/', $dependency['id']);
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.disable', ['vendor' => $vendor, 'package' => $package]))
+        ->assertSessionHasErrors('plugin', "Cannot disable {$dependency['id']} because {$dependent['id']} depends on it.");
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]))
+        ->assertSessionHasErrors('plugin', "Cannot remove {$dependency['id']} because {$dependent['id']} depends on it.");
+
+    expect(app(RuntimePluginStore::class)->readState())
+        ->toMatchArray([$dependency['id'] => ['enabled' => true]])
+        ->and(is_dir($this->runtimePluginPath.'/'.$dependency['id']))->toBeTrue();
+});
+
+it('marks enabled runtime dependency cycles as unavailable', function (): void {
+    $report = app(RuntimePluginGraphValidator::class)->validate([
+        'settings/cycle-a' => [
+            'metadata' => [
+                'id' => 'settings/cycle-a',
+                'entry_class' => 'SettingsRuntime\\CycleAPlugin',
+                'core_version' => '*',
+                'dependencies' => ['settings/cycle-b'],
+            ],
+            'enabled' => true,
+        ],
+        'settings/cycle-b' => [
+            'metadata' => [
+                'id' => 'settings/cycle-b',
+                'entry_class' => 'SettingsRuntime\\CycleBPlugin',
+                'core_version' => '*',
+                'dependencies' => ['settings/cycle-a'],
+            ],
+            'enabled' => true,
+        ],
+    ], []);
+
+    expect($report['loadable'])->toBe([])
+        ->and($report['issues'])->toMatchArray([
+            'settings/cycle-a' => ['status' => 'broken', 'error' => 'Runtime plugin dependency cycle detected.'],
+            'settings/cycle-b' => ['status' => 'broken', 'error' => 'Runtime plugin dependency cycle detected.'],
+        ]);
+});
+
+it('marks duplicate runtime entry classes as conflicts', function (): void {
+    $metadata = fn (string $id): array => [
+        'id' => $id,
+        'entry_class' => 'SettingsRuntime\\DuplicatePlugin',
+        'core_version' => '*',
+        'dependencies' => [],
+    ];
+    $report = app(RuntimePluginGraphValidator::class)->validate([
+        'settings/duplicate-a' => ['metadata' => $metadata('settings/duplicate-a'), 'enabled' => true],
+        'settings/duplicate-b' => ['metadata' => $metadata('settings/duplicate-b'), 'enabled' => true],
+    ], []);
+
+    expect($report['loadable'])->toBe([])
+        ->and($report['issues'])->toMatchArray([
+            'settings/duplicate-a' => [
+                'status' => 'conflict',
+                'error' => 'Runtime plugin [settings/duplicate-a] conflicts with another runtime plugin entry class [SettingsRuntime\\DuplicatePlugin].',
+            ],
+            'settings/duplicate-b' => [
+                'status' => 'conflict',
+                'error' => 'Runtime plugin [settings/duplicate-b] conflicts with another runtime plugin entry class [SettingsRuntime\\DuplicatePlugin].',
+            ],
+        ]);
+});
+
+it('keeps the plugins page available when a runtime dependency is missing or disabled', function (): void {
+    $dependency = makePluginSettingsArtifact();
+    $dependent = makePluginSettingsArtifact(['dependencies' => [$dependency['id']]]);
+    app(PluginInstaller::class)->install($dependency['zip']);
+    app(PluginInstaller::class)->install($dependent['zip']);
+    app(RuntimePluginStore::class)->withLock(function (RuntimePluginStore $store) use ($dependency): void {
+        $store->setEnabled($dependency['id'], false);
+    });
+
+    $missing = makePluginSettingsArtifact(['dependencies' => ['missing/plugin']]);
+    $missingPath = $this->runtimePluginPath.'/'.$missing['id'];
+    File::makeDirectory($missingPath, 0750, true);
+    $zip = new ZipArchive;
+    $zip->open($missing['zip']);
+    $zip->extractTo($missingPath);
+    $zip->close();
+    $state = app(RuntimePluginStore::class)->readState();
+    $state[$missing['id']] = ['enabled' => true];
+    app(RuntimePluginStore::class)->writeState($state);
+
+    expect(app(RuntimePluginDiscovery::class)->discover())->toBe([]);
+
+    $plugins = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('id', $missing['id']))->toMatchArray([
+        'managed_id' => $missing['id'],
+        'status' => 'broken',
+        'can_enable' => false,
+        'can_remove' => true,
+    ])
+        ->and(collect($plugins)->firstWhere('id', $dependent['id']))->toMatchArray([
+            'status' => 'broken',
+            'can_enable' => false,
+        ])
+        ->and(collect($plugins)->firstWhere('id', $dependent['id'])['error'])
+        ->toContain("disabled plugin [{$dependency['id']}]");
+});
+
+it('surfaces a runtime plugin that is incompatible with the current core', function (): void {
+    $artifact = makePluginSettingsArtifact(['core_version' => '^9.0']);
+    $path = $this->runtimePluginPath.'/'.$artifact['id'];
+    File::makeDirectory($path, 0750, true);
+    $zip = new ZipArchive;
+    $zip->open($artifact['zip']);
+    $zip->extractTo($path);
+    $zip->close();
+    file_put_contents($this->runtimePluginPath.'/state.json', json_encode([
+        $artifact['id'] => ['enabled' => true],
+    ], JSON_THROW_ON_ERROR));
+
+    $plugins = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('id', $artifact['id']))->toMatchArray([
+        'status' => 'incompatible',
+        'can_enable' => false,
+        'can_disable' => true,
+        'can_remove' => true,
+    ]);
+});
+
+it('uses the managed package identity to recover a mismatched manifest', function (): void {
+    $artifact = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($artifact['zip']);
+    $manifestPath = $this->runtimePluginPath.'/'.$artifact['id'].'/manifest.json';
+    $manifest = json_decode(file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+    $manifest['id'] = 'other/declared-id';
+    file_put_contents($manifestPath, json_encode($manifest, JSON_THROW_ON_ERROR));
+    $owner = User::factory()->owner()->create();
+    [$vendor, $package] = explode('/', $artifact['id']);
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
+        'id' => $artifact['id'],
+        'managed_id' => $artifact['id'],
+        'declared_id' => 'other/declared-id',
+        'status' => 'broken',
+        'can_remove' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]))
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
+});
+
 /** @return array{zip: string, id: string, class: string} */
-function makePluginSettingsArtifact(): array
+function makePluginSettingsArtifact(array $overrides = []): array
 {
     $suffix = (string) random_int(100000, 999999);
     $id = "settings/runtime-{$suffix}";
@@ -209,8 +382,11 @@ function makePluginSettingsArtifact(): array
         'core_version' => '^0.2',
         'php' => '^8.3',
         'dependencies' => [],
+        ...$overrides,
     ];
+    $dependencies = var_export($manifest['dependencies'], true);
     $source = "<?php\n\nnamespace SettingsRuntime;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$id}',\n            name: 'Settings Runtime Fixture',\n            version: '1.0.0',\n            description: 'Settings runtime fixture.',\n            coreVersion: '^0.2',\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void {}\n}\n";
+    $source = str_replace("coreVersion: '^0.2',", "coreVersion: '{$manifest['core_version']}',\n            dependencies: {$dependencies},", $source);
 
     $directory = sys_get_temp_dir().'/openkos-settings-zip-'.bin2hex(random_bytes(8));
     mkdir($directory, 0750, true);

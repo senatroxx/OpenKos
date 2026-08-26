@@ -15,6 +15,7 @@ class PluginManagementService
         private RuntimePluginArtifactValidator $validator,
         private ComposerPluginDiscovery $composer,
         private PluginInstaller $installer,
+        private RuntimePluginGraphValidator $graph,
     ) {}
 
     /**
@@ -91,6 +92,10 @@ class PluginManagementService
     {
         $message = strtolower($exception->getMessage());
 
+        if ($exception instanceof RuntimePluginDependencyException) {
+            return __($exception->getMessage());
+        }
+
         if ($exception instanceof RuntimePluginConflictException || str_contains($message, 'conflict')) {
             return __('This plugin conflicts with an explicit or Composer-installed plugin. Disable or remove the runtime copy.');
         }
@@ -114,36 +119,74 @@ class PluginManagementService
     {
         $state = $this->store->readState();
         $packages = $this->store->installedPackages();
+        $runtime = [];
         $rows = [];
 
         foreach ($packages as $id => $path) {
             $enabled = $state[$id]['enabled'] ?? false;
 
             try {
-                $metadata = $this->validator->validateInFreshProcess($path, $id);
-                $rows[] = $this->runtimeRow($metadata, $enabled);
+                $runtime[$id] = [
+                    'metadata' => $this->validator->validateInFreshProcess($path, $id),
+                    'enabled' => $enabled,
+                ];
             } catch (Throwable $exception) {
                 report($exception);
-                $preview = $this->manifestPreview($path, $id);
-                $status = $this->validationStatus($exception);
-                $rows[] = [
-                    ...$preview,
-                    'source' => 'runtime',
-                    'status' => $status,
+                $runtime[$id] = [
+                    'metadata' => null,
                     'enabled' => $enabled,
-                    'error' => $status === 'incompatible'
-                        ? __('This plugin is not compatible with the current OpenKOS or PHP installation.')
-                        : __('This plugin is incomplete or failed validation. Disable or remove it, then install a valid artifact.'),
-                    'can_enable' => false,
-                    'can_disable' => $enabled,
-                    'can_remove' => true,
+                    'status' => $this->validationStatus($exception),
+                    'error' => $this->validationError($exception),
                 ];
             }
+        }
+
+        $health = $this->graph->validate($runtime, $this->hostPluginClasses());
+
+        foreach ($packages as $id => $path) {
+            $entry = $runtime[$id];
+            $enabled = $entry['enabled'];
+
+            if (is_array($entry['metadata'])) {
+                $metadata = $entry['metadata'];
+                $issue = $health['issues'][$id] ?? null;
+
+                if ($issue !== null) {
+                    $rows[] = [
+                        ...$this->runtimeRow($metadata, $enabled),
+                        'status' => $issue['status'],
+                        'error' => __($issue['error']),
+                        'can_enable' => false,
+                        'can_disable' => $enabled,
+                        'can_remove' => true,
+                    ];
+
+                    continue;
+                }
+
+                $rows[] = $this->runtimeRow($metadata, $enabled);
+
+                continue;
+            }
+
+            $status = $entry['status'];
+            $rows[] = [
+                ...$this->manifestPreview($path, $id),
+                'source' => 'runtime',
+                'status' => $status,
+                'enabled' => $enabled,
+                'error' => $entry['error'],
+                'can_enable' => false,
+                'can_disable' => $enabled,
+                'can_remove' => true,
+            ];
         }
 
         foreach (array_diff_key($state, $packages) as $id => $entry) {
             $rows[] = [
                 'id' => $id,
+                'managed_id' => $id,
+                'declared_id' => null,
                 'name' => $id,
                 'version' => null,
                 'description' => '',
@@ -187,6 +230,8 @@ class PluginManagementService
                 $manifest = app()->make($class)->manifest();
                 $rows[] = [
                     'id' => $manifest->id,
+                    'managed_id' => $manifest->id,
+                    'declared_id' => $manifest->id,
                     'name' => $manifest->name,
                     'version' => $manifest->version,
                     'description' => $manifest->description,
@@ -215,6 +260,8 @@ class PluginManagementService
     {
         return [
             ...$metadata,
+            'managed_id' => $metadata['id'],
+            'declared_id' => $metadata['id'],
             'source' => 'runtime',
             'status' => $enabled ? 'enabled' : 'disabled',
             'enabled' => $enabled,
@@ -230,6 +277,8 @@ class PluginManagementService
     {
         $preview = [
             'id' => $id,
+            'managed_id' => $id,
+            'declared_id' => null,
             'name' => $id,
             'version' => null,
             'description' => '',
@@ -262,7 +311,11 @@ class PluginManagementService
 
         foreach (['id', 'name', 'version', 'description', 'entry_class', 'core_version', 'php'] as $key) {
             if (is_string($manifest[$key] ?? null) && $manifest[$key] !== '') {
-                $preview[$key] = $manifest[$key];
+                if ($key === 'id') {
+                    $preview['declared_id'] = $manifest[$key];
+                } else {
+                    $preview[$key] = $manifest[$key];
+                }
             }
         }
 
@@ -287,6 +340,33 @@ class PluginManagementService
             : 'broken';
     }
 
+    private function validationError(Throwable $exception): string
+    {
+        $message = strtolower($exception->getMessage());
+
+        if (str_contains($message, 'does not match installed package')) {
+            return __('Manifest plugin ID does not match installed package identity.');
+        }
+
+        return $this->validationStatus($exception) === 'incompatible'
+            ? __('This plugin is not compatible with the current OpenKOS or PHP installation.')
+            : __('This plugin is incomplete or failed validation. Disable or remove it, then install a valid artifact.');
+    }
+
+    /** @return array<int, string> */
+    private function hostPluginClasses(): array
+    {
+        $classes = array_values(array_filter(config('platform.plugins', []), 'is_string'));
+
+        try {
+            $classes = [...$classes, ...$this->composer->discoverComposerOnly()];
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
+        return array_values(array_unique(array_filter($classes, 'is_string')));
+    }
+
     /** @param array<int, array<string, mixed>> $runtime @param array<int, array<string, mixed>> $legacy */
     private function markConflicts(array &$runtime, array &$legacy): void
     {
@@ -301,6 +381,10 @@ class PluginManagementService
         unset($plugin);
 
         foreach ($runtime as &$plugin) {
+            if (in_array($plugin['status'], ['broken', 'incompatible', 'missing'], true)) {
+                continue;
+            }
+
             if (in_array($plugin['id'], array_column($legacy, 'id'), true) || in_array($plugin['entry_class'], $legacyClasses, true)) {
                 $this->markConflict($plugin, __('A Composer or explicit plugin has the same identity; this runtime copy is not loaded.'));
 

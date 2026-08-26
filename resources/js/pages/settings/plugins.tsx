@@ -112,11 +112,11 @@ export default function Plugins({
     }
 
     function runAction(plugin: PlatformPlugin, action: 'enable' | 'disable') {
-        const parts = routeParts(plugin.id);
+        const parts = routeParts(plugin.managed_id);
         const route = action === 'enable' ? enable(parts) : disable(parts);
 
         setActionError(null);
-        setProcessingPlugin(plugin.id);
+        setProcessingPlugin(plugin.managed_id);
         router.post(
             route.url,
             {},
@@ -136,8 +136,8 @@ export default function Plugins({
         const plugin = removeConfirmation;
         setRemoveConfirmation(null);
         setActionError(null);
-        setProcessingPlugin(plugin.id);
-        router.delete(destroy(routeParts(plugin.id)).url, {
+        setProcessingPlugin(plugin.managed_id);
+        router.delete(destroy(routeParts(plugin.managed_id)).url, {
             preserveScroll: true,
             onError: (errors) => setActionError(errors.plugin ?? null),
             onFinish: () => setProcessingPlugin(null),
@@ -249,13 +249,13 @@ export default function Plugins({
                 ) : (
                     <div className="grid gap-4 lg:grid-cols-2">
                         {plugins.map((plugin) => (
-                            <Card key={`${plugin.source}:${plugin.id}`}>
+                            <Card key={`${plugin.source}:${plugin.managed_id}`}>
                                 <CardHeader>
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div>
                                             <CardTitle>{plugin.name}</CardTitle>
                                             <CardDescription className="mt-1 font-mono">
-                                                {plugin.id}
+                                                {plugin.managed_id}
                                             </CardDescription>
                                         </div>
                                         <Badge
@@ -295,6 +295,20 @@ export default function Plugins({
                                                 {plugin.version ?? t('Unknown')}
                                             </dd>
                                         </div>
+                                        {plugin.declared_id &&
+                                            plugin.declared_id !==
+                                                plugin.managed_id && (
+                                                <div className="sm:col-span-2">
+                                                    <dt className="text-muted-foreground">
+                                                        {t(
+                                                            'Declared plugin ID',
+                                                        )}
+                                                    </dt>
+                                                    <dd className="font-mono break-all">
+                                                        {plugin.declared_id}
+                                                    </dd>
+                                                </div>
+                                            )}
                                         {plugin.core_version && (
                                             <div>
                                                 <dt className="text-muted-foreground">
@@ -352,7 +366,7 @@ export default function Plugins({
                                                     size="sm"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.id
+                                                        plugin.managed_id
                                                     }
                                                     onClick={() =>
                                                         runAction(
@@ -371,7 +385,7 @@ export default function Plugins({
                                                     variant="outline"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.id
+                                                        plugin.managed_id
                                                     }
                                                     onClick={() =>
                                                         runAction(
@@ -390,7 +404,7 @@ export default function Plugins({
                                                     variant="destructive"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.id
+                                                        plugin.managed_id
                                                     }
                                                     onClick={() =>
                                                         setRemoveConfirmation(

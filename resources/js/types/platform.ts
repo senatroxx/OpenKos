@@ -27,6 +27,8 @@ export type PlatformPage = {
 
 export type PlatformPlugin = {
     id: string;
+    managed_id: string;
+    declared_id: string | null;
     name: string;
     version: string | null;
     description: string;

@@ -12,6 +12,7 @@ final class RuntimePluginDiscovery
     public function __construct(
         private RuntimePluginStore $store,
         private RuntimePluginArtifactValidator $validator,
+        private RuntimePluginGraphValidator $graph,
     ) {}
 
     /**
@@ -29,22 +30,46 @@ final class RuntimePluginDiscovery
                 $state = $store->readState();
                 $packages = $store->installedPackages();
                 $conflictingIds = $this->assertNoComposerConflicts($packages, $state, $existingClasses);
-                $plugins = [];
+                $runtime = [];
 
                 foreach ($packages as $id => $path) {
-                    if (! ($state[$id]['enabled'] ?? false) || in_array($id, $conflictingIds, true)) {
-                        continue;
-                    }
+                    $enabled = $state[$id]['enabled'] ?? false;
 
                     try {
-                        $plugins[] = $this->validator->validate($path, $id)['entry_class'];
+                        $runtime[$id] = [
+                            'metadata' => $this->validator->validate($path, $id),
+                            'enabled' => $enabled,
+                        ];
                     } catch (Throwable $exception) {
                         Log::error('Runtime plugin could not be loaded.', [
                             'plugin' => $id,
                             'path' => $path,
                             'exception' => $exception,
                         ]);
+                        $runtime[$id] = [
+                            'metadata' => null,
+                            'enabled' => $enabled,
+                            'status' => 'broken',
+                            'error' => 'Runtime plugin artifact validation failed.',
+                        ];
                     }
+                }
+
+                $report = $this->graph->validate($runtime, $existingClasses);
+                $plugins = [];
+
+                foreach ($report['issues'] as $id => $issue) {
+                    if (($runtime[$id]['enabled'] ?? false) && ! in_array($id, $conflictingIds, true)) {
+                        Log::error('Runtime plugin skipped because its boot graph is invalid.', [
+                            'plugin' => $id,
+                            'status' => $issue['status'],
+                            'error' => $issue['error'],
+                        ]);
+                    }
+                }
+
+                foreach ($report['loadable'] as $id) {
+                    $plugins[] = $runtime[$id]['metadata']['entry_class'];
                 }
 
                 return $plugins;
