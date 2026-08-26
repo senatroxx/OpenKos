@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import type { GatewayPaymentAttempt, InvoiceLineItem } from '@/types';
 
 type PublicInvoice = {
@@ -48,17 +49,19 @@ export default function SignedInvoice({
 
     return (
         <div className="space-y-6">
-            <Head title={`Invoice ${invoice.reference ?? ''}`} />
+            <Head title={`${t('Invoice')} ${invoice.reference ?? ''}`} />
 
             <header className="space-y-2">
-                <p className="text-sm text-muted-foreground">Payment link</p>
+                <p className="text-sm text-muted-foreground">
+                    {t('Payment link')}
+                </p>
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-semibold">
-                            {invoice.reference ?? 'Invoice'}
+                            {invoice.reference ?? t('Invoice')}
                         </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            {formatPeriod(invoice.period_start, 'id-ID')}
+                            {formatPeriod(invoice.period_start)}
                         </p>
                     </div>
                     <StatusBadge
@@ -70,28 +73,32 @@ export default function SignedInvoice({
 
             {invoice.status === 'paid' ? (
                 <Alert>
-                    <AlertTitle>Invoice paid</AlertTitle>
+                    <AlertTitle>{t('Invoice paid')}</AlertTitle>
                     <AlertDescription>
-                        This invoice is paid. No further payment is required.
+                        {t(
+                            'This invoice is paid. No further payment is required.',
+                        )}
                     </AlertDescription>
                 </Alert>
             ) : latestAttempt?.status === 'pending' ? (
                 <Alert>
                     <Clock />
-                    <AlertTitle>Checkout in progress</AlertTitle>
+                    <AlertTitle>{t('Checkout in progress')}</AlertTitle>
                     <AlertDescription>
-                        Complete the checkout or return here later. The invoice
-                        updates after the payment provider confirms payment.
+                        {t(
+                            'Complete the checkout or return here later. The invoice updates after the payment provider confirms payment.',
+                        )}
                     </AlertDescription>
                 </Alert>
             ) : latestAttempt?.status === 'failed' ||
               latestAttempt?.status === 'expired' ? (
                 <Alert variant="destructive">
                     <AlertCircle />
-                    <AlertTitle>Checkout unavailable</AlertTitle>
+                    <AlertTitle>{t('Checkout unavailable')}</AlertTitle>
                     <AlertDescription>
-                        The previous checkout is no longer available. You can
-                        start a new payment below.
+                        {t(
+                            'The previous checkout is no longer available. You can start a new payment below.',
+                        )}
                     </AlertDescription>
                 </Alert>
             ) : null}
@@ -103,24 +110,24 @@ export default function SignedInvoice({
                         invoice.context.property_name) && (
                         <section className="rounded-lg border p-4">
                             <h2 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                Payment context
+                                {t('Payment context')}
                             </h2>
                             <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
                                 {invoice.context.tenant_name && (
                                     <Detail
-                                        label="Billed to"
+                                        label={t('Billed to')}
                                         value={invoice.context.tenant_name}
                                     />
                                 )}
                                 {invoice.context.property_name && (
                                     <Detail
-                                        label="Property"
+                                        label={t('Property')}
                                         value={invoice.context.property_name}
                                     />
                                 )}
                                 {invoice.context.unit_name && (
                                     <Detail
-                                        label="Unit"
+                                        label={t('Unit')}
                                         value={invoice.context.unit_name}
                                     />
                                 )}
@@ -130,7 +137,7 @@ export default function SignedInvoice({
 
                     <section className="rounded-lg border">
                         <h2 className="border-b px-4 py-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                            Invoice details
+                            {t('Invoice details')}
                         </h2>
                         {invoice.line_items.length > 0 ? (
                             <div className="divide-y">
@@ -146,14 +153,17 @@ export default function SignedInvoice({
                                             </p>
                                         </div>
                                         <span className="tabular-nums">
-                                            {formatPrice(item.amount, invoice.currency)}
+                                            {formatPrice(
+                                                item.amount,
+                                                invoice.currency,
+                                            )}
                                         </span>
                                     </div>
                                 ))}
                             </div>
                         ) : (
                             <p className="px-4 py-6 text-sm text-muted-foreground">
-                                No itemized charges.
+                                {t('No itemized charges.')}
                             </p>
                         )}
                     </section>
@@ -162,11 +172,12 @@ export default function SignedInvoice({
                         <section className="rounded-lg border">
                             <div className="border-b px-4 py-3">
                                 <h2 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Online payment attempts
+                                    {t('Online payment attempts')}
                                 </h2>
                                 <p className="mt-1 text-xs text-muted-foreground">
-                                    Payment status is updated after provider
-                                    confirmation.
+                                    {t(
+                                        'Payment status is updated after provider confirmation.',
+                                    )}
                                 </p>
                             </div>
                             <div className="divide-y">
@@ -183,51 +194,55 @@ export default function SignedInvoice({
 
                 <aside className="order-first rounded-lg border p-5 lg:sticky lg:top-8 lg:order-none">
                     <p className="text-sm text-muted-foreground">
-                        Outstanding balance
+                        {t('Outstanding balance')}
                     </p>
                     <p className="mt-1 text-2xl font-semibold tabular-nums">
                         {formatPrice(invoice.outstanding, invoice.currency)}
                     </p>
                     <div className="mt-5 grid gap-4 text-sm">
                         <Detail
-                            label="Total"
+                            label={t('Total')}
                             value={formatPrice(invoice.total, invoice.currency)}
                         />
                         <Detail
-                            label="Paid"
-                            value={formatPrice(invoice.amount_paid, invoice.currency)}
+                            label={t('Paid')}
+                            value={formatPrice(
+                                invoice.amount_paid,
+                                invoice.currency,
+                            )}
                         />
                         <Detail
-                            label="Due date"
+                            label={t('Due date')}
                             value={formatDate(invoice.due_date)}
                         />
                     </div>
                     {isPayable && onlinePaymentAvailable && (
-                        <form
-                            action={paymentUrl}
-                            method="post"
-                            target="_blank"
-                        >
-                            <input type="hidden" name="_token" value={csrfToken} />
+                        <form action={paymentUrl} method="post" target="_blank">
+                            <input
+                                type="hidden"
+                                name="_token"
+                                value={csrfToken}
+                            />
                             <Button className="mt-6 w-full" type="submit">
                                 {resumableAttempt
-                                    ? 'Continue online payment'
-                                    : 'Pay online'}
+                                    ? t('Continue online payment')
+                                    : t('Pay online')}
                                 <ArrowRight />
                             </Button>
                         </form>
                     )}
                     {isPayable && !onlinePaymentAvailable && (
                         <p className="mt-6 text-sm text-muted-foreground">
-                            Online payment is currently unavailable.
+                            {t('Online payment is currently unavailable.')}
                         </p>
                     )}
                 </aside>
             </div>
 
             <p className="text-center text-xs text-muted-foreground">
-                Payment status is confirmed by the payment provider and may
-                take a moment to appear here.
+                {t(
+                    'Payment status is confirmed by the payment provider and may take a moment to appear here.',
+                )}
             </p>
         </div>
     );
@@ -239,11 +254,11 @@ function GatewayAttemptRow({ attempt }: { attempt: GatewayPaymentAttempt }) {
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <p className="font-medium">
-                        Started {formatDate(attempt.initiated_at)}
+                        {t('Started')} {formatDate(attempt.initiated_at)}
                     </p>
                     {attempt.status === 'pending' && attempt.expires_at && (
                         <p className="text-xs text-muted-foreground">
-                            Expires {formatDate(attempt.expires_at)}
+                            {t('Expires')} {formatDate(attempt.expires_at)}
                         </p>
                     )}
                 </div>
@@ -272,7 +287,7 @@ function GatewayAttemptRow({ attempt }: { attempt: GatewayPaymentAttempt }) {
                                 rel="noreferrer"
                                 target="_blank"
                             >
-                                Continue checkout
+                                {t('Continue checkout')}
                             </a>
                         </Button>
                     )}

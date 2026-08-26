@@ -28,6 +28,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { t } from '@/lib/i18n';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import type { MaintenanceTicket } from '@/types';
 
@@ -214,12 +215,16 @@ export default function TicketFormSheet({
                 <SheetContent className="sm:max-w-lg">
                     <SheetHeader>
                         <SheetTitle>
-                            {isEdit ? 'Edit Ticket' : 'New Maintenance Ticket'}
+                            {t(
+                                isEdit
+                                    ? 'Edit Ticket'
+                                    : 'New Maintenance Ticket',
+                            )}
                         </SheetTitle>
                         <SheetDescription>
                             {isEdit
-                                ? 'Update ticket details.'
-                                : 'Report a maintenance issue.'}
+                                ? t('Update ticket details.')
+                                : t('Report a maintenance issue.')}
                         </SheetDescription>
                     </SheetHeader>
 
@@ -230,7 +235,7 @@ export default function TicketFormSheet({
                         <div className="space-y-6">
                             {!isEdit && (
                                 <div className="grid gap-2">
-                                    <Label>Property</Label>
+                                    <Label>{t('Property')}</Label>
                                     <Select
                                         value={data.property_id}
                                         onValueChange={(v) =>
@@ -243,7 +248,11 @@ export default function TicketFormSheet({
                                         }
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select property" />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select property',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {properties.map((p) => (
@@ -262,7 +271,7 @@ export default function TicketFormSheet({
 
                             {!isEdit && (
                                 <div className="grid gap-2">
-                                    <Label>Location</Label>
+                                    <Label>{t('Location')}</Label>
                                     <div className="flex gap-2">
                                         <Select
                                             value={locationType}
@@ -273,10 +282,10 @@ export default function TicketFormSheet({
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="unit">
-                                                    Unit
+                                                    {t('Unit')}
                                                 </SelectItem>
                                                 <SelectItem value="area">
-                                                    Common Area
+                                                    {t('Common Area')}
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -292,7 +301,11 @@ export default function TicketFormSheet({
                                                 }
                                             >
                                                 <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select a unit (optional)" />
+                                                    <SelectValue
+                                                        placeholder={t(
+                                                            'Select a unit (optional)',
+                                                        )}
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {filteredUnits.map((r) => (
@@ -316,7 +329,9 @@ export default function TicketFormSheet({
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="e.g. Lobby, 3rd Floor Hallway"
+                                                placeholder={t(
+                                                    'e.g. Lobby, 3rd Floor Hallway',
+                                                )}
                                             />
                                         )}
                                     </div>
@@ -344,39 +359,43 @@ export default function TicketFormSheet({
                                         htmlFor="block_unit"
                                         className="cursor-pointer text-sm font-normal"
                                     >
-                                        Block unit for maintenance
+                                        {t('Block unit for maintenance')}
                                     </Label>
                                 </div>
                             )}
 
                             <div className="grid gap-2">
-                                <Label>Title</Label>
+                                <Label>{t('Title')}</Label>
                                 <Input
                                     required={!isEdit}
                                     value={data.title}
                                     onChange={(e) =>
                                         setData('title', e.target.value)
                                     }
-                                    placeholder="e.g. Leaking faucet"
+                                    placeholder={t('e.g. Leaking faucet')}
                                 />
                                 <InputError message={errors.title} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="description">Description</Label>
+                                <Label htmlFor="description">
+                                    {t('Description')}
+                                </Label>
                                 <Textarea
                                     id="description"
                                     value={data.description}
                                     onChange={(e) =>
                                         setData('description', e.target.value)
                                     }
-                                    placeholder="Describe the issue in detail"
+                                    placeholder={t(
+                                        'Describe the issue in detail',
+                                    )}
                                 />
                                 <InputError message={errors.description} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label>Priority</Label>
+                                <Label>{t('Priority')}</Label>
                                 <Select
                                     value={data.priority}
                                     onValueChange={(v) =>
@@ -387,15 +406,17 @@ export default function TicketFormSheet({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="low">Low</SelectItem>
+                                        <SelectItem value="low">
+                                            {t('Low')}
+                                        </SelectItem>
                                         <SelectItem value="medium">
-                                            Medium
+                                            {t('Medium')}
                                         </SelectItem>
                                         <SelectItem value="high">
-                                            High
+                                            {t('High')}
                                         </SelectItem>
                                         <SelectItem value="urgent">
-                                            Urgent
+                                            {t('Urgent')}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -406,7 +427,7 @@ export default function TicketFormSheet({
                                 <>
                                     <div className="grid gap-2">
                                         <Label htmlFor="resolution_notes">
-                                            Resolution Notes
+                                            {t('Resolution Notes')}
                                         </Label>
                                         <Textarea
                                             id="resolution_notes"
@@ -424,7 +445,9 @@ export default function TicketFormSheet({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="cost">Cost</Label>
+                                        <Label htmlFor="cost">
+                                            {t('Cost')}
+                                        </Label>
                                         <Input
                                             id="cost"
                                             type="number"
@@ -468,7 +491,7 @@ export default function TicketFormSheet({
                                                 htmlFor="restore_unit"
                                                 className="cursor-pointer text-sm font-normal"
                                             >
-                                                Restore unit availability
+                                                {t('Restore unit availability')}
                                             </Label>
                                         </div>
                                     );
@@ -481,10 +504,10 @@ export default function TicketFormSheet({
                                 onClick={() => handleOpenChange(false)}
                                 disabled={processing}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
                             <Button disabled={processing} type="submit">
-                                {isEdit ? 'Save' : 'Create'}
+                                {t(isEdit ? 'Save' : 'Create')}
                             </Button>
                         </div>
                     </form>
@@ -497,10 +520,12 @@ export default function TicketFormSheet({
             >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Unit Occupied</DialogTitle>
+                        <DialogTitle>{t('Unit Occupied')}</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground">
-                            {selectedUnitData?.name} has an active lease. What
-                            would you like to do?
+                            {selectedUnitData?.name}{' '}
+                            {t(
+                                'has an active lease. What would you like to do?',
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -519,7 +544,9 @@ export default function TicketFormSheet({
                                         />
                                         <div className="flex-1">
                                             <div className="text-sm font-medium">
-                                                Move tenant to another unit
+                                                {t(
+                                                    'Move tenant to another unit',
+                                                )}
                                             </div>
                                             <Select
                                                 value={moveToUnitId}
@@ -529,7 +556,11 @@ export default function TicketFormSheet({
                                                 }}
                                             >
                                                 <SelectTrigger className="mt-2 w-full">
-                                                    <SelectValue placeholder="Select unit" />
+                                                    <SelectValue
+                                                        placeholder={t(
+                                                            'Select unit',
+                                                        )}
+                                                    />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {availableMoveUnits.map(
@@ -562,7 +593,9 @@ export default function TicketFormSheet({
                                         className="mt-0.5"
                                     />
                                     <span className="text-sm font-medium">
-                                        Keep tenant, just mark as maintenance
+                                        {t(
+                                            'Keep tenant, just mark as maintenance',
+                                        )}
                                     </span>
                                 </label>
                             </div>
@@ -573,7 +606,7 @@ export default function TicketFormSheet({
                             variant="outline"
                             onClick={() => setShowOccupiedDialog(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button
                             disabled={
@@ -591,7 +624,7 @@ export default function TicketFormSheet({
                                 );
                             }}
                         >
-                            Continue
+                            {t('Continue')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -603,10 +636,11 @@ export default function TicketFormSheet({
             >
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Restore Occupant?</DialogTitle>
+                        <DialogTitle>{t('Restore Occupant?')}</DialogTitle>
                         <DialogDescription>
-                            This unit was vacated for maintenance. Move the
-                            occupant back?
+                            {t(
+                                'This unit was vacated for maintenance. Move the occupant back?',
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -617,7 +651,7 @@ export default function TicketFormSheet({
                                 submitTicket();
                             }}
                         >
-                            Keep in current unit
+                            {t('Keep in current unit')}
                         </Button>
                         <Button
                             onClick={() => {
@@ -625,7 +659,7 @@ export default function TicketFormSheet({
                                 submitTicket({ move_back: '1' });
                             }}
                         >
-                            Move back
+                            {t('Move back')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/sheet';
 import { appAccessStatus, inviteActionLabel } from '@/lib/app-access';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import tenants from '@/routes/tenants';
 import type { Lease, TenantDocument, WorkspaceTenant } from '@/types';
 
@@ -80,14 +81,14 @@ export default function TenantDetailSheet({
             >
                 <SheetHeader>
                     <SheetTitle>{tenant?.name}</SheetTitle>
-                    <SheetDescription>Tenant details</SheetDescription>
+                    <SheetDescription>{t('Tenant details')}</SheetDescription>
                 </SheetHeader>
 
                 {tenant && (
                     <div className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6">
                         <div className="space-y-5">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span>Status:</span>
+                                <span>{t('Status:')}</span>
                                 {(() => {
                                     const status = isArchived
                                         ? 'archived'
@@ -102,7 +103,7 @@ export default function TenantDetailSheet({
                                         />
                                     );
                                 })()}
-                                <span className="ml-2">App access:</span>
+                                <span className="ml-2">{t('App access:')}</span>
                                 <StatusBadge
                                     domain="app_access"
                                     value={appAccessStatus(tenant.user)}
@@ -111,14 +112,14 @@ export default function TenantDetailSheet({
 
                             <div className="rounded-lg border bg-muted/30 p-4">
                                 <p className="mb-2 text-xs font-medium text-muted-foreground uppercase">
-                                    Current Lease
+                                    {t('Current Lease')}
                                 </p>
                                 {activeLease ? (
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm font-medium">
                                                 {activeLease.unit?.name ??
-                                                    'Unknown Unit'}
+                                                    t('Unknown Unit')}
                                             </span>
                                             <span className="font-mono text-xs text-muted-foreground">
                                                 {activeLease.reference}
@@ -128,7 +129,7 @@ export default function TenantDetailSheet({
                                             <span className="text-sm text-muted-foreground">
                                                 {activeLease.unit?.property
                                                     ?.name ??
-                                                    'Unknown Property'}
+                                                    t('Unknown Property')}
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
@@ -138,7 +139,7 @@ export default function TenantDetailSheet({
                                                 )}
                                                 {activeLease.end_date
                                                     ? ` — ${formatDate(activeLease.end_date)}`
-                                                    : ' — Present'}
+                                                    : ` — ${t('Present')}`}
                                             </span>
                                             <span className="font-medium tabular-nums">
                                                 {formatPrice(
@@ -155,7 +156,7 @@ export default function TenantDetailSheet({
                                                     ?.id === tenant.id ? (
                                                     <>
                                                         <p className="mb-1 text-xs text-muted-foreground">
-                                                            Co-tenants
+                                                            {t('Co-tenants')}
                                                         </p>
                                                         <div className="space-y-1">
                                                             {activeLease.tenants
@@ -190,7 +191,7 @@ export default function TenantDetailSheet({
                                                 ) : activeLease.primary_tenant ? (
                                                     <>
                                                         <p className="mb-1 text-xs text-muted-foreground">
-                                                            Main tenant
+                                                            {t('Main tenant')}
                                                         </p>
                                                         <div className="flex items-center justify-between text-sm">
                                                             <span>
@@ -219,14 +220,14 @@ export default function TenantDetailSheet({
                                     </div>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        No active lease
+                                        {t('No active lease')}
                                     </p>
                                 )}
                             </div>
 
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground uppercase">
-                                    Phone
+                                    {t('Phone')}
                                 </p>
                                 <p className="mt-1 text-sm">
                                     {tenant.phone ?? '—'}
@@ -235,7 +236,7 @@ export default function TenantDetailSheet({
 
                             <div>
                                 <p className="text-xs font-medium text-muted-foreground uppercase">
-                                    ID Card (KTP)
+                                    {t('ID Card (KTP)')}
                                 </p>
                                 <p className="mt-1 text-sm tabular-nums">
                                     {tenant.id_card_number ?? '—'}
@@ -245,7 +246,7 @@ export default function TenantDetailSheet({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Emergency Contact
+                                        {t('Emergency Contact')}
                                     </p>
                                     <p className="mt-1 text-sm">
                                         {tenant.emergency_contact_name ?? '—'}
@@ -253,7 +254,7 @@ export default function TenantDetailSheet({
                                 </div>
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Emergency Phone
+                                        {t('Emergency Phone')}
                                     </p>
                                     <p className="mt-1 text-sm tabular-nums">
                                         {tenant.emergency_contact_phone ?? '—'}
@@ -264,7 +265,7 @@ export default function TenantDetailSheet({
                             {tenant.notes && (
                                 <div>
                                     <p className="text-xs font-medium text-muted-foreground uppercase">
-                                        Notes
+                                        {t('Notes')}
                                     </p>
                                     <p className="mt-1 text-sm whitespace-pre-wrap">
                                         {tenant.notes}
@@ -278,7 +279,7 @@ export default function TenantDetailSheet({
                                     onClick={onDocuments}
                                     className="w-full"
                                 >
-                                    Documents
+                                    {t('Documents')}
                                 </Button>
                             )}
                         </div>
@@ -288,7 +289,7 @@ export default function TenantDetailSheet({
                                 variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Close
+                                {t('Close')}
                             </Button>
                             {!isArchived && tenant && (
                                 <>
@@ -298,7 +299,7 @@ export default function TenantDetailSheet({
                                             onClick={onInvite}
                                         >
                                             <MailPlus className="size-4" />
-                                            Invite to App
+                                            {t('Invite to App')}
                                         </Button>
                                     )}
                                     {inviteActionLabel(
@@ -326,12 +327,12 @@ export default function TenantDetailSheet({
                                                 onClick={onDisableAccess}
                                             >
                                                 <UserX className="size-4" />
-                                                Disable Access
+                                                {t('Disable Access')}
                                             </Button>
                                         )}
                                     {!activeLease && onAssignToUnit && (
                                         <Button onClick={onAssignToUnit}>
-                                            Assign to Unit
+                                            {t('Assign to Unit')}
                                         </Button>
                                     )}
                                     {activeLease && onMoveOut && (
@@ -339,13 +340,15 @@ export default function TenantDetailSheet({
                                             variant="destructive"
                                             onClick={onMoveOut}
                                         >
-                                            Move Out
+                                            {t('Move Out')}
                                         </Button>
                                     )}
                                     <Button variant="outline" onClick={archive}>
-                                        Archive
+                                        {t('Archive')}
                                     </Button>
-                                    <Button onClick={onEdit}>Edit</Button>
+                                    <Button onClick={onEdit}>
+                                        {t('Edit')}
+                                    </Button>
                                 </>
                             )}
                         </div>
@@ -356,9 +359,9 @@ export default function TenantDetailSheet({
             <Dialog open={archiveConfirm} onOpenChange={setArchiveConfirm}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Archive tenant</DialogTitle>
+                        <DialogTitle>{t('Archive tenant')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to archive{' '}
+                            {t('Are you sure you want to archive')}{' '}
                             <span className="font-medium">{tenant?.name}</span>?
                         </DialogDescription>
                     </DialogHeader>
@@ -367,10 +370,10 @@ export default function TenantDetailSheet({
                             variant="outline"
                             onClick={() => setArchiveConfirm(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmArchive}>
-                            Archive
+                            {t('Archive')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

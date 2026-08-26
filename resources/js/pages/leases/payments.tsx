@@ -10,6 +10,7 @@ import { WorkspaceTable } from '@/components/shared/workspace-table';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leaseInvoices from '@/routes/leases/workspace/invoices';
 import paymentRoutes from '@/routes/payments';
 import type {
@@ -88,7 +89,7 @@ export default function LeasePayments({
             className: 'font-medium',
             render: (payment) =>
                 payment.invoice
-                    ? formatPeriod(payment.invoice.period_start, 'id-ID')
+                    ? formatPeriod(payment.invoice.period_start)
                     : '—',
         },
         {
@@ -165,7 +166,7 @@ export default function LeasePayments({
                             }}
                         >
                             <Check className="size-3" />
-                            Confirm
+                            {t('Confirm')}
                         </Button>
                         <Button
                             type="button"
@@ -178,7 +179,7 @@ export default function LeasePayments({
                             }}
                         >
                             <X className="size-3" />
-                            Reject
+                            {t('Reject')}
                         </Button>
                     </div>
                 ) : (
@@ -226,7 +227,7 @@ export default function LeasePayments({
                     src={previewProof.src}
                     mimeType={previewProof.mimeType}
                     title={previewProof.name}
-                    subtitle="Payment Proof"
+                    subtitle={t('Payment Proof')}
                     onClose={() => setPreviewProof(null)}
                 />
             )}

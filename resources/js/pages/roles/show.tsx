@@ -3,6 +3,7 @@ import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layo
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/i18n';
 
 import type { WorkspaceRole } from '@/types/roles';
 
@@ -12,14 +13,16 @@ export default function RoleWorkspace({ role }: { role: WorkspaceRole }) {
             title={role.label}
             subtitle={role.description ?? undefined}
             backRoute="/roles"
-            backLabel="All roles"
+            backLabel={t('All roles')}
             actions={
                 <Button size="sm" asChild>
-                    <Link href={`/roles/${role.id}/edit`}>Edit role</Link>
+                    <Link href={`/roles/${role.id}/edit`}>
+                        {t('Edit role')}
+                    </Link>
                 </Button>
             }
         >
-            <Head title={`${role.label} — Role`} />
+            <Head title={`${role.label} — ${t('Role')}`} />
 
             <WorkspaceTabs
                 workspace="role"
@@ -28,7 +31,7 @@ export default function RoleWorkspace({ role }: { role: WorkspaceRole }) {
                 tabs={[
                     {
                         key: 'overview',
-                        label: 'Overview',
+                        label: t('Overview'),
                         href: `/roles/${role.id}`,
                     },
                 ]}
@@ -37,24 +40,24 @@ export default function RoleWorkspace({ role }: { role: WorkspaceRole }) {
             <div className="space-y-6">
                 <div className="flex flex-wrap gap-2">
                     <Badge variant="outline">
-                        {role.is_active ? 'Active' : 'Disabled'}
+                        {t(role.is_active ? 'Active' : 'Disabled')}
                     </Badge>
                     {role.is_system && (
-                        <Badge variant="secondary">System role</Badge>
+                        <Badge variant="secondary">{t('System role')}</Badge>
                     )}
                     <Badge variant="outline">
                         {role.users_count}{' '}
-                        {role.users_count === 1 ? 'user' : 'users'}
+                        {t(role.users_count === 1 ? 'user' : 'users')}
                     </Badge>
                 </div>
 
                 <div>
                     <p className="mb-2 text-xs text-muted-foreground">
-                        Permissions ({role.permissions.length})
+                        {t('Permissions')} ({role.permissions.length})
                     </p>
                     {role.permissions.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                            No permissions granted.
+                            {t('No permissions granted.')}
                         </p>
                     ) : (
                         <div className="flex flex-wrap gap-1.5">

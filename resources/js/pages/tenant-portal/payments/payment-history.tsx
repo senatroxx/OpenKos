@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { index as billingIndex } from '@/routes/portal/billing';
 import { payments as paymentHistory } from '@/routes/portal/billing/history';
 import { show as showInvoice } from '@/routes/portal/billing/invoices';
@@ -34,7 +35,7 @@ export default function PaymentHistory({
 }) {
     return (
         <div className="flex flex-1 flex-col gap-6 p-4">
-            <Head title="Payment history" />
+            <Head title={t('Payment history')} />
 
             <Link
                 href={billingIndex({
@@ -43,13 +44,15 @@ export default function PaymentHistory({
                 className="inline-flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
-                Back to billing
+                {t('Back to billing')}
             </Link>
 
             <div>
-                <h1 className="text-2xl font-semibold">Payment history</h1>
+                <h1 className="text-2xl font-semibold">
+                    {t('Payment history')}
+                </h1>
                 <p className="text-sm text-muted-foreground">
-                    Confirmed and cancelled payment records.
+                    {t('Confirmed and cancelled payment records.')}
                 </p>
             </div>
 
@@ -62,7 +65,7 @@ export default function PaymentHistory({
 
             {payments.data.length === 0 ? (
                 <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                    No payment records yet.
+                    {t('No payment records yet.')}
                 </p>
             ) : (
                 <div className="divide-y rounded-lg border">
@@ -75,23 +78,29 @@ export default function PaymentHistory({
                                 <p className="truncate font-medium">
                                     {(PAYMENT_METHOD_LABELS[
                                         payment.payment_method
-                                    ] ?? payment.payment_method) + ' payment'}
+                                    ] ?? payment.payment_method) +
+                                        ` ${t('payment')}`}
                                 </p>
                                 <p className="text-muted-foreground">
-                                    Paid on {formatDate(payment.payment_date)} ·{' '}
+                                    {t('Paid on')}{' '}
+                                    {formatDate(payment.payment_date)} ·{' '}
                                     {formatPeriod(payment.invoice.period_start)}{' '}
-                                    rent
+                                    {t('rent')}
                                     {payment.invoice.reference && (
                                         <>
                                             {' · '}
-                                            Invoice {payment.invoice.reference}
+                                            {t('Invoice')}{' '}
+                                            {payment.invoice.reference}
                                         </>
                                     )}
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
                                 <span className="font-medium tabular-nums">
-                                    {formatPrice(payment.amount, payment.currency)}
+                                    {formatPrice(
+                                        payment.amount,
+                                        payment.currency,
+                                    )}
                                 </span>
                                 <StatusBadge
                                     domain="tenant_payment"
@@ -103,7 +112,7 @@ export default function PaymentHistory({
                                     asChild
                                 >
                                     <Link href={showInvoice(payment.invoice)}>
-                                        View invoice
+                                        {t('View invoice')}
                                         <ChevronRight className="size-4 sm:hidden" />
                                     </Link>
                                 </Button>

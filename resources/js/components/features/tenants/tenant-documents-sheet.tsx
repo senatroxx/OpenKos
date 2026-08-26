@@ -27,6 +27,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { formatDate, formatSize } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import tenants from '@/routes/tenants';
 import type { Tenant, TenantDocument } from '@/types';
 
@@ -120,9 +121,9 @@ export default function TenantDocumentsSheet({
             <Sheet open={open} onOpenChange={onOpenChange}>
                 <SheetContent className="sm:max-w-lg">
                     <SheetHeader>
-                        <SheetTitle>Documents</SheetTitle>
+                        <SheetTitle>{t('Documents')}</SheetTitle>
                         <SheetDescription>
-                            {tenant?.name ?? 'Tenant'}
+                            {tenant?.name ?? t('Tenant')}
                         </SheetDescription>
                     </SheetHeader>
 
@@ -182,7 +183,7 @@ export default function TenantDocumentsSheet({
 
                                 {(tenant.documents ?? []).length === 0 && (
                                     <p className="text-sm text-muted-foreground">
-                                        No documents
+                                        {t('No documents')}
                                     </p>
                                 )}
 
@@ -200,23 +201,27 @@ export default function TenantDocumentsSheet({
                                         onValueChange={setDocType}
                                     >
                                         <SelectTrigger className="w-[160px] shrink-0">
-                                            <SelectValue placeholder="Select type..." />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select type...',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="ktp">
                                                 KTP
                                             </SelectItem>
                                             <SelectItem value="passport">
-                                                Passport
+                                                {t('Passport')}
                                             </SelectItem>
                                             <SelectItem value="lease">
-                                                Lease/Agreement
+                                                {t('Lease/Agreement')}
                                             </SelectItem>
                                             <SelectItem value="supporting">
-                                                Supporting
+                                                {t('Supporting')}
                                             </SelectItem>
                                             <SelectItem value="other">
-                                                Other
+                                                {t('Other')}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -247,9 +252,9 @@ export default function TenantDocumentsSheet({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete document</DialogTitle>
+                        <DialogTitle>{t('Delete document')}</DialogTitle>
                         <DialogDescription>
-                            Delete this document? This cannot be undone.
+                            {t('Delete this document? This cannot be undone.')}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -257,10 +262,10 @@ export default function TenantDocumentsSheet({
                             variant="outline"
                             onClick={() => setDeleteConfirm(null)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmDelete}>
-                            Delete
+                            {t('Delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

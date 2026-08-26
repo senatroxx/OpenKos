@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import { formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
 import type {
@@ -376,13 +377,13 @@ export default function Index({
                                     }
                                 >
                                     <ExternalLink className="size-4" />
-                                    Open Workspace
+                                    {t('Open Workspace')}
                                 </DropdownMenuItem>
                             )}
                             {!r.deleted_at && (
                                 <DropdownMenuItem onClick={() => openDetail(r)}>
                                     <Eye className="size-4" />
-                                    View
+                                    {t('View')}
                                 </DropdownMenuItem>
                             )}
                             {!r.deleted_at && r.capacity > occupants.length && (
@@ -393,7 +394,7 @@ export default function Index({
                                     }}
                                 >
                                     <DoorOpen className="size-4" />
-                                    Assign Tenant
+                                    {t('Assign Tenant')}
                                     {r.capacity > 1 ? '(s)' : ''}
                                 </DropdownMenuItem>
                             )}
@@ -412,7 +413,7 @@ export default function Index({
                                     }}
                                 >
                                     <Move className="size-4" />
-                                    Move Unit
+                                    {t('Move Unit')}
                                 </DropdownMenuItem>
                             )}
                             {!r.deleted_at &&
@@ -423,7 +424,7 @@ export default function Index({
                             {r.deleted_at ? (
                                 <DropdownMenuItem onClick={() => restore(r)}>
                                     <RotateCcw className="size-4" />
-                                    Restore
+                                    {t('Restore')}
                                 </DropdownMenuItem>
                             ) : (
                                 <>
@@ -431,14 +432,14 @@ export default function Index({
                                         onClick={() => openEdit(r)}
                                     >
                                         <Pencil className="size-4" />
-                                        Edit
+                                        {t('Edit')}
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         variant="destructive"
                                         onClick={() => confirmDelete(r)}
                                     >
                                         <Trash2 className="size-4" />
-                                        Delete
+                                        {t('Delete')}
                                     </DropdownMenuItem>
                                 </>
                             )}
@@ -451,11 +452,11 @@ export default function Index({
 
     return (
         <PropertyLayout property={property} activeTab="units">
-            <Head title={`Units - ${property.name}`} />
+            <Head title={`${t('Units')} - ${property.name}`} />
 
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-end">
-                    <Button onClick={openCreate}>New Unit</Button>
+                    <Button onClick={openCreate}>{t('New Unit')}</Button>
                 </div>
 
                 <FilterBar
@@ -469,7 +470,7 @@ export default function Index({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search by name or floor..."
+                            placeholder={t('Search by name or floor...')}
                         />
                     }
                 />
@@ -484,10 +485,10 @@ export default function Index({
                     perPage={currentPerPage}
                     onPageChange={table.goToPage}
                     onPerPageChange={table.setPerPage}
-                    noun="units"
+                    noun={t('units')}
                     empty={{
-                        message: 'No units yet.',
-                        createLabel: 'Create your first unit',
+                        message: t('No units yet.'),
+                        createLabel: t('Create your first unit'),
                         onCreate: openCreate,
                     }}
                 />
@@ -543,13 +544,13 @@ export default function Index({
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete unit</DialogTitle>
+                        <DialogTitle>{t('Delete unit')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete{' '}
+                            {t('Are you sure you want to delete')}{' '}
                             <span className="font-medium">
                                 {unitToDelete?.name}
                             </span>
-                            ? This action cannot be undone.
+                            ? {t('This action cannot be undone.')}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -557,10 +558,10 @@ export default function Index({
                             variant="outline"
                             onClick={() => setDeleteDialogOpen(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={destroy}>
-                            Delete
+                            {t('Delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

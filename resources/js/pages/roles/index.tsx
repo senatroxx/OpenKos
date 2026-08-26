@@ -33,6 +33,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTable } from '@/hooks/use-table';
+import { t } from '@/lib/i18n';
 import roles, { destroy, clone } from '@/routes/roles';
 import type { PaginatedData, RoleData, TableMeta } from '@/types';
 
@@ -104,7 +105,7 @@ export default function Index({
     const columns: TableColumn<RoleData>[] = [
         {
             key: '_role',
-            label: 'Role',
+            label: t('Role'),
             sortable: true,
             render: (role) => (
                 <div className="flex items-center gap-2">
@@ -120,38 +121,38 @@ export default function Index({
         },
         {
             key: '_description',
-            label: 'Description',
+            label: t('Description'),
             render: (role) =>
                 role.description ?? (
                     <span className="text-muted-foreground italic">
-                        No description
+                        {t('No description')}
                     </span>
                 ),
         },
         {
             key: '_type',
-            label: 'Type',
+            label: t('Type'),
             render: (role) =>
                 role.is_system ? (
-                    <Badge variant="secondary">System</Badge>
+                    <Badge variant="secondary">{t('System')}</Badge>
                 ) : (
-                    <Badge variant="outline">Custom</Badge>
+                    <Badge variant="outline">{t('Custom')}</Badge>
                 ),
         },
         {
             key: 'users_count',
-            label: 'Users',
+            label: t('Users'),
             sortable: true,
             className: 'text-muted-foreground',
         },
         {
             key: 'permissions_count',
-            label: 'Permissions',
+            label: t('Permissions'),
             className: 'text-muted-foreground',
         },
         {
             key: '_status',
-            label: 'Status',
+            label: t('Status'),
             render: (role) => (
                 <StatusBadge
                     domain="role"
@@ -169,7 +170,7 @@ export default function Index({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <Button variant="ghost" size="icon" className="size-8">
-                            <span className="sr-only">Actions</span>
+                            <span className="sr-only">{t('Actions')}</span>
                             <EllipsisVertical className="size-4" />
                         </Button>
                     </DropdownMenuTrigger>
@@ -180,13 +181,13 @@ export default function Index({
                         <DropdownMenuItem asChild>
                             <Link href={`/roles/${role.id}`}>
                                 <Eye className="size-4" />
-                                View
+                                {t('View')}
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                             <Link href={roles.edit(role)}>
                                 <Pencil className="size-4" />
-                                Edit
+                                {t('Edit')}
                             </Link>
                         </DropdownMenuItem>
                         {!role.is_system && (
@@ -195,14 +196,14 @@ export default function Index({
                                     onClick={() => openClone(role)}
                                 >
                                     <Copy className="size-4" />
-                                    Clone
+                                    {t('Clone')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                     variant="destructive"
                                     onClick={() => confirmDelete(role)}
                                 >
                                     <Trash2 className="size-4" />
-                                    Delete
+                                    {t('Delete')}
                                 </DropdownMenuItem>
                             </>
                         )}
@@ -214,18 +215,18 @@ export default function Index({
 
     return (
         <>
-            <Head title="Roles & Permissions" />
+            <Head title={t('Roles & Permissions')} />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between gap-4">
                     <Heading
-                        title="Roles & Permissions"
-                        description="Create and manage custom roles"
+                        title={t('Roles & Permissions')}
+                        description={t('Create and manage custom roles')}
                     />
                     <Link href={roles.create()}>
                         <Button>
                             <Plus className="size-4" />
-                            Create Role
+                            {t('Create Role')}
                         </Button>
                     </Link>
                 </div>
@@ -241,7 +242,7 @@ export default function Index({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search roles..."
+                            placeholder={t('Search roles...')}
                         />
                     }
                 />
@@ -258,8 +259,8 @@ export default function Index({
                     onPerPageChange={table.setPerPage}
                     noun="roles"
                     empty={{
-                        message: 'No roles yet.',
-                        createLabel: 'Create a role',
+                        message: t('No roles yet.'),
+                        createLabel: t('Create a role'),
                         onCreate: () => router.visit(roles.create()),
                     }}
                 />
@@ -271,10 +272,11 @@ export default function Index({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete role?</DialogTitle>
+                        <DialogTitle>{t('Delete role?')}</DialogTitle>
                         <DialogDescription>
-                            Users assigned to this role will keep their accounts
-                            but lose this role. This cannot be undone.
+                            {t(
+                                'Users assigned to this role will keep their accounts but lose this role. This cannot be undone.',
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -282,11 +284,11 @@ export default function Index({
                             variant="outline"
                             onClick={() => setDeleteRole(null)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={executeDelete}>
                             <Trash2 className="size-4" />
-                            Delete role
+                            {t('Delete role')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -295,19 +297,21 @@ export default function Index({
             <Dialog open={cloneOpen} onOpenChange={setCloneOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Clone role</DialogTitle>
+                        <DialogTitle>{t('Clone role')}</DialogTitle>
                         <DialogDescription>
-                            Create a copy of &ldquo;{cloneTarget?.label}&rdquo;
-                            with its permissions.
+                            {t('Create a copy of')} &ldquo;{cloneTarget?.label}
+                            &rdquo; {t('with its permissions.')}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2">
-                        <Label htmlFor="clone-name">Role identifier</Label>
+                        <Label htmlFor="clone-name">
+                            {t('Role identifier')}
+                        </Label>
                         <Input
                             id="clone-name"
                             value={cloneName}
                             onChange={(e) => setCloneName(e.target.value)}
-                            placeholder="e.g. finance-staff-copy"
+                            placeholder={t('e.g. finance-staff-copy')}
                         />
                     </div>
                     <DialogFooter>
@@ -315,11 +319,11 @@ export default function Index({
                             variant="outline"
                             onClick={() => setCloneOpen(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button onClick={executeClone} disabled={!cloneName}>
                             <Copy className="size-4" />
-                            Clone
+                            {t('Clone')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

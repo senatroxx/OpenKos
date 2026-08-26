@@ -32,6 +32,7 @@ import {
     formatPrice,
     todayISO,
 } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import tenants from '@/routes/tenants';
 import type { AvailableUnit, UnitRate, Tenant } from '@/types';
 
@@ -311,9 +312,9 @@ export default function AssignUnitSheet({
         >
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Assign to Unit</SheetTitle>
+                    <SheetTitle>{t('Assign to Unit')}</SheetTitle>
                     <SheetDescription>
-                        Assign {tenant?.name ?? 'tenant'} to a unit
+                        {t('Assign this tenant to a unit')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -324,15 +325,15 @@ export default function AssignUnitSheet({
                     <div className="space-y-6">
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Section 1 — Who
+                                {t('Section 1 — Who')}
                             </h3>
 
                             <div className="mb-3 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-                                {tenant?.name ?? 'Unknown tenant'}
+                                {tenant?.name ?? t('Unknown tenant')}
                             </div>
 
                             <div className="grid gap-2">
-                                <Label>Property</Label>
+                                <Label>{t('Property')}</Label>
                                 <SearchableSelect
                                     options={propertyOptions.map((p) => ({
                                         value: p.propertyId,
@@ -340,14 +341,14 @@ export default function AssignUnitSheet({
                                     }))}
                                     value={selectedPropertyId}
                                     onChange={handlePropertyChange}
-                                    placeholder="Select property..."
+                                    placeholder={t('Select property...')}
                                     searchPlaceholder="Search property..."
                                     emptyText="No properties with available units."
                                 />
                             </div>
 
                             <div className="mt-3 grid gap-2">
-                                <Label>Unit</Label>
+                                <Label>{t('Unit')}</Label>
                                 <SearchableSelect
                                     key={selectedPropertyId ?? 'none'}
                                     options={unitOptions}
@@ -370,11 +371,13 @@ export default function AssignUnitSheet({
 
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Section 2 — Stay
+                                {t('Section 2 — Stay')}
                             </h3>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="start_date">Move-in Date</Label>
+                                <Label htmlFor="start_date">
+                                    {t('Move-in Date')}
+                                </Label>
                                 <Input
                                     id="start_date"
                                     type="date"
@@ -390,7 +393,7 @@ export default function AssignUnitSheet({
                                 (activeLease ? (
                                     <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm">
                                         <p className="font-medium">
-                                            Existing lease terms
+                                            {t('Existing lease terms')}
                                         </p>
                                         <p className="mt-1 text-muted-foreground">
                                             {activeLease.rent_amount
@@ -398,18 +401,21 @@ export default function AssignUnitSheet({
                                                       activeLease.rent_amount,
                                                       activeLease.currency,
                                                   )
-                                                : 'Custom amount'}{' '}
+                                                : t('Custom amount')}{' '}
                                             {activeLease.billing_label}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            Adding a tenant keeps this lease's
-                                            currency and billing terms.
+                                            {t(
+                                                'Adding a tenant keeps this lease currency and billing terms.',
+                                            )}
                                         </p>
                                     </div>
                                 ) : rates.length > 0 ? (
                                     <div className="mt-4 grid gap-2">
                                         <div className="flex items-center justify-between gap-3">
-                                            <Label>Unit Rate Options</Label>
+                                            <Label>
+                                                {t('Unit Rate Options')}
+                                            </Label>
                                             {availableCurrencies.length > 1 ? (
                                                 <Select
                                                     value={displayCurrency}
@@ -513,16 +519,16 @@ export default function AssignUnitSheet({
                                     </div>
                                 ) : (
                                     <p className="mt-4 text-xs text-surface-amber-foreground">
-                                        No pricing configured for this unit.
-                                        Enter a custom rent below or set up unit
-                                        rates first.
+                                        {t(
+                                            'No pricing configured for this unit. Enter a custom rent below or set up unit rates first.',
+                                        )}
                                     </p>
                                 ))}
 
                             {!activeLease && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="rent_due_day">
-                                        Rent Due Every Month
+                                        {t('Rent Due Every Month')}
                                     </Label>
                                     <Select
                                         value={data.rent_due_day}
@@ -531,7 +537,11 @@ export default function AssignUnitSheet({
                                         }
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select due day" />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select due day',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {DUE_DAY_OPTIONS.map((opt) => (
@@ -539,7 +549,7 @@ export default function AssignUnitSheet({
                                                     key={opt.value}
                                                     value={opt.value}
                                                 >
-                                                    {opt.label}
+                                                    {t(opt.label)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -560,7 +570,7 @@ export default function AssignUnitSheet({
                                         }
                                         className="size-4"
                                     />
-                                    Override room price?
+                                    {t('Override room price?')}
                                 </label>
                             )}
 
@@ -569,7 +579,7 @@ export default function AssignUnitSheet({
                                 (overridePrice || !hasRates) && (
                                     <div className="mt-4 grid gap-2">
                                         <Label htmlFor="rent_amount">
-                                            Rent Amount ({currency})
+                                            {t('Rent Amount')} ({currency})
                                         </Label>
                                         <Input
                                             id="rent_amount"
@@ -582,7 +592,7 @@ export default function AssignUnitSheet({
                                                     e.target.value,
                                                 )
                                             }
-                                            placeholder="Enter rent amount"
+                                            placeholder={t('Enter rent amount')}
                                         />
                                         {monthlyEquivalent && (
                                             <p className="text-xs text-muted-foreground">
@@ -597,7 +607,7 @@ export default function AssignUnitSheet({
                             {!activeLease && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="billing_strategy">
-                                        Billing Strategy
+                                        {t('Billing Strategy')}
                                     </Label>
                                     <Select
                                         value={data.billing_strategy}
@@ -606,7 +616,11 @@ export default function AssignUnitSheet({
                                         }
                                     >
                                         <SelectTrigger id="billing_strategy">
-                                            <SelectValue placeholder="Select billing strategy" />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select billing strategy',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {BILLING_STRATEGIES.map((s) => (
@@ -614,7 +628,7 @@ export default function AssignUnitSheet({
                                                     key={s.value}
                                                     value={s.value}
                                                 >
-                                                    {s.label}
+                                                    {t(s.label)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -635,7 +649,7 @@ export default function AssignUnitSheet({
                                 >
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                            Section 3 — Deposit
+                                            {t('Section 3 — Deposit')}
                                         </h3>
                                         <CollapsibleTrigger asChild>
                                             <Button
@@ -645,8 +659,8 @@ export default function AssignUnitSheet({
                                                 className="flex items-center gap-2 text-xs text-muted-foreground"
                                             >
                                                 {hasDeposit
-                                                    ? 'Has deposit'
-                                                    : 'No deposit'}
+                                                    ? t('Has deposit')
+                                                    : t('No deposit')}
                                                 <ChevronDown
                                                     className={`size-3 transition-transform ${hasDeposit ? 'rotate-180' : ''}`}
                                                 />
@@ -658,7 +672,8 @@ export default function AssignUnitSheet({
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label htmlFor="deposit_amount">
-                                                    Deposit Amount ({currency})
+                                                    {t('Deposit Amount')} (
+                                                    {currency})
                                                 </Label>
                                                 <Input
                                                     id="deposit_amount"
@@ -680,7 +695,7 @@ export default function AssignUnitSheet({
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="deposit_paid_at">
-                                                    Paid Date
+                                                    {t('Paid Date')}
                                                 </Label>
                                                 <Input
                                                     id="deposit_paid_at"
@@ -706,14 +721,14 @@ export default function AssignUnitSheet({
                         )}
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 value={data.notes}
                                 onChange={(e) =>
                                     setData('notes', e.target.value)
                                 }
-                                placeholder="Additional notes"
+                                placeholder={t('Additional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
@@ -725,9 +740,11 @@ export default function AssignUnitSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
-                        <Button disabled={processing}>Assign to Unit</Button>
+                        <Button disabled={processing}>
+                            {t('Assign to Unit')}
+                        </Button>
                     </div>
                 </form>
             </SheetContent>

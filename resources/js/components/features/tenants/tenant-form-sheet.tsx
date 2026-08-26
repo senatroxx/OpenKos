@@ -13,6 +13,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { appAccessStatus } from '@/lib/app-access';
+import { t } from '@/lib/i18n';
 import tenants from '@/routes/tenants';
 import type { Tenant } from '@/types';
 
@@ -73,12 +74,12 @@ export default function TenantFormSheet({
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        {isEdit ? 'Edit Tenant' : 'New Tenant'}
+                        {t(isEdit ? 'Edit Tenant' : 'New Tenant')}
                     </SheetTitle>
                     <SheetDescription>
                         {isEdit
-                            ? 'Update tenant details'
-                            : 'Add a new tenant to the system'}
+                            ? t('Update tenant details')
+                            : t('Add a new tenant to the system')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -88,7 +89,7 @@ export default function TenantFormSheet({
                 >
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="name">{t('Name')}</Label>
                             <Input
                                 id="name"
                                 required
@@ -96,23 +97,23 @@ export default function TenantFormSheet({
                                 onChange={(e) =>
                                     setData('name', e.target.value)
                                 }
-                                placeholder="e.g. Budi Santoso"
+                                placeholder={t('e.g. Budi Santoso')}
                             />
                             <InputError message={errors.name} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="phone">Phone</Label>
+                            <Label htmlFor="phone">{t('Phone')}</Label>
                             <PhoneInput
                                 value={data.phone}
                                 onChange={(v) => setData('phone', v)}
-                                placeholder="e.g. 81234567890"
+                                placeholder={t('e.g. 81234567890')}
                             />
                             <InputError message={errors.phone} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="email">Email</Label>
+                            <Label htmlFor="email">{t('Email')}</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -121,12 +122,16 @@ export default function TenantFormSheet({
                                 onChange={(e) =>
                                     setData('email', e.target.value)
                                 }
-                                placeholder="e.g. tenant@example.com"
+                                placeholder={t('e.g. tenant@example.com')}
                             />
                             <p className="text-xs text-muted-foreground">
                                 {emailLocked
-                                    ? 'This tenant signs in with this email. To change it, disable their app access first, then edit.'
-                                    : 'Used for app access and notifications. Optional.'}
+                                    ? t(
+                                          'This tenant signs in with this email. To change it, disable their app access first, then edit.',
+                                      )
+                                    : t(
+                                          'Used for app access and notifications. Optional.',
+                                      )}
                             </p>
                             <InputError message={errors.email} />
                         </div>
@@ -135,12 +140,12 @@ export default function TenantFormSheet({
                             <div className="flex items-start justify-between gap-4">
                                 <div className="grid gap-1">
                                     <Label htmlFor="send_invite">
-                                        Send activation invite
+                                        {t('Send activation invite')}
                                     </Label>
                                     <p className="text-xs text-muted-foreground">
-                                        Emails a link to set a password and
-                                        access the portal. Leave off to only
-                                        save the email for notifications.
+                                        {t(
+                                            'Emails a link to set a password and access the portal. Leave off to only save the email for notifications.',
+                                        )}
                                     </p>
                                 </div>
                                 <Switch
@@ -155,7 +160,7 @@ export default function TenantFormSheet({
 
                         <div className="grid gap-2">
                             <Label htmlFor="id_card_number">
-                                ID Card Number (KTP)
+                                {t('ID Card Number (KTP)')}
                             </Label>
                             <Input
                                 id="id_card_number"
@@ -163,21 +168,21 @@ export default function TenantFormSheet({
                                 onChange={(e) =>
                                     setData('id_card_number', e.target.value)
                                 }
-                                placeholder="e.g. 3273010203040005"
+                                placeholder={t('e.g. 3273010203040005')}
                             />
                             <InputError message={errors.id_card_number} />
                         </div>
 
                         <div className="grid gap-2">
                             <Label htmlFor="emergency_contact_phone">
-                                Emergency Contact Phone
+                                {t('Emergency Contact Phone')}
                             </Label>
                             <PhoneInput
                                 value={data.emergency_contact_phone}
                                 onChange={(v) =>
                                     setData('emergency_contact_phone', v)
                                 }
-                                placeholder="e.g. 81234567890"
+                                placeholder={t('e.g. 81234567890')}
                             />
                             <InputError
                                 message={errors.emergency_contact_phone}
@@ -186,7 +191,7 @@ export default function TenantFormSheet({
 
                         <div className="grid gap-2">
                             <Label htmlFor="emergency_contact_name">
-                                Emergency Contact Name
+                                {t('Emergency Contact Name')}
                             </Label>
                             <Input
                                 id="emergency_contact_name"
@@ -197,7 +202,7 @@ export default function TenantFormSheet({
                                         e.target.value,
                                     )
                                 }
-                                placeholder="e.g. Siti Nurhaliza"
+                                placeholder={t('e.g. Siti Nurhaliza')}
                             />
                             <InputError
                                 message={errors.emergency_contact_name}
@@ -205,14 +210,14 @@ export default function TenantFormSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 value={data.notes}
                                 onChange={(e) =>
                                     setData('notes', e.target.value)
                                 }
-                                placeholder="Additional notes"
+                                placeholder={t('Additional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
@@ -227,7 +232,7 @@ export default function TenantFormSheet({
                                 }
                                 className="rounded border-input"
                             />
-                            <Label htmlFor="is_active">Active</Label>
+                            <Label htmlFor="is_active">{t('Active')}</Label>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-4">
@@ -237,10 +242,10 @@ export default function TenantFormSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button disabled={processing}>
-                            {isEdit ? 'Save' : 'Create'}
+                            {t(isEdit ? 'Save' : 'Create')}
                         </Button>
                     </div>
                 </form>

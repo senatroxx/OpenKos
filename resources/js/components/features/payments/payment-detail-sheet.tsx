@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/sheet';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import type { Payment, PaymentProof } from '@/types';
 
 export default function PaymentDetailSheet({
@@ -37,11 +38,8 @@ export default function PaymentDetailSheet({
                 <SheetHeader>
                     <SheetTitle>
                         {payment?.invoice
-                            ? formatPeriod(
-                                  payment.invoice.period_start,
-                                  'id-ID',
-                              )
-                            : 'Payment'}
+                            ? formatPeriod(payment.invoice.period_start)
+                            : t('Payment')}
                     </SheetTitle>
                 </SheetHeader>
 
@@ -50,7 +48,7 @@ export default function PaymentDetailSheet({
                         <div className="space-y-6">
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Status
+                                    {t('Status')}
                                 </h3>
                                 <StatusBadge
                                     domain="payment"
@@ -65,19 +63,22 @@ export default function PaymentDetailSheet({
 
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Details
+                                    {t('Details')}
                                 </h3>
                                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                     <DetailRow
-                                        label="Amount"
-                                        value={formatPrice(payment.amount, payment.currency)}
+                                        label={t('Amount')}
+                                        value={formatPrice(
+                                            payment.amount,
+                                            payment.currency,
+                                        )}
                                     />
                                     <DetailRow
-                                        label="Paid on"
+                                        label={t('Paid on')}
                                         value={formatDate(payment.payment_date)}
                                     />
                                     <DetailRow
-                                        label="Method"
+                                        label={t('Method')}
                                         value={
                                             PAYMENT_METHOD_LABELS[
                                                 payment.payment_method
@@ -85,17 +86,17 @@ export default function PaymentDetailSheet({
                                         }
                                     />
                                     <DetailRow
-                                        label="Reference"
+                                        label={t('Reference')}
                                         value={
                                             payment.invoice?.reference ?? '—'
                                         }
                                     />
                                     <DetailRow
-                                        label="Confirmed by"
+                                        label={t('Confirmed by')}
                                         value={confirmedByName}
                                     />
                                     <DetailRow
-                                        label="Verified"
+                                        label={t('Verified')}
                                         value={formatDate(verifiedDate)}
                                     />
                                 </div>
@@ -104,7 +105,7 @@ export default function PaymentDetailSheet({
                             {payment.notes && (
                                 <section>
                                     <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                        Notes
+                                        {t('Notes')}
                                     </h3>
                                     <div className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
                                         {payment.notes}
@@ -114,7 +115,7 @@ export default function PaymentDetailSheet({
 
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Proofs
+                                    {t('Proofs')}
                                 </h3>
                                 <div className="rounded-lg border p-4">
                                     {payment.proofs.length > 0 ? (
@@ -139,7 +140,7 @@ export default function PaymentDetailSheet({
                                         </div>
                                     ) : (
                                         <p className="text-sm text-muted-foreground">
-                                            No proofs uploaded.
+                                            {t('No proofs uploaded.')}
                                         </p>
                                     )}
                                 </div>
@@ -158,7 +159,7 @@ export default function PaymentDetailSheet({
                                         }
                                     >
                                         <Check className="size-4" />
-                                        Confirm
+                                        {t('Confirm')}
                                     </Button>
                                     <Button
                                         type="button"
@@ -169,7 +170,7 @@ export default function PaymentDetailSheet({
                                         }
                                     >
                                         <X className="size-4" />
-                                        Reject
+                                        {t('Reject')}
                                     </Button>
                                 </>
                             )}
@@ -179,7 +180,7 @@ export default function PaymentDetailSheet({
                                 variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Close
+                                {t('Close')}
                             </Button>
                         </div>
                     </div>

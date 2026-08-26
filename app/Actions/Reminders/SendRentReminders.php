@@ -8,6 +8,7 @@ use App\Events\Reminder\InvoiceReminderDispatched;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Repositories\ReminderRepository;
+use App\Services\Localization\ApplicationLocale;
 use Illuminate\Database\Eloquent\Collection;
 
 class SendRentReminders
@@ -17,10 +18,13 @@ class SendRentReminders
     public function __construct(
         private PaymentReminderScheduler $scheduler,
         private ReminderRepository $repository,
+        private ApplicationLocale $locale,
     ) {}
 
     public function execute(?Lease $lease = null): int
     {
+        $this->locale->apply();
+
         $settings = new ReminderSettings(
             enabled: Setting::get('reminder_enabled') ?? true,
             daysBefore: Setting::get('reminder_days_before') ?? 3,

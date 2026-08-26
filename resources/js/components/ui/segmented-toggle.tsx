@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 type SegmentedToggleProps = {
@@ -48,7 +49,7 @@ export function SegmentedToggle({
                             : 'text-muted-foreground',
                     )}
                 >
-                    {option.label}
+                    {t(option.label)}
                 </button>
             ))}
         </div>

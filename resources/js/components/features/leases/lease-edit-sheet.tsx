@@ -19,6 +19,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { DUE_DAY_OPTIONS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/properties/units/leases';
 import type { Lease } from '@/types';
 
@@ -62,33 +63,34 @@ export default function LeaseEditSheet({
         <Sheet key={lease.id} open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Edit Lease</SheetTitle>
+                    <SheetTitle>{t('Edit Lease')}</SheetTitle>
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto px-4">
                     <form onSubmit={handleSubmit} className="space-y-6 pt-4">
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Occupancy
+                                {t('Occupancy')}
                             </h3>
                             <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
                                 <div>
                                     <p className="mb-1 text-xs text-muted-foreground">
-                                        Tenants
+                                        {t('Tenants')}
                                     </p>
                                     <div className="space-y-1">
                                         {(lease.tenants ?? []).length > 0
-                                            ? lease.tenants.map((t) => (
+                                            ? lease.tenants.map((tenant) => (
                                                   <div
-                                                      key={t.id}
+                                                      key={tenant.id}
                                                       className="flex items-center justify-between text-sm"
                                                   >
                                                       <span className="font-medium">
-                                                          {t.name}
+                                                          {tenant.name}
                                                       </span>
-                                                      {t.pivot?.is_primary && (
-                                                          <span className="text-[10px] font-medium text-blue-600 uppercase">
-                                                              Primary
+                                                      {tenant.pivot
+                                                          ?.is_primary && (
+                                                          <span className="text-xs font-medium text-blue-600 uppercase">
+                                                              {t('Primary')}
                                                           </span>
                                                       )}
                                                   </div>
@@ -102,8 +104,8 @@ export default function LeaseEditSheet({
                                                                   .name
                                                           }
                                                       </span>
-                                                      <span className="text-[10px] font-medium text-primary uppercase">
-                                                          Primary
+                                                      <span className="text-xs font-medium text-primary uppercase">
+                                                          {t('Primary')}
                                                       </span>
                                                   </div>
                                               )}
@@ -111,7 +113,7 @@ export default function LeaseEditSheet({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">
-                                        Unit
+                                        {t('Unit')}
                                     </span>
                                     <span className="font-medium">
                                         {lease.unit?.name}
@@ -119,7 +121,7 @@ export default function LeaseEditSheet({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">
-                                        Property
+                                        {t('Property')}
                                     </span>
                                     <span className="font-medium">
                                         {lease.unit?.property?.name ?? '—'}
@@ -127,7 +129,7 @@ export default function LeaseEditSheet({
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">
-                                        Start date
+                                        {t('Start date')}
                                     </span>
                                     <span className="tabular-nums">
                                         {formatDate(lease.start_date)}
@@ -138,13 +140,13 @@ export default function LeaseEditSheet({
 
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Rent & Terms
+                                {t('Rent & Terms')}
                             </h3>
 
                             <div className="flex items-start gap-4">
                                 <div className="min-w-0 flex-1">
                                     <Label htmlFor="rent_amount">
-                                        Rent Amount ({currency})
+                                        {t('Rent Amount')} ({currency})
                                     </Label>
                                     <Input
                                         id="rent_amount"
@@ -159,14 +161,14 @@ export default function LeaseEditSheet({
                                                 e.target.value,
                                             )
                                         }
-                                        placeholder="Rent amount"
+                                        placeholder={t('Rent amount')}
                                     />
                                     <InputError message={errors.rent_amount} />
                                 </div>
 
                                 <div className="shrink-0">
                                     <Label htmlFor="rent_due_day">
-                                        Rent Due Every Month
+                                        {t('Rent Due Every Month')}
                                     </Label>
                                     <Select
                                         value={data.rent_due_day}
@@ -183,7 +185,7 @@ export default function LeaseEditSheet({
                                                     key={opt.value}
                                                     value={opt.value}
                                                 >
-                                                    {opt.label}
+                                                    {t(opt.label)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -195,21 +197,24 @@ export default function LeaseEditSheet({
 
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Deposit
+                                {t('Deposit')}
                             </h3>
                             <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">
-                                        Amount
+                                        {t('Amount')}
                                     </span>
                                     <span className="font-medium tabular-nums">
-                                        {formatPrice(lease.deposit_amount, lease.currency)}
+                                        {formatPrice(
+                                            lease.deposit_amount,
+                                            lease.currency,
+                                        )}
                                     </span>
                                 </div>
                                 {lease.deposit_paid_at && (
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                            Paid at
+                                            {t('Paid at')}
                                         </span>
                                         <span className="tabular-nums">
                                             {formatDate(lease.deposit_paid_at)}
@@ -220,7 +225,7 @@ export default function LeaseEditSheet({
 
                             <div className="mt-4 grid gap-2">
                                 <Label htmlFor="deposit_refunded_at">
-                                    Deposit Refunded At
+                                    {t('Deposit Refunded At')}
                                 </Label>
                                 <Input
                                     id="deposit_refunded_at"
@@ -236,7 +241,9 @@ export default function LeaseEditSheet({
                                 />
                                 {noDeposit && (
                                     <p className="text-xs text-muted-foreground">
-                                        No deposit was collected for this lease.
+                                        {t(
+                                            'No deposit was collected for this lease.',
+                                        )}
                                     </p>
                                 )}
                                 <InputError
@@ -247,7 +254,7 @@ export default function LeaseEditSheet({
 
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Notes
+                                {t('Notes')}
                             </h3>
                             <div className="grid gap-2">
                                 <Textarea
@@ -256,7 +263,7 @@ export default function LeaseEditSheet({
                                     onChange={(e) =>
                                         setData('notes', e.target.value)
                                     }
-                                    placeholder="Additional notes"
+                                    placeholder={t('Additional notes')}
                                 />
                                 <InputError message={errors.notes} />
                             </div>
@@ -269,9 +276,9 @@ export default function LeaseEditSheet({
                                 onClick={() => onOpenChange(false)}
                                 disabled={processing}
                             >
-                                Cancel
+                                {t('Cancel')}
                             </Button>
-                            <Button disabled={processing}>Save</Button>
+                            <Button disabled={processing}>{t('Save')}</Button>
                         </div>
                     </form>
                 </div>

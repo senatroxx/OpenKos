@@ -16,6 +16,7 @@ import {
     SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { t } from '@/lib/i18n';
 import type { NavItem, NavSection } from '@/types';
 
 export function NavMain({
@@ -56,7 +57,7 @@ export function NavMain({
         <div className="flex flex-col gap-4 py-1">
             {displaySections.map((section) => (
                 <SidebarGroup key={section.title} className="px-2 py-0">
-                    <SidebarGroupLabel>{section.title}</SidebarGroupLabel>
+                    <SidebarGroupLabel>{t(section.title)}</SidebarGroupLabel>
                     <SidebarMenu className="gap-0.5">
                         {section.items.map((item) => {
                             const hasMultipleChildren =
@@ -78,11 +79,11 @@ export function NavMain({
                                             <CollapsibleTrigger asChild>
                                                 <SidebarMenuButton
                                                     tooltip={{
-                                                        children: item.title,
+                                                        children: t(item.title),
                                                     }}
                                                 >
                                                     {item.icon && <item.icon />}
-                                                    <span>{item.title}</span>
+                                                    <span>{t(item.title)}</span>
                                                     <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
                                                 </SidebarMenuButton>
                                             </CollapsibleTrigger>
@@ -113,9 +114,9 @@ export function NavMain({
                                                                             <child.icon />
                                                                         )}
                                                                         <span>
-                                                                            {
-                                                                                child.title
-                                                                            }
+                                                                            {t(
+                                                                                child.title,
+                                                                            )}
                                                                         </span>
                                                                     </Link>
                                                                 </SidebarMenuSubButton>
@@ -137,11 +138,11 @@ export function NavMain({
                                     <SidebarMenuButton
                                         asChild
                                         isActive={checkItemActive(item)}
-                                        tooltip={{ children: item.title }}
+                                        tooltip={{ children: t(item.title) }}
                                     >
                                         <Link href={targetHref} prefetch>
                                             {item.icon && <item.icon />}
-                                            <span>{item.title}</span>
+                                            <span>{t(item.title)}</span>
                                         </Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>

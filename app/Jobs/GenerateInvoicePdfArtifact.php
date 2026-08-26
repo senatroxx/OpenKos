@@ -6,6 +6,7 @@ use App\Actions\Invoices\GenerateInvoicePdf;
 use App\Models\Invoice;
 use App\Models\Setting;
 use App\Services\Invoices\InvoicePdfArtifact;
+use App\Services\Localization\ApplicationLocale;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,25 +28,33 @@ class GenerateInvoicePdfArtifact implements ShouldBeUnique, ShouldQueue
         return "invoice-pdf:{$this->invoiceId}:{$this->fingerprint}";
     }
 
-    public function handle(InvoicePdfArtifact $artifact, GenerateInvoicePdf $renderer): void
+    public function handle(InvoicePdfArtifact $artifact, GenerateInvoicePdf $renderer, ApplicationLocale $locale): void
     {
-        if (! Setting::get('invoice_pdf_enabled')) {
-            return;
+        $previousLocale = app()->getLocale();
+
+        try {
+            $locale->apply();
+
+            if (! Setting::get('invoice_pdf_enabled')) {
+                return;
+            }
+
+            $invoice = Invoice::find($this->invoiceId);
+
+            if (! $invoice) {
+                return;
+            }
+
+            $currentFingerprint = $artifact->fingerprint($invoice);
+            if ($currentFingerprint !== $this->fingerprint) {
+                self::dispatch($invoice->getKey(), $currentFingerprint);
+
+                return;
+            }
+
+            $artifact->generate($invoice, $this->fingerprint, $renderer->execute($invoice));
+        } finally {
+            app()->setLocale($previousLocale);
         }
-
-        $invoice = Invoice::find($this->invoiceId);
-
-        if (! $invoice) {
-            return;
-        }
-
-        $currentFingerprint = $artifact->fingerprint($invoice);
-        if ($currentFingerprint !== $this->fingerprint) {
-            self::dispatch($invoice->getKey(), $currentFingerprint);
-
-            return;
-        }
-
-        $artifact->generate($invoice, $this->fingerprint, $renderer->execute($invoice));
     }
 }

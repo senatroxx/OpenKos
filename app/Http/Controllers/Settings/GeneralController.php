@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateBrandingRequest;
 use App\Models\Setting;
 use App\Models\UnitRate;
+use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Settings\InstallationCurrencySettings;
 use Illuminate\Http\RedirectResponse;
@@ -23,6 +24,7 @@ class GeneralController extends Controller
     public function __construct(
         private UpdateSettings $updateSettings,
         private UpdateBranding $updateBranding,
+        private ApplicationLocale $locale,
         private InstallationCurrencySettings $currencies,
     ) {}
 
@@ -38,17 +40,27 @@ class GeneralController extends Controller
             'invoice_id_prefix',
             'invoice_pdf_enabled',
         ]);
+        $settings['locale'] = $this->locale->resolve($settings['locale'] ?? null);
         $settings['currency'] = $this->currencies->default();
         $settings['supported_currencies'] = $this->currencies->supported();
 
         return Inertia::render('settings/general', [
             'settings' => $settings,
+            'locale_options' => $this->locale->options(),
             'timezone_list' => timezone_identifiers_list(),
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
+        if (is_string($request->input('locale'))) {
+            $normalizedLocale = $this->locale->normalize($request->input('locale'));
+
+            if ($normalizedLocale !== null) {
+                $request->merge(['locale' => $normalizedLocale]);
+            }
+        }
+
         $this->normalizeCurrencyInput($request);
 
         if ($request->exists('currency') || $request->exists('supported_currencies')) {
@@ -74,7 +86,13 @@ class GeneralController extends Controller
         $validated = $request->validate([
             'site_name' => ['sometimes', 'required', 'string', 'max:255'],
             'country_code' => ['sometimes', 'required', 'string', 'size:2', 'regex:/^[A-Z]+$/'],
-            'locale' => ['sometimes', 'required', 'string', 'max:10'],
+            'locale' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:10',
+                Rule::in(array_keys($this->locale->options())),
+            ],
             'currency' => ['sometimes', 'required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/', Rule::in(array_keys(app(MoneyConverter::class)->scales()))],
             'supported_currencies' => ['sometimes', 'required', 'array', 'list', 'min:1'],
             'supported_currencies.*' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/', 'distinct:strict', Rule::in(array_keys(app(MoneyConverter::class)->scales()))],
@@ -83,6 +101,10 @@ class GeneralController extends Controller
             'invoice_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
             'invoice_pdf_enabled' => ['sometimes', 'boolean'],
         ]);
+
+        if (array_key_exists('locale', $validated)) {
+            $validated['locale'] = $this->locale->normalize($validated['locale']);
+        }
 
         $nextDefault = $validated['currency'] ?? (
             $useFreshCurrencySettings
@@ -111,6 +133,8 @@ class GeneralController extends Controller
         $removedCurrencies = array_values(array_diff($previousSupported, $nextSupported));
 
         $this->updateSettings->execute($validated, $request->user());
+
+        $this->locale->apply($validated['locale'] ?? null);
 
         $activeRemovedCurrencies = empty($removedCurrencies)
             ? []

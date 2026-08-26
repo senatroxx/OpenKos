@@ -4,6 +4,7 @@ import { LeaseDetailSheet, MoveOutSheet } from '@/components/features';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { AvailableUnit, Lease, Property, Unit } from '@/types';
 
@@ -59,7 +60,7 @@ export default function Index({
                 {leases.length === 0 ? (
                     <div className="flex flex-1 items-center justify-center rounded-lg border py-16">
                         <p className="text-muted-foreground">
-                            No lease history for this unit.
+                            {t('No lease history for this unit.')}
                         </p>
                     </div>
                 ) : (
@@ -68,31 +69,31 @@ export default function Index({
                             <thead>
                                 <tr className="border-b bg-muted/50 text-left text-muted-foreground">
                                     <th className="px-4 py-3 font-medium">
-                                        Reference
+                                        {t('Reference')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Tenant
+                                        {t('Tenant')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Start
+                                        {t('Start')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        End
+                                        {t('End')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Rent
+                                        {t('Rent')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Deposit
+                                        {t('Deposit')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Due Day
+                                        {t('Due Day')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Status
+                                        {t('Status')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Termination
+                                        {t('Termination')}
                                     </th>
                                 </tr>
                             </thead>
@@ -108,24 +109,30 @@ export default function Index({
                                         </td>
                                         <td className="px-4 py-3">
                                             {(lease.tenants ?? []).length > 0
-                                                ? lease.tenants.map((t) => (
-                                                      <div key={t.id}>
-                                                          <p className="font-medium">
-                                                              {t.name}
-                                                              {t.pivot
-                                                                  ?.is_primary && (
-                                                                  <span className="ml-1 text-[10px] font-medium text-primary uppercase">
-                                                                      Primary
-                                                                  </span>
-                                                              )}
-                                                          </p>
-                                                          {t.phone && (
-                                                              <p className="text-xs text-muted-foreground">
-                                                                  {t.phone}
+                                                ? lease.tenants.map(
+                                                      (tenant) => (
+                                                          <div key={tenant.id}>
+                                                              <p className="font-medium">
+                                                                  {tenant.name}
+                                                                  {tenant.pivot
+                                                                      ?.is_primary && (
+                                                                      <span className="ml-1 text-xs font-medium text-primary uppercase">
+                                                                          {t(
+                                                                              'Primary',
+                                                                          )}
+                                                                      </span>
+                                                                  )}
                                                               </p>
-                                                          )}
-                                                      </div>
-                                                  ))
+                                                              {tenant.phone && (
+                                                                  <p className="text-xs text-muted-foreground">
+                                                                      {
+                                                                          tenant.phone
+                                                                      }
+                                                                  </p>
+                                                              )}
+                                                          </div>
+                                                      ),
+                                                  )
                                                 : lease.primary_tenant && (
                                                       <div>
                                                           <p className="font-medium">
@@ -155,7 +162,10 @@ export default function Index({
                                             {formatDate(lease.end_date)}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
-                                            {formatPrice(lease.rent_amount, lease.currency)}
+                                            {formatPrice(
+                                                lease.rent_amount,
+                                                lease.currency,
+                                            )}
                                             {lease.billing_label}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">

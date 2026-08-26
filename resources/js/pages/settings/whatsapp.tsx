@@ -17,6 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { t } from '@/lib/i18n';
 import {
     edit as editWhatsApp,
     update as updateWhatsApp,
@@ -68,7 +69,9 @@ export default function WhatsApp({
         drivers[0];
     const fields = currentDriver?.configuration_schema ?? {};
 
-    const rawDriverKey = activeDriverName.replace(/^openkos\//, '').replace(/^whatsapp-/, '');
+    const rawDriverKey = activeDriverName
+        .replace(/^openkos\//, '')
+        .replace(/^whatsapp-/, '');
     const driverConfig =
         data.whatsapp_config[activeDriverName] ??
         data.whatsapp_config[rawDriverKey] ??
@@ -82,143 +85,158 @@ export default function WhatsApp({
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-lg font-medium">WhatsApp settings</h2>
+                <h2 className="text-lg font-medium">
+                    {t('WhatsApp settings')}
+                </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Configure the active WhatsApp driver and its credentials.
+                    {t(
+                        'Configure the active WhatsApp driver and its credentials.',
+                    )}
                 </p>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
                 <form onSubmit={handleSubmit}>
                     <Card>
-                    <CardHeader>
-                        <CardTitle>WhatsApp Driver</CardTitle>
-                        <CardDescription>
-                            Select the active WhatsApp driver and configure its
-                            credentials.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid max-w-xs gap-2">
-                            <Label htmlFor="whatsapp_driver">Driver</Label>
-                            <Select
-                                value={driver}
-                                onValueChange={(value) =>
-                                    setData('whatsapp_driver', value)
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {drivers.map((d) => (
-                                        <SelectItem key={d.name} value={d.name}>
-                                            {d.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {errors.whatsapp_driver && (
-                                <p className="text-sm text-red-600">
-                                    {errors.whatsapp_driver}
-                                </p>
-                            )}
-                        </div>
-
-                        {Object.keys(fields).length > 0 && (
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
-                                Values saved below override environment defaults.
-                                Leave fields blank to use environment variable
-                                fallbacks.
+                        <CardHeader>
+                            <CardTitle>{t('WhatsApp Driver')}</CardTitle>
+                            <CardDescription>
+                                {t(
+                                    'Select the active WhatsApp driver and configure its credentials.',
+                                )}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid max-w-xs gap-2">
+                                <Label htmlFor="whatsapp_driver">
+                                    {t('Driver')}
+                                </Label>
+                                <Select
+                                    value={driver}
+                                    onValueChange={(value) =>
+                                        setData('whatsapp_driver', value)
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {drivers.map((d) => (
+                                            <SelectItem
+                                                key={d.name}
+                                                value={d.name}
+                                            >
+                                                {d.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {errors.whatsapp_driver && (
+                                    <p className="text-sm text-red-600">
+                                        {errors.whatsapp_driver}
+                                    </p>
+                                )}
                             </div>
-                        )}
 
-                        {Object.keys(fields).length > 0 &&
-                            Object.entries(fields).map(([key, field]) => {
-                                const fieldError =
-                                    errors[
-                                        `whatsapp_config.${driver}.${key}` as keyof typeof errors
-                                    ];
+                            {Object.keys(fields).length > 0 && (
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                                    {t(
+                                        'Values saved below override environment defaults. Leave fields blank to use environment variable fallbacks.',
+                                    )}
+                                </div>
+                            )}
 
-                                return (
-                                    <div
-                                        key={key}
-                                        className="grid max-w-xs gap-2"
-                                    >
-                                        <Label htmlFor={`config-${key}`}>
-                                            {field.label}
-                                            {field.required && (
-                                                <span className="text-destructive">
-                                                    {' '}
-                                                    *
-                                                </span>
+                            {Object.keys(fields).length > 0 &&
+                                Object.entries(fields).map(([key, field]) => {
+                                    const fieldError =
+                                        errors[
+                                            `whatsapp_config.${driver}.${key}` as keyof typeof errors
+                                        ];
+
+                                    return (
+                                        <div
+                                            key={key}
+                                            className="grid max-w-xs gap-2"
+                                        >
+                                            <Label htmlFor={`config-${key}`}>
+                                                {t(field.label)}
+                                                {field.required && (
+                                                    <span className="text-destructive">
+                                                        {' '}
+                                                        *
+                                                    </span>
+                                                )}
+                                            </Label>
+                                            <Input
+                                                id={`config-${key}`}
+                                                name={`whatsapp_config[${driver}][${key}]`}
+                                                type={
+                                                    field.type === 'password'
+                                                        ? 'password'
+                                                        : field.type === 'url'
+                                                          ? 'url'
+                                                          : 'text'
+                                                }
+                                                value={driverConfig[key] ?? ''}
+                                                onChange={(e) =>
+                                                    setData('whatsapp_config', {
+                                                        ...data.whatsapp_config,
+                                                        [driver]: {
+                                                            ...data
+                                                                .whatsapp_config[
+                                                                driver
+                                                            ],
+                                                            [key]: e.target
+                                                                .value,
+                                                        },
+                                                    })
+                                                }
+                                                placeholder={
+                                                    field.placeholder ?? ''
+                                                }
+                                            />
+                                            {fieldError && (
+                                                <p className="text-sm text-red-600">
+                                                    {fieldError}
+                                                </p>
                                             )}
-                                        </Label>
-                                        <Input
-                                            id={`config-${key}`}
-                                            name={`whatsapp_config[${driver}][${key}]`}
-                                            type={
-                                                field.type === 'password'
-                                                    ? 'password'
-                                                    : field.type === 'url'
-                                                      ? 'url'
-                                                      : 'text'
-                                            }
-                                            value={driverConfig[key] ?? ''}
-                                            onChange={(e) =>
-                                                setData('whatsapp_config', {
-                                                    ...data.whatsapp_config,
-                                                    [driver]: {
-                                                        ...data.whatsapp_config[
-                                                            driver
-                                                        ],
-                                                        [key]: e.target.value,
-                                                    },
-                                                })
-                                            }
-                                            placeholder={
-                                                field.placeholder ?? ''
-                                            }
-                                        />
-                                        {fieldError && (
-                                            <p className="text-sm text-red-600">
-                                                {fieldError}
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                    </CardContent>
-                    <CardFooter>
-                        <Button disabled={processing}>Save</Button>
-                    </CardFooter>
+                                        </div>
+                                    );
+                                })}
+                        </CardContent>
+                        <CardFooter>
+                            <Button disabled={processing}>{t('Save')}</Button>
+                        </CardFooter>
                     </Card>
                 </form>
 
                 <Card>
-                <CardHeader>
-                    <CardTitle>Test Connection</CardTitle>
-                    <CardDescription>
-                        Verify that the active WhatsApp driver is working
-                        correctly.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                        A health check will be performed on the active driver.
-                    </p>
-                </CardContent>
-                <CardFooter>
-                    <Button variant="secondary" asChild>
-                        <Link
-                            href={testWhatsApp.url()}
-                            method="post"
-                            as="button"
-                        >
-                            Test Connection
-                        </Link>
-                    </Button>
-                </CardFooter>
+                    <CardHeader>
+                        <CardTitle>{t('Test Connection')}</CardTitle>
+                        <CardDescription>
+                            {t(
+                                'Verify that the active WhatsApp driver is working correctly.',
+                            )}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">
+                            {t(
+                                'A health check will be performed on the active driver.',
+                            )}
+                        </p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button variant="secondary" asChild>
+                            <Link
+                                href={testWhatsApp.url()}
+                                method="post"
+                                as="button"
+                            >
+                                {t('Test Connection')}
+                            </Link>
+                        </Button>
+                    </CardFooter>
                 </Card>
             </div>
         </div>

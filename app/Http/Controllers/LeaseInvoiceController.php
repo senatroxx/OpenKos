@@ -9,6 +9,7 @@ use App\Models\Lease;
 use App\Models\PaymentAttempt;
 use App\Models\Setting;
 use App\Services\Invoices\InvoicePdfArtifact;
+use App\Services\Localization\ApplicationLocale;
 use App\Services\Payments\SignedInvoicePaymentLink;
 use App\Support\DateTimeFormatter;
 use App\Tables\Column;
@@ -148,7 +149,7 @@ class LeaseInvoiceController extends Controller
         };
     }
 
-    public function print(Lease $lease, Invoice $invoice): ViewContract
+    public function print(Lease $lease, Invoice $invoice, ApplicationLocale $locale): ViewContract
     {
         abort_if($invoice->lease_id !== $lease->id, 404);
 
@@ -166,12 +167,13 @@ class LeaseInvoiceController extends Controller
         ]);
         $invoice->append(['outstanding', 'display_status']);
         $settings = Setting::some(['site_name', 'locale', 'currency']);
+        $resolvedLocale = $locale->resolve($settings['locale'] ?? null);
 
         return view('invoices.pdf', [
             'autoPrint' => true,
             'currency' => $invoice->currency,
             'invoice' => $invoice,
-            'locale' => $settings['locale'] ?? 'id',
+            'locale' => $resolvedLocale,
             'siteName' => $settings['site_name'] ?? config('app.name'),
         ]);
     }

@@ -4,11 +4,14 @@ namespace App\Actions\Invoices;
 
 use App\Models\Invoice;
 use App\Models\Setting;
+use App\Services\Localization\ApplicationLocale;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
 final class GenerateInvoicePdf
 {
+    public function __construct(private ApplicationLocale $locale) {}
+
     public function execute(Invoice $invoice): string
     {
         $invoice->loadMissing([
@@ -26,12 +29,13 @@ final class GenerateInvoicePdf
         $options = new Options;
         $options->setDefaultFont('DejaVu Sans');
         $options->setIsRemoteEnabled(false);
+        $resolvedLocale = $this->locale->resolve($settings['locale'] ?? null);
 
         $pdf = new Dompdf($options);
         $pdf->loadHtml(view('invoices.pdf', [
             'currency' => $invoice->currency,
             'invoice' => $invoice,
-            'locale' => $settings['locale'] ?? 'id',
+            'locale' => $resolvedLocale,
             'siteName' => $settings['site_name'] ?? config('app.name'),
         ])->render(), 'UTF-8');
         $pdf->setPaper('A4');

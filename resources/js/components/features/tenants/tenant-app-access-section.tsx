@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { appAccessStatus } from '@/lib/app-access';
 import { formatDate } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import tenants from '@/routes/tenants';
 import type { Tenant } from '@/types';
 
@@ -50,14 +51,14 @@ export default function TenantAppAccessSection({
     return (
         <div className="rounded-lg border bg-muted/30 p-4">
             <p className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                App Access
+                {t('App Access')}
             </p>
 
             {status === 'none' && (
                 <div className="space-y-3">
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
-                            Not activated
+                            {t('Not activated')}
                         </span>
                         <StatusBadge domain="app_access" value="none" />
                     </div>
@@ -66,7 +67,7 @@ export default function TenantAppAccessSection({
                         size="sm"
                         onClick={() => setInviteOpen(true)}
                     >
-                        Invite to App
+                        {t('Invite to App')}
                     </Button>
                 </div>
             )}
@@ -80,10 +81,10 @@ export default function TenantAppAccessSection({
                         <StatusBadge domain="app_access" value="email_only" />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Receives notifications. No portal access yet.
+                        {t('Receives notifications. No portal access yet.')}
                     </p>
                     <Button variant="outline" size="sm" onClick={handleResend}>
-                        Send Invitation
+                        {t('Send Invitation')}
                     </Button>
                 </div>
             )}
@@ -102,14 +103,14 @@ export default function TenantAppAccessSection({
                             size="sm"
                             onClick={handleResend}
                         >
-                            Resend Invitation
+                            {t('Resend Invitation')}
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setDisableConfirm(true)}
                         >
-                            Disable Access
+                            {t('Disable Access')}
                         </Button>
                     </div>
                 </div>
@@ -124,10 +125,10 @@ export default function TenantAppAccessSection({
                         <StatusBadge domain="app_access" value="disabled" />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Access disabled. Still receives notifications.
+                        {t('Access disabled. Still receives notifications.')}
                     </p>
                     <Button variant="outline" size="sm" onClick={handleResend}>
-                        Re-invite
+                        {t('Re-invite')}
                     </Button>
                 </div>
             )}
@@ -142,7 +143,7 @@ export default function TenantAppAccessSection({
                     </div>
                     {user.last_login_at && (
                         <p className="text-xs text-muted-foreground">
-                            Last login: {formatDate(user.last_login_at)}
+                            {t('Last login:')} {formatDate(user.last_login_at)}
                         </p>
                     )}
                     <div className="flex gap-2">
@@ -151,14 +152,14 @@ export default function TenantAppAccessSection({
                             size="sm"
                             onClick={handleResend}
                         >
-                            Resend Invitation
+                            {t('Resend Invitation')}
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => setDisableConfirm(true)}
                         >
-                            Disable Access
+                            {t('Disable Access')}
                         </Button>
                     </div>
                 </div>
@@ -173,13 +174,13 @@ export default function TenantAppAccessSection({
             <Dialog open={disableConfirm} onOpenChange={setDisableConfirm}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Disable app access</DialogTitle>
+                        <DialogTitle>{t('Disable app access')}</DialogTitle>
                         <DialogDescription>
-                            This signs{' '}
+                            {t('This signs')}{' '}
                             <span className="font-medium">{tenant.name}</span>{' '}
-                            out and revokes their portal access. They'll still
-                            receive notifications, and you can re-invite them
-                            later.
+                            {t(
+                                "out and revokes their portal access. They'll still receive notifications, and you can re-invite them later.",
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -187,10 +188,10 @@ export default function TenantAppAccessSection({
                             variant="outline"
                             onClick={() => setDisableConfirm(false)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmDisable}>
-                            Disable Access
+                            {t('Disable Access')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

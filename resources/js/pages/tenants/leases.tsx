@@ -42,7 +42,8 @@ const columns: TableColumn<Lease>[] = [
         key: 'rent_amount',
         label: 'Rent',
         sortable: true,
-        render: (l) => `${formatPrice(l.rent_amount, l.currency)} ${l.billing_label ?? ''}`,
+        render: (l) =>
+            `${formatPrice(l.rent_amount, l.currency)} ${l.billing_label ?? ''}`,
     },
     {
         key: 'status',

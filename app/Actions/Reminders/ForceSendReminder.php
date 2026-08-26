@@ -10,6 +10,7 @@ use App\Events\Reminder\InvoiceReminderDispatched;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Repositories\ReminderRepository;
+use App\Services\Localization\ApplicationLocale;
 use Carbon\Carbon;
 
 class ForceSendReminder
@@ -17,10 +18,12 @@ class ForceSendReminder
     public function __construct(
         private PaymentReminderScheduler $scheduler,
         private ReminderRepository $repository,
+        private ApplicationLocale $locale,
     ) {}
 
     public function execute(Lease $lease): string
     {
+        $this->locale->apply();
         $lease->load(['primaryTenant.user']);
         $tenant = $lease->primaryTenant;
 

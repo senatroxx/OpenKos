@@ -1,5 +1,6 @@
 import { StatusBadge } from '@/components/shared/status-badge';
 import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import type { Unit } from '@/types';
 
 export default function UnitOverview({ unit }: { unit: Unit }) {
@@ -16,31 +17,35 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
         <div className="space-y-6">
             <div>
                 <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    Status
+                    {t('Status')}
                 </p>
                 <StatusBadge domain="unit" value={unit.status} />
             </div>
 
             <div>
                 <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    Unit Details
+                    {t('Unit Details')}
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-lg border bg-muted/30 p-4">
-                        <p className="text-xs text-muted-foreground">Floor</p>
+                        <p className="text-xs text-muted-foreground">
+                            {t('Floor')}
+                        </p>
                         <p className="mt-1 text-sm font-medium">
                             {unit.floor ?? '—'}
                         </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">
-                        <p className="text-xs text-muted-foreground">Size</p>
+                        <p className="text-xs text-muted-foreground">
+                            {t('Size')}
+                        </p>
                         <p className="mt-1 text-sm font-medium tabular-nums">
                             {unit.size_sqm ? `${unit.size_sqm} m²` : '—'}
                         </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">
                         <p className="text-xs text-muted-foreground">
-                            Capacity
+                            {t('Capacity')}
                         </p>
                         <p className="mt-1 text-sm font-medium tabular-nums">
                             {unit.capacity}
@@ -48,7 +53,7 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">
                         <p className="text-xs text-muted-foreground">
-                            Occupants
+                            {t('Occupants')}
                         </p>
                         <p className="mt-1 text-sm font-medium tabular-nums">
                             {allTenants.length} / {unit.capacity}
@@ -59,7 +64,7 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
                 {unit.active_rates && unit.active_rates.length > 0 && (
                     <div className="mt-4 rounded-lg border bg-muted/30 p-4">
                         <p className="mb-2 text-xs text-muted-foreground">
-                            Pricing
+                            {t('Pricing')}
                         </p>
                         {unit.active_rates.map((rate, i) => (
                             <div
@@ -84,7 +89,7 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
             {unit.description && (
                 <div>
                     <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        Description
+                        {t('Description')}
                     </p>
                     <p className="rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
                         {unit.description}
@@ -95,7 +100,7 @@ export default function UnitOverview({ unit }: { unit: Unit }) {
             {unit.notes && (
                 <div>
                     <p className="mb-2 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        Notes
+                        {t('Notes')}
                     </p>
                     <p className="rounded-lg border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
                         {unit.notes}

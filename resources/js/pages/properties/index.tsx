@@ -32,6 +32,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { ManagedProperty, PaginatedData, TableMeta } from '@/types';
 
@@ -125,13 +126,13 @@ export default function Index({
     const columns: TableColumn<ManagedProperty>[] = [
         {
             key: 'name',
-            label: 'Name',
+            label: t('Name'),
             sortable: true,
             className: 'font-medium',
         },
         {
             key: 'type',
-            label: 'Type',
+            label: t('Type'),
             sortable: true,
             render: (p) => (
                 <Badge variant="outline">{p.type_label ?? p.type}</Badge>
@@ -139,32 +140,32 @@ export default function Index({
         },
         {
             key: 'city',
-            label: 'City',
+            label: t('City'),
             sortable: true,
             className: 'text-muted-foreground',
             render: (p) => p.city?.name ?? '\u2014',
         },
         {
             key: 'units_count',
-            label: 'Total Units',
+            label: t('Total Units'),
             sortable: true,
             className: 'tabular-nums',
         },
         {
             key: 'occupied_units_count',
-            label: 'Occupied',
+            label: t('Occupied'),
             sortable: true,
             className: 'tabular-nums',
         },
         {
             key: 'tenants_count',
-            label: 'Tenants',
+            label: t('Tenants'),
             sortable: true,
             className: 'tabular-nums',
         },
         {
             key: '_status',
-            label: 'Status',
+            label: t('Status'),
             render: (p) => (
                 <StatusBadge
                     domain="property"
@@ -193,15 +194,15 @@ export default function Index({
                             onClick={() => router.get(properties.show.url(p))}
                         >
                             <ExternalLink className="size-4" />
-                            Open Workspace
+                            {t('Open Workspace')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openDetail(p)}>
                             <Eye className="size-4" />
-                            View
+                            {t('View')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(p)}>
                             <Pencil className="size-4" />
-                            Edit
+                            {t('Edit')}
                         </DropdownMenuItem>
                         {p.is_active ? (
                             <DropdownMenuItem
@@ -209,12 +210,12 @@ export default function Index({
                                 onClick={() => archive(p)}
                             >
                                 <Trash2 className="size-4" />
-                                Archive
+                                {t('Archive')}
                             </DropdownMenuItem>
                         ) : (
                             <DropdownMenuItem onClick={() => restore(p)}>
                                 <RotateCcw className="size-4" />
-                                Restore
+                                {t('Restore')}
                             </DropdownMenuItem>
                         )}
                     </DropdownMenuContent>
@@ -225,16 +226,16 @@ export default function Index({
 
     return (
         <>
-            <Head title="Properties" />
+            <Head title={t('Properties')} />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <Heading
-                        title="Properties"
-                        description="Manage your properties"
+                        title={t('Properties')}
+                        description={t('Manage your properties')}
                     />
 
-                    <Button onClick={openCreate}>New Property</Button>
+                    <Button onClick={openCreate}>{t('New Property')}</Button>
                 </div>
 
                 <FilterBar
@@ -248,7 +249,9 @@ export default function Index({
                             value={table.searchValue}
                             onChange={table.onSearchChange}
                             onClear={table.clearSearch}
-                            placeholder="Search by name, province, or city..."
+                            placeholder={t(
+                                'Search by name, province, or city...',
+                            )}
                         />
                     }
                 />
@@ -263,10 +266,10 @@ export default function Index({
                     perPage={currentPerPage}
                     onPageChange={table.goToPage}
                     onPerPageChange={table.setPerPage}
-                    noun="properties"
+                    noun={t('properties')}
                     empty={{
-                        message: 'No properties yet.',
-                        createLabel: 'Create your first property',
+                        message: t('No properties yet.'),
+                        createLabel: t('Create your first property'),
                         onCreate: openCreate,
                     }}
                 />
@@ -293,9 +296,9 @@ export default function Index({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Archive property</DialogTitle>
+                        <DialogTitle>{t('Archive property')}</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to archive{' '}
+                            {t('Are you sure you want to archive')}{' '}
                             <span className="font-medium">
                                 {archiveConfirm?.name}
                             </span>
@@ -307,10 +310,10 @@ export default function Index({
                             variant="outline"
                             onClick={() => setArchiveConfirm(null)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmArchive}>
-                            Archive
+                            {t('Archive')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
+import { t } from "@/lib/i18n"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -180,8 +181,8 @@ function Sidebar({
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetHeader className="sr-only">
-          <SheetTitle>Sidebar</SheetTitle>
-          <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+          <SheetTitle>{t("Sidebar")}</SheetTitle>
+          <SheetDescription>{t("Displays the mobile sidebar.")}</SheetDescription>
         </SheetHeader>
         <SheetContent
           data-sidebar="sidebar"
@@ -267,7 +268,7 @@ function SidebarTrigger({
       {...props}
     >
       {isMobile || state === "collapsed" ? <PanelLeftOpenIcon /> : <PanelLeftCloseIcon />}
-      <span className="sr-only">Toggle sidebar</span>
+      <span className="sr-only">{t("Toggle sidebar")}</span>
     </Button>
   )
 }
@@ -279,10 +280,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Toggle sidebar"
+      aria-label={t("Toggle sidebar")}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Toggle sidebar"
+      title={t("Toggle sidebar")}
       className={cn(
         "hover:after:bg-sidebar-border absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
@@ -398,7 +399,7 @@ function SidebarGroupLabel({
       data-slot="sidebar-group-label"
       data-sidebar="group-label"
       className={cn(
-        "text-sidebar-foreground/70 ring-sidebar-ring flex h-7 shrink-0 items-center rounded-md px-2 text-[11px] font-medium tracking-wider uppercase outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
+        "text-sidebar-foreground/70 ring-sidebar-ring flex h-7 shrink-0 items-center rounded-md px-2 text-xs font-medium tracking-wider uppercase outline-hidden transition-[margin,opacity] duration-200 ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
         "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:select-none group-data-[collapsible=icon]:pointer-events-none",
         className
       )}

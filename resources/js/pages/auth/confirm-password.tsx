@@ -8,32 +8,33 @@ import { InputError, PasswordInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { t } from '@/lib/i18n';
 import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {
     return (
         <>
-            <Head title="Confirm password" />
+            <Head title={t('Confirm password')} />
 
             <PasskeyVerify
                 routes={{
                     options: confirmOptions(),
                     submit: confirmStore(),
                 }}
-                label="Confirm with passkey"
-                loadingLabel="Confirming..."
-                separator="Or confirm with password"
+                label={t('Confirm with passkey')}
+                loadingLabel={t('Confirming...')}
+                separator={t('Or confirm with password')}
             />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <Label htmlFor="password">{t('Password')}</Label>
                             <PasswordInput
                                 id="password"
                                 name="password"
-                                placeholder="Password"
+                                placeholder={t('Password')}
                                 autoComplete="current-password"
                                 autoFocus
                             />
@@ -48,7 +49,7 @@ export default function ConfirmPassword() {
                                 data-test="confirm-password-button"
                             >
                                 {processing && <Spinner />}
-                                Confirm password
+                                {t('Confirm password')}
                             </Button>
                         </div>
                     </div>

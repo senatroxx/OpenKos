@@ -1,4 +1,5 @@
 import React from 'react';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 export type MetricVariant =
@@ -273,7 +274,7 @@ export function MetricCard({
             {progress !== undefined && (
                 <div className="mt-3">
                     <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
-                        <span>Progress</span>
+                        <span>{t('Progress')}</span>
                         <span className="tabular-nums">{progress}%</span>
                     </div>
                     <div

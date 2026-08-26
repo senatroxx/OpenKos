@@ -28,6 +28,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
+import { t } from '@/lib/i18n';
 import type { PropertyTypeOption } from '@/types';
 
 const BASE = '/settings/property-types';
@@ -65,12 +66,16 @@ function PropertyTypeFormSheet({
             <SheetContent className="sm:max-w-md">
                 <SheetHeader>
                     <SheetTitle>
-                        {editing ? 'Edit type' : 'New property type'}
+                        {editing ? t('Edit type') : t('New property type')}
                     </SheetTitle>
                     <SheetDescription>
                         {editing
-                            ? 'Rename this type. Its slug stays fixed so existing properties keep working.'
-                            : 'Add a classification. A slug is generated from the name.'}
+                            ? t(
+                                  'Rename this type. Its slug stays fixed so existing properties keep working.',
+                              )
+                            : t(
+                                  'Add a classification. A slug is generated from the name.',
+                              )}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -78,7 +83,7 @@ function PropertyTypeFormSheet({
                     <form onSubmit={handleSubmit}>
                         <div className="space-y-6 pt-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="label">Name</Label>
+                                <Label htmlFor="label">{t('Name')}</Label>
                                 <Input
                                     id="label"
                                     name="label"
@@ -86,7 +91,7 @@ function PropertyTypeFormSheet({
                                     onChange={(e) =>
                                         setData('label', e.target.value)
                                     }
-                                    placeholder="e.g. Guesthouse"
+                                    placeholder={t('e.g. Guesthouse')}
                                     required
                                 />
                                 <InputError message={errors.label} />
@@ -99,10 +104,10 @@ function PropertyTypeFormSheet({
                                     onClick={() => onOpenChange(false)}
                                     disabled={processing}
                                 >
-                                    Cancel
+                                    {t('Cancel')}
                                 </Button>
                                 <Button disabled={processing}>
-                                    {editing ? 'Save' : 'Add'}
+                                    {editing ? t('Save') : t('Add')}
                                 </Button>
                             </div>
                         </div>
@@ -157,21 +162,23 @@ export default function PropertyTypes({
         <div className="space-y-6">
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <h2 className="text-lg font-medium">Property Types</h2>
+                    <h2 className="text-lg font-medium">
+                        {t('Property Types')}
+                    </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        The classifications available when creating a property.
-                        Add your own (e.g. Kos, Riad, Guesthouse); deactivate
-                        ones you don&apos;t use.
+                        {t(
+                            "The classifications available when creating a property. Add your own (e.g. Kos, Riad, Guesthouse); deactivate ones you don't use.",
+                        )}
                     </p>
                 </div>
-                <Button onClick={openNew}>Add type</Button>
+                <Button onClick={openNew}>{t('Add type')}</Button>
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Types</CardTitle>
+                    <CardTitle>{t('Types')}</CardTitle>
                     <CardDescription>
-                        A type in use can be deactivated but not deleted.
+                        {t('A type in use can be deactivated but not deleted.')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -180,16 +187,16 @@ export default function PropertyTypes({
                             <thead>
                                 <tr className="border-b bg-muted/50 text-left text-muted-foreground">
                                     <th className="px-4 py-3 font-medium">
-                                        Label
+                                        {t('Label')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Slug
+                                        {t('Slug')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        In use
+                                        {t('In use')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
-                                        Active
+                                        {t('Active')}
                                     </th>
                                     <th className="px-4 py-3 font-medium" />
                                 </tr>
@@ -266,9 +273,9 @@ export default function PropertyTypes({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Delete type</DialogTitle>
+                        <DialogTitle>{t('Delete type')}</DialogTitle>
                         <DialogDescription>
-                            Delete{' '}
+                            {t('Delete')}{' '}
                             <span className="font-medium">
                                 {deleteConfirm?.label}
                             </span>
@@ -280,10 +287,10 @@ export default function PropertyTypes({
                             variant="outline"
                             onClick={() => setDeleteConfirm(null)}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button variant="destructive" onClick={confirmDelete}>
-                            Delete
+                            {t('Delete')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

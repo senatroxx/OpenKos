@@ -142,6 +142,7 @@ test('RentReminder still renders events without invoice context', function () {
 });
 
 test('RentReminder replaces every documented custom template placeholder', function () {
+    Setting::set('locale', 'en');
     Setting::set('reminder_message_template', ':name|:unit|:days|:amount|:date');
 
     $lease = new Lease;
@@ -160,7 +161,8 @@ test('RentReminder replaces every documented custom template placeholder', funct
     $content = (new RentReminder($event))->toMailChannel((object) ['name' => 'Ayu']);
 
     expect($content->plainTextBody)->toContain('Ayu|A-01|3|')
-        ->and($content->plainTextBody)->toContain('150.000.000|01 Aug 2026');
+        ->and($content->plainTextBody)->toContain('150,000,000')
+        ->and($content->plainTextBody)->toContain('01 Aug 2026');
 });
 
 test('RentReminder selects templates by reminder type', function () {

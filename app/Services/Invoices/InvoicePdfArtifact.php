@@ -5,11 +5,14 @@ namespace App\Services\Invoices;
 use App\Jobs\GenerateInvoicePdfArtifact;
 use App\Models\Invoice;
 use App\Models\Setting;
+use App\Services\Localization\ApplicationLocale;
 use Illuminate\Support\Facades\Storage;
 
 final class InvoicePdfArtifact
 {
     private const DISK = 'local';
+
+    public function __construct(private ApplicationLocale $locale) {}
 
     public function status(Invoice $invoice): string
     {
@@ -96,8 +99,13 @@ final class InvoicePdfArtifact
                 ->orderBy('id'),
         ]);
 
+        $settings = Setting::some(['site_name', 'locale', 'currency']);
+        $settings['locale'] = $this->locale->resolve($settings['locale'] ?? null);
+        $settings['display_timezone'] = config('app.display_timezone', 'UTC');
+
         $payload = [
-            'settings' => Setting::some(['site_name', 'locale', 'currency']),
+            'settings' => $settings,
+            'translation_catalogs' => $this->translationCatalogs($settings['locale']),
             'invoice' => $this->attributes($invoice, [
                 'id', 'reference', 'created_at', 'period_start', 'period_end',
                 'due_date', 'status', 'total', 'amount_paid',
@@ -121,6 +129,19 @@ final class InvoicePdfArtifact
         ];
 
         return hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR));
+    }
+
+    /** @return array<string, string|null> */
+    private function translationCatalogs(string $locale): array
+    {
+        $locales = array_values(array_unique([$locale, $this->locale->fallback()]));
+
+        return collect($locales)->mapWithKeys(function (string $catalogLocale): array {
+            $path = lang_path("{$catalogLocale}.json");
+            $hash = is_file($path) ? hash_file('sha256', $path) : false;
+
+            return [$catalogLocale => is_string($hash) ? $hash : null];
+        })->all();
     }
 
     /** @return array<string, mixed>|null */

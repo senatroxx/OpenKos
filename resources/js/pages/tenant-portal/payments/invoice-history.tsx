@@ -3,6 +3,7 @@ import { ChevronLeft } from 'lucide-react';
 import InvoiceActionItem from '@/components/features/payments/invoice-action-item';
 import PortalHistoryPagination from '@/components/features/payments/portal-history-pagination';
 import TenantLeaseContext from '@/components/features/tenant-portal/lease-context';
+import { t } from '@/lib/i18n';
 import { index as billingIndex } from '@/routes/portal/billing';
 import { invoices as invoiceHistory } from '@/routes/portal/billing/history';
 import type {
@@ -20,7 +21,7 @@ export default function InvoiceHistory({
 }) {
     return (
         <div className="flex flex-1 flex-col gap-6 p-4">
-            <Head title="Invoice history" />
+            <Head title={t('Invoice history')} />
 
             <Link
                 href={billingIndex({
@@ -29,13 +30,15 @@ export default function InvoiceHistory({
                 className="inline-flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
-                Back to billing
+                {t('Back to billing')}
             </Link>
 
             <div>
-                <h1 className="text-2xl font-semibold">Invoice history</h1>
+                <h1 className="text-2xl font-semibold">
+                    {t('Invoice history')}
+                </h1>
                 <p className="text-sm text-muted-foreground">
-                    Completed and closed invoices.
+                    {t('Completed and closed invoices.')}
                 </p>
             </div>
 
@@ -48,7 +51,7 @@ export default function InvoiceHistory({
 
             {invoices.data.length === 0 ? (
                 <p className="rounded-lg border p-4 text-sm text-muted-foreground">
-                    No completed invoices yet.
+                    {t('No completed invoices yet.')}
                 </p>
             ) : (
                 <div className="divide-y rounded-lg border">

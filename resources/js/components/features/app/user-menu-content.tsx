@@ -6,6 +6,7 @@ import {
     DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
+import { t } from '@/lib/i18n';
 import { logout } from '@/routes';
 import type { User } from '@/types';
 
@@ -37,7 +38,7 @@ export function UserMenuContent({ user }: Props) {
                     data-test="logout-button"
                 >
                     <LogOut className="mr-2" />
-                    Log out
+                    {t('Log out')}
                 </Link>
             </DropdownMenuItem>
         </>

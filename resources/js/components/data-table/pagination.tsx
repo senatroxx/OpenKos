@@ -6,6 +6,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { t } from '@/lib/i18n';
 import type { PaginatedData } from '@/types';
 
 type DataTablePaginationProps<T> = {
@@ -27,12 +28,13 @@ export function DataTablePagination<T>({
         <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
             <div className="flex items-center gap-4">
                 <p className="text-muted-foreground">
-                    Showing {data.from} to {data.to} of {data.total} {noun}
+                    {t('Showing')} {data.from} {t('to')} {data.to} {t('of')}{' '}
+                    {data.total} {t(noun)}
                 </p>
 
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                        Per page
+                        {t('Per page')}
                     </span>
                     <Select
                         value={String(perPage)}
@@ -59,7 +61,7 @@ export function DataTablePagination<T>({
                     disabled={data.current_page === 1}
                     onClick={() => onPageChange(data.current_page - 1)}
                 >
-                    Previous
+                    {t('Previous')}
                 </Button>
 
                 {data.links
@@ -81,7 +83,7 @@ export function DataTablePagination<T>({
                     disabled={data.current_page === data.last_page}
                     onClick={() => onPageChange(data.current_page + 1)}
                 >
-                    Next
+                    {t('Next')}
                 </Button>
             </div>
         </div>

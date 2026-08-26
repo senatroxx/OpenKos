@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Property, Unit } from '@/types';
 
@@ -59,7 +60,7 @@ export default function UnitDetailSheet({
                 <SheetHeader>
                     <SheetTitle>{unit?.name}</SheetTitle>
                     <SheetDescription>
-                        Unit details and occupancy
+                        {t('Unit details and occupancy')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -69,7 +70,7 @@ export default function UnitDetailSheet({
                             {/* Status */}
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Status
+                                    {t('Status')}
                                 </h3>
                                 <StatusBadge
                                     domain="unit"
@@ -80,18 +81,18 @@ export default function UnitDetailSheet({
                             {/* Unit Details */}
                             <section>
                                 <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                    Unit Details
+                                    {t('Unit Details')}
                                 </h3>
                                 <div className="space-y-2 rounded-lg border p-4">
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                            Floor
+                                            {t('Floor')}
                                         </span>
                                         <span>{unit.floor ?? '—'}</span>
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                            Size
+                                            {t('Size')}
                                         </span>
                                         <span className="tabular-nums">
                                             {unit.size_sqm
@@ -101,7 +102,7 @@ export default function UnitDetailSheet({
                                     </div>
                                     <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                            Capacity
+                                            {t('Capacity')}
                                         </span>
                                         <span className="tabular-nums">
                                             {unit.capacity}
@@ -111,7 +112,7 @@ export default function UnitDetailSheet({
                                         unit.active_rates.length > 0 && (
                                             <div className="border-t pt-2">
                                                 <p className="mb-2 text-xs text-muted-foreground">
-                                                    Pricing
+                                                    {t('Pricing')}
                                                 </p>
                                                 {unit.active_rates.map(
                                                     (rate, i) => (
@@ -149,12 +150,12 @@ export default function UnitDetailSheet({
                             {isOccupied && unit?.leases?.[0] && (
                                 <section>
                                     <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                        Current Occupancy
+                                        {t('Current Occupancy')}
                                     </h3>
                                     <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                                         <div>
                                             <p className="mb-2 text-xs text-muted-foreground">
-                                                Tenants (
+                                                {t('Tenants')} (
                                                 {unit.capacity > 0
                                                     ? `${allTenants.length}/${unit.capacity}`
                                                     : ''}
@@ -162,32 +163,34 @@ export default function UnitDetailSheet({
                                             </p>
                                             <div className="space-y-1">
                                                 {allTenants.length > 0 ? (
-                                                    allTenants.map((t) => (
+                                                    allTenants.map((tenant) => (
                                                         <div
-                                                            key={t.id}
+                                                            key={tenant.id}
                                                             className="flex items-center justify-between text-sm"
                                                         >
                                                             <span className="font-medium">
-                                                                {t.name}
+                                                                {tenant.name}
                                                             </span>
-                                                            {t.pivot
+                                                            {tenant.pivot
                                                                 ?.is_primary && (
-                                                                <span className="text-[10px] font-medium text-primary uppercase">
-                                                                    Primary
+                                                                <span className="text-xs font-medium text-primary uppercase">
+                                                                    {t(
+                                                                        'Primary',
+                                                                    )}
                                                                 </span>
                                                             )}
                                                         </div>
                                                     ))
                                                 ) : (
                                                     <span className="text-sm text-muted-foreground">
-                                                        No tenants
+                                                        {t('No tenants')}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                Billing rate
+                                                {t('Billing rate')}
                                             </span>
                                             <span className="font-medium tabular-nums">
                                                 {formatPrice(
@@ -199,7 +202,7 @@ export default function UnitDetailSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                Reference
+                                                {t('Reference')}
                                             </span>
                                             <span className="font-mono text-xs tabular-nums">
                                                 {unit.leases[0].reference ??
@@ -208,7 +211,7 @@ export default function UnitDetailSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                Monthly equivalent
+                                                {t('Monthly equivalent')}
                                             </span>
                                             <span className="tabular-nums">
                                                 {formatPrice(
@@ -221,7 +224,7 @@ export default function UnitDetailSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                Deposit
+                                                {t('Deposit')}
                                             </span>
                                             <span className="tabular-nums">
                                                 {formatPrice(
@@ -233,7 +236,7 @@ export default function UnitDetailSheet({
                                         </div>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-muted-foreground">
-                                                Due day
+                                                {t('Due day')}
                                             </span>
                                             <span className="tabular-nums">
                                                 {DUE_DAY_LABELS[
@@ -250,7 +253,7 @@ export default function UnitDetailSheet({
                             {unit.description && (
                                 <section>
                                     <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                        Description
+                                        {t('Description')}
                                     </h3>
                                     <p className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
                                         {unit.description}
@@ -262,7 +265,7 @@ export default function UnitDetailSheet({
                             {unit.notes && (
                                 <section>
                                     <h3 className="mb-3 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                        Notes
+                                        {t('Notes')}
                                     </h3>
                                     <p className="rounded-lg border p-4 text-sm whitespace-pre-wrap">
                                         {unit.notes}
@@ -274,7 +277,7 @@ export default function UnitDetailSheet({
                         <div className="flex flex-wrap items-center justify-end gap-4">
                             {onEdit && (
                                 <Button variant="outline" onClick={onEdit}>
-                                    Edit
+                                    {t('Edit')}
                                 </Button>
                             )}
                             {isOccupied && onMoveOut && (
@@ -282,18 +285,21 @@ export default function UnitDetailSheet({
                                     variant="destructive"
                                     onClick={onMoveOut}
                                 >
-                                    Move Out Tenant
+                                    {t('Move Out Tenant')}
                                 </Button>
                             )}
                             {isOccupied && onMoveUnit && (
                                 <Button variant="outline" onClick={onMoveUnit}>
-                                    Move Unit
+                                    {t('Move Unit')}
                                 </Button>
                             )}
                             {hasSpace && onAssignTenant && (
                                 <Button onClick={onAssignTenant}>
-                                    Assign Tenant
-                                    {unit.capacity > 1 ? '(s)' : ''}
+                                    {t(
+                                        unit.capacity > 1
+                                            ? 'Assign Tenants'
+                                            : 'Assign Tenant',
+                                    )}
                                 </Button>
                             )}
                             {unit && property && (
@@ -312,7 +318,7 @@ export default function UnitDetailSheet({
                                             );
                                         }}
                                     >
-                                        Lease History
+                                        {t('Lease History')}
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -328,7 +334,7 @@ export default function UnitDetailSheet({
                                             );
                                         }}
                                     >
-                                        Maintenance History
+                                        {t('Maintenance History')}
                                     </Button>
                                 </>
                             )}
@@ -336,7 +342,7 @@ export default function UnitDetailSheet({
                                 variant="outline"
                                 onClick={() => onOpenChange(false)}
                             >
-                                Close
+                                {t('Close')}
                             </Button>
                         </div>
                     </div>

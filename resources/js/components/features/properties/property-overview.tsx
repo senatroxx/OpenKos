@@ -1,5 +1,6 @@
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
+import { t } from '@/lib/i18n';
 import type { Property } from '@/types';
 
 export default function PropertyOverview({ property }: { property: Property }) {
@@ -18,7 +19,9 @@ export default function PropertyOverview({ property }: { property: Property }) {
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
+                <span className="text-sm text-muted-foreground">
+                    {t('Status:')}
+                </span>
                 <StatusBadge
                     domain="property"
                     value={property.is_active ? 'active' : 'archived'}
@@ -33,7 +36,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
             {property.address && (
                 <div>
                     <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        Address
+                        {t('Address')}
                     </p>
                     <p className="mt-1 text-sm">{property.address}</p>
                     {locationLabel && (
@@ -47,7 +50,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
             {!property.address && city && (
                 <div>
                     <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        City
+                        {t('City')}
                     </p>
                     <p className="mt-1 text-sm">{city.name}</p>
                 </div>
@@ -56,7 +59,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
             {property.phone && (
                 <div>
                     <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        Phone
+                        {t('Phone')}
                     </p>
                     <p className="mt-1 text-sm">{property.phone}</p>
                 </div>
@@ -64,7 +67,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
 
             <div>
                 <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    Statistics
+                    {t('Statistics')}
                 </p>
                 <div className="mt-2 grid grid-cols-3 gap-4">
                     <div className="rounded-lg border bg-muted/30 p-4">
@@ -72,7 +75,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
                             {property.units_count ?? 0}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Total Units
+                            {t('Total Units')}
                         </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">
@@ -80,14 +83,16 @@ export default function PropertyOverview({ property }: { property: Property }) {
                             {property.occupied_units_count ?? 0}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Occupied
+                            {t('Occupied')}
                         </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 p-4">
                         <p className="text-2xl font-semibold tabular-nums">
                             {property.tenants_count ?? 0}
                         </p>
-                        <p className="text-xs text-muted-foreground">Tenants</p>
+                        <p className="text-xs text-muted-foreground">
+                            {t('Tenants')}
+                        </p>
                     </div>
                 </div>
             </div>

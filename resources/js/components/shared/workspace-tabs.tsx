@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { PluginRegion } from '@/components/shared/plugin-region';
+import { t } from '@/lib/i18n';
 import { usePlatformTabs } from '@/lib/platform';
 
 export type WorkspaceTabDef = {
@@ -26,13 +27,13 @@ export function WorkspaceTabs({
 }) {
     const platformTabs = usePlatformTabs(workspace)
         .filter((t) => typeof t.meta.href === 'string')
-        .map((t) => ({
-            key: t.key,
-            label: t.label,
+        .map((tab) => ({
+            key: tab.key,
+            label: t(tab.label),
             href: Object.entries(hrefParams).reduce(
                 (href, [param, value]) =>
                     href.replaceAll(`{${param}}`, String(value)),
-                t.meta.href as string,
+                tab.meta.href as string,
             ),
         }));
 
@@ -42,17 +43,17 @@ export function WorkspaceTabs({
 
             <div className="mb-6 border-b">
                 <nav className="-mb-px flex gap-6">
-                    {[...tabs, ...platformTabs].map((t) => (
+                    {[...tabs, ...platformTabs].map((tab) => (
                         <Link
-                            key={t.key}
-                            href={t.href}
+                            key={tab.key}
+                            href={tab.href}
                             className={`pb-3 text-sm font-medium transition-colors ${
-                                activeTab === t.key
+                                activeTab === tab.key
                                     ? 'border-b-2 border-primary text-foreground'
                                     : 'text-muted-foreground hover:text-foreground'
                             }`}
                         >
-                            {t.label}
+                            {t(tab.label)}
                         </Link>
                     ))}
                 </nav>

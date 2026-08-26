@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import invoiceRoutes from '@/routes/leases/workspace/invoices';
 import paymentRoutes from '@/routes/payments';
 import type {
@@ -109,14 +110,16 @@ export default function InvoiceDetail({
 
     return (
         <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
-            <Head title={`Invoice ${invoice.reference} — Lease #${lease.id}`} />
+            <Head
+                title={`${t('Invoice')} ${invoice.reference} — ${t('Lease')} #${lease.id}`}
+            />
 
             <Link
                 href={`/leases/${lease.id}/invoices`}
                 className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
-                Back to invoices
+                {t('Back to invoices')}
             </Link>
 
             <div className="flex-1 space-y-6">
@@ -128,7 +131,7 @@ export default function InvoiceDetail({
                                 {invoice.reference ?? 'Invoice'}
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                {formatPeriod(invoice.period_start, 'id-ID')}
+                                {formatPeriod(invoice.period_start)}
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-3">
@@ -148,8 +151,8 @@ export default function InvoiceDetail({
                                         <Copy className="size-4" />
                                     )}
                                     {copiedText === paymentLink
-                                        ? 'Copied'
-                                        : 'Copy payment link'}
+                                        ? t('Copied')
+                                        : t('Copy payment link')}
                                 </Button>
                             )}
                             {invoicePdf.status === 'available' ? (
@@ -161,12 +164,12 @@ export default function InvoiceDetail({
                                         ])}
                                     >
                                         <Download className="size-4" />
-                                        Download PDF
+                                        {t('Download PDF')}
                                     </a>
                                 </Button>
                             ) : invoicePdf.status === 'pending' ? (
                                 <Button disabled size="sm" variant="outline">
-                                    PDF pending
+                                    {t('PDF pending')}
                                 </Button>
                             ) : (
                                 <Button asChild size="sm" variant="outline">
@@ -179,7 +182,7 @@ export default function InvoiceDetail({
                                         target="_blank"
                                     >
                                         <Printer className="size-4" />
-                                        Print / Save as PDF
+                                        {t('Print / Save as PDF')}
                                     </a>
                                 </Button>
                             )}
@@ -188,26 +191,36 @@ export default function InvoiceDetail({
 
                     <div className="mt-6 grid grid-cols-3 gap-4 text-sm">
                         <div>
-                            <p className="text-muted-foreground">Total</p>
+                            <p className="text-muted-foreground">
+                                {t('Total')}
+                            </p>
                             <p className="mt-1 font-medium tabular-nums">
                                 {formatPrice(invoice.total, invoice.currency)}
                             </p>
                         </div>
                         <div>
-                            <p className="text-muted-foreground">Paid</p>
+                            <p className="text-muted-foreground">{t('Paid')}</p>
                             <p className="mt-1 font-medium tabular-nums">
-                                {formatPrice(invoice.amount_paid, invoice.currency)}
-                            </p>
-                        </div>
-                        <div>
-                            <p className="text-muted-foreground">Outstanding</p>
-                            <p className="mt-1 font-medium tabular-nums">
-                                {formatPrice(invoice.outstanding ?? '0', invoice.currency)}
+                                {formatPrice(
+                                    invoice.amount_paid,
+                                    invoice.currency,
+                                )}
                             </p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">
-                                Billing period
+                                {t('Outstanding')}
+                            </p>
+                            <p className="mt-1 font-medium tabular-nums">
+                                {formatPrice(
+                                    invoice.outstanding ?? '0',
+                                    invoice.currency,
+                                )}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-muted-foreground">
+                                {t('Billing period')}
                             </p>
                             <p className="mt-1 tabular-nums">
                                 {formatDate(invoice.period_start)} —{' '}
@@ -215,7 +228,9 @@ export default function InvoiceDetail({
                             </p>
                         </div>
                         <div>
-                            <p className="text-muted-foreground">Due date</p>
+                            <p className="text-muted-foreground">
+                                {t('Due date')}
+                            </p>
                             <p className="mt-1 tabular-nums">
                                 {formatDate(invoice.due_date)}
                             </p>
@@ -228,7 +243,7 @@ export default function InvoiceDetail({
                     <div className="rounded-lg border">
                         <div className="border-b px-4 py-3">
                             <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                                Line Items
+                                {t('Line Items')}
                             </h3>
                         </div>
                         <div className="divide-y">
@@ -246,7 +261,10 @@ export default function InvoiceDetail({
                                         </p>
                                     </div>
                                     <p className="tabular-nums">
-                                        {formatPrice(item.amount, invoice.currency)}
+                                        {formatPrice(
+                                            item.amount,
+                                            invoice.currency,
+                                        )}
                                     </p>
                                 </div>
                             ))}
@@ -258,7 +276,7 @@ export default function InvoiceDetail({
                 <section className="rounded-lg border">
                     <div className="border-b px-4 py-3">
                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                            Activity timeline
+                            {t('Activity timeline')}
                         </h3>
                     </div>
                     {invoice.payments && invoice.payments.length > 0 ? (
@@ -278,11 +296,11 @@ export default function InvoiceDetail({
                                         <div className="flex items-center justify-between gap-3">
                                             <p className="font-medium">
                                                 {payment.status === 'confirmed'
-                                                    ? 'Payment confirmed'
+                                                    ? t('Payment confirmed')
                                                     : payment.status ===
                                                         'cancelled'
-                                                      ? 'Payment cancelled'
-                                                      : 'Payment submitted'}
+                                                      ? t('Payment cancelled')
+                                                      : t('Payment submitted')}
                                             </p>
                                             <StatusBadge
                                                 domain="payment"
@@ -296,7 +314,10 @@ export default function InvoiceDetail({
                                             ] ?? payment.payment_method}
                                         </p>
                                         <p className="mt-1 font-medium tabular-nums">
-                                            {formatPrice(payment.amount, payment.currency)}
+                                            {formatPrice(
+                                                payment.amount,
+                                                payment.currency,
+                                            )}
                                         </p>
                                     </div>
                                 </div>
@@ -304,7 +325,7 @@ export default function InvoiceDetail({
                         </div>
                     ) : (
                         <p className="px-4 py-6 text-sm text-muted-foreground">
-                            No payment activity yet.
+                            {t('No payment activity yet.')}
                         </p>
                     )}
                 </section>
@@ -313,7 +334,7 @@ export default function InvoiceDetail({
                 <section className="rounded-lg border">
                     <div className="border-b px-4 py-3">
                         <h3 className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                            Gateway attempts
+                            {t('Gateway attempts')}
                         </h3>
                     </div>
                     {gatewayAttempts.length > 0 ? (
@@ -327,10 +348,13 @@ export default function InvoiceDetail({
                                         <div className="min-w-0">
                                             <p className="font-medium">
                                                 {attempt.gateway ??
-                                                    'Payment gateway'}
+                                                    t('Payment gateway')}
                                             </p>
                                             <p className="mt-1 text-xs text-muted-foreground">
-                                            {formatPrice(attempt.amount, attempt.currency)}{' '}
+                                                {formatPrice(
+                                                    attempt.amount,
+                                                    attempt.currency,
+                                                )}{' '}
                                                 {attempt.currency}
                                             </p>
                                         </div>
@@ -342,34 +366,34 @@ export default function InvoiceDetail({
 
                                     <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                                         <p>
-                                            OpenKOS reference:{' '}
+                                            {t('OpenKOS reference:')}{' '}
                                             <span className="font-mono text-foreground">
                                                 {attempt.reference ?? '—'}
                                             </span>
                                         </p>
                                         <p>
-                                            Provider reference:{' '}
+                                            {t('Provider reference:')}{' '}
                                             <span className="font-mono text-foreground">
                                                 {attempt.provider_reference ??
                                                     '—'}
                                             </span>
                                         </p>
                                         <p>
-                                            Created:{' '}
+                                            {t('Created:')}{' '}
                                             {formatDate(
                                                 attempt.created_at ??
                                                     attempt.initiated_at,
                                             )}
                                         </p>
                                         <p>
-                                            Updated:{' '}
+                                            {t('Updated:')}{' '}
                                             {attempt.updated_at
                                                 ? formatDate(attempt.updated_at)
                                                 : '—'}
                                         </p>
                                         {attempt.expires_at && (
                                             <p>
-                                                Expires:{' '}
+                                                {t('Expires:')}{' '}
                                                 {formatDate(attempt.expires_at)}
                                             </p>
                                         )}
@@ -395,8 +419,8 @@ export default function InvoiceDetail({
                                         >
                                             <RefreshCw className="size-4" />
                                             {recheckingAttemptId === attempt.id
-                                                ? 'Checking…'
-                                                : 'Recheck status'}
+                                                ? t('Checking…')
+                                                : t('Recheck status')}
                                         </Button>
                                     )}
                                 </div>
@@ -404,15 +428,16 @@ export default function InvoiceDetail({
                         </div>
                     ) : (
                         <p className="px-4 py-6 text-sm text-muted-foreground">
-                            No gateway attempts yet.
+                            {t('No gateway attempts yet.')}
                         </p>
                     )}
                 </section>
 
                 {invoicePdf.status === 'pending' && (
                     <p className="text-right text-xs text-muted-foreground">
-                        A queue worker is preparing this PDF. Refresh this page
-                        when it is ready.
+                        {t(
+                            'A queue worker is preparing this PDF. Refresh this page when it is ready.',
+                        )}
                     </p>
                 )}
             </div>
@@ -436,7 +461,7 @@ export default function InvoiceDetail({
                     src={previewProof.src}
                     mimeType={previewProof.mimeType}
                     title={previewProof.name}
-                    subtitle="Payment Proof"
+                    subtitle={t('Payment Proof')}
                     onClose={() => setPreviewProof(null)}
                 />
             )}

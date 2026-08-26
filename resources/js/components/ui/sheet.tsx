@@ -5,6 +5,7 @@ import * as React from "react"
 import { Link } from "@inertiajs/react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { t } from "@/lib/i18n"
 
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
@@ -82,7 +83,7 @@ function SheetContent({
           )}
           <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none cursor-pointer">
             <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("Close")}</span>
           </SheetPrimitive.Close>
         </div>
       </SheetPrimitive.Content>

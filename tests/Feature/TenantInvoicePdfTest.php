@@ -127,6 +127,16 @@ test('tenant can open a print-ready invoice page', function () {
         ->assertSee('window.print()');
 });
 
+test('invoice print pages use the canonical fallback locale', function () {
+    Setting::set('locale', 'fr');
+    $fixture = createTenantInvoicePdfFixture();
+
+    $this->actingAs($fixture['user'])
+        ->get(route('portal.billing.invoices.print', $fixture['invoice']))
+        ->assertOk()
+        ->assertSee('<html lang="en">', false);
+});
+
 test('invoice print page preserves tenant ownership rules', function () {
     $fixture = createTenantInvoicePdfFixture();
     $otherUser = User::factory()->create();
@@ -189,6 +199,55 @@ test('invoice PDF artifacts are reused until rendered invoice data changes', fun
     Bus::assertDispatched(GenerateInvoicePdfArtifact::class);
 });
 
+test('invoice PDF fingerprints use canonical locale values', function () {
+    $fixture = createTenantInvoicePdfFixture();
+    $artifact = app(InvoicePdfArtifact::class);
+
+    Setting::set('locale', 'id-ID');
+    $aliasFingerprint = $artifact->fingerprint($fixture['invoice']);
+
+    Setting::set('locale', 'id');
+    expect($artifact->fingerprint($fixture['invoice']))
+        ->toBe($aliasFingerprint);
+});
+
+test('invoice PDF fingerprints change when translations change', function () {
+    $fixture = createTenantInvoicePdfFixture();
+    $artifact = app(InvoicePdfArtifact::class);
+    $path = lang_path('id.json');
+    $original = file_get_contents($path);
+
+    expect($original)->toBeString();
+
+    try {
+        $before = $artifact->fingerprint($fixture['invoice']);
+        file_put_contents($path, $original."\n");
+        $after = $artifact->fingerprint($fixture['invoice']);
+    } finally {
+        file_put_contents($path, $original);
+    }
+
+    expect($after)->not->toBe($before);
+});
+
+test('invoice PDF fingerprints change when the display timezone changes', function () {
+    $fixture = createTenantInvoicePdfFixture();
+    $artifact = app(InvoicePdfArtifact::class);
+    $originalTimezone = config('app.display_timezone');
+
+    try {
+        config(['app.display_timezone' => 'UTC']);
+        $before = $artifact->fingerprint($fixture['invoice']);
+
+        config(['app.display_timezone' => 'Asia/Jakarta']);
+        $after = $artifact->fingerprint($fixture['invoice']);
+    } finally {
+        config(['app.display_timezone' => $originalTimezone]);
+    }
+
+    expect($after)->not->toBe($before);
+});
+
 test('invoice PDF view reflects the current aggregate for each payable state', function (
     string $paymentAmount,
     InvoiceStatus $expectedStatus,
@@ -220,6 +279,7 @@ test('invoice PDF view reflects the current aggregate for each payable state', f
     $expectedLabel = $expectedStatus === InvoiceStatus::Partial
         ? 'Partially Paid'
         : $expectedStatus->label();
+    $expectedLabel = __($expectedLabel, [], 'id');
 
     expect($invoice->status)->toBe($expectedStatus)
         ->and($html)
@@ -227,9 +287,9 @@ test('invoice PDF view reflects the current aggregate for each payable state', f
         ->toContain($fixture['lease']->reference)
         ->toContain('Kos Sriwijaya')
         ->toContain('Unit A-01')
-        ->toContain('Bill To')
+        ->toContain(__('Bill To', [], 'id'))
         ->toContain(e($fixture['tenant']->name))
-        ->toContain('Tenant ID '.$fixture['tenant']->id)
+        ->toContain(__('Tenant ID', [], 'id').' '.$fixture['tenant']->id)
         ->toContain('john@example.com')
         ->toContain('+62 812 3456 7890')
         ->toContain((string) Number::currency((float) $invoice->total, in: 'IDR', locale: 'id', precision: 0))
@@ -272,12 +332,12 @@ test('invoice PDF renders confirmed payment details and history', function () {
     $html = renderTenantInvoicePdfView($invoice);
 
     expect($html)
-        ->toContain('Payments')
-        ->toContain('Bank Transfer')
+        ->toContain(__('Payments', [], 'id'))
+        ->toContain(__('Bank Transfer', [], 'id'))
         ->toContain('PAY20260021')
-        ->toContain('Total paid')
-        ->toContain('Outstanding')
-        ->toContain('Generated on')
+        ->toContain(__('Total paid', [], 'id'))
+        ->toContain(__('Outstanding', [], 'id'))
+        ->toContain(__('Generated on', [], 'id'))
         ->toContain('UTC');
 });
 
@@ -307,14 +367,14 @@ test('invoice PDF derives overdue status at the end-of-day boundary', function (
     $invoice->append(['outstanding', 'display_status']);
 
     expect($invoice->display_status)->toBe('pending')
-        ->and(renderTenantInvoicePdfView($invoice))->toContain('Pending');
+        ->and(renderTenantInvoicePdfView($invoice))->toContain(__('Pending', [], 'id'));
 
     $invoice->update(['due_date' => '2026-08-04']);
     $invoice->refresh()->load(['lease.unit.property', 'lineItems']);
     $invoice->append(['outstanding', 'display_status']);
 
     expect($invoice->display_status)->toBe('overdue')
-        ->and(renderTenantInvoicePdfView($invoice))->toContain('Overdue');
+        ->and(renderTenantInvoicePdfView($invoice))->toContain(__('Overdue', [], 'id'));
 });
 
 test('invoice PDF handles missing references and line items', function () {
@@ -327,7 +387,7 @@ test('invoice PDF handles missing references and line items', function () {
 
     expect(renderTenantInvoicePdfView($invoice))
         ->toContain("#{$invoice->id}")
-        ->toContain('No itemized charges.');
+        ->toContain(__('No itemized charges.', [], 'id'));
 
     $this->actingAs($fixture['user'])
         ->get(route('portal.billing.invoices.download', $invoice))

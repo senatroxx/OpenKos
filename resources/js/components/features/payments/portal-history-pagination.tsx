@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/i18n';
 
 export default function PortalHistoryPagination({
     currentPage,
@@ -20,23 +21,23 @@ export default function PortalHistoryPagination({
         <div className="flex items-center justify-between gap-3">
             {previousHref ? (
                 <Button variant="outline" asChild>
-                    <Link href={previousHref}>Previous</Link>
+                    <Link href={previousHref}>{t('Previous')}</Link>
                 </Button>
             ) : (
                 <Button variant="outline" disabled>
-                    Previous
+                    {t('Previous')}
                 </Button>
             )}
             <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {lastPage}
+                {t('Page')} {currentPage} {t('of')} {lastPage}
             </p>
             {nextHref ? (
                 <Button variant="outline" asChild>
-                    <Link href={nextHref}>Next</Link>
+                    <Link href={nextHref}>{t('Next')}</Link>
                 </Button>
             ) : (
                 <Button variant="outline" disabled>
-                    Next
+                    {t('Next')}
                 </Button>
             )}
         </div>

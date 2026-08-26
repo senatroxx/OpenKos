@@ -18,6 +18,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { t } from '@/lib/i18n';
 import leases from '@/routes/leases';
 import type { Lease } from '@/types';
 
@@ -81,9 +82,9 @@ export default function RenewLeaseSheet({
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Renew Lease</SheetTitle>
+                    <SheetTitle>{t('Renew Lease')}</SheetTitle>
                     <SheetDescription>
-                        {lease.primary_tenant?.name ?? 'Tenant'} ·{' '}
+                        {lease.primary_tenant?.name ?? t('Tenant')} ·{' '}
                         {lease.unit?.name}
                     </SheetDescription>
                 </SheetHeader>
@@ -95,7 +96,7 @@ export default function RenewLeaseSheet({
                     <div className="space-y-6">
                         <div className="grid gap-2">
                             <Label htmlFor="rent_amount">
-                                New Rent Amount ({currency})
+                                {t('New Rent Amount')} ({currency})
                             </Label>
                             <Input
                                 id="rent_amount"
@@ -115,14 +116,14 @@ export default function RenewLeaseSheet({
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="extension_value">
-                                    Extension
+                                    {t('Extension')}
                                 </Label>
                                 <Input
                                     id="extension_value"
                                     type="number"
                                     min={1}
                                     max={120}
-                                    placeholder="e.g. 12"
+                                    placeholder={t('e.g. 12')}
                                     value={data.extension_value}
                                     onChange={(e) =>
                                         setData(
@@ -135,7 +136,9 @@ export default function RenewLeaseSheet({
                                 <InputError message={errors.extension_value} />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="extension_unit">Period</Label>
+                                <Label htmlFor="extension_unit">
+                                    {t('Period')}
+                                </Label>
                                 <Select
                                     value={data.extension_unit}
                                     onValueChange={(v) =>
@@ -147,10 +150,10 @@ export default function RenewLeaseSheet({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="months">
-                                            Months
+                                            {t('Months')}
                                         </SelectItem>
                                         <SelectItem value="years">
-                                            Years
+                                            {t('Years')}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -160,7 +163,7 @@ export default function RenewLeaseSheet({
 
                         <div className="grid gap-2">
                             <Label htmlFor="deposit_handling">
-                                Security Deposit
+                                {t('Security Deposit')}
                             </Label>
                             <Select
                                 value={data.deposit_handling}
@@ -177,7 +180,7 @@ export default function RenewLeaseSheet({
                                             key={d.value}
                                             value={d.value}
                                         >
-                                            {d.label}
+                                            {t(d.label)}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -187,11 +190,14 @@ export default function RenewLeaseSheet({
 
                         {isOverdue && (
                             <Alert variant="destructive">
-                                <AlertTitle>Outstanding Balance</AlertTitle>
+                                <AlertTitle>
+                                    {t('Outstanding Balance')}
+                                </AlertTitle>
                                 <AlertDescription>
                                     <p className="mb-3">
-                                        This lease has overdue payments. Renewal
-                                        will proceed with the existing balance.
+                                        {t(
+                                            'This lease has overdue payments. Renewal will proceed with the existing balance.',
+                                        )}
                                     </p>
                                     <label className="flex items-start gap-3">
                                         <input
@@ -206,8 +212,9 @@ export default function RenewLeaseSheet({
                                             className="mt-0.5 size-4"
                                         />
                                         <span>
-                                            I confirm I want to renew despite
-                                            the outstanding balance
+                                            {t(
+                                                'I confirm I want to renew despite the outstanding balance',
+                                            )}
                                         </span>
                                     </label>
                                 </AlertDescription>
@@ -221,9 +228,11 @@ export default function RenewLeaseSheet({
                             onClick={handleClose}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
-                        <Button disabled={processing}>Renew Lease</Button>
+                        <Button disabled={processing}>
+                            {t('Renew Lease')}
+                        </Button>
                     </div>
                 </form>
             </SheetContent>

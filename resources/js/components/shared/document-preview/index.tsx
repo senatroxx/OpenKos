@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import { useEffect } from 'react';
 import type { PointerEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { t } from '@/lib/i18n';
 
 type DocumentPreviewProps = {
     src: string;
@@ -74,7 +75,7 @@ export default function DocumentPreview({
             ) : (
                 <img
                     src={src}
-                    alt={title ?? 'Preview'}
+                    alt={title ?? t('Preview')}
                     className="max-h-[90vh] max-w-[90vw] rounded object-contain"
                     onClick={(e) => e.stopPropagation()}
                 />

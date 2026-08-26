@@ -4,6 +4,7 @@ import { destroy } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyRegi
 import PasskeyItem from '@/components/features/auth/passkey-item';
 import PasskeyRegistration from '@/components/features/auth/passkey-register';
 import Heading from '@/components/shared/heading';
+import { t } from '@/lib/i18n';
 import type { Passkey } from '@/types/auth';
 
 export type Props = {
@@ -17,9 +18,9 @@ const EmptyState = () => {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
                 <KeyRound className="h-7 w-7 text-muted-foreground" />
             </div>
-            <p className="font-medium">No passkeys yet</p>
+            <p className="font-medium">{t('No passkeys yet')}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-                Add a passkey to sign in without a password
+                {t('Add a passkey to sign in without a password')}
             </p>
         </div>
     );
@@ -47,8 +48,8 @@ export default function ManagePasskeys(props: Props) {
         <div className="space-y-6">
             <Heading
                 variant="small"
-                title="Passkeys"
-                description="Manage your passkeys for passwordless sign-in"
+                title={t('Passkeys')}
+                description={t('Manage your passkeys for passwordless sign-in')}
             />
 
             <div className="overflow-hidden rounded-lg border border-border">

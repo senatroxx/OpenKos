@@ -10,6 +10,7 @@ import {
     Wrench,
 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { RecentActivityEntry } from '@/types';
 
@@ -24,28 +25,28 @@ export function parseActivity(entry: RecentActivityEntry) {
             desc.includes('approve')
         ) {
             return {
-                title: 'Payment Verified',
+                title: t('Payment Verified'),
                 icon: BadgeCheck,
                 iconClass:
                     'bg-surface-green-icon text-surface-green-foreground',
-                category: 'Payments',
+                category: t('Payments'),
             };
         }
 
         return {
-            title: 'Payment Recorded',
+            title: t('Payment Recorded'),
             icon: Receipt,
             iconClass: 'bg-surface-blue-icon text-surface-blue-foreground',
-            category: 'Payments',
+            category: t('Payments'),
         };
     }
 
     if (desc.includes('invoice') || type.includes('invoice')) {
         return {
-            title: 'Invoice Updated',
+            title: t('Invoice Updated'),
             icon: FileText,
             iconClass: 'bg-surface-blue-icon text-surface-blue-foreground',
-            category: 'Billing',
+            category: t('Billing'),
         };
     }
 
@@ -56,37 +57,37 @@ export function parseActivity(entry: RecentActivityEntry) {
         type.includes('maintenance')
     ) {
         return {
-            title: 'Maintenance Event',
+            title: t('Maintenance Event'),
             icon: Wrench,
             iconClass: 'bg-surface-amber-icon text-surface-amber-foreground',
-            category: 'Maintenance',
+            category: t('Maintenance'),
         };
     }
 
     if (desc.includes('reminder') || desc.includes('notification')) {
         return {
-            title: 'Reminder Sent',
+            title: t('Reminder Sent'),
             icon: MessageSquare,
             iconClass: 'bg-surface-blue-icon text-surface-blue-foreground',
-            category: 'Reminders',
+            category: t('Reminders'),
         };
     }
 
     if (desc.includes('lease') || type.includes('lease')) {
         return {
-            title: 'Lease Event',
+            title: t('Lease Event'),
             icon: FileClock,
             iconClass: 'bg-surface-purple-icon text-surface-purple-foreground',
-            category: 'Leases',
+            category: t('Leases'),
         };
     }
 
     if (desc.includes('tenant') || type.includes('tenant')) {
         return {
-            title: 'Tenant Event',
+            title: t('Tenant Event'),
             icon: UserPlus,
             iconClass: 'bg-surface-purple-icon text-surface-purple-foreground',
-            category: 'Tenants',
+            category: t('Tenants'),
         };
     }
 
@@ -94,7 +95,7 @@ export function parseActivity(entry: RecentActivityEntry) {
         title: entry.description,
         icon: Activity,
         iconClass: 'bg-muted text-muted-foreground',
-        category: 'General',
+        category: t('General'),
     };
 }
 
@@ -112,7 +113,7 @@ export function getActivitySummaryChips(recentActivity: RecentActivityEntry[]) {
 export function ActivityFeedItem({ entry }: { entry: RecentActivityEntry }) {
     const activity = parseActivity(entry);
     const Icon = activity.icon;
-    const actor = entry.actor_name || 'System';
+    const actor = entry.actor_name || t('System');
 
     return (
         <div className="flex items-start gap-3 text-sm">
@@ -137,7 +138,7 @@ export function ActivityFeedItem({ entry }: { entry: RecentActivityEntry }) {
                     <p className="truncate text-xs text-muted-foreground">
                         {entry.description}{' '}
                         <span className="text-muted-foreground/70">
-                            • by {actor}
+                            • {t('by')} {actor}
                         </span>
                     </p>
                     {entry.action_url && (
@@ -145,7 +146,7 @@ export function ActivityFeedItem({ entry }: { entry: RecentActivityEntry }) {
                             href={entry.action_url}
                             className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-primary transition-colors hover:underline"
                         >
-                            View →
+                            {t('View')} →
                         </Link>
                     )}
                 </div>

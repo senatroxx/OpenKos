@@ -18,6 +18,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Property, Unit } from '@/types';
 
@@ -81,11 +82,13 @@ export default function UnitFormSheet({
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>{isEdit ? 'Edit Unit' : 'New Unit'}</SheetTitle>
+                    <SheetTitle>
+                        {t(isEdit ? 'Edit Unit' : 'New Unit')}
+                    </SheetTitle>
                     <SheetDescription>
                         {isEdit
-                            ? 'Update unit details'
-                            : `Add a unit to ${property.name}`}
+                            ? t('Update unit details')
+                            : `${t('Add a unit to')} ${property.name}`}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -95,7 +98,7 @@ export default function UnitFormSheet({
                 >
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="name">{t('Name')}</Label>
                             <Input
                                 id="name"
                                 required
@@ -103,27 +106,29 @@ export default function UnitFormSheet({
                                 onChange={(event) =>
                                     setData('name', event.target.value)
                                 }
-                                placeholder="e.g. Unit 101"
+                                placeholder={t('e.g. Unit 101')}
                             />
                             <InputError message={errors.name} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="floor">Floor</Label>
+                                <Label htmlFor="floor">{t('Floor')}</Label>
                                 <Input
                                     id="floor"
                                     value={data.floor}
                                     onChange={(event) =>
                                         setData('floor', event.target.value)
                                     }
-                                    placeholder="e.g. 1"
+                                    placeholder={t('e.g. 1')}
                                 />
                                 <InputError message={errors.floor} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="capacity">Capacity</Label>
+                                <Label htmlFor="capacity">
+                                    {t('Capacity')}
+                                </Label>
                                 <Input
                                     id="capacity"
                                     type="number"
@@ -139,7 +144,9 @@ export default function UnitFormSheet({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="size_sqm">Size (m²)</Label>
+                                <Label htmlFor="size_sqm">
+                                    {t('Size (m²)')}
+                                </Label>
                                 <Input
                                     id="size_sqm"
                                     type="number"
@@ -149,13 +156,13 @@ export default function UnitFormSheet({
                                     onChange={(event) =>
                                         setData('size_sqm', event.target.value)
                                     }
-                                    placeholder="e.g. 20"
+                                    placeholder={t('e.g. 20')}
                                 />
                                 <InputError message={errors.size_sqm} />
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="status">Status</Label>
+                                <Label htmlFor="status">{t('Status')}</Label>
                                 <Select
                                     value={data.status}
                                     onValueChange={(value) =>
@@ -191,7 +198,7 @@ export default function UnitFormSheet({
                                                 key={option.value}
                                                 value={option.value}
                                             >
-                                                {option.label}
+                                                {t(option.label)}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -201,27 +208,29 @@ export default function UnitFormSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">
+                                {t('Description')}
+                            </Label>
                             <Textarea
                                 id="description"
                                 value={data.description}
                                 onChange={(event) =>
                                     setData('description', event.target.value)
                                 }
-                                placeholder="Unit description"
+                                placeholder={t('Unit description')}
                             />
                             <InputError message={errors.description} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 value={data.notes}
                                 onChange={(event) =>
                                     setData('notes', event.target.value)
                                 }
-                                placeholder="Additional notes"
+                                placeholder={t('Additional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
@@ -234,10 +243,10 @@ export default function UnitFormSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button disabled={processing}>
-                            {isEdit ? 'Save' : 'Create'}
+                            {t(isEdit ? 'Save' : 'Create')}
                         </Button>
                     </div>
                 </form>

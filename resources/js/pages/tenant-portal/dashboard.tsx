@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate, formatPrice } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import { dashboard } from '@/routes/portal';
 import { index as billingIndex } from '@/routes/portal/billing';
 import { payments as paymentHistory } from '@/routes/portal/billing/history';
@@ -82,15 +83,15 @@ export default function Dashboard({
 }: Props) {
     return (
         <>
-            <Head title="Tenant Portal" />
+            <Head title={t('Tenant Portal')} />
 
             <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 p-4">
                 <div>
                     <h1 className="text-xl font-semibold text-balance">
-                        Dashboard
+                        {t('Dashboard')}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Overview of your stay and billing.
+                        {t('Overview of your stay and billing.')}
                     </p>
                 </div>
 
@@ -130,7 +131,7 @@ function CurrentPaymentCard({
         return (
             <Card className={`gap-4 py-5 ${className}`}>
                 <CardHeader className="px-5 pb-0">
-                    <CardTitle>Payment required</CardTitle>
+                    <CardTitle>{t('Payment required')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-5">
                     <StatusBadge
@@ -139,26 +140,32 @@ function CurrentPaymentCard({
                     />
                     <div>
                         <p className="text-3xl font-semibold tracking-tight tabular-nums">
-                            {formatPrice(nextAction.invoice.amount, nextAction.invoice.currency)}
+                            {formatPrice(
+                                nextAction.invoice.amount,
+                                nextAction.invoice.currency,
+                            )}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                            Due {formatDate(nextAction.invoice.due_date)}
+                            {t('Due')} {formatDate(nextAction.invoice.due_date)}
                         </p>
                     </div>
                     {nextAction.pending_payment && (
                         <p className="text-sm text-muted-foreground">
-                            A payment of{' '}
-                            {formatPrice(nextAction.pending_payment.amount, nextAction.pending_payment.currency)}{' '}
-                            submitted{' '}
+                            {t('A payment of')}{' '}
+                            {formatPrice(
+                                nextAction.pending_payment.amount,
+                                nextAction.pending_payment.currency,
+                            )}{' '}
+                            {t('submitted')}{' '}
                             {formatDate(
                                 nextAction.pending_payment.payment_date,
                             )}{' '}
-                            is awaiting verification.
+                            {t('is awaiting verification.')}
                         </p>
                     )}
                     <Button asChild size="sm">
                         <Link href={showInvoice(nextAction.invoice.id)}>
-                            View invoice
+                            {t('View invoice')}
                             <ChevronRight />
                         </Link>
                     </Button>
@@ -171,21 +178,25 @@ function CurrentPaymentCard({
         return (
             <Card className={`gap-4 py-5 ${className}`}>
                 <CardHeader className="px-5 pb-0">
-                    <CardTitle>Payment awaiting verification</CardTitle>
+                    <CardTitle>{t('Payment awaiting verification')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-5">
                     <StatusBadge domain="tenant_payment" value="pending" />
                     <p className="text-sm text-muted-foreground">
-                        Your payment of{' '}
-                        {formatPrice(nextAction.pending_payment.amount, nextAction.pending_payment.currency)}{' '}
-                        submitted{' '}
+                        {t('Your payment of')}{' '}
+                        {formatPrice(
+                            nextAction.pending_payment.amount,
+                            nextAction.pending_payment.currency,
+                        )}{' '}
+                        {t('submitted')}{' '}
                         {formatDate(nextAction.pending_payment.payment_date)} is
-                        being reviewed. You do not need to do anything right
-                        now.
+                        {t(
+                            'is being reviewed. You do not need to do anything right now.',
+                        )}
                     </p>
                     <Button asChild size="sm" variant="outline">
                         <Link href={billingIndex()}>
-                            View billing
+                            {t('View billing')}
                             <ChevronRight />
                         </Link>
                     </Button>
@@ -199,25 +210,27 @@ function CurrentPaymentCard({
             <CardHeader className="px-5 pb-0">
                 <CardTitle>
                     {nextAction.type === 'no_active_stay'
-                        ? 'No active lease'
-                        : 'All caught up'}
+                        ? t('No active lease')
+                        : t('All caught up')}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-5">
                 <Badge variant="secondary">
                     {nextAction.type === 'no_active_stay'
-                        ? 'No active stay'
-                        : 'No payment required'}
+                        ? t('No active stay')
+                        : t('No payment required')}
                 </Badge>
                 <p className="text-sm text-muted-foreground">
                     {nextAction.type === 'no_active_stay'
-                        ? 'There is no active lease associated with your account.'
-                        : 'You do not need to make a payment right now.'}
+                        ? t(
+                              'There is no active lease associated with your account.',
+                          )
+                        : t('You do not need to make a payment right now.')}
                 </p>
                 {nextAction.type === 'no_payment_required' && (
                     <Button asChild size="sm" variant="outline">
                         <Link href={billingIndex()}>
-                            View billing
+                            {t('View billing')}
                             <ChevronRight />
                         </Link>
                     </Button>
@@ -237,10 +250,10 @@ function AccountSummaryCard({
     return (
         <Card className={`gap-4 py-5 ${className}`}>
             <CardHeader className="flex-row items-center justify-between gap-3 px-5 pb-0">
-                <CardTitle>Account summary</CardTitle>
+                <CardTitle>{t('Account summary')}</CardTitle>
                 <Button asChild size="sm" variant="ghost">
                     <Link href={billingIndex()}>
-                        View billing
+                        {t('View billing')}
                         <ChevronRight />
                     </Link>
                 </Button>
@@ -248,7 +261,7 @@ function AccountSummaryCard({
             <CardContent className="space-y-3 px-5 text-sm">
                 <div>
                     <p className="text-sm text-muted-foreground">
-                        Outstanding balance
+                        {t('Outstanding balance')}
                     </p>
                     <p className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">
                         {summary.outstanding_amounts
@@ -260,16 +273,16 @@ function AccountSummaryCard({
                 </div>
                 <div className="space-y-2 border-t pt-3">
                     <SummaryItem
-                        label="Payable invoices"
+                        label={t('Payable invoices')}
                         value={String(summary.payable_invoice_count)}
                     />
                     <SummaryItem
-                        label="Awaiting verification"
+                        label={t('Awaiting verification')}
                         value={String(summary.pending_verification_count)}
                     />
                     {summary.next_due_date && (
                         <SummaryItem
-                            label="Next due date"
+                            label={t('Next due date')}
                             value={formatDate(summary.next_due_date)}
                         />
                     )}
@@ -289,7 +302,7 @@ function ActiveStayCard({
     return (
         <Card className={`gap-4 py-5 ${className}`}>
             <CardHeader className="px-5 pb-0">
-                <CardTitle>Active stay</CardTitle>
+                <CardTitle>{t('Active stay')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-5">
                 <div className="flex items-start justify-between gap-3">
@@ -301,11 +314,11 @@ function ActiveStayCard({
                 </div>
                 <p className="text-sm text-muted-foreground">
                     {formatDate(lease.start_date)} —{' '}
-                    {lease.end_date ? formatDate(lease.end_date) : 'Ongoing'}
+                    {lease.end_date ? formatDate(lease.end_date) : t('Ongoing')}
                 </p>
                 <Button asChild size="sm" variant="outline">
                     <Link href={showLease(lease.id)}>
-                        View lease
+                        {t('View lease')}
                         <ChevronRight />
                     </Link>
                 </Button>
@@ -324,10 +337,10 @@ function RecentActivityCard({
     return (
         <Card className={`gap-4 py-5 ${className}`}>
             <CardHeader className="flex-row items-center justify-between gap-3 px-5 pb-0">
-                <CardTitle>Recent activity</CardTitle>
+                <CardTitle>{t('Recent activity')}</CardTitle>
                 <Button asChild size="sm" variant="ghost">
                     <Link href={paymentHistory()}>
-                        View history
+                        {t('View history')}
                         <ChevronRight />
                     </Link>
                 </Button>
@@ -335,7 +348,7 @@ function RecentActivityCard({
             <CardContent className="px-5">
                 {activity.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
-                        No recent activity yet.
+                        {t('No recent activity yet.')}
                     </p>
                 ) : (
                     <div className="divide-y">
@@ -382,11 +395,11 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
 
 function activityLabel(type: Activity['type']): string {
     return {
-        payment_submitted: 'Payment submitted',
-        payment_confirmed: 'Payment confirmed',
-        payment_cancelled: 'Payment cancelled',
-        invoice_issued: 'Invoice issued',
-        lease_started: 'Lease started',
+        payment_submitted: t('Payment submitted'),
+        payment_confirmed: t('Payment confirmed'),
+        payment_cancelled: t('Payment cancelled'),
+        invoice_issued: t('Invoice issued'),
+        lease_started: t('Lease started'),
     }[type];
 }
 

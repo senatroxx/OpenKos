@@ -9,6 +9,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 export default function MoveUnitSheet({
     property,
@@ -74,9 +75,9 @@ export default function MoveUnitSheet({
         <Sheet key="move-unit" open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Move Tenant</SheetTitle>
+                    <SheetTitle>{t('Move Tenant')}</SheetTitle>
                     <SheetDescription>
-                        Move tenant from {currentUnit.name} to another unit
+                        {t('Move tenant from the current unit to another unit')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -86,7 +87,7 @@ export default function MoveUnitSheet({
                 >
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label>Target Unit</Label>
+                            <Label>{t('Target Unit')}</Label>
                             <SearchableSelect
                                 options={unitOptions}
                                 value={data.target_unit_id}
@@ -96,7 +97,7 @@ export default function MoveUnitSheet({
                                         val as number | null,
                                     )
                                 }
-                                placeholder="Select target unit..."
+                                placeholder={t('Select target unit...')}
                                 searchPlaceholder="Search unit..."
                                 emptyText="No available units."
                             />
@@ -104,9 +105,9 @@ export default function MoveUnitSheet({
                         </div>
 
                         <p className="text-sm text-muted-foreground">
-                            The current lease will be terminated, and a new
-                            lease will be created in the selected unit. The
-                            deposit will be transferred.
+                            {t(
+                                'The current lease will be terminated, a new lease will be created in the selected unit, and the deposit will be transferred.',
+                            )}
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-4">
@@ -116,9 +117,11 @@ export default function MoveUnitSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
-                        <Button disabled={processing}>Move Tenant</Button>
+                        <Button disabled={processing}>
+                            {t('Move Tenant')}
+                        </Button>
                     </div>
                 </form>
             </SheetContent>

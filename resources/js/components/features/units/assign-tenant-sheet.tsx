@@ -32,6 +32,7 @@ import {
     formatPrice,
     todayISO,
 } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Property, Unit, UnitRate } from '@/types';
 
@@ -231,12 +232,16 @@ export default function AssignTenantSheet({
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        Assign Tenant{capacity > 1 ? 's' : ''}
+                        {t(capacity > 1 ? 'Assign Tenants' : 'Assign Tenant')}
                     </SheetTitle>
                     <SheetDescription>
-                        Assign {capacity > 1 ? 'tenants' : 'a tenant'} to{' '}
-                        {unit?.name ?? 'this unit'}
-                        {capacity > 1 && ` (capacity: ${capacity})`}
+                        {t(
+                            capacity > 1
+                                ? 'Assign tenants to this unit'
+                                : 'Assign a tenant to this unit',
+                        )}{' '}
+                        {unit?.name ?? t('this unit')}
+                        {capacity > 1 && ` (${t('capacity')}: ${capacity})`}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -247,14 +252,14 @@ export default function AssignTenantSheet({
                     <div className="space-y-6">
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Section 1 — Who
+                                {t('Section 1 — Who')}
                             </h3>
 
                             <div className="grid gap-2">
                                 <Label>
-                                    Tenants{' '}
+                                    {t('Tenants')}{' '}
                                     {capacity > 1 &&
-                                        `(select up to ${capacity})`}
+                                        `(${t('select up to :count', { count: capacity })})`}
                                 </Label>
 
                                 <div className="max-h-48 overflow-y-auto rounded-md border">
@@ -302,8 +307,11 @@ export default function AssignTenantSheet({
 
                                 <p className="text-xs text-muted-foreground">
                                     {data.tenant_ids.length === 0
-                                        ? 'Select at least one tenant'
-                                        : `${data.tenant_ids.length} of ${capacity} selected`}
+                                        ? t('Select at least one tenant')
+                                        : t(':count of :total selected', {
+                                              count: data.tenant_ids.length,
+                                              total: capacity,
+                                          })}
                                 </p>
 
                                 <InputError message={errors.tenant_ids} />
@@ -312,11 +320,13 @@ export default function AssignTenantSheet({
 
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                Section 2 — Stay
+                                {t('Section 2 — Stay')}
                             </h3>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="start_date">Move-in Date</Label>
+                                <Label htmlFor="start_date">
+                                    {t('Move-in Date')}
+                                </Label>
                                 <Input
                                     id="start_date"
                                     type="date"
@@ -331,7 +341,7 @@ export default function AssignTenantSheet({
                             {activeLease ? (
                                 <div className="mt-4 rounded-md border bg-muted/30 p-3 text-sm">
                                     <p className="font-medium">
-                                        Existing lease terms
+                                        {t('Existing lease terms')}
                                     </p>
                                     <p className="mt-1 text-muted-foreground">
                                         {activeLease.rent_amount
@@ -339,19 +349,20 @@ export default function AssignTenantSheet({
                                                   activeLease.rent_amount,
                                                   activeLease.currency,
                                               )
-                                            : 'Custom amount'}{' '}
+                                            : t('Custom amount')}{' '}
                                         {activeLease.billing_label}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        Adding a tenant keeps this lease's
-                                        currency and billing terms.
+                                        {t(
+                                            'Adding a tenant keeps this lease currency and billing terms.',
+                                        )}
                                     </p>
                                 </div>
                             ) : unit?.active_rates &&
                               unit.active_rates.length > 0 ? (
                                 <div className="mt-4 grid gap-2">
                                     <div className="flex items-center justify-between gap-3">
-                                        <Label>Unit Rate Options</Label>
+                                        <Label>{t('Unit Rate Options')}</Label>
                                         {availableCurrencies.length > 1 ? (
                                             <Select
                                                 value={displayCurrency}
@@ -446,15 +457,16 @@ export default function AssignTenantSheet({
                                 </div>
                             ) : (
                                 <p className="mt-4 text-xs text-surface-amber-foreground">
-                                    No pricing configured for this unit. Please
-                                    set up unit rates first.
+                                    {t(
+                                        'No pricing configured for this unit. Please set up unit rates first.',
+                                    )}
                                 </p>
                             )}
 
                             {!activeLease && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="rent_due_day">
-                                        Rent Due Every Month
+                                        {t('Rent Due Every Month')}
                                     </Label>
                                     <Select
                                         value={data.rent_due_day}
@@ -463,7 +475,11 @@ export default function AssignTenantSheet({
                                         }
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select due day" />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select due day',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {DUE_DAY_OPTIONS.map((opt) => (
@@ -471,7 +487,7 @@ export default function AssignTenantSheet({
                                                     key={opt.value}
                                                     value={opt.value}
                                                 >
-                                                    {opt.label}
+                                                    {t(opt.label)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -492,14 +508,14 @@ export default function AssignTenantSheet({
                                         }
                                         className="size-4"
                                     />
-                                    Override room price?
+                                    {t('Override room price?')}
                                 </label>
                             )}
 
                             {(overridePrice || !hasRates) && !activeLease && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="rent_amount">
-                                        Rent Amount ({currency})
+                                        {t('Rent Amount')} ({currency})
                                     </Label>
                                     <Input
                                         id="rent_amount"
@@ -524,7 +540,7 @@ export default function AssignTenantSheet({
                             {!activeLease && (
                                 <div className="mt-4 grid gap-2">
                                     <Label htmlFor="billing_strategy">
-                                        Billing Strategy
+                                        {t('Billing Strategy')}
                                     </Label>
                                     <Select
                                         value={data.billing_strategy}
@@ -533,7 +549,11 @@ export default function AssignTenantSheet({
                                         }
                                     >
                                         <SelectTrigger id="billing_strategy">
-                                            <SelectValue placeholder="Select billing strategy" />
+                                            <SelectValue
+                                                placeholder={t(
+                                                    'Select billing strategy',
+                                                )}
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {BILLING_STRATEGIES.map((s) => (
@@ -541,7 +561,7 @@ export default function AssignTenantSheet({
                                                     key={s.value}
                                                     value={s.value}
                                                 >
-                                                    {s.label}
+                                                    {t(s.label)}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -562,7 +582,7 @@ export default function AssignTenantSheet({
                                 >
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                            Section 3 — Deposit
+                                            {t('Section 3 — Deposit')}
                                         </h3>
                                         <CollapsibleTrigger asChild>
                                             <Button
@@ -572,8 +592,8 @@ export default function AssignTenantSheet({
                                                 className="flex items-center gap-2 text-xs text-muted-foreground"
                                             >
                                                 {hasDeposit
-                                                    ? 'Has deposit'
-                                                    : 'No deposit'}
+                                                    ? t('Has deposit')
+                                                    : t('No deposit')}
                                                 <ChevronDown
                                                     className={`size-3 transition-transform ${hasDeposit ? 'rotate-180' : ''}`}
                                                 />
@@ -585,7 +605,8 @@ export default function AssignTenantSheet({
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="grid gap-2">
                                                 <Label htmlFor="deposit_amount">
-                                                    Deposit Amount ({currency})
+                                                    {t('Deposit Amount')} (
+                                                    {currency})
                                                 </Label>
                                                 <Input
                                                     id="deposit_amount"
@@ -607,7 +628,7 @@ export default function AssignTenantSheet({
                                             </div>
                                             <div className="grid gap-2">
                                                 <Label htmlFor="deposit_paid_at">
-                                                    Paid Date
+                                                    {t('Paid Date')}
                                                 </Label>
                                                 <Input
                                                     id="deposit_paid_at"
@@ -633,14 +654,14 @@ export default function AssignTenantSheet({
                         )}
 
                         <div className="grid gap-2">
-                            <Label htmlFor="notes">Notes</Label>
+                            <Label htmlFor="notes">{t('Notes')}</Label>
                             <Textarea
                                 id="notes"
                                 value={data.notes}
                                 onChange={(e) =>
                                     setData('notes', e.target.value)
                                 }
-                                placeholder="Additional notes"
+                                placeholder={t('Additional notes')}
                             />
                             <InputError message={errors.notes} />
                         </div>
@@ -652,11 +673,14 @@ export default function AssignTenantSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button disabled={processing}>
-                            Assign Tenant
-                            {data.tenant_ids.length > 1 ? 's' : ''}
+                            {t(
+                                data.tenant_ids.length > 1
+                                    ? 'Assign Tenants'
+                                    : 'Assign Tenant',
+                            )}
                         </Button>
                     </div>
                 </form>

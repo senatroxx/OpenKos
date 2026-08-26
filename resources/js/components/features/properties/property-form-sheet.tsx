@@ -18,6 +18,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { t } from '@/lib/i18n';
 import { store, update } from '@/routes/properties';
 import type { Property, PropertyTypeOption, Region } from '@/types';
 
@@ -87,12 +88,12 @@ export default function PropertyFormSheet({
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        {isEdit ? 'Edit Property' : 'New Property'}
+                        {t(isEdit ? 'Edit Property' : 'New Property')}
                     </SheetTitle>
                     <SheetDescription>
                         {isEdit
-                            ? 'Update property details'
-                            : 'Add a new property to manage'}
+                            ? t('Update property details')
+                            : t('Add a new property to manage')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -102,7 +103,7 @@ export default function PropertyFormSheet({
                 >
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
+                            <Label htmlFor="name">{t('Name')}</Label>
                             <Input
                                 id="name"
                                 required
@@ -110,13 +111,13 @@ export default function PropertyFormSheet({
                                 onChange={(e) =>
                                     setData('name', e.target.value)
                                 }
-                                placeholder="e.g. Kos Melati"
+                                placeholder={t('e.g. Kos Melati')}
                             />
                             <InputError message={errors.name} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="type">Type</Label>
+                            <Label htmlFor="type">{t('Type')}</Label>
                             <Select
                                 value={data.type}
                                 onValueChange={(v) => setData('type', v)}
@@ -139,21 +140,21 @@ export default function PropertyFormSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="address">Address</Label>
+                            <Label htmlFor="address">{t('Address')}</Label>
                             <Textarea
                                 id="address"
                                 value={data.address}
                                 onChange={(e) =>
                                     setData('address', e.target.value)
                                 }
-                                placeholder="Property address"
+                                placeholder={t('Property address')}
                             />
                             <InputError message={errors.address} />
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                             <div className="grid gap-2">
-                                <Label>Province</Label>
+                                <Label>{t('Province')}</Label>
                                 <SearchableSelect
                                     options={regionOptions}
                                     value={data.region_id}
@@ -164,14 +165,14 @@ export default function PropertyFormSheet({
                                             city_id: null,
                                         }))
                                     }
-                                    placeholder="Select province..."
-                                    searchPlaceholder="Search province..."
-                                    emptyText="No province found."
+                                    placeholder={t('Select province...')}
+                                    searchPlaceholder={t('Search province...')}
+                                    emptyText={t('No province found.')}
                                 />
                                 <InputError message={errors.region_id} />
                             </div>
                             <div className="grid gap-2">
-                                <Label>City / Kabupaten</Label>
+                                <Label>{t('City / Kabupaten')}</Label>
                                 <SearchableSelect
                                     options={cityOptions}
                                     value={data.city_id}
@@ -180,35 +181,37 @@ export default function PropertyFormSheet({
                                     }
                                     placeholder={
                                         data.region_id
-                                            ? 'Select city...'
-                                            : 'Select province first'
+                                            ? t('Select city...')
+                                            : t('Select province first')
                                     }
-                                    searchPlaceholder="Search city..."
-                                    emptyText="No city found."
+                                    searchPlaceholder={t('Search city...')}
+                                    emptyText={t('No city found.')}
                                     disabled={!data.region_id}
                                 />
                                 <InputError message={errors.city_id} />
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="postal_code">Postal Code</Label>
+                                <Label htmlFor="postal_code">
+                                    {t('Postal Code')}
+                                </Label>
                                 <Input
                                     id="postal_code"
                                     value={data.postal_code}
                                     onChange={(e) =>
                                         setData('postal_code', e.target.value)
                                     }
-                                    placeholder="Postal code"
+                                    placeholder={t('Postal code')}
                                 />
                                 <InputError message={errors.postal_code} />
                             </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="phone">Phone</Label>
+                            <Label htmlFor="phone">{t('Phone')}</Label>
                             <PhoneInput
                                 value={data.phone}
                                 onChange={(v) => setData('phone', v)}
-                                placeholder="e.g. 81234567890"
+                                placeholder={t('e.g. 81234567890')}
                             />
                             <InputError message={errors.phone} />
                         </div>
@@ -220,10 +223,10 @@ export default function PropertyFormSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button disabled={processing}>
-                            {isEdit ? 'Save' : 'Create'}
+                            {t(isEdit ? 'Save' : 'Create')}
                         </Button>
                     </div>
                 </form>

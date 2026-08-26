@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate } from '@/lib/formatters';
+import { t } from '@/lib/i18n';
 
 type Ticket = {
     id: number;
@@ -56,18 +57,20 @@ export default function MaintenanceTickets({ tickets, activeLease }: Props) {
 
     return (
         <>
-            <Head title="Maintenance" />
+            <Head title={t('Maintenance')} />
             <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold">Maintenance</h1>
+                        <h1 className="text-xl font-semibold">
+                            {t('Maintenance')}
+                        </h1>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Report issues and track their progress.
+                            {t('Report issues and track their progress.')}
                         </p>
                     </div>
                     {activeLease && (
                         <Button onClick={() => setSheetOpen(true)}>
-                            Report Issue
+                            {t('Report Issue')}
                         </Button>
                     )}
                 </div>
@@ -77,7 +80,7 @@ export default function MaintenanceTickets({ tickets, activeLease }: Props) {
                         <Card>
                             <CardContent className="flex min-h-40 flex-col items-center justify-center p-6 text-center">
                                 <p className="text-sm text-muted-foreground">
-                                    No maintenance tickets submitted.
+                                    {t('No maintenance tickets submitted.')}
                                 </p>
                             </CardContent>
                         </Card>
@@ -175,9 +178,9 @@ function PortalTicketFormSheet({
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>Report Maintenance Issue</SheetTitle>
+                    <SheetTitle>{t('Report Maintenance Issue')}</SheetTitle>
                     <SheetDescription>
-                        Report a maintenance issue at your property.
+                        {t('Report a maintenance issue at your property.')}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -187,12 +190,12 @@ function PortalTicketFormSheet({
                 >
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label>Property</Label>
+                            <Label>{t('Property')}</Label>
                             <Input value={activeLease.property_name} disabled />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Location</Label>
+                            <Label>{t('Location')}</Label>
                             <div className="flex gap-2">
                                 <Select
                                     value={locationType}
@@ -206,10 +209,10 @@ function PortalTicketFormSheet({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="unit">
-                                            Unit
+                                            {t('Unit')}
                                         </SelectItem>
                                         <SelectItem value="area">
-                                            Common Area
+                                            {t('Common Area')}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -224,7 +227,9 @@ function PortalTicketFormSheet({
                                         onChange={(e) =>
                                             setData('location', e.target.value)
                                         }
-                                        placeholder="e.g. Lobby, 3rd Floor Hallway"
+                                        placeholder={t(
+                                            'e.g. Lobby, 3rd Floor Hallway',
+                                        )}
                                     />
                                 )}
                             </div>
@@ -232,27 +237,29 @@ function PortalTicketFormSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label>Title</Label>
+                            <Label>{t('Title')}</Label>
                             <Input
                                 required
                                 value={data.title}
                                 onChange={(e) =>
                                     setData('title', e.target.value)
                                 }
-                                placeholder="e.g. Leaking faucet"
+                                placeholder={t('e.g. Leaking faucet')}
                             />
                             <InputError message={errors.title} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">
+                                {t('Description')}
+                            </Label>
                             <Textarea
                                 id="description"
                                 value={data.description}
                                 onChange={(e) =>
                                     setData('description', e.target.value)
                                 }
-                                placeholder="Describe the issue in detail"
+                                placeholder={t('Describe the issue in detail')}
                             />
                             <InputError message={errors.description} />
                         </div>
@@ -264,10 +271,10 @@ function PortalTicketFormSheet({
                             onClick={() => handleOpenChange(false)}
                             disabled={processing}
                         >
-                            Cancel
+                            {t('Cancel')}
                         </Button>
                         <Button disabled={processing} type="submit">
-                            Submit
+                            {t('Submit')}
                         </Button>
                     </div>
                 </form>

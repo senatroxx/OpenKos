@@ -13,6 +13,7 @@ import {
     setDisplayLocale,
     setDisplayTimezone,
 } from '@/lib/formatters';
+import { setTranslations } from '@/lib/i18n';
 import '@/plugins';
 
 type PageWithTimezone = {
@@ -20,8 +21,15 @@ type PageWithTimezone = {
         app?: {
             timezone?: string;
             currency_scales?: Record<string, number>;
+            locale?: string;
+            intl_locale?: string;
         };
         setting?: { currency?: string; locale?: string };
+        i18n?: {
+            locale?: string;
+            messages?: Record<string, unknown>;
+            fallback?: Record<string, unknown>;
+        };
         branding?: { faviconUrl?: string };
     };
 };
@@ -30,7 +38,12 @@ function syncDisplaySettings(page: PageWithTimezone): void {
     setDisplayTimezone(page.props?.app?.timezone);
     setCurrencyScales(page.props?.app?.currency_scales);
     setDisplayCurrency(page.props?.setting?.currency);
-    setDisplayLocale(page.props?.setting?.locale);
+    setDisplayLocale(page.props?.app?.intl_locale);
+    setTranslations(page.props?.i18n?.messages, page.props?.i18n?.fallback);
+
+    if (typeof document !== 'undefined' && page.props?.app?.locale) {
+        document.documentElement.lang = page.props.app.locale;
+    }
 }
 
 function syncBrandingFavicon(page: PageWithTimezone): void {
