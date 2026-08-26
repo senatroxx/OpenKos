@@ -88,6 +88,11 @@ class PluginManagementService
         $this->installer->remove($id, $force);
     }
 
+    public function cleanupOrphanedMetadata(): void
+    {
+        $this->installer->cleanupOrphanedMetadata();
+    }
+
     public function userMessage(Throwable $exception): string
     {
         $message = strtolower($exception->getMessage());
@@ -98,6 +103,14 @@ class PluginManagementService
 
         if ($exception instanceof RuntimePluginConflictException || str_contains($message, 'conflict')) {
             return __('This plugin conflicts with an explicit or Composer-installed plugin. Disable or remove the runtime copy.');
+        }
+
+        if (str_contains($message, 'could not remove runtime plugin path')) {
+            return __('The runtime plugin could not be removed. Check runtime storage permissions and try again.');
+        }
+
+        if (str_contains($message, 'could not clean runtime lifecycle path')) {
+            return __('Runtime plugin metadata could not be cleaned. Check runtime storage permissions and try again.');
         }
 
         if (
@@ -124,10 +137,10 @@ class PluginManagementService
         } catch (Throwable $exception) {
             report($exception);
 
-            return $this->runtimePluginsWithCorruptState();
+            return $this->runtimePluginsWithCorruptState($recoveryStatus);
         }
 
-        $packages = $this->store->installedPackages();
+        $packages = $this->store->managedPackageEntries();
         $runtime = [];
         $rows = [];
 
@@ -169,6 +182,7 @@ class PluginManagementService
                         'can_disable' => $enabled,
                         'can_remove' => true,
                         'can_force_recovery' => true,
+                        'can_cleanup' => false,
                     ];
 
                     continue;
@@ -180,6 +194,7 @@ class PluginManagementService
             }
 
             $status = $entry['status'];
+            $canRemove = ! is_link($path);
             $rows[] = [
                 ...$this->manifestPreview($path, $id),
                 'source' => 'runtime',
@@ -188,8 +203,9 @@ class PluginManagementService
                 'error' => $entry['error'],
                 'can_enable' => false,
                 'can_disable' => $enabled,
-                'can_remove' => true,
-                'can_force_recovery' => true,
+                'can_remove' => $canRemove,
+                'can_force_recovery' => $canRemove,
+                'can_cleanup' => false,
             ];
         }
 
@@ -206,24 +222,41 @@ class PluginManagementService
                 'php' => null,
                 'dependencies' => [],
                 'source' => 'runtime',
-                'status' => 'missing',
+                'status' => 'missing_package',
                 'enabled' => $entry['enabled'],
                 'error' => __('Plugin state exists without an installed package. Remove the stale state entry.'),
                 'can_enable' => false,
                 'can_disable' => false,
                 'can_remove' => true,
                 'can_force_recovery' => true,
+                'can_cleanup' => false,
             ];
         }
 
-        if ($recoveryStatus === 'corrupt') {
+        if ($recoveryStatus === RuntimePluginStore::RECOVERY_PENDING) {
             foreach ($rows as &$row) {
                 if ($row['source'] !== 'runtime') {
                     continue;
                 }
 
-                $row['status'] = 'broken';
-                $row['error'] = __('Runtime plugin recovery metadata is corrupted. Force remove this package to recover it.');
+                $row['status'] = RuntimePluginStore::RECOVERY_PENDING;
+                $row['error'] = __('Runtime plugin recovery is pending and will complete before the next lifecycle change.');
+                $row['can_enable'] = false;
+                $row['can_disable'] = false;
+                $row['can_remove'] = true;
+                $row['can_force_recovery'] = false;
+            }
+            unset($row);
+        }
+
+        if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
+            foreach ($rows as &$row) {
+                if ($row['source'] !== 'runtime') {
+                    continue;
+                }
+
+                $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
+                $row['error'] = __('Runtime plugin recovery cannot be completed. Force remove this package or clean up orphaned metadata.');
                 $row['can_enable'] = false;
                 $row['can_disable'] = false;
                 $row['can_remove'] = true;
@@ -232,15 +265,20 @@ class PluginManagementService
             unset($row);
         }
 
+        if ($rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus);
+        }
+
         return $rows;
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function runtimePluginsWithCorruptState(): array
+    private function runtimePluginsWithCorruptState(string $recoveryStatus): array
     {
         $rows = [];
 
-        foreach ($this->store->installedPackages() as $id => $path) {
+        foreach ($this->store->managedPackageEntries() as $id => $path) {
+            $canRemove = ! is_link($path);
             $rows[] = [
                 ...$this->manifestPreview($path, $id),
                 'source' => 'runtime',
@@ -249,9 +287,27 @@ class PluginManagementService
                 'error' => __('Runtime plugin state is corrupted. Force remove this package to recover it.'),
                 'can_enable' => false,
                 'can_disable' => false,
-                'can_remove' => true,
-                'can_force_recovery' => true,
+                'can_remove' => $canRemove,
+                'can_force_recovery' => $canRemove,
+                'can_cleanup' => false,
             ];
+        }
+
+        if ($rows === []) {
+            $rows[] = $this->orphanedMetadataRow('orphaned_state', $recoveryStatus);
+        }
+
+        if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
+            foreach ($rows as &$row) {
+                $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
+                $row['error'] = __('Runtime plugin state and recovery metadata cannot be completed. Clean up orphaned metadata.');
+                $row['can_enable'] = false;
+                $row['can_disable'] = false;
+                $row['can_remove'] = $row['managed_id'] !== null;
+                $row['can_force_recovery'] = $row['managed_id'] !== null;
+                $row['can_cleanup'] = $row['managed_id'] === null;
+            }
+            unset($row);
         }
 
         return $rows;
@@ -297,6 +353,7 @@ class PluginManagementService
                     'can_disable' => false,
                     'can_remove' => false,
                     'can_force_recovery' => false,
+                    'can_cleanup' => false,
                 ];
             } catch (Throwable $exception) {
                 report($exception);
@@ -321,6 +378,41 @@ class PluginManagementService
             'can_disable' => $enabled,
             'can_remove' => true,
             'can_force_recovery' => false,
+            'can_cleanup' => false,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function orphanedMetadataRow(string $status, ?string $recoveryStatus = null): array
+    {
+        $error = $status === 'orphaned_state'
+            ? __('Runtime lifecycle metadata is corrupted without an installed package. Clean it up before installing another plugin.')
+            : __('Runtime plugin recovery cannot be completed without an installed package. Clean up the orphaned lifecycle metadata.');
+
+        if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
+            $error = __('Runtime lifecycle metadata is corrupted and cannot be recovered. Clean it up before installing another plugin.');
+        }
+
+        return [
+            'id' => 'Runtime lifecycle metadata',
+            'managed_id' => null,
+            'declared_id' => null,
+            'name' => __('Runtime lifecycle metadata'),
+            'version' => null,
+            'description' => __('No runtime package is installed, but lifecycle metadata still requires recovery.'),
+            'entry_class' => null,
+            'core_version' => null,
+            'php' => null,
+            'dependencies' => [],
+            'source' => 'runtime',
+            'status' => $status,
+            'enabled' => false,
+            'error' => $error,
+            'can_enable' => false,
+            'can_disable' => false,
+            'can_remove' => false,
+            'can_force_recovery' => false,
+            'can_cleanup' => $status !== RuntimePluginStore::RECOVERY_PENDING,
         ];
     }
 
@@ -339,6 +431,11 @@ class PluginManagementService
             'php' => null,
             'dependencies' => [],
         ];
+
+        if (is_link($path) || ! is_dir($path)) {
+            return $preview;
+        }
+
         $manifestPath = $path.'/manifest.json';
 
         if (! is_file($manifestPath) || is_link($manifestPath)) {
@@ -433,7 +530,14 @@ class PluginManagementService
         unset($plugin);
 
         foreach ($runtime as &$plugin) {
-            if (in_array($plugin['status'], ['broken', 'incompatible', 'missing'], true)) {
+            if (in_array($plugin['status'], [
+                'broken',
+                'incompatible',
+                'missing_package',
+                'orphaned_state',
+                RuntimePluginStore::RECOVERY_PENDING,
+                RuntimePluginStore::RECOVERY_UNRECOVERABLE,
+            ], true)) {
                 continue;
             }
 

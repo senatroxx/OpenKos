@@ -73,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('settings/plugins', [PluginController::class, 'index'])->name('settings.plugins.index');
         Route::post('settings/plugins', [PluginController::class, 'install'])->name('settings.plugins.install');
+        Route::delete('settings/plugins/recovery', [PluginController::class, 'cleanup'])->name('settings.plugins.recovery.cleanup');
         Route::post('settings/plugins/{vendor}/{package}/enable', [PluginController::class, 'enable'])
             ->where(['vendor' => '[a-z0-9][a-z0-9._-]*', 'package' => '[a-z0-9][a-z0-9._-]*'])
             ->name('settings.plugins.enable');

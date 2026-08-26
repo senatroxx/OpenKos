@@ -125,12 +125,12 @@ final class PluginInstaller
         $this->store->withLock(function (RuntimePluginStore $store) use ($id, $force): void {
             $recoveryStatus = $store->recoveryStatus();
 
-            if ($force && $recoveryStatus === 'pending') {
+            if ($force && $recoveryStatus === RuntimePluginStore::RECOVERY_PENDING) {
                 try {
                     $store->recoverPendingOperation();
                     $recoveryStatus = $store->recoveryStatus();
                 } catch (Throwable $exception) {
-                    if ($store->recoveryStatus() !== 'corrupt') {
+                    if ($store->recoveryStatus() !== RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
                         try {
                             $store->readState();
                         } catch (Throwable) {
@@ -142,7 +142,7 @@ final class PluginInstaller
                         throw $exception;
                     }
 
-                    $recoveryStatus = 'corrupt';
+                    $recoveryStatus = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
                 }
             }
 
@@ -150,7 +150,7 @@ final class PluginInstaller
                 try {
                     $store->readState();
                 } catch (Throwable) {
-                    if ($recoveryStatus === 'pending') {
+                    if ($recoveryStatus === RuntimePluginStore::RECOVERY_PENDING) {
                         $store->forceRemove($id, true);
 
                         return;
@@ -164,7 +164,7 @@ final class PluginInstaller
 
             $this->assertNoEnabledDependants($id, $store, 'remove', $force);
 
-            if ($force && $recoveryStatus === 'corrupt') {
+            if ($force && $recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
                 $store->forceRemove($id);
 
                 return;
@@ -172,6 +172,13 @@ final class PluginInstaller
 
             $store->remove($id);
         }, ! $force);
+    }
+
+    public function cleanupOrphanedMetadata(): void
+    {
+        $this->store->withLock(function (RuntimePluginStore $store): void {
+            $store->forceCleanupOrphanedMetadata();
+        }, false);
     }
 
     private function validateArchiveEntries(ZipArchive $archive): void

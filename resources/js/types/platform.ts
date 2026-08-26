@@ -27,7 +27,7 @@ export type PlatformPage = {
 
 export type PlatformPlugin = {
     id: string;
-    managed_id: string;
+    managed_id: string | null;
     declared_id: string | null;
     name: string;
     version: string | null;
@@ -44,13 +44,17 @@ export type PlatformPlugin = {
         | 'incompatible'
         | 'broken'
         | 'conflict'
-        | 'missing';
+        | 'missing_package'
+        | 'pending_recovery'
+        | 'unrecoverable_recovery'
+        | 'orphaned_state';
     enabled: boolean;
     error: string | null;
     can_enable: boolean;
     can_disable: boolean;
     can_remove: boolean;
     can_force_recovery: boolean;
+    can_cleanup: boolean;
 };
 
 export type Platform = {

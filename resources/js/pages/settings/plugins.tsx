@@ -30,6 +30,7 @@ import {
     index,
     install,
 } from '@/routes/settings/plugins';
+import { cleanup as cleanupRecovery } from '@/routes/settings/plugins/recovery';
 import type { PlatformPlugin } from '@/types/platform';
 
 type Props = {
@@ -53,7 +54,10 @@ const statusVariants: Record<
     incompatible: 'destructive',
     broken: 'destructive',
     conflict: 'destructive',
-    missing: 'destructive',
+    missing_package: 'destructive',
+    pending_recovery: 'outline',
+    unrecoverable_recovery: 'destructive',
+    orphaned_state: 'destructive',
 };
 
 function formatBytes(bytes: number): string {
@@ -74,8 +78,15 @@ function statusLabel(status: PlatformPlugin['status']): string {
         incompatible: t('Incompatible'),
         broken: t('Broken'),
         conflict: t('Conflict'),
-        missing: t('Missing'),
+        missing_package: t('Missing package'),
+        pending_recovery: t('Pending recovery'),
+        unrecoverable_recovery: t('Unrecoverable recovery'),
+        orphaned_state: t('Orphaned state'),
     }[status];
+}
+
+function pluginKey(plugin: PlatformPlugin): string {
+    return plugin.managed_id ?? plugin.id;
 }
 
 export default function Plugins({
@@ -121,11 +132,15 @@ export default function Plugins({
         action: 'enable' | 'disable',
         force = false,
     ) {
+        if (plugin.managed_id === null) {
+            return;
+        }
+
         const parts = routeParts(plugin.managed_id);
         const route = action === 'enable' ? enable(parts) : disable(parts);
 
         setActionError(null);
-        setProcessingPlugin(plugin.managed_id);
+        setProcessingPlugin(pluginKey(plugin));
         router.post(route.url, force ? { force: true } : {}, {
             preserveScroll: true,
             onError: (errors) => setActionError(errors.plugin ?? null),
@@ -139,11 +154,28 @@ export default function Plugins({
         }
 
         const { plugin, force } = removeConfirmation;
+
+        if (plugin.managed_id === null) {
+            return;
+        }
+
         setRemoveConfirmation(null);
         setActionError(null);
-        setProcessingPlugin(plugin.managed_id);
+        setProcessingPlugin(pluginKey(plugin));
         router.delete(destroy(routeParts(plugin.managed_id)).url, {
             data: force ? { force: true } : {},
+            preserveScroll: true,
+            onError: (errors) => setActionError(errors.plugin ?? null),
+            onFinish: () => setProcessingPlugin(null),
+        });
+    }
+
+    function cleanupMetadata(plugin: PlatformPlugin) {
+        const key = pluginKey(plugin);
+
+        setActionError(null);
+        setProcessingPlugin(key);
+        router.delete(cleanupRecovery().url, {
             preserveScroll: true,
             onError: (errors) => setActionError(errors.plugin ?? null),
             onFinish: () => setProcessingPlugin(null),
@@ -255,13 +287,13 @@ export default function Plugins({
                 ) : (
                     <div className="grid gap-4 lg:grid-cols-2">
                         {plugins.map((plugin) => (
-                            <Card key={`${plugin.source}:${plugin.managed_id}`}>
+                            <Card key={`${plugin.source}:${pluginKey(plugin)}`}>
                                 <CardHeader>
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div>
                                             <CardTitle>{plugin.name}</CardTitle>
                                             <CardDescription className="mt-1 font-mono">
-                                                {plugin.managed_id}
+                                                {plugin.managed_id ?? plugin.id}
                                             </CardDescription>
                                         </div>
                                         <Badge
@@ -372,6 +404,25 @@ export default function Plugins({
                                         </Alert>
                                     )}
 
+                                    {plugin.can_cleanup && (
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="destructive"
+                                                disabled={
+                                                    processingPlugin ===
+                                                    pluginKey(plugin)
+                                                }
+                                                onClick={() =>
+                                                    cleanupMetadata(plugin)
+                                                }
+                                            >
+                                                {t('Clean up metadata')}
+                                            </Button>
+                                        </div>
+                                    )}
+
                                     {(plugin.can_enable ||
                                         plugin.can_disable ||
                                         plugin.can_remove) && (
@@ -382,7 +433,7 @@ export default function Plugins({
                                                     size="sm"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.managed_id
+                                                        pluginKey(plugin)
                                                     }
                                                     onClick={() =>
                                                         runAction(
@@ -402,7 +453,7 @@ export default function Plugins({
                                                         variant="outline"
                                                         disabled={
                                                             processingPlugin ===
-                                                            plugin.managed_id
+                                                            pluginKey(plugin)
                                                         }
                                                         onClick={() =>
                                                             runAction(
@@ -420,7 +471,9 @@ export default function Plugins({
                                                             variant="destructive"
                                                             disabled={
                                                                 processingPlugin ===
-                                                                plugin.managed_id
+                                                                pluginKey(
+                                                                    plugin,
+                                                                )
                                                             }
                                                             onClick={() =>
                                                                 runAction(
@@ -443,7 +496,7 @@ export default function Plugins({
                                                         variant="destructive"
                                                         disabled={
                                                             processingPlugin ===
-                                                            plugin.managed_id
+                                                            pluginKey(plugin)
                                                         }
                                                         onClick={() =>
                                                             setRemoveConfirmation(
@@ -463,7 +516,9 @@ export default function Plugins({
                                                             variant="destructive"
                                                             disabled={
                                                                 processingPlugin ===
-                                                                plugin.managed_id
+                                                                pluginKey(
+                                                                    plugin,
+                                                                )
                                                             }
                                                             onClick={() =>
                                                                 setRemoveConfirmation(

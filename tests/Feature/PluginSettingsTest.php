@@ -443,7 +443,60 @@ it('keeps a runtime package removable when state metadata is corrupt', function 
         ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]), ['force' => true])
         ->assertRedirect(route('settings.plugins.index'));
 
-    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
+    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/state.json'))->toBeFalse();
+});
+
+it('surfaces and cleans orphaned runtime state without a package row', function (): void {
+    File::makeDirectory($this->runtimePluginPath, 0750, true);
+    file_put_contents($this->runtimePluginPath.'/state.json', '{broken');
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('status', 'orphaned_state'))->toMatchArray([
+        'managed_id' => null,
+        'can_cleanup' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'))
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/state.json'))->toBeFalse();
+});
+
+it('surfaces and cleans unrecoverable runtime recovery without a package row', function (): void {
+    File::makeDirectory($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'settings/missing-backup',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('status', 'unrecoverable_recovery'))->toMatchArray([
+        'managed_id' => null,
+        'can_cleanup' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'))
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
 });
 
 it('keeps a runtime package removable when recovery metadata is corrupt', function (): void {
@@ -459,7 +512,7 @@ it('keeps a runtime package removable when recovery metadata is corrupt', functi
         ->inertiaProps('plugins');
 
     expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
-        'status' => 'broken',
+        'status' => 'unrecoverable_recovery',
         'can_disable' => false,
         'can_remove' => true,
         'can_force_recovery' => true,
@@ -483,7 +536,7 @@ it('does not offer disable for a package missing from the managed directory', fu
         ->inertiaProps('plugins');
 
     expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
-        'status' => 'missing',
+        'status' => 'missing_package',
         'can_disable' => false,
         'can_remove' => true,
     ]);

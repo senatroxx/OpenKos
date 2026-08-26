@@ -14,6 +14,13 @@ afterEach(function (): void {
     config(['platform.runtime.path' => $this->originalRuntimePath]);
 });
 
+it('reads empty state without creating absent runtime storage', function (): void {
+    $store = app(RuntimePluginStore::class);
+
+    expect($store->readState())->toBe([])
+        ->and(is_dir($this->runtimePluginPath))->toBeFalse();
+});
+
 it('restores the previous package after an interrupted swap', function (): void {
     $store = app(RuntimePluginStore::class);
     $activePath = $this->runtimePluginPath.'/acme/recovery';
@@ -119,6 +126,148 @@ it('rejects recovery paths outside their managed directories', function (): void
 
     expect(fn (): mixed => $store->withLock(fn (): null => null))
         ->toThrow(RuntimeException::class, 'recovery marker is invalid');
+});
+
+it('classifies structurally valid but unrecoverable recovery metadata', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    expect($store->recoveryStatus())->toBe(RuntimePluginStore::RECOVERY_UNRECOVERABLE);
+});
+
+it('classifies ambiguous prepared recovery metadata as unrecoverable', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath.'/acme/recovery', 0750, true);
+    mkdir($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => false,
+        'phase' => 'prepared',
+    ], JSON_THROW_ON_ERROR));
+
+    expect($store->recoveryStatus())->toBe(RuntimePluginStore::RECOVERY_UNRECOVERABLE);
+});
+
+it('cleans orphaned lifecycle metadata while holding the store lock', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath.'/.backup/stale', 0750, true);
+    mkdir($this->runtimePluginPath.'/.staging/stale', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/state.json', '{broken');
+    file_put_contents($this->runtimePluginPath.'/recovery.json', '{broken');
+    file_put_contents($this->runtimePluginPath.'/recovery.json.tmp', 'stale');
+
+    $store->withLock(function (RuntimePluginStore $store): void {
+        $store->forceCleanupOrphanedMetadata();
+    }, false);
+
+    expect(is_file($this->runtimePluginPath.'/state.json'))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json.tmp'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.backup'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
+});
+
+it('surfaces deletion failures instead of reporting force removal success', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $packagePath = $this->runtimePluginPath.'/acme/failure';
+    mkdir(dirname($packagePath), 0750, true);
+    mkdir($packagePath, 0750);
+    file_put_contents($packagePath.'/locked.txt', 'locked');
+    chmod($packagePath, 0500);
+
+    try {
+        expect(fn (): mixed => $store->withLock(
+            fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/failure'),
+            false,
+        ))->toThrow(RuntimeException::class, 'Could not remove runtime plugin path');
+    } finally {
+        chmod($packagePath, 0700);
+    }
+});
+
+it('rejects symlinked internal staging paths', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $outside = sys_get_temp_dir().'/openkos-runtime-outside-'.bin2hex(random_bytes(8));
+    mkdir($outside, 0750, true);
+    mkdir($this->runtimePluginPath, 0750, true);
+    symlink($outside, $this->runtimePluginPath.'/.staging');
+
+    try {
+        expect(fn (): mixed => $store->withLock(
+            fn (RuntimePluginStore $store): mixed => $store->createStagingPath('incoming'),
+            false,
+        ))->toThrow(RuntimeException::class, 'contains a symlink');
+    } finally {
+        unlink($this->runtimePluginPath.'/.staging');
+        File::deleteDirectory($outside);
+    }
+});
+
+it('does not remove a different package while forcing recovery', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $targetPath = $this->runtimePluginPath.'/acme/target';
+    mkdir($targetPath, 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/other',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    expect(fn (): mixed => $store->withLock(
+        fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/target'),
+        false,
+    ))->toThrow(RuntimeException::class, 'belongs to a different package');
+
+    expect(is_dir($targetPath))->toBeTrue()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeTrue();
+});
+
+it('clears recovery artifacts without touching another package', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $targetPath = $this->runtimePluginPath.'/acme/target';
+    $otherPath = $this->runtimePluginPath.'/acme/other';
+    mkdir($targetPath, 0750, true);
+    mkdir($otherPath, 0750, true);
+    mkdir($this->runtimePluginPath.'/.backup/stale', 0750, true);
+    mkdir($this->runtimePluginPath.'/.staging/stale', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/state.json', json_encode([
+        'acme/target' => ['enabled' => false],
+        'acme/other' => ['enabled' => true],
+    ], JSON_THROW_ON_ERROR));
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/target',
+        'staging' => '.staging/stale',
+        'backup' => '.backup/stale',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(
+        fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/target'),
+        false,
+    );
+
+    expect(is_dir($targetPath))->toBeFalse()
+        ->and(is_dir($otherPath))->toBeTrue()
+        ->and(is_dir($this->runtimePluginPath.'/.backup'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse()
+        ->and(json_decode(file_get_contents($this->runtimePluginPath.'/state.json'), true, 512, JSON_THROW_ON_ERROR))
+        ->toBe(['acme/other' => ['enabled' => true]]);
 });
 
 it('rejects the application root as runtime plugin storage', function (): void {

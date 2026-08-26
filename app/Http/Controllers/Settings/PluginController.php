@@ -64,6 +64,23 @@ class PluginController extends Controller
         return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->remove($id, $request->boolean('force')), __('Plugin removed. Restart required for changes to take effect.'));
     }
 
+    public function cleanup(PluginManagementService $plugins): RedirectResponse
+    {
+        try {
+            $plugins->cleanupOrphanedMetadata();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'plugin' => $plugins->userMessage($exception),
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Runtime plugin metadata cleaned.')]);
+
+        return to_route('settings.plugins.index');
+    }
+
     /** @param callable(string): mixed $action */
     private function runLifecycle(PluginManagementService $plugins, string $id, callable $action, string $success): RedirectResponse
     {
