@@ -38,6 +38,11 @@ type Props = {
     max_upload_bytes: number;
 };
 
+type RemoveConfirmation = {
+    plugin: PlatformPlugin;
+    force: boolean;
+};
+
 const statusVariants: Record<
     PlatformPlugin['status'],
     'default' | 'secondary' | 'destructive' | 'outline'
@@ -81,7 +86,7 @@ export default function Plugins({
     const fileInput = useRef<HTMLInputElement>(null);
     const [uploadConfirmationOpen, setUploadConfirmationOpen] = useState(false);
     const [removeConfirmation, setRemoveConfirmation] =
-        useState<PlatformPlugin | null>(null);
+        useState<RemoveConfirmation | null>(null);
     const [processingPlugin, setProcessingPlugin] = useState<string | null>(
         null,
     );
@@ -111,21 +116,21 @@ export default function Plugins({
         });
     }
 
-    function runAction(plugin: PlatformPlugin, action: 'enable' | 'disable') {
+    function runAction(
+        plugin: PlatformPlugin,
+        action: 'enable' | 'disable',
+        force = false,
+    ) {
         const parts = routeParts(plugin.managed_id);
         const route = action === 'enable' ? enable(parts) : disable(parts);
 
         setActionError(null);
         setProcessingPlugin(plugin.managed_id);
-        router.post(
-            route.url,
-            {},
-            {
-                preserveScroll: true,
-                onError: (errors) => setActionError(errors.plugin ?? null),
-                onFinish: () => setProcessingPlugin(null),
-            },
-        );
+        router.post(route.url, force ? { force: true } : {}, {
+            preserveScroll: true,
+            onError: (errors) => setActionError(errors.plugin ?? null),
+            onFinish: () => setProcessingPlugin(null),
+        });
     }
 
     function confirmRemove() {
@@ -133,11 +138,12 @@ export default function Plugins({
             return;
         }
 
-        const plugin = removeConfirmation;
+        const { plugin, force } = removeConfirmation;
         setRemoveConfirmation(null);
         setActionError(null);
         setProcessingPlugin(plugin.managed_id);
         router.delete(destroy(routeParts(plugin.managed_id)).url, {
+            data: force ? { force: true } : {},
             preserveScroll: true,
             onError: (errors) => setActionError(errors.plugin ?? null),
             onFinish: () => setProcessingPlugin(null),
@@ -356,6 +362,16 @@ export default function Plugins({
                                         </Alert>
                                     )}
 
+                                    {plugin.can_force_recovery && (
+                                        <Alert variant="destructive">
+                                            <AlertDescription>
+                                                {t(
+                                                    'Recovery actions are available because this runtime package or its dependency graph is invalid. They may leave dependent plugins unavailable.',
+                                                )}
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
                                     {(plugin.can_enable ||
                                         plugin.can_disable ||
                                         plugin.can_remove) && (
@@ -379,41 +395,89 @@ export default function Plugins({
                                                 </Button>
                                             )}
                                             {plugin.can_disable && (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    disabled={
-                                                        processingPlugin ===
-                                                        plugin.managed_id
-                                                    }
-                                                    onClick={() =>
-                                                        runAction(
-                                                            plugin,
-                                                            'disable',
-                                                        )
-                                                    }
-                                                >
-                                                    {t('Disable')}
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        disabled={
+                                                            processingPlugin ===
+                                                            plugin.managed_id
+                                                        }
+                                                        onClick={() =>
+                                                            runAction(
+                                                                plugin,
+                                                                'disable',
+                                                            )
+                                                        }
+                                                    >
+                                                        {t('Disable')}
+                                                    </Button>
+                                                    {plugin.can_force_recovery && (
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            disabled={
+                                                                processingPlugin ===
+                                                                plugin.managed_id
+                                                            }
+                                                            onClick={() =>
+                                                                runAction(
+                                                                    plugin,
+                                                                    'disable',
+                                                                    true,
+                                                                )
+                                                            }
+                                                        >
+                                                            {t('Force disable')}
+                                                        </Button>
+                                                    )}
+                                                </>
                                             )}
                                             {plugin.can_remove && (
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="destructive"
-                                                    disabled={
-                                                        processingPlugin ===
-                                                        plugin.managed_id
-                                                    }
-                                                    onClick={() =>
-                                                        setRemoveConfirmation(
-                                                            plugin,
-                                                        )
-                                                    }
-                                                >
-                                                    {t('Remove')}
-                                                </Button>
+                                                <>
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        disabled={
+                                                            processingPlugin ===
+                                                            plugin.managed_id
+                                                        }
+                                                        onClick={() =>
+                                                            setRemoveConfirmation(
+                                                                {
+                                                                    plugin,
+                                                                    force: false,
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        {t('Remove')}
+                                                    </Button>
+                                                    {plugin.can_force_recovery && (
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            disabled={
+                                                                processingPlugin ===
+                                                                plugin.managed_id
+                                                            }
+                                                            onClick={() =>
+                                                                setRemoveConfirmation(
+                                                                    {
+                                                                        plugin,
+                                                                        force: true,
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            {t('Force remove')}
+                                                        </Button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     )}
@@ -458,11 +522,19 @@ export default function Plugins({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{t('Remove runtime plugin?')}</DialogTitle>
+                        <DialogTitle>
+                            {removeConfirmation?.force
+                                ? t('Force remove runtime plugin?')
+                                : t('Remove runtime plugin?')}
+                        </DialogTitle>
                         <DialogDescription>
-                            {t(
-                                'This removes only the runtime package and its activation state. Plugin-owned database data will not be deleted. A restart is required for changes to take effect.',
-                            )}
+                            {removeConfirmation?.force
+                                ? t(
+                                      'This recovery action removes the managed package directory even when lifecycle metadata is corrupt. Plugin-owned database data will not be deleted. A restart is required for changes to take effect.',
+                                  )
+                                : t(
+                                      'This removes only the runtime package and its activation state. Plugin-owned database data will not be deleted. A restart is required for changes to take effect.',
+                                  )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -476,7 +548,9 @@ export default function Plugins({
                             variant="destructive"
                             onClick={confirmRemove}
                         >
-                            {t('Remove plugin')}
+                            {removeConfirmation?.force
+                                ? t('Force remove plugin')
+                                : t('Remove plugin')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

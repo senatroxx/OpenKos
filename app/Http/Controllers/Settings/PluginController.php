@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\InstallPluginRequest;
 use App\Services\Platform\PluginManagementService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -53,14 +54,14 @@ class PluginController extends Controller
         return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->enable($id), __('Plugin enabled. Restart required for changes to take effect.'));
     }
 
-    public function disable(string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
+    public function disable(Request $request, string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
     {
-        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->disable($id), __('Plugin disabled. Restart required for changes to take effect.'));
+        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->disable($id, $request->boolean('force')), __('Plugin disabled. Restart required for changes to take effect.'));
     }
 
-    public function destroy(string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
+    public function destroy(Request $request, string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
     {
-        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->remove($id), __('Plugin removed. Restart required for changes to take effect.'));
+        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->remove($id, $request->boolean('force')), __('Plugin removed. Restart required for changes to take effect.'));
     }
 
     /** @param callable(string): mixed $action */

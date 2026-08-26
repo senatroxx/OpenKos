@@ -50,6 +50,7 @@ export type PlatformPlugin = {
     can_enable: boolean;
     can_disable: boolean;
     can_remove: boolean;
+    can_force_recovery: boolean;
 };
 
 export type Platform = {

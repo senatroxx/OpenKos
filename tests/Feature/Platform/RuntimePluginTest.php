@@ -51,7 +51,9 @@ it('does not boot a disabled runtime plugin', function (): void {
 
     $this->bootPlatformWithIsolatedRegistries();
 
-    expect(app(PermissionRegistry::class)->all())->not->toHaveKey('runtime-fixture.view');
+    expect(app(PermissionRegistry::class)->all())
+        ->not->toHaveKey('runtime-fixture.view')
+        ->and(class_exists($artifact['class'], false))->toBeFalse();
 });
 
 it('validates updates in a fresh process after the previous class was loaded', function (): void {

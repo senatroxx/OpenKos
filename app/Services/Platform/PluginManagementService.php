@@ -78,14 +78,14 @@ class PluginManagementService
         return $this->installer->enable($id);
     }
 
-    public function disable(string $id): void
+    public function disable(string $id, bool $force = false): void
     {
-        $this->installer->disable($id);
+        $this->installer->disable($id, $force);
     }
 
-    public function remove(string $id): void
+    public function remove(string $id, bool $force = false): void
     {
-        $this->installer->remove($id);
+        $this->installer->remove($id, $force);
     }
 
     public function userMessage(Throwable $exception): string
@@ -117,7 +117,16 @@ class PluginManagementService
     /** @return array<int, array<string, mixed>> */
     private function runtimePlugins(): array
     {
-        $state = $this->store->readState();
+        $recoveryStatus = $this->store->recoveryStatus();
+
+        try {
+            $state = $this->store->readState();
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return $this->runtimePluginsWithCorruptState();
+        }
+
         $packages = $this->store->installedPackages();
         $runtime = [];
         $rows = [];
@@ -159,6 +168,7 @@ class PluginManagementService
                         'can_enable' => false,
                         'can_disable' => $enabled,
                         'can_remove' => true,
+                        'can_force_recovery' => true,
                     ];
 
                     continue;
@@ -179,6 +189,7 @@ class PluginManagementService
                 'can_enable' => false,
                 'can_disable' => $enabled,
                 'can_remove' => true,
+                'can_force_recovery' => true,
             ];
         }
 
@@ -199,8 +210,47 @@ class PluginManagementService
                 'enabled' => $entry['enabled'],
                 'error' => __('Plugin state exists without an installed package. Remove the stale state entry.'),
                 'can_enable' => false,
-                'can_disable' => $entry['enabled'],
+                'can_disable' => false,
                 'can_remove' => true,
+                'can_force_recovery' => true,
+            ];
+        }
+
+        if ($recoveryStatus === 'corrupt') {
+            foreach ($rows as &$row) {
+                if ($row['source'] !== 'runtime') {
+                    continue;
+                }
+
+                $row['status'] = 'broken';
+                $row['error'] = __('Runtime plugin recovery metadata is corrupted. Force remove this package to recover it.');
+                $row['can_enable'] = false;
+                $row['can_disable'] = false;
+                $row['can_remove'] = true;
+                $row['can_force_recovery'] = true;
+            }
+            unset($row);
+        }
+
+        return $rows;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function runtimePluginsWithCorruptState(): array
+    {
+        $rows = [];
+
+        foreach ($this->store->installedPackages() as $id => $path) {
+            $rows[] = [
+                ...$this->manifestPreview($path, $id),
+                'source' => 'runtime',
+                'status' => 'broken',
+                'enabled' => false,
+                'error' => __('Runtime plugin state is corrupted. Force remove this package to recover it.'),
+                'can_enable' => false,
+                'can_disable' => false,
+                'can_remove' => true,
+                'can_force_recovery' => true,
             ];
         }
 
@@ -246,6 +296,7 @@ class PluginManagementService
                     'can_enable' => false,
                     'can_disable' => false,
                     'can_remove' => false,
+                    'can_force_recovery' => false,
                 ];
             } catch (Throwable $exception) {
                 report($exception);
@@ -269,6 +320,7 @@ class PluginManagementService
             'can_enable' => ! $enabled,
             'can_disable' => $enabled,
             'can_remove' => true,
+            'can_force_recovery' => false,
         ];
     }
 
@@ -407,5 +459,6 @@ class PluginManagementService
         $plugin['can_enable'] = false;
         $plugin['can_disable'] = $plugin['source'] === 'runtime' && $plugin['enabled'];
         $plugin['can_remove'] = $plugin['source'] === 'runtime';
+        $plugin['can_force_recovery'] = $plugin['source'] === 'runtime';
     }
 }

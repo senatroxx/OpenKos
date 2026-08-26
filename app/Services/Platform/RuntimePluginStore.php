@@ -34,7 +34,7 @@ final class RuntimePluginStore
         return $this->root;
     }
 
-    public function withLock(Closure $callback): mixed
+    public function withLock(Closure $callback, bool $recover = true): mixed
     {
         $this->ensureDirectory($this->root);
 
@@ -45,13 +45,43 @@ final class RuntimePluginStore
         }
 
         try {
-            $this->recoverPendingOperation();
+            if ($recover) {
+                $this->recoverPendingOperation();
+            }
 
             return $callback($this);
         } finally {
             flock($handle, LOCK_UN);
             fclose($handle);
         }
+    }
+
+    public function recoveryStatus(): string
+    {
+        $path = $this->recoveryMarkerPath();
+
+        if (is_link($path) || (file_exists($path) && ! is_file($path))) {
+            return 'corrupt';
+        }
+
+        if (! is_file($path)) {
+            return 'clear';
+        }
+
+        $contents = file_get_contents($path);
+
+        if ($contents === false) {
+            return 'corrupt';
+        }
+
+        try {
+            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+            $this->validateRecoveryMarker($marker);
+        } catch (Throwable) {
+            return 'corrupt';
+        }
+
+        return 'pending';
     }
 
     /**
@@ -62,6 +92,10 @@ final class RuntimePluginStore
         $path = $this->statePath();
 
         if (is_link($path)) {
+            throw new RuntimeException('Runtime plugin state is corrupted. Repair or remove '.$path.' before continuing.');
+        }
+
+        if (file_exists($path) && ! is_file($path)) {
             throw new RuntimeException('Runtime plugin state is corrupted. Repair or remove '.$path.' before continuing.');
         }
 
@@ -279,7 +313,8 @@ final class RuntimePluginStore
         $activePath = $this->packagePath($id);
         $state = $this->readState();
 
-        if (! is_dir($activePath)) {
+        if (! is_dir($activePath) || is_link($activePath)) {
+            $this->deleteDirectory($activePath);
             unset($state[$id]);
             $this->writeState($state);
 
@@ -318,7 +353,49 @@ final class RuntimePluginStore
         }
     }
 
-    private function recoverPendingOperation(): void
+    public function forceRemove(string $id, bool $allowPendingRecovery = false): void
+    {
+        $this->assertValidId($id);
+        $recoveryStatus = $this->recoveryStatus();
+
+        if ($recoveryStatus === 'pending') {
+            if (! $allowPendingRecovery) {
+                throw new RuntimeException('Runtime plugin recovery is still pending. Complete recovery before forcing removal.');
+            }
+
+            $contents = file_get_contents($this->recoveryMarkerPath());
+            $marker = is_string($contents) ? json_decode($contents, true) : null;
+
+            $this->validateRecoveryMarker($marker);
+
+            if ($marker['id'] !== $id) {
+                throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+            }
+
+            $this->deleteDirectory($this->managedPath($marker['backup']));
+            $stagingPath = isset($marker['staging']) && is_string($marker['staging'])
+                ? $this->managedPath($marker['staging'])
+                : null;
+            $this->deleteDirectory($stagingPath);
+            $this->removeRecoveryMarker();
+        }
+
+        $this->deleteDirectory($this->packagePath($id));
+
+        try {
+            $state = $this->readState();
+            unset($state[$id]);
+            $this->writeState($state);
+        } catch (Throwable) {
+            // The managed package is still removable when lifecycle metadata is corrupt.
+        }
+
+        if ($recoveryStatus === 'corrupt') {
+            $this->removeRecoveryMarker();
+        }
+    }
+
+    public function recoverPendingOperation(): void
     {
         $path = $this->recoveryMarkerPath();
 
@@ -342,17 +419,7 @@ final class RuntimePluginStore
             throw new RuntimeException('Runtime plugin recovery marker is corrupted.', previous: $exception);
         }
 
-        if (
-            ! is_array($marker) ||
-            ! in_array($marker['operation'] ?? null, ['swap', 'remove'], true) ||
-            ! in_array($marker['phase'] ?? null, ['prepared', 'old_preserved', 'new_active', 'committed'], true) ||
-            ! is_string($marker['id'] ?? null) ||
-            ! is_string($marker['backup'] ?? null) ||
-            ! str_starts_with($marker['backup'], '.backup/') ||
-            (isset($marker['staging']) && $marker['staging'] !== null && (! is_string($marker['staging']) || ! str_starts_with($marker['staging'], '.staging/')))
-        ) {
-            throw new RuntimeException('Runtime plugin recovery marker is invalid.');
-        }
+        $this->validateRecoveryMarker($marker);
 
         $id = $marker['id'];
         $backupPath = $this->managedPath($marker['backup']);
@@ -444,6 +511,24 @@ final class RuntimePluginStore
         $this->writeState($state);
     }
 
+    private function validateRecoveryMarker(mixed $marker): void
+    {
+        if (
+            ! is_array($marker) ||
+            ! in_array($marker['operation'] ?? null, ['swap', 'remove'], true) ||
+            ! in_array($marker['phase'] ?? null, ['prepared', 'old_preserved', 'new_active', 'committed'], true) ||
+            ! is_string($marker['id'] ?? null) ||
+            ! is_string($marker['backup'] ?? null) ||
+            ! is_bool($marker['had_active'] ?? null) ||
+            ! str_starts_with($marker['backup'], '.backup/') ||
+            (isset($marker['staging']) && $marker['staging'] !== null && (! is_string($marker['staging']) || ! str_starts_with($marker['staging'], '.staging/')))
+        ) {
+            throw new RuntimeException('Runtime plugin recovery marker is invalid.');
+        }
+
+        $this->assertValidId($marker['id']);
+    }
+
     /**
      * @param  array<string, mixed>  $marker
      */
@@ -517,7 +602,7 @@ final class RuntimePluginStore
 
     private function deleteDirectory(?string $path): void
     {
-        if ($path === null || ! file_exists($path)) {
+        if ($path === null || (! file_exists($path) && ! is_link($path))) {
             return;
         }
 

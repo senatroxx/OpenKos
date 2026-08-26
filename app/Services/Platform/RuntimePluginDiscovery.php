@@ -35,6 +35,15 @@ final class RuntimePluginDiscovery
                 foreach ($packages as $id => $path) {
                     $enabled = $state[$id]['enabled'] ?? false;
 
+                    if (! $enabled) {
+                        $runtime[$id] = [
+                            'metadata' => null,
+                            'enabled' => false,
+                        ];
+
+                        continue;
+                    }
+
                     try {
                         $runtime[$id] = [
                             'metadata' => $this->validator->validate($path, $id),

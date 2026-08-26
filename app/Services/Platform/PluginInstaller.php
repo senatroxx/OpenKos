@@ -101,20 +101,77 @@ final class PluginInstaller
         });
     }
 
-    public function disable(string $id): void
+    public function disable(string $id, bool $force = false): void
     {
-        $this->store->withLock(function (RuntimePluginStore $store) use ($id): void {
-            $this->assertNoEnabledDependants($id, $store, 'disable');
+        $this->store->withLock(function (RuntimePluginStore $store) use ($id, $force): void {
+            if ($force) {
+                try {
+                    $store->readState();
+                } catch (Throwable $exception) {
+                    throw new RuntimeException(
+                        'Runtime plugin state is corrupted. Remove the package to recover it.',
+                        previous: $exception,
+                    );
+                }
+            }
+
+            $this->assertNoEnabledDependants($id, $store, 'disable', $force);
             $store->setEnabled($id, false);
         });
     }
 
-    public function remove(string $id): void
+    public function remove(string $id, bool $force = false): void
     {
-        $this->store->withLock(function (RuntimePluginStore $store) use ($id): void {
-            $this->assertNoEnabledDependants($id, $store, 'remove');
+        $this->store->withLock(function (RuntimePluginStore $store) use ($id, $force): void {
+            $recoveryStatus = $store->recoveryStatus();
+
+            if ($force && $recoveryStatus === 'pending') {
+                try {
+                    $store->recoverPendingOperation();
+                    $recoveryStatus = $store->recoveryStatus();
+                } catch (Throwable $exception) {
+                    if ($store->recoveryStatus() !== 'corrupt') {
+                        try {
+                            $store->readState();
+                        } catch (Throwable) {
+                            $store->forceRemove($id, true);
+
+                            return;
+                        }
+
+                        throw $exception;
+                    }
+
+                    $recoveryStatus = 'corrupt';
+                }
+            }
+
+            if ($force) {
+                try {
+                    $store->readState();
+                } catch (Throwable) {
+                    if ($recoveryStatus === 'pending') {
+                        $store->forceRemove($id, true);
+
+                        return;
+                    }
+
+                    $store->forceRemove($id);
+
+                    return;
+                }
+            }
+
+            $this->assertNoEnabledDependants($id, $store, 'remove', $force);
+
+            if ($force && $recoveryStatus === 'corrupt') {
+                $store->forceRemove($id);
+
+                return;
+            }
+
             $store->remove($id);
-        });
+        }, ! $force);
     }
 
     private function validateArchiveEntries(ZipArchive $archive): void
@@ -210,11 +267,15 @@ final class PluginInstaller
         ];
     }
 
-    private function assertNoEnabledDependants(string $id, RuntimePluginStore $store, string $action): void
+    private function assertNoEnabledDependants(string $id, RuntimePluginStore $store, string $action, bool $force = false): void
     {
         $dependants = $this->graph->enabledDependants($id, $store, $this->hostPluginClasses());
 
         if ($dependants === []) {
+            return;
+        }
+
+        if ($force && $this->graph->canForceRecover($id, $store, $this->hostPluginClasses())) {
             return;
         }
 
