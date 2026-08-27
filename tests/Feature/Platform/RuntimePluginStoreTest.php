@@ -278,6 +278,28 @@ it('surfaces deletion failures instead of reporting force removal success', func
     }
 });
 
+it('does not erase another package state when removing with corrupt state', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $firstPath = $this->runtimePluginPath.'/acme/first';
+    $secondPath = $this->runtimePluginPath.'/acme/second';
+    mkdir($firstPath, 0750, true);
+    mkdir($secondPath, 0750, true);
+    $store->writeState([
+        'acme/first' => ['enabled' => true],
+        'acme/second' => ['enabled' => false],
+    ]);
+    file_put_contents($this->runtimePluginPath.'/state.json', '{broken');
+
+    $store->withLock(
+        fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/first'),
+        false,
+    );
+
+    expect(is_dir($firstPath))->toBeFalse()
+        ->and(is_dir($secondPath))->toBeTrue()
+        ->and(file_get_contents($this->runtimePluginPath.'/state.json'))->toBe('{broken');
+});
+
 it('rejects symlinked internal staging paths', function (): void {
     $store = app(RuntimePluginStore::class);
     $outside = sys_get_temp_dir().'/openkos-runtime-outside-'.bin2hex(random_bytes(8));
@@ -294,6 +316,38 @@ it('rejects symlinked internal staging paths', function (): void {
         unlink($this->runtimePluginPath.'/.staging');
         File::deleteDirectory($outside);
     }
+});
+
+it('surfaces and removes an unsafe lock path without opening it', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $outside = sys_get_temp_dir().'/openkos-runtime-lock-outside-'.bin2hex(random_bytes(8));
+    mkdir($outside, 0750, true);
+    mkdir($this->runtimePluginPath, 0750, true);
+    symlink($outside, $this->runtimePluginPath.'/.lock');
+
+    try {
+        expect($store->managedFilesystemAnomalies())->toHaveKey('internal:.lock');
+
+        $store->forceCleanupFilesystemAnomaly('internal:.lock');
+
+        expect(is_link($this->runtimePluginPath.'/.lock'))->toBeFalse()
+            ->and(is_dir($outside))->toBeTrue();
+    } finally {
+        File::deleteDirectory($outside);
+        File::delete($this->runtimePluginPath.'/.lock');
+    }
+});
+
+it('surfaces and removes a non-file recovery marker', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath.'/recovery.json/nested', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json/nested/marker', 'keep');
+
+    expect($store->managedFilesystemAnomalies())->toHaveKey('internal:recovery.json');
+
+    $store->forceCleanupFilesystemAnomaly('internal:recovery.json');
+
+    expect(file_exists($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
 });
 
 it('does not remove a different package while forcing recovery', function (): void {

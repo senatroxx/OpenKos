@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Platform\ComposerPluginDiscovery;
 use App\Services\Platform\RuntimePluginArtifactValidator;
+use App\Services\Platform\RuntimePluginDiscovery;
 use App\Services\Platform\RuntimePluginStore;
 use Illuminate\Console\Command;
 use Throwable;
@@ -13,15 +15,41 @@ final class ListRuntimePluginsCommand extends Command
 
     protected $description = 'List installed runtime plugins and their state.';
 
-    public function handle(RuntimePluginStore $store, RuntimePluginArtifactValidator $validator): int
-    {
+    public function handle(
+        RuntimePluginStore $store,
+        RuntimePluginArtifactValidator $validator,
+        RuntimePluginDiscovery $discovery,
+        ComposerPluginDiscovery $composer,
+    ): int {
         try {
-            $rows = $store->withLock(function (RuntimePluginStore $store) use ($validator): array {
+            $rows = $store->withLock(function (RuntimePluginStore $store) use ($validator, $discovery, $composer): array {
                 $state = $store->readState();
+                $packages = $store->installedPackages();
+                $existingClasses = array_values(array_filter(config('platform.plugins', []), 'is_string'));
+
+                try {
+                    $existingClasses = [...$existingClasses, ...$composer->discoverComposerOnly()];
+                } catch (Throwable $exception) {
+                    report($exception);
+                }
+
+                $conflictingIds = $discovery->conflictingIds($packages, $state, $existingClasses);
                 $rows = [];
 
-                foreach ($store->installedPackages() as $id => $path) {
+                foreach ($packages as $id => $path) {
                     $enabled = $state[$id]['enabled'] ?? false;
+
+                    if (in_array($id, $conflictingIds, true)) {
+                        try {
+                            $version = $validator->inspectStaticMetadata($path, $id)['version'];
+                        } catch (Throwable) {
+                            $version = 'unknown';
+                        }
+
+                        $rows[] = [$id, $version, 'Conflict'];
+
+                        continue;
+                    }
 
                     try {
                         $metadata = $enabled
@@ -39,7 +67,7 @@ final class ListRuntimePluginsCommand extends Command
                 }
 
                 return $rows;
-            });
+            }, false);
         } catch (Throwable $exception) {
             $this->error($exception->getMessage());
 

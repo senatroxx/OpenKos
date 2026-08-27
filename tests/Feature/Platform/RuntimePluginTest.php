@@ -91,6 +91,28 @@ it('does not execute disabled runtime plugins while listing them', function (): 
     File::delete($marker);
 });
 
+it('does not recover runtime state while listing plugins', function (): void {
+    mkdir($this->runtimePluginPath.'/.backup/recover', 0750, true);
+    mkdir($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/.backup/recover/marker', 'keep');
+    file_put_contents($this->runtimePluginPath.'/state.json', json_encode([
+        'acme/recover' => ['enabled' => true],
+    ], JSON_THROW_ON_ERROR));
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/recover',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/recover',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $this->artisan('plugin:list')->assertSuccessful();
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeTrue()
+        ->and(is_file($this->runtimePluginPath.'/.backup/recover/marker'))->toBeTrue();
+});
+
 it('validates updates in a fresh process after the previous class was loaded', function (): void {
     $first = makeRuntimePluginArtifact();
 
@@ -136,6 +158,19 @@ it('rejects artifacts that exceed the configured archive limit', function (): vo
 
     $this->artisan('plugin:install', ['zip' => $zip])
         ->assertFailed();
+});
+
+it('does not overwrite stale runtime artifacts during installation', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    File::makeDirectory($this->runtimePluginPath.'/.staging/stale', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/.staging/stale/marker', 'keep');
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('Orphaned runtime artifacts');
+
+    expect(is_file($this->runtimePluginPath.'/.staging/stale/marker'))->toBeTrue()
+        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
 });
 
 it('counts archive directories toward the entry limit', function (): void {
@@ -208,6 +243,86 @@ it('skips a runtime plugin that conflicts with an explicit plugin', function ():
     expect(app(PermissionRegistry::class)->all())->not->toHaveKey('runtime-fixture.view')
         ->and(is_file($marker))->toBeFalse();
     File::delete($marker);
+});
+
+it('does not execute a conflicting runtime plugin while listing it', function (): void {
+    $artifact = makeRuntimePluginArtifact(id: 'openkos/mail');
+    $packagePath = $this->runtimePluginPath.'/'.$artifact['id'];
+    File::makeDirectory($packagePath, 0750, true);
+    $zip = new ZipArchive;
+    $zip->open($artifact['zip']);
+    $zip->extractTo($packagePath);
+    $zip->close();
+    app(RuntimePluginStore::class)->writeState([
+        $artifact['id'] => ['enabled' => true],
+    ]);
+    $marker = sys_get_temp_dir().'/openkos-conflicting-list-'.bin2hex(random_bytes(8));
+    $autoloadPath = $packagePath.'/vendor/autoload.php';
+    $autoload = file_get_contents($autoloadPath);
+    $replacementCount = 0;
+    file_put_contents($autoloadPath, str_replace(
+        '<?php',
+        "<?php\nfile_put_contents(".var_export($marker, true).", 'loaded');",
+        $autoload,
+        $replacementCount,
+    ));
+
+    config(['platform.plugins' => [MailPlugin::class]]);
+
+    $this->artisan('plugin:list')
+        ->assertSuccessful()
+        ->expectsOutputToContain('Conflict');
+
+    expect(is_file($marker))->toBeFalse();
+    File::delete($marker);
+});
+
+it('does not execute duplicate runtime entry classes during discovery', function (): void {
+    $first = makeRuntimePluginArtifact(
+        ['id' => 'acme/duplicate-a'],
+        classShort: 'SharedDuplicatePlugin',
+    );
+    $second = makeRuntimePluginArtifact(
+        ['id' => 'acme/duplicate-b'],
+        classShort: 'SharedDuplicatePlugin',
+    );
+
+    $this->artisan('plugin:install', ['zip' => $first['zip']])->assertSuccessful();
+    $secondPath = $this->runtimePluginPath.'/'.$second['id'];
+    File::makeDirectory($secondPath, 0750, true);
+    $zip = new ZipArchive;
+    $zip->open($second['zip']);
+    $zip->extractTo($secondPath);
+    $zip->close();
+    app(RuntimePluginStore::class)->writeState([
+        $first['id'] => ['enabled' => true],
+        $second['id'] => ['enabled' => true],
+    ]);
+
+    $markers = [
+        sys_get_temp_dir().'/openkos-duplicate-a-'.bin2hex(random_bytes(8)),
+        sys_get_temp_dir().'/openkos-duplicate-b-'.bin2hex(random_bytes(8)),
+    ];
+
+    foreach ([$first, $second] as $index => $artifact) {
+        $autoloadPath = $this->runtimePluginPath.'/'.$artifact['id'].'/vendor/autoload.php';
+        $autoload = file_get_contents($autoloadPath);
+        $replacementCount = 0;
+        file_put_contents($autoloadPath, str_replace(
+            '<?php',
+            "<?php\nfile_put_contents(".var_export($markers[$index], true).", 'loaded');",
+            $autoload,
+            $replacementCount,
+        ));
+    }
+
+    $this->bootPlatformWithIsolatedRegistries();
+
+    expect(is_file($markers[0]))->toBeFalse()
+        ->and(is_file($markers[1]))->toBeFalse();
+
+    File::delete($markers[0]);
+    File::delete($markers[1]);
 });
 
 it('rejects an entry-class conflict before activating a runtime plugin', function (): void {

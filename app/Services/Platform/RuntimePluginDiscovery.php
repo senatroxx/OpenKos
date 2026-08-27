@@ -114,6 +114,7 @@ final class RuntimePluginDiscovery
     {
         $existingIds = [];
         $conflictingIds = [];
+        $runtimeEntryClasses = [];
         foreach ($existingClasses as $class) {
             if (! is_string($class) || ! class_exists($class) || ! is_a($class, Plugin::class, true)) {
                 continue;
@@ -143,6 +144,8 @@ final class RuntimePluginDiscovery
                 continue;
             }
 
+            $runtimeEntryClasses[$entryClass][] = $id;
+
             if (in_array($entryClass, $existingClasses, true) || isset($existingIds[$id])) {
                 $conflictingIds[] = $id;
                 Log::warning('Runtime plugin skipped because a Composer or explicit plugin takes precedence.', [
@@ -152,7 +155,24 @@ final class RuntimePluginDiscovery
             }
         }
 
-        return $conflictingIds;
+        foreach ($runtimeEntryClasses as $entryClass => $ids) {
+            if (count($ids) < 2) {
+                continue;
+            }
+
+            foreach ($ids as $id) {
+                if (! in_array($id, $conflictingIds, true)) {
+                    $conflictingIds[] = $id;
+                }
+
+                Log::warning('Runtime plugin skipped because another runtime plugin uses the same entry class.', [
+                    'plugin' => $id,
+                    'entry_class' => $entryClass,
+                ]);
+            }
+        }
+
+        return array_values(array_unique($conflictingIds));
     }
 
     private function readEntryClass(string $path): string

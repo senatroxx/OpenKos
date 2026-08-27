@@ -41,6 +41,10 @@ final class PluginInstaller
         }
 
         return $this->store->withLock(function (RuntimePluginStore $store) use ($zipPath): array {
+            if ($store->recoveryStatus() === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
+                throw new RuntimeException('Orphaned runtime artifacts must be cleaned before installation.');
+            }
+
             $archive = new ZipArchive;
             $opened = $archive->open($zipPath);
 
@@ -187,9 +191,21 @@ final class PluginInstaller
 
     public function cleanupOrphanedMetadata(?string $recoveryId = null, ?string $cleanupKey = null): void
     {
+        if ($cleanupKey === 'internal:.lock') {
+            $this->store->forceCleanupFilesystemAnomaly($cleanupKey);
+
+            return;
+        }
+
         $this->store->withLock(function (RuntimePluginStore $store) use ($recoveryId, $cleanupKey): void {
             if ($cleanupKey === 'orphaned-artifacts') {
                 $store->forceCleanupOrphanedArtifacts();
+
+                return;
+            }
+
+            if ($cleanupKey === 'orphaned-recovery') {
+                $store->forceCleanupUnknownRecovery();
 
                 return;
             }

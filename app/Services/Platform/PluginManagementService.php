@@ -114,6 +114,10 @@ class PluginManagementService
             return __('Runtime plugin metadata could not be cleaned. Check runtime storage permissions and try again.');
         }
 
+        if (str_contains($message, 'orphaned runtime artifacts')) {
+            return __('Clean up orphaned runtime artifacts before installing another plugin.');
+        }
+
         if (
             str_contains($message, 'constraint')
             || str_contains($message, 'dependency')
@@ -146,6 +150,7 @@ class PluginManagementService
         $conflictingIds = $this->discovery->conflictingIds($packages, $state, $hostClasses);
         $runtime = [];
         $rows = [];
+        $filesystemAnomalies = $this->store->managedFilesystemAnomalies();
 
         foreach ($packages as $id => $path) {
             $enabled = $state[$id]['enabled'] ?? false;
@@ -275,6 +280,10 @@ class PluginManagementService
         }
 
         foreach (array_diff_key($state, $packages) as $id => $entry) {
+            $vendor = strstr($id, '/', true);
+            $blockedByVendorAnomaly = is_string($vendor)
+                && array_key_exists('vendor:'.$vendor, $filesystemAnomalies);
+
             $rows[] = [
                 'id' => $id,
                 'managed_id' => $id,
@@ -289,17 +298,19 @@ class PluginManagementService
                 'source' => 'runtime',
                 'status' => 'missing_package',
                 'enabled' => $entry['enabled'],
-                'error' => __('Plugin state exists without an installed package. Remove the stale state entry.'),
+                'error' => $blockedByVendorAnomaly
+                    ? __('An unsafe vendor path blocks this stale plugin state. Clean up the vendor filesystem anomaly first.')
+                    : __('Plugin state exists without an installed package. Remove the stale state entry.'),
                 'can_enable' => false,
                 'can_disable' => false,
-                'can_remove' => true,
-                'can_force_recovery' => true,
+                'can_remove' => ! $blockedByVendorAnomaly,
+                'can_force_recovery' => ! $blockedByVendorAnomaly,
                 'can_cleanup' => false,
                 'cleanup_key' => null,
             ];
         }
 
-        foreach ($this->store->managedFilesystemAnomalies() as $key => $path) {
+        foreach ($filesystemAnomalies as $key => $path) {
             if (str_starts_with($key, 'package:') && array_key_exists(substr($key, strlen('package:')), $packages)) {
                 continue;
             }
@@ -313,6 +324,12 @@ class PluginManagementService
             && ! in_array($recoveryIdentity, array_column($rows, 'managed_id'), true)
         ) {
             $rows[] = $this->recoveryRow($recoveryStatus, $recoveryIdentity);
+        } elseif (
+            $recoveryIdentity === null
+            && $recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE
+            && ! array_key_exists('internal:recovery.json', $filesystemAnomalies)
+        ) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-recovery');
         } elseif ($recoveryIdentity === null && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
             $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
         } elseif ($recoveryIdentity === null && $rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
@@ -349,6 +366,18 @@ class PluginManagementService
                 }
 
                 if ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity) {
+                    $row['can_remove'] = false;
+                    $row['can_force_recovery'] = false;
+
+                    continue;
+                }
+
+                if ($recoveryIdentity === null) {
+                    $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
+                    $row['error'] = __('Runtime plugin recovery ownership cannot be determined. Clean up the recovery metadata first.');
+                    $row['can_enable'] = false;
+                    $row['can_disable'] = false;
+                    $row['can_remove'] = false;
                     $row['can_force_recovery'] = false;
 
                     continue;
@@ -358,7 +387,7 @@ class PluginManagementService
                 $row['error'] = __('Runtime plugin recovery cannot be completed. Force remove this package or clean up orphaned metadata.');
                 $row['can_enable'] = false;
                 $row['can_disable'] = false;
-                $row['can_remove'] = true;
+                $row['can_remove'] = false;
                 $row['can_force_recovery'] = true;
             }
             unset($row);
@@ -392,14 +421,16 @@ class PluginManagementService
                 'error' => __('Runtime plugin state is corrupted. Force remove this package to recover it.'),
                 'can_enable' => false,
                 'can_disable' => false,
-                'can_remove' => $canRemove,
+                'can_remove' => false,
                 'can_force_recovery' => $canRemove,
                 'can_cleanup' => false,
                 'cleanup_key' => null,
             ];
         }
 
-        foreach ($this->store->managedFilesystemAnomalies() as $key => $path) {
+        $filesystemAnomalies = $this->store->managedFilesystemAnomalies();
+
+        foreach ($filesystemAnomalies as $key => $path) {
             if (str_starts_with($key, 'package:')) {
                 continue;
             }
@@ -407,7 +438,7 @@ class PluginManagementService
             $rows[] = $this->filesystemAnomalyRow($key);
         }
 
-        if ($rows === []) {
+        if ($rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
             $rows[] = $this->orphanedMetadataRow('orphaned_state', $recoveryStatus);
         }
 
@@ -417,6 +448,12 @@ class PluginManagementService
             && ! in_array($recoveryIdentity, array_column($rows, 'managed_id'), true)
         ) {
             $rows[] = $this->recoveryRow($recoveryStatus, $recoveryIdentity);
+        } elseif (
+            $recoveryIdentity === null
+            && $recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE
+            && ! array_key_exists('internal:recovery.json', $filesystemAnomalies)
+        ) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-recovery');
         } elseif ($recoveryIdentity === null && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
             $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
         }
@@ -428,6 +465,18 @@ class PluginManagementService
                 }
 
                 if ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity) {
+                    $row['can_remove'] = false;
+                    $row['can_force_recovery'] = false;
+
+                    continue;
+                }
+
+                if ($recoveryIdentity === null) {
+                    $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
+                    $row['error'] = __('Runtime plugin recovery ownership cannot be determined. Clean up the recovery metadata first.');
+                    $row['can_enable'] = false;
+                    $row['can_disable'] = false;
+                    $row['can_remove'] = false;
                     $row['can_force_recovery'] = false;
 
                     continue;
@@ -437,7 +486,7 @@ class PluginManagementService
                 $row['error'] = __('Runtime plugin state and recovery metadata cannot be completed. Clean up orphaned metadata.');
                 $row['can_enable'] = false;
                 $row['can_disable'] = false;
-                $row['can_remove'] = $row['managed_id'] !== null;
+                $row['can_remove'] = false;
                 $row['can_force_recovery'] = $row['managed_id'] !== null;
                 $row['can_cleanup'] = $row['managed_id'] === null;
             }
@@ -521,6 +570,7 @@ class PluginManagementService
     /** @return array<string, mixed> */
     private function orphanedMetadataRow(string $status, ?string $recoveryStatus = null, ?string $cleanupKey = null): array
     {
+        $unknownRecovery = $cleanupKey === 'orphaned-recovery';
         $error = match ($status) {
             'orphaned_state' => __('Runtime lifecycle metadata is corrupted without an installed package. Clean it up before installing another plugin.'),
             RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT => __('Stale runtime recovery artifacts were found. Clean them up before installing another plugin.'),
@@ -537,7 +587,9 @@ class PluginManagementService
             'declared_id' => null,
             'name' => __('Runtime lifecycle metadata'),
             'version' => null,
-            'description' => __('No runtime package is installed, but lifecycle metadata still requires recovery.'),
+            'description' => $unknownRecovery
+                ? __('Runtime recovery metadata exists, but its package identity cannot be trusted.')
+                : __('No runtime package is installed, but lifecycle metadata still requires recovery.'),
             'entry_class' => null,
             'core_version' => null,
             'php' => null,

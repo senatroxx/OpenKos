@@ -435,7 +435,7 @@ it('keeps a runtime package removable when state metadata is corrupt', function 
         'status' => 'broken',
         'can_enable' => false,
         'can_disable' => false,
-        'can_remove' => true,
+        'can_remove' => false,
         'can_force_recovery' => true,
     ]);
 
@@ -525,6 +525,10 @@ it('cleans an orphaned recovery marker by identity without touching another pack
         'status' => 'unrecoverable_recovery',
         'can_cleanup' => true,
     ]);
+    expect(collect($plugins)->firstWhere('managed_id', $other['id']))->toMatchArray([
+        'can_remove' => false,
+        'can_force_recovery' => false,
+    ]);
 
     [$otherVendor, $otherPackage] = explode('/', $other['id']);
 
@@ -543,6 +547,44 @@ it('cleans an orphaned recovery marker by identity without touching another pack
     expect(is_dir($this->runtimePluginPath.'/'.$other['id']))->toBeTrue()
         ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
         ->and(is_dir($this->runtimePluginPath.'/.staging/incoming'))->toBeFalse();
+});
+
+it('surfaces unknown recovery metadata independently from installed packages', function (): void {
+    $first = makePluginSettingsArtifact();
+    $second = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($first['zip']);
+    app(PluginInstaller::class)->install($second['zip']);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', '{broken');
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('cleanup_key', 'orphaned-recovery'))->toMatchArray([
+        'status' => 'unrecoverable_recovery',
+        'managed_id' => null,
+        'can_cleanup' => true,
+    ])
+        ->and(collect($plugins)->firstWhere('managed_id', $first['id']))->toMatchArray([
+            'can_remove' => false,
+            'can_force_recovery' => false,
+        ])
+        ->and(collect($plugins)->firstWhere('managed_id', $second['id']))->toMatchArray([
+            'can_remove' => false,
+            'can_force_recovery' => false,
+        ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'orphaned-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/'.$first['id']))->toBeTrue()
+        ->and(is_dir($this->runtimePluginPath.'/'.$second['id']))->toBeTrue();
 });
 
 it('surfaces and cleans stale runtime artifacts without touching a package', function (): void {
@@ -610,6 +652,7 @@ it('surfaces and removes a symlinked runtime vendor without following it', funct
     File::makeDirectory($outside, 0750, true);
     File::makeDirectory($this->runtimePluginPath, 0750, true);
     symlink($outside, $this->runtimePluginPath.'/settings');
+    app(RuntimePluginStore::class)->writeState(['settings/runtime' => ['enabled' => true]]);
     $owner = User::factory()->owner()->create();
 
     try {
@@ -621,7 +664,12 @@ it('surfaces and removes a symlinked runtime vendor without following it', funct
         expect(collect($plugins)->firstWhere('cleanup_key', 'vendor:settings'))->toMatchArray([
             'status' => 'broken',
             'can_cleanup' => true,
-        ]);
+        ])
+            ->and(collect($plugins)->firstWhere('managed_id', 'settings/runtime'))->toMatchArray([
+                'status' => 'missing_package',
+                'can_remove' => false,
+                'can_force_recovery' => false,
+            ]);
 
         $this->actingAs($owner)
             ->delete(route('settings.plugins.recovery.cleanup'), [
@@ -652,12 +700,22 @@ it('keeps a runtime package removable when recovery metadata is corrupt', functi
     expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
         'status' => 'unrecoverable_recovery',
         'can_disable' => false,
-        'can_remove' => true,
-        'can_force_recovery' => true,
+        'can_remove' => false,
+        'can_force_recovery' => false,
+    ]);
+
+    expect(collect($plugins)->firstWhere('cleanup_key', 'orphaned-recovery'))->toMatchArray([
+        'can_cleanup' => true,
     ]);
 
     $this->actingAs($owner)
-        ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]), ['force' => true])
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'orphaned-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]))
         ->assertRedirect(route('settings.plugins.index'));
 
     expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse()

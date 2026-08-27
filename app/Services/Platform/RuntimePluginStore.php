@@ -361,7 +361,15 @@ final class RuntimePluginStore
             }
         }
 
-        foreach (['state.json', 'recovery.json', 'recovery.json.tmp', '.staging', '.backup'] as $name) {
+        foreach (['.lock', 'state.json', 'recovery.json', 'recovery.json.tmp'] as $name) {
+            $path = $this->root.'/'.$name;
+
+            if (is_link($path) || (file_exists($path) && ! is_file($path))) {
+                $anomalies['internal:'.$name] = $path;
+            }
+        }
+
+        foreach (['.staging', '.backup'] as $name) {
             $path = $this->root.'/'.$name;
 
             if (is_link($path)) {
@@ -438,8 +446,7 @@ final class RuntimePluginStore
 
         $statePath = $this->statePath();
         if (file_exists($statePath) || is_link($statePath)) {
-            $this->assertSafeManagedPath($statePath);
-            $this->deleteDirectory($statePath);
+            $this->deleteManagedPath($statePath);
         }
 
         $this->cleanupRecoveryArtifacts();
@@ -552,6 +559,71 @@ final class RuntimePluginStore
         }
     }
 
+    public function forceCleanupUnknownRecovery(): void
+    {
+        if ($this->recoveryIdentity() !== null) {
+            throw new RuntimeException('Runtime plugin recovery belongs to a known package.');
+        }
+
+        $markerPath = $this->recoveryMarkerPath();
+
+        if (! is_file($markerPath) || is_link($markerPath)) {
+            throw new RuntimeException('Runtime plugin recovery metadata is not available.');
+        }
+
+        $contents = file_get_contents($markerPath);
+
+        $paths = [$markerPath, $this->root.'/recovery.json.tmp'];
+
+        if ($contents !== false) {
+            try {
+                $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+
+                if (is_array($marker)) {
+                    foreach (['backup', 'staging'] as $key) {
+                        $path = $this->recoveryCleanupPath($key, $marker[$key] ?? null);
+
+                        if ($path !== null) {
+                            $paths[] = $path;
+                        }
+                    }
+                }
+            } catch (Throwable) {
+                // The marker itself is the only trustworthy cleanup target.
+            }
+        }
+
+        foreach (array_unique($paths) as $path) {
+            if (! file_exists($path) && ! is_link($path)) {
+                continue;
+            }
+
+            $this->deleteManagedPath($path);
+        }
+
+        foreach (array_unique($paths) as $path) {
+            if (file_exists($path) || is_link($path)) {
+                throw new RuntimeException("Could not clean runtime lifecycle path [{$path}].");
+            }
+        }
+
+        foreach ([$this->root.'/.staging', $this->root.'/.backup'] as $container) {
+            if (! is_dir($container) || is_link($container)) {
+                continue;
+            }
+
+            $entries = scandir($container);
+
+            if ($entries === false) {
+                throw new RuntimeException("Could not inspect runtime lifecycle path [{$container}].");
+            }
+
+            if ($entries === ['.', '..']) {
+                $this->deleteManagedPath($container);
+            }
+        }
+    }
+
     public function forceCleanupFilesystemAnomaly(string $key): void
     {
         $anomalies = $this->managedFilesystemAnomalies();
@@ -561,11 +633,7 @@ final class RuntimePluginStore
         }
 
         $path = $anomalies[$key];
-        $this->assertSafeManagedLink($path);
-
-        if (! @unlink($path) || file_exists($path) || is_link($path)) {
-            throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
-        }
+        $this->deleteManagedPath($path);
 
         if (str_starts_with($key, 'package:')) {
             try {
@@ -655,6 +723,21 @@ final class RuntimePluginStore
         }
 
         $this->deleteManagedPath($path);
+
+        $container = $this->root.'/.staging';
+        if (! is_dir($container) || is_link($container)) {
+            return;
+        }
+
+        $entries = scandir($container);
+
+        if ($entries === false) {
+            throw new RuntimeException("Could not inspect runtime lifecycle path [{$container}].");
+        }
+
+        if ($entries === ['.', '..']) {
+            $this->deleteManagedPath($container);
+        }
     }
 
     public function promote(string $id, string $stagingPath, bool $enabled): void
@@ -812,11 +895,10 @@ final class RuntimePluginStore
         }
 
         $stateWasCorrupt = false;
+        $state = [];
         try {
             $state = $this->readState();
         } catch (Throwable) {
-            $this->resetState();
-            $state = [];
             $stateWasCorrupt = true;
         }
 
@@ -955,18 +1037,6 @@ final class RuntimePluginStore
         }
 
         $this->writeState($state);
-    }
-
-    private function resetState(): void
-    {
-        $path = $this->statePath();
-        $this->assertSafeManagedPath($path);
-
-        if (file_exists($path) && ! is_file($path)) {
-            $this->deleteDirectory($path);
-        }
-
-        $this->writeState([]);
     }
 
     private function validateRecoveryMarker(mixed $marker): void
@@ -1203,7 +1273,19 @@ final class RuntimePluginStore
             return;
         }
 
-        if (is_link($path) || is_file($path)) {
+        if (is_link($path)) {
+            $this->assertSafeManagedLink($path);
+
+            if (! @unlink($path) || file_exists($path) || is_link($path)) {
+                throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
+            }
+
+            return;
+        }
+
+        if (is_file($path)) {
+            $this->assertSafeManagedPath($path);
+
             if (! @unlink($path) || file_exists($path) || is_link($path)) {
                 throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
             }
@@ -1215,10 +1297,14 @@ final class RuntimePluginStore
             throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
         }
 
+        $this->assertSafeManagedPath($path);
+
         $entries = @scandir($path);
         if ($entries === false) {
             throw new RuntimeException("Could not inspect runtime plugin path [{$path}].");
         }
+
+        $this->assertSafeManagedPath($path);
 
         foreach ($entries as $entry) {
             if ($entry === '.' || $entry === '..') {
@@ -1227,6 +1313,8 @@ final class RuntimePluginStore
 
             $this->deleteDirectory($path.DIRECTORY_SEPARATOR.$entry);
         }
+
+        $this->assertSafeManagedPath($path);
 
         if (! @rmdir($path) || file_exists($path) || is_link($path)) {
             throw new RuntimeException("Could not remove runtime plugin path [{$path}].");

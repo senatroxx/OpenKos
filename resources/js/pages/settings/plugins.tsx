@@ -433,7 +433,8 @@ export default function Plugins({
 
                                     {(plugin.can_enable ||
                                         plugin.can_disable ||
-                                        plugin.can_remove) && (
+                                        plugin.can_remove ||
+                                        plugin.can_force_recovery) && (
                                         <div className="flex flex-wrap gap-2">
                                             {plugin.can_enable && (
                                                 <Button
@@ -497,50 +498,42 @@ export default function Plugins({
                                                 </>
                                             )}
                                             {plugin.can_remove && (
-                                                <>
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        disabled={
-                                                            processingPlugin ===
-                                                            pluginKey(plugin)
-                                                        }
-                                                        onClick={() =>
-                                                            setRemoveConfirmation(
-                                                                {
-                                                                    plugin,
-                                                                    force: false,
-                                                                },
-                                                            )
-                                                        }
-                                                    >
-                                                        {t('Remove')}
-                                                    </Button>
-                                                    {plugin.can_force_recovery && (
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            disabled={
-                                                                processingPlugin ===
-                                                                pluginKey(
-                                                                    plugin,
-                                                                )
-                                                            }
-                                                            onClick={() =>
-                                                                setRemoveConfirmation(
-                                                                    {
-                                                                        plugin,
-                                                                        force: true,
-                                                                    },
-                                                                )
-                                                            }
-                                                        >
-                                                            {t('Force remove')}
-                                                        </Button>
-                                                    )}
-                                                </>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    disabled={
+                                                        processingPlugin ===
+                                                        pluginKey(plugin)
+                                                    }
+                                                    onClick={() =>
+                                                        setRemoveConfirmation({
+                                                            plugin,
+                                                            force: false,
+                                                        })
+                                                    }
+                                                >
+                                                    {t('Remove')}
+                                                </Button>
+                                            )}
+                                            {plugin.can_force_recovery && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    disabled={
+                                                        processingPlugin ===
+                                                        pluginKey(plugin)
+                                                    }
+                                                    onClick={() =>
+                                                        setRemoveConfirmation({
+                                                            plugin,
+                                                            force: true,
+                                                        })
+                                                    }
+                                                >
+                                                    {t('Force remove')}
+                                                </Button>
                                             )}
                                         </div>
                                     )}
