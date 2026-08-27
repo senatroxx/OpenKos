@@ -111,6 +111,37 @@ final class RuntimePluginArtifactValidator
     }
 
     /**
+     * Read manifest metadata without loading the runtime package.
+     *
+     * @return array{
+     *     id: string,
+     *     name: string,
+     *     version: string,
+     *     description: string,
+     *     entry_class: class-string<Plugin>,
+     *     core_version: string,
+     *     php: string,
+     *     dependencies: array<int, string>
+     * }
+     */
+    public function inspectStaticMetadata(string $directory, ?string $expectedId = null): array
+    {
+        if (! is_dir($directory) || is_link($directory)) {
+            throw new InvalidArgumentException('Runtime plugin artifact directory is missing or unsafe.');
+        }
+
+        $metadata = $this->validateManifest($this->readJsonFile($directory.'/manifest.json', 'manifest.json'));
+
+        if ($expectedId !== null && $metadata['id'] !== $expectedId) {
+            throw new InvalidArgumentException(
+                "Runtime plugin manifest ID [{$metadata['id']}] does not match installed package [{$expectedId}].",
+            );
+        }
+
+        return $metadata;
+    }
+
+    /**
      * @return array{
      *     id: string,
      *     name: string,

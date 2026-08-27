@@ -14,6 +14,7 @@ class PluginManagementService
         private RuntimePluginStore $store,
         private RuntimePluginArtifactValidator $validator,
         private ComposerPluginDiscovery $composer,
+        private RuntimePluginDiscovery $discovery,
         private PluginInstaller $installer,
         private RuntimePluginGraphValidator $graph,
     ) {}
@@ -88,9 +89,9 @@ class PluginManagementService
         $this->installer->remove($id, $force);
     }
 
-    public function cleanupOrphanedMetadata(): void
+    public function cleanupOrphanedMetadata(?string $recoveryId = null, ?string $cleanupKey = null): void
     {
-        $this->installer->cleanupOrphanedMetadata();
+        $this->installer->cleanupOrphanedMetadata($recoveryId, $cleanupKey);
     }
 
     public function userMessage(Throwable $exception): string
@@ -141,11 +142,64 @@ class PluginManagementService
         }
 
         $packages = $this->store->managedPackageEntries();
+        $hostClasses = $this->hostPluginClasses();
+        $conflictingIds = $this->discovery->conflictingIds($packages, $state, $hostClasses);
         $runtime = [];
         $rows = [];
 
         foreach ($packages as $id => $path) {
             $enabled = $state[$id]['enabled'] ?? false;
+
+            if (is_link($path)) {
+                $runtime[$id] = [
+                    'metadata' => null,
+                    'enabled' => $enabled,
+                    'status' => 'broken',
+                    'error' => 'Runtime plugin package path is a symlink and cannot be loaded.',
+                    'cleanup_key' => 'package:'.$id,
+                ];
+
+                continue;
+            }
+
+            if (in_array($id, $conflictingIds, true)) {
+                try {
+                    $runtime[$id] = [
+                        'metadata' => $this->validator->inspectStaticMetadata($path, $id),
+                        'enabled' => $enabled,
+                        'status' => 'conflict',
+                        'error' => 'Runtime plugin conflicts with a Composer or explicit plugin.',
+                    ];
+                } catch (Throwable) {
+                    $runtime[$id] = [
+                        'metadata' => null,
+                        'enabled' => $enabled,
+                        'status' => 'conflict',
+                        'error' => 'Runtime plugin conflicts with a Composer or explicit plugin.',
+                    ];
+                }
+
+                continue;
+            }
+
+            if (! $enabled) {
+                try {
+                    $runtime[$id] = [
+                        'metadata' => $this->validator->inspectStaticMetadata($path, $id),
+                        'enabled' => false,
+                    ];
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $runtime[$id] = [
+                        'metadata' => null,
+                        'enabled' => false,
+                        'status' => $this->validationStatus($exception),
+                        'error' => $this->validationError($exception),
+                    ];
+                }
+
+                continue;
+            }
 
             try {
                 $runtime[$id] = [
@@ -163,11 +217,20 @@ class PluginManagementService
             }
         }
 
-        $health = $this->graph->validate($runtime, $this->hostPluginClasses());
+        $health = $this->graph->validate($runtime, $hostClasses);
 
         foreach ($packages as $id => $path) {
             $entry = $runtime[$id];
             $enabled = $entry['enabled'];
+
+            if (isset($entry['cleanup_key'])) {
+                $rows[] = [
+                    ...$this->filesystemAnomalyRow($entry['cleanup_key']),
+                    'enabled' => $enabled,
+                ];
+
+                continue;
+            }
 
             if (is_array($entry['metadata'])) {
                 $metadata = $entry['metadata'];
@@ -183,6 +246,7 @@ class PluginManagementService
                         'can_remove' => true,
                         'can_force_recovery' => true,
                         'can_cleanup' => false,
+                        'cleanup_key' => null,
                     ];
 
                     continue;
@@ -206,6 +270,7 @@ class PluginManagementService
                 'can_remove' => $canRemove,
                 'can_force_recovery' => $canRemove,
                 'can_cleanup' => false,
+                'cleanup_key' => $entry['cleanup_key'] ?? null,
             ];
         }
 
@@ -230,12 +295,37 @@ class PluginManagementService
                 'can_remove' => true,
                 'can_force_recovery' => true,
                 'can_cleanup' => false,
+                'cleanup_key' => null,
             ];
+        }
+
+        foreach ($this->store->managedFilesystemAnomalies() as $key => $path) {
+            if (str_starts_with($key, 'package:') && array_key_exists(substr($key, strlen('package:')), $packages)) {
+                continue;
+            }
+
+            $rows[] = $this->filesystemAnomalyRow($key);
+        }
+
+        $recoveryIdentity = $this->store->recoveryIdentity();
+        if (
+            $recoveryIdentity !== null
+            && ! in_array($recoveryIdentity, array_column($rows, 'managed_id'), true)
+        ) {
+            $rows[] = $this->recoveryRow($recoveryStatus, $recoveryIdentity);
+        } elseif ($recoveryIdentity === null && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
+        } elseif ($recoveryIdentity === null && $rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus);
         }
 
         if ($recoveryStatus === RuntimePluginStore::RECOVERY_PENDING) {
             foreach ($rows as &$row) {
-                if ($row['source'] !== 'runtime') {
+                if (
+                    $row['source'] !== 'runtime'
+                    || ($row['cleanup_key'] ?? null) !== null
+                    || ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity)
+                ) {
                     continue;
                 }
 
@@ -251,7 +341,16 @@ class PluginManagementService
 
         if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
             foreach ($rows as &$row) {
-                if ($row['source'] !== 'runtime') {
+                if (
+                    $row['source'] !== 'runtime'
+                    || ($row['cleanup_key'] ?? null) !== null
+                ) {
+                    continue;
+                }
+
+                if ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity) {
+                    $row['can_force_recovery'] = false;
+
                     continue;
                 }
 
@@ -265,10 +364,6 @@ class PluginManagementService
             unset($row);
         }
 
-        if ($rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
-            $rows[] = $this->orphanedMetadataRow($recoveryStatus);
-        }
-
         return $rows;
     }
 
@@ -279,6 +374,16 @@ class PluginManagementService
 
         foreach ($this->store->managedPackageEntries() as $id => $path) {
             $canRemove = ! is_link($path);
+
+            if (is_link($path)) {
+                $rows[] = [
+                    ...$this->filesystemAnomalyRow('package:'.$id),
+                    'enabled' => false,
+                ];
+
+                continue;
+            }
+
             $rows[] = [
                 ...$this->manifestPreview($path, $id),
                 'source' => 'runtime',
@@ -290,15 +395,44 @@ class PluginManagementService
                 'can_remove' => $canRemove,
                 'can_force_recovery' => $canRemove,
                 'can_cleanup' => false,
+                'cleanup_key' => null,
             ];
+        }
+
+        foreach ($this->store->managedFilesystemAnomalies() as $key => $path) {
+            if (str_starts_with($key, 'package:')) {
+                continue;
+            }
+
+            $rows[] = $this->filesystemAnomalyRow($key);
         }
 
         if ($rows === []) {
             $rows[] = $this->orphanedMetadataRow('orphaned_state', $recoveryStatus);
         }
 
+        $recoveryIdentity = $this->store->recoveryIdentity();
+        if (
+            $recoveryIdentity !== null
+            && ! in_array($recoveryIdentity, array_column($rows, 'managed_id'), true)
+        ) {
+            $rows[] = $this->recoveryRow($recoveryStatus, $recoveryIdentity);
+        } elseif ($recoveryIdentity === null && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
+        }
+
         if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
             foreach ($rows as &$row) {
+                if (($row['cleanup_key'] ?? null) !== null) {
+                    continue;
+                }
+
+                if ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity) {
+                    $row['can_force_recovery'] = false;
+
+                    continue;
+                }
+
                 $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
                 $row['error'] = __('Runtime plugin state and recovery metadata cannot be completed. Clean up orphaned metadata.');
                 $row['can_enable'] = false;
@@ -354,6 +488,7 @@ class PluginManagementService
                     'can_remove' => false,
                     'can_force_recovery' => false,
                     'can_cleanup' => false,
+                    'cleanup_key' => null,
                 ];
             } catch (Throwable $exception) {
                 report($exception);
@@ -379,15 +514,18 @@ class PluginManagementService
             'can_remove' => true,
             'can_force_recovery' => false,
             'can_cleanup' => false,
+            'cleanup_key' => null,
         ];
     }
 
     /** @return array<string, mixed> */
-    private function orphanedMetadataRow(string $status, ?string $recoveryStatus = null): array
+    private function orphanedMetadataRow(string $status, ?string $recoveryStatus = null, ?string $cleanupKey = null): array
     {
-        $error = $status === 'orphaned_state'
-            ? __('Runtime lifecycle metadata is corrupted without an installed package. Clean it up before installing another plugin.')
-            : __('Runtime plugin recovery cannot be completed without an installed package. Clean up the orphaned lifecycle metadata.');
+        $error = match ($status) {
+            'orphaned_state' => __('Runtime lifecycle metadata is corrupted without an installed package. Clean it up before installing another plugin.'),
+            RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT => __('Stale runtime recovery artifacts were found. Clean them up before installing another plugin.'),
+            default => __('Runtime plugin recovery cannot be completed without an installed package. Clean up the orphaned lifecycle metadata.'),
+        };
 
         if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
             $error = __('Runtime lifecycle metadata is corrupted and cannot be recovered. Clean it up before installing another plugin.');
@@ -412,7 +550,67 @@ class PluginManagementService
             'can_disable' => false,
             'can_remove' => false,
             'can_force_recovery' => false,
-            'can_cleanup' => $status !== RuntimePluginStore::RECOVERY_PENDING,
+            'can_cleanup' => $cleanupKey !== null || $status !== RuntimePluginStore::RECOVERY_PENDING,
+            'cleanup_key' => $cleanupKey,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function recoveryRow(string $status, string $id): array
+    {
+        return [
+            'id' => $id,
+            'managed_id' => $id,
+            'declared_id' => null,
+            'name' => __('Runtime plugin recovery'),
+            'version' => null,
+            'description' => __('Recovery metadata exists for a package that is not installed.'),
+            'entry_class' => null,
+            'core_version' => null,
+            'php' => null,
+            'dependencies' => [],
+            'source' => 'runtime',
+            'status' => $status,
+            'enabled' => false,
+            'error' => $status === RuntimePluginStore::RECOVERY_PENDING
+                ? __('Runtime plugin recovery is pending and will complete before the next lifecycle change.')
+                : __('Runtime plugin recovery cannot be completed. Clean up this recovery record.'),
+            'can_enable' => false,
+            'can_disable' => false,
+            'can_remove' => false,
+            'can_force_recovery' => false,
+            'can_cleanup' => $status === RuntimePluginStore::RECOVERY_UNRECOVERABLE,
+            'cleanup_key' => 'recovery:'.$id,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function filesystemAnomalyRow(string $key): array
+    {
+        $managedId = str_starts_with($key, 'package:') ? substr($key, strlen('package:')) : null;
+        $label = $managedId ?? substr($key, strpos($key, ':') + 1);
+
+        return [
+            'id' => $managedId ?? $key,
+            'managed_id' => $managedId,
+            'declared_id' => null,
+            'name' => __('Unsafe runtime filesystem path'),
+            'version' => null,
+            'description' => __('A managed runtime path is a symlink and was not followed.'),
+            'entry_class' => null,
+            'core_version' => null,
+            'php' => null,
+            'dependencies' => [],
+            'source' => 'runtime',
+            'status' => 'broken',
+            'enabled' => false,
+            'error' => __('Runtime path :path is a symlink. Remove the symlink before installing or loading plugins.', ['path' => $label]),
+            'can_enable' => false,
+            'can_disable' => false,
+            'can_remove' => false,
+            'can_force_recovery' => false,
+            'can_cleanup' => true,
+            'cleanup_key' => $key,
         ];
     }
 

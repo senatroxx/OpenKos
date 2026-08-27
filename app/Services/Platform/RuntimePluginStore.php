@@ -14,6 +14,8 @@ final class RuntimePluginStore
 
     public const RECOVERY_UNRECOVERABLE = 'unrecoverable_recovery';
 
+    public const RECOVERY_ORPHANED_ARTIFACT = 'orphaned_runtime_artifact';
+
     private string $root;
 
     public function __construct()
@@ -22,6 +24,7 @@ final class RuntimePluginStore
         $path = str_starts_with($configuredPath, DIRECTORY_SEPARATOR)
             ? rtrim($configuredPath, DIRECTORY_SEPARATOR)
             : base_path(trim($configuredPath, DIRECTORY_SEPARATOR));
+        $this->assertConfiguredPathHasNoSymlink($path);
         $this->root = $this->canonicalizePath($path);
         $basePath = realpath(base_path());
 
@@ -40,7 +43,7 @@ final class RuntimePluginStore
         return $this->root;
     }
 
-    public function withLock(Closure $callback, bool $recover = true): mixed
+    public function withLock(Closure $callback, bool $recover = true, ?string $pluginId = null): mixed
     {
         $this->ensureDirectory($this->root);
 
@@ -54,7 +57,11 @@ final class RuntimePluginStore
 
         try {
             if ($recover) {
-                $this->recoverPendingOperation();
+                $recoveryIdentity = $this->recoveryIdentity();
+
+                if ($pluginId === null || $recoveryIdentity === null || $recoveryIdentity === $pluginId) {
+                    $this->recoverPendingOperation();
+                }
             }
 
             return $callback($this);
@@ -77,7 +84,9 @@ final class RuntimePluginStore
         }
 
         if (! is_file($path)) {
-            return self::RECOVERY_HEALTHY;
+            return $this->orphanedRuntimeArtifactPaths() === []
+                ? self::RECOVERY_HEALTHY
+                : self::RECOVERY_ORPHANED_ARTIFACT;
         }
 
         $contents = file_get_contents($path);
@@ -98,6 +107,37 @@ final class RuntimePluginStore
         }
 
         return self::RECOVERY_PENDING;
+    }
+
+    public function recoveryIdentity(): ?string
+    {
+        $path = $this->recoveryMarkerPath();
+
+        try {
+            $this->assertSafeManagedPath($path);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! is_file($path) || is_link($path)) {
+            return null;
+        }
+
+        $contents = file_get_contents($path);
+
+        if ($contents === false) {
+            return null;
+        }
+
+        try {
+            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $id = is_array($marker) ? $marker['id'] ?? null : null;
+
+        return is_string($id) && $this->isValidId($id) ? $id : null;
     }
 
     /**
@@ -262,6 +302,134 @@ final class RuntimePluginStore
         );
     }
 
+    /**
+     * @return array<string, string>
+     */
+    public function managedFilesystemAnomalies(): array
+    {
+        $anomalies = [];
+
+        if (is_link($this->root) || (file_exists($this->root) && ! is_dir($this->root))) {
+            throw new RuntimeException('Runtime plugin storage is not a safe directory.');
+        }
+
+        if (! is_dir($this->root)) {
+            return $anomalies;
+        }
+
+        $this->assertSafeManagedPath($this->root);
+        $vendors = scandir($this->root);
+
+        if ($vendors === false) {
+            throw new RuntimeException('Could not inspect runtime plugin storage.');
+        }
+
+        foreach ($vendors as $vendor) {
+            if ($vendor === '.' || $vendor === '..' || str_starts_with($vendor, '.')) {
+                continue;
+            }
+
+            $vendorPath = $this->root.'/'.$vendor;
+
+            if (is_link($vendorPath)) {
+                $anomalies['vendor:'.$vendor] = $vendorPath;
+
+                continue;
+            }
+
+            if (! is_dir($vendorPath)) {
+                continue;
+            }
+
+            $packages = scandir($vendorPath);
+
+            if ($packages === false) {
+                throw new RuntimeException("Could not inspect runtime plugin vendor directory [{$vendor}].");
+            }
+
+            foreach ($packages as $package) {
+                if ($package === '.' || $package === '..' || str_starts_with($package, '.')) {
+                    continue;
+                }
+
+                $id = $vendor.'/'.$package;
+                $packagePath = $vendorPath.'/'.$package;
+
+                if ($this->isValidId($id) && is_link($packagePath)) {
+                    $anomalies['package:'.$id] = $packagePath;
+                }
+            }
+        }
+
+        foreach (['state.json', 'recovery.json', 'recovery.json.tmp', '.staging', '.backup'] as $name) {
+            $path = $this->root.'/'.$name;
+
+            if (is_link($path)) {
+                $anomalies['internal:'.$name] = $path;
+            }
+        }
+
+        foreach (scandir($this->root) ?: [] as $entry) {
+            if (str_starts_with($entry, '.state-') && str_ends_with($entry, '.tmp')) {
+                $path = $this->root.'/'.$entry;
+
+                if (is_link($path)) {
+                    $anomalies['internal:'.$entry] = $path;
+                }
+            }
+        }
+
+        ksort($anomalies, SORT_STRING);
+
+        return $anomalies;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function orphanedRuntimeArtifactPaths(): array
+    {
+        $artifacts = [];
+
+        if (is_link($this->root) || (file_exists($this->root) && ! is_dir($this->root))) {
+            throw new RuntimeException('Runtime plugin storage is not a safe directory.');
+        }
+
+        if (! is_dir($this->root)) {
+            return $artifacts;
+        }
+
+        $this->assertSafeManagedPath($this->root);
+
+        foreach (['.staging', '.backup', 'recovery.json.tmp'] as $name) {
+            $path = $this->root.'/'.$name;
+
+            if ((file_exists($path) || is_link($path)) && ! is_link($path)) {
+                $artifacts[$name] = $path;
+            }
+        }
+
+        $entries = scandir($this->root);
+
+        if ($entries === false) {
+            throw new RuntimeException('Could not inspect runtime plugin storage.');
+        }
+
+        foreach ($entries as $entry) {
+            if (! str_starts_with($entry, '.state-') || ! str_ends_with($entry, '.tmp')) {
+                continue;
+            }
+
+            $path = $this->root.'/'.$entry;
+
+            if ((file_exists($path) || is_link($path)) && ! is_link($path)) {
+                $artifacts[$entry] = $path;
+            }
+        }
+
+        return $artifacts;
+    }
+
     public function forceCleanupOrphanedMetadata(): void
     {
         if ($this->managedPackageEntries() !== []) {
@@ -281,6 +449,135 @@ final class RuntimePluginStore
         }
     }
 
+    public function forceCleanupOrphanedArtifacts(): void
+    {
+        if ($this->recoveryMarkerExists()) {
+            throw new RuntimeException('Runtime plugin recovery metadata must be handled before cleaning orphaned artifacts.');
+        }
+
+        foreach ($this->orphanedRuntimeArtifactPaths() as $path) {
+            $this->assertSafeManagedPath($path);
+            $this->deleteDirectory($path);
+        }
+
+        if ($this->orphanedRuntimeArtifactPaths() !== []) {
+            throw new RuntimeException('Could not clean orphaned runtime artifacts.');
+        }
+    }
+
+    public function forceCleanupRecovery(string $id): void
+    {
+        $this->assertValidId($id);
+        $markerPath = $this->recoveryMarkerPath();
+
+        if (! is_file($markerPath) || is_link($markerPath)) {
+            throw new RuntimeException('Runtime plugin recovery metadata is not available.');
+        }
+
+        $contents = file_get_contents($markerPath);
+
+        if ($contents === false) {
+            throw new RuntimeException('Runtime plugin recovery marker cannot be read.');
+        }
+
+        try {
+            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable $exception) {
+            throw new RuntimeException('Runtime plugin recovery marker is corrupted.', previous: $exception);
+        }
+
+        if (! is_array($marker) || ($marker['id'] ?? null) !== $id) {
+            throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+        }
+
+        try {
+            $state = $this->readState();
+            if (array_key_exists($id, $state)) {
+                unset($state[$id]);
+                $this->writeState($state);
+            }
+        } catch (Throwable) {
+            if ($this->managedPackageEntries() === []) {
+                $statePath = $this->statePath();
+
+                if (file_exists($statePath) || is_link($statePath)) {
+                    $this->deleteManagedPath($statePath);
+                }
+            }
+        }
+
+        $paths = [$markerPath, $this->root.'/recovery.json.tmp'];
+
+        foreach (['backup', 'staging'] as $key) {
+            if (! array_key_exists($key, $marker)) {
+                continue;
+            }
+
+            $path = $this->recoveryCleanupPath($key, $marker[$key]);
+
+            if ($path !== null) {
+                $paths[] = $path;
+            }
+        }
+
+        foreach (array_unique($paths) as $path) {
+            if (! file_exists($path) && ! is_link($path)) {
+                continue;
+            }
+
+            $this->deleteManagedPath($path);
+        }
+
+        foreach (array_unique($paths) as $path) {
+            if (file_exists($path) || is_link($path)) {
+                throw new RuntimeException("Could not clean runtime lifecycle path [{$path}].");
+            }
+        }
+
+        foreach ([$this->root.'/.staging', $this->root.'/.backup'] as $container) {
+            if (! is_dir($container) || is_link($container)) {
+                continue;
+            }
+
+            $entries = scandir($container);
+
+            if ($entries === false) {
+                throw new RuntimeException("Could not inspect runtime lifecycle path [{$container}].");
+            }
+
+            if ($entries === ['.', '..']) {
+                $this->assertSafeManagedPath($container);
+                $this->deleteDirectory($container);
+            }
+        }
+    }
+
+    public function forceCleanupFilesystemAnomaly(string $key): void
+    {
+        $anomalies = $this->managedFilesystemAnomalies();
+
+        if (! isset($anomalies[$key])) {
+            throw new RuntimeException('Runtime filesystem anomaly is no longer present.');
+        }
+
+        $path = $anomalies[$key];
+        $this->assertSafeManagedLink($path);
+
+        if (! @unlink($path) || file_exists($path) || is_link($path)) {
+            throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
+        }
+
+        if (str_starts_with($key, 'package:')) {
+            try {
+                $state = $this->readState();
+                unset($state[substr($key, strlen('package:'))]);
+                $this->writeState($state);
+            } catch (Throwable) {
+                // The symlink is gone; a corrupt state file remains independently recoverable.
+            }
+        }
+    }
+
     private function cleanupRecoveryArtifacts(): void
     {
         if (! is_dir($this->root)) {
@@ -291,8 +588,7 @@ final class RuntimePluginStore
 
         foreach ($this->recoveryArtifactPaths() as $path) {
             if (file_exists($path) || is_link($path)) {
-                $this->assertSafeManagedPath($path);
-                $this->deleteDirectory($path);
+                $this->deleteManagedPath($path);
             }
         }
 
@@ -311,8 +607,7 @@ final class RuntimePluginStore
             }
 
             $path = $this->root.'/'.$entry;
-            $this->assertSafeManagedPath($path);
-            $this->deleteDirectory($path);
+            $this->deleteManagedPath($path);
         }
 
         foreach ($this->recoveryArtifactPaths() as $path) {
@@ -320,6 +615,13 @@ final class RuntimePluginStore
                 throw new RuntimeException("Could not clean runtime lifecycle path [{$path}].");
             }
         }
+    }
+
+    private function recoveryMarkerExists(): bool
+    {
+        $path = $this->recoveryMarkerPath();
+
+        return file_exists($path) || is_link($path);
     }
 
     public function packagePath(string $id): string
@@ -352,8 +654,7 @@ final class RuntimePluginStore
             throw new RuntimeException('Only staging paths can be discarded.');
         }
 
-        $this->assertSafeManagedPath($path);
-        $this->deleteDirectory($path);
+        $this->deleteManagedPath($path);
     }
 
     public function promote(string $id, string $stagingPath, bool $enabled): void
@@ -770,26 +1071,18 @@ final class RuntimePluginStore
 
     private function assertRecoveryBelongsTo(string $id): void
     {
-        $path = $this->recoveryMarkerPath();
+        $identity = $this->recoveryIdentity();
 
-        if (! is_file($path) || is_link($path)) {
+        if ($identity !== null) {
+            if ($identity !== $id) {
+                throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+            }
+
             return;
         }
 
-        $contents = file_get_contents($path);
-
-        if ($contents === false) {
-            return;
-        }
-
-        try {
-            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
-            return;
-        }
-
-        if (is_array($marker) && is_string($marker['id'] ?? null) && $this->isValidId($marker['id']) && $marker['id'] !== $id) {
-            throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+        if (count($this->managedPackageEntries()) > 1) {
+            throw new RuntimeException('Runtime plugin recovery owner cannot be determined safely.');
         }
     }
 
@@ -824,8 +1117,7 @@ final class RuntimePluginStore
             return;
         }
 
-        $this->assertSafeManagedPath($path);
-        $this->deleteDirectory($path);
+        $this->deleteManagedPath($path);
     }
 
     /** @return array<int, string> */
@@ -873,6 +1165,21 @@ final class RuntimePluginStore
         }
 
         return $path;
+    }
+
+    private function recoveryCleanupPath(string $key, mixed $relativePath): ?string
+    {
+        $prefix = $key === 'backup' ? '.backup/' : '.staging/';
+
+        if (! is_string($relativePath) || ! str_starts_with($relativePath, $prefix) || $relativePath === $prefix) {
+            return null;
+        }
+
+        try {
+            return $this->managedPath($relativePath);
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function ensureDirectory(string $path): void
@@ -926,6 +1233,17 @@ final class RuntimePluginStore
         }
     }
 
+    private function deleteManagedPath(string $path): void
+    {
+        if (is_link($path)) {
+            $this->assertSafeManagedLink($path);
+        } else {
+            $this->assertSafeManagedPath($path);
+        }
+
+        $this->deleteDirectory($path);
+    }
+
     private function assertSafeManagedPath(string $path): void
     {
         if ($path !== $this->root && ! str_starts_with($path, $this->root.DIRECTORY_SEPARATOR)) {
@@ -958,6 +1276,38 @@ final class RuntimePluginStore
             || ($resolved !== $resolvedRoot && ! str_starts_with($resolved, $resolvedRoot.DIRECTORY_SEPARATOR))
         ) {
             throw new RuntimeException('Runtime plugin path is outside managed storage.');
+        }
+    }
+
+    private function assertSafeManagedLink(string $path): void
+    {
+        if (! is_link($path)) {
+            throw new RuntimeException("Runtime plugin path is no longer a symlink [{$path}].");
+        }
+
+        if ($path !== $this->root && ! str_starts_with($path, $this->root.DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException('Runtime plugin path is outside managed storage.');
+        }
+
+        $this->assertSafeManagedPath(dirname($path));
+    }
+
+    private function assertConfiguredPathHasNoSymlink(string $path): void
+    {
+        $current = $path;
+
+        while (true) {
+            if (is_link($current)) {
+                throw new RuntimeException('Runtime plugin storage cannot use a symlinked path.');
+            }
+
+            $parent = dirname($current);
+
+            if ($parent === $current) {
+                return;
+            }
+
+            $current = $parent;
         }
     }
 

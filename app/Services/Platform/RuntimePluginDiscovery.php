@@ -29,7 +29,7 @@ final class RuntimePluginDiscovery
             return $this->store->withLock(function (RuntimePluginStore $store) use ($existingClasses): array {
                 $state = $store->readState();
                 $packages = $store->installedPackages();
-                $conflictingIds = $this->assertNoComposerConflicts($packages, $state, $existingClasses);
+                $conflictingIds = $this->conflictingIds($packages, $state, $existingClasses);
                 $runtime = [];
 
                 foreach ($packages as $id => $path) {
@@ -39,6 +39,17 @@ final class RuntimePluginDiscovery
                         $runtime[$id] = [
                             'metadata' => null,
                             'enabled' => false,
+                        ];
+
+                        continue;
+                    }
+
+                    if (in_array($id, $conflictingIds, true)) {
+                        $runtime[$id] = [
+                            'metadata' => null,
+                            'enabled' => true,
+                            'status' => 'conflict',
+                            'error' => 'Runtime plugin conflicts with a Composer or explicit plugin.',
                         ];
 
                         continue;
@@ -99,7 +110,7 @@ final class RuntimePluginDiscovery
      * @param  array<int, string>  $existingClasses
      * @return array<int, string>
      */
-    private function assertNoComposerConflicts(array $packages, array $state, array $existingClasses): array
+    public function conflictingIds(array $packages, array $state, array $existingClasses): array
     {
         $existingIds = [];
         $conflictingIds = [];

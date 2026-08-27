@@ -58,6 +58,7 @@ const statusVariants: Record<
     pending_recovery: 'outline',
     unrecoverable_recovery: 'destructive',
     orphaned_state: 'destructive',
+    orphaned_runtime_artifact: 'outline',
 };
 
 function formatBytes(bytes: number): string {
@@ -82,6 +83,7 @@ function statusLabel(status: PlatformPlugin['status']): string {
         pending_recovery: t('Pending recovery'),
         unrecoverable_recovery: t('Unrecoverable recovery'),
         orphaned_state: t('Orphaned state'),
+        orphaned_runtime_artifact: t('Orphaned runtime artifact'),
     }[status];
 }
 
@@ -172,10 +174,16 @@ export default function Plugins({
 
     function cleanupMetadata(plugin: PlatformPlugin) {
         const key = pluginKey(plugin);
+        const data = plugin.cleanup_key
+            ? { cleanup_key: plugin.cleanup_key }
+            : plugin.managed_id
+              ? { recovery_id: plugin.managed_id }
+              : {};
 
         setActionError(null);
         setProcessingPlugin(key);
         router.delete(cleanupRecovery().url, {
+            data,
             preserveScroll: true,
             onError: (errors) => setActionError(errors.plugin ?? null),
             onFinish: () => setProcessingPlugin(null),

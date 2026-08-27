@@ -21,6 +21,22 @@ it('reads empty state without creating absent runtime storage', function (): voi
         ->and(is_dir($this->runtimePluginPath))->toBeFalse();
 });
 
+it('rejects a symlinked configured runtime root', function (): void {
+    $target = sys_get_temp_dir().'/openkos-runtime-root-'.bin2hex(random_bytes(8));
+    mkdir($target, 0750, true);
+    symlink($target, $this->runtimePluginPath);
+    config(['platform.runtime.path' => $this->runtimePluginPath]);
+    app()->forgetInstance(RuntimePluginStore::class);
+
+    try {
+        expect(fn (): RuntimePluginStore => app(RuntimePluginStore::class))
+            ->toThrow(RuntimeException::class, 'symlinked path');
+    } finally {
+        unlink($this->runtimePluginPath);
+        File::deleteDirectory($target);
+    }
+});
+
 it('restores the previous package after an interrupted swap', function (): void {
     $store = app(RuntimePluginStore::class);
     $activePath = $this->runtimePluginPath.'/acme/recovery';
@@ -157,6 +173,72 @@ it('classifies ambiguous prepared recovery metadata as unrecoverable', function 
     ], JSON_THROW_ON_ERROR));
 
     expect($store->recoveryStatus())->toBe(RuntimePluginStore::RECOVERY_UNRECOVERABLE);
+});
+
+it('classifies stale runtime artifacts without a recovery marker', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath.'/.staging/stale', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/.state-stale.tmp', 'stale');
+
+    expect($store->recoveryStatus())->toBe(RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT);
+
+    $store->withLock(function (RuntimePluginStore $store): void {
+        $store->forceCleanupOrphanedArtifacts();
+    }, false);
+
+    expect(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/.state-stale.tmp'))->toBeFalse();
+});
+
+it('cleans a recovery marker by its own identity', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    mkdir($this->runtimePluginPath.'/acme/other', 0750, true);
+    $store->writeState([
+        'acme/missing' => ['enabled' => true],
+        'acme/other' => ['enabled' => true],
+    ]);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/missing',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(function (RuntimePluginStore $store): void {
+        $store->forceCleanupRecovery('acme/missing');
+    }, false);
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging/incoming'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/acme/other'))->toBeTrue()
+        ->and(app(RuntimePluginStore::class)->readState())->toMatchArray([
+            'acme/other' => ['enabled' => true],
+        ]);
+});
+
+it('does not let malformed recovery paths delete lifecycle state', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $store->writeState(['acme/other' => ['enabled' => true]]);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/missing',
+        'staging' => '.staging/incoming',
+        'backup' => 'state.json',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(function (RuntimePluginStore $store): void {
+        $store->forceCleanupRecovery('acme/missing');
+    }, false);
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(app(RuntimePluginStore::class)->readState())->toBe([
+            'acme/other' => ['enabled' => true],
+        ]);
 });
 
 it('cleans orphaned lifecycle metadata while holding the store lock', function (): void {

@@ -330,7 +330,7 @@ final class RuntimePluginGraphValidator
 
             try {
                 $plugins[$id] = [
-                    'metadata' => $this->validator->validateInFreshProcess($path, $id),
+                    'metadata' => $this->validator->inspectStaticMetadata($path, $id),
                     'enabled' => $enabled,
                 ];
             } catch (Throwable $exception) {

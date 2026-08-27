@@ -1,8 +1,11 @@
 <?php
 
+use App\Services\Platform\PluginManagementService;
+use App\Services\Platform\RuntimePluginStore;
 use Illuminate\Support\Facades\File;
 use OpenKOS\Core\Contracts\PluginDiscovery;
 use OpenKOS\Platform\Permission\PermissionRegistry;
+use OpenKOS\Plugins\Mail\MailPlugin;
 
 beforeEach(function (): void {
     $this->runtimePluginPath = sys_get_temp_dir().'/openkos-runtime-'.bin2hex(random_bytes(8));
@@ -54,6 +57,38 @@ it('does not boot a disabled runtime plugin', function (): void {
     expect(app(PermissionRegistry::class)->all())
         ->not->toHaveKey('runtime-fixture.view')
         ->and(class_exists($artifact['class'], false))->toBeFalse();
+});
+
+it('does not execute disabled runtime plugins while listing them', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    $marker = sys_get_temp_dir().'/openkos-disabled-plugin-'.bin2hex(random_bytes(8));
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+    $this->artisan('plugin:disable', ['id' => $artifact['id']])->assertSuccessful();
+
+    $autoloadPath = $this->runtimePluginPath.'/'.$artifact['id'].'/vendor/autoload.php';
+    $autoload = file_get_contents($autoloadPath);
+    $replacementCount = 0;
+    file_put_contents($autoloadPath, str_replace(
+        '<?php',
+        "<?php\nfile_put_contents(".var_export($marker, true).", 'loaded');",
+        $autoload,
+        $replacementCount,
+    ));
+
+    $this->artisan('plugin:list')
+        ->assertSuccessful()
+        ->expectsOutputToContain('Disabled');
+
+    $plugins = app(PluginManagementService::class)->catalog()['plugins'];
+
+    expect(collect($plugins)->firstWhere('id', $artifact['id']))->toMatchArray([
+        'status' => 'disabled',
+        'enabled' => false,
+    ]);
+
+    expect(is_file($marker))->toBeFalse();
+    File::delete($marker);
 });
 
 it('validates updates in a fresh process after the previous class was loaded', function (): void {
@@ -145,15 +180,34 @@ it('reports an enabled package with a malformed manifest without booting it', fu
 });
 
 it('skips a runtime plugin that conflicts with an explicit plugin', function (): void {
-    $artifact = makeRuntimePluginArtifact();
+    $artifact = makeRuntimePluginArtifact(id: 'openkos/mail');
+    $packagePath = $this->runtimePluginPath.'/'.$artifact['id'];
+    File::makeDirectory($packagePath, 0750, true);
+    $zip = new ZipArchive;
+    $zip->open($artifact['zip']);
+    $zip->extractTo($packagePath);
+    $zip->close();
+    app(RuntimePluginStore::class)->writeState([
+        $artifact['id'] => ['enabled' => true],
+    ]);
+    $marker = sys_get_temp_dir().'/openkos-conflicting-plugin-'.bin2hex(random_bytes(8));
+    $autoloadPath = $packagePath.'/vendor/autoload.php';
+    $autoload = file_get_contents($autoloadPath);
+    $replacementCount = 0;
+    file_put_contents($autoloadPath, str_replace(
+        '<?php',
+        "<?php\nfile_put_contents(".var_export($marker, true).", 'loaded');",
+        $autoload,
+        $replacementCount,
+    ));
 
-    $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
-    require_once $this->runtimePluginPath.'/'.$artifact['id'].'/vendor/autoload.php';
-    config(['platform.plugins' => [$artifact['class']]]);
+    config(['platform.plugins' => [MailPlugin::class]]);
 
     expect(fn (): mixed => $this->bootPlatformWithIsolatedRegistries())
         ->not->toThrow(RuntimeException::class);
-    expect(app(PermissionRegistry::class)->all())->toHaveKey('runtime-fixture.view');
+    expect(app(PermissionRegistry::class)->all())->not->toHaveKey('runtime-fixture.view')
+        ->and(is_file($marker))->toBeFalse();
+    File::delete($marker);
 });
 
 it('rejects an entry-class conflict before activating a runtime plugin', function (): void {

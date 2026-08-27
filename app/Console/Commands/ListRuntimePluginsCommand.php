@@ -24,7 +24,9 @@ final class ListRuntimePluginsCommand extends Command
                     $enabled = $state[$id]['enabled'] ?? false;
 
                     try {
-                        $metadata = $validator->validate($path, $id);
+                        $metadata = $enabled
+                            ? $validator->validate($path, $id)
+                            : $validator->inspectStaticMetadata($path, $id);
                         $rows[] = [$id, $metadata['version'], $enabled ? 'Enabled' : 'Disabled'];
                     } catch (Throwable $exception) {
                         $rows[] = [$id, 'unknown', $enabled ? 'Invalid (enabled)' : 'Invalid (disabled)'];

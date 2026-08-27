@@ -15,6 +15,7 @@ final class PluginInstaller
         private RuntimePluginArtifactValidator $validator,
         private RuntimePluginGraphValidator $graph,
         private ComposerPluginDiscovery $composer,
+        private RuntimePluginDiscovery $discovery,
     ) {}
 
     /**
@@ -93,12 +94,22 @@ final class PluginInstaller
     {
         return $this->store->withLock(function (RuntimePluginStore $store) use ($id): array {
             $path = $store->packagePath($id);
+            $state = $store->readState();
+
+            if (in_array($id, $this->discovery->conflictingIds(
+                [$id => $path],
+                [...$state, $id => ['enabled' => true]],
+                $this->hostPluginClasses(),
+            ), true)) {
+                throw new RuntimePluginConflictException('Runtime plugin conflicts with a Composer or explicit plugin.');
+            }
+
             $metadata = $this->validator->validateInFreshProcess($path, $id);
             $this->graph->validateCandidate($metadata, true, $store, $this->hostPluginClasses());
             $store->setEnabled($id, true);
 
             return $metadata;
-        });
+        }, true, $id);
     }
 
     public function disable(string $id, bool $force = false): void
@@ -117,7 +128,7 @@ final class PluginInstaller
 
             $this->assertNoEnabledDependants($id, $store, 'disable', $force);
             $store->setEnabled($id, false);
-        });
+        }, true, $id);
     }
 
     public function remove(string $id, bool $force = false): void
@@ -174,9 +185,33 @@ final class PluginInstaller
         }, ! $force);
     }
 
-    public function cleanupOrphanedMetadata(): void
+    public function cleanupOrphanedMetadata(?string $recoveryId = null, ?string $cleanupKey = null): void
     {
-        $this->store->withLock(function (RuntimePluginStore $store): void {
+        $this->store->withLock(function (RuntimePluginStore $store) use ($recoveryId, $cleanupKey): void {
+            if ($cleanupKey === 'orphaned-artifacts') {
+                $store->forceCleanupOrphanedArtifacts();
+
+                return;
+            }
+
+            if (str_starts_with($cleanupKey ?? '', 'recovery:')) {
+                $store->forceCleanupRecovery(substr($cleanupKey, strlen('recovery:')));
+
+                return;
+            }
+
+            if ($cleanupKey !== null) {
+                $store->forceCleanupFilesystemAnomaly($cleanupKey);
+
+                return;
+            }
+
+            if ($recoveryId !== null) {
+                $store->forceCleanupRecovery($recoveryId);
+
+                return;
+            }
+
             $store->forceCleanupOrphanedMetadata();
         }, false);
     }

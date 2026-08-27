@@ -64,10 +64,13 @@ class PluginController extends Controller
         return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->remove($id, $request->boolean('force')), __('Plugin removed. Restart required for changes to take effect.'));
     }
 
-    public function cleanup(PluginManagementService $plugins): RedirectResponse
+    public function cleanup(Request $request, PluginManagementService $plugins): RedirectResponse
     {
         try {
-            $plugins->cleanupOrphanedMetadata();
+            $plugins->cleanupOrphanedMetadata(
+                $request->string('recovery_id')->trim()->toString() ?: null,
+                $request->string('cleanup_key')->trim()->toString() ?: null,
+            );
         } catch (Throwable $exception) {
             report($exception);
 
