@@ -62,9 +62,22 @@ final class PluginInstaller
                     throw new RuntimeException('Plugin ZIP could not be extracted into staging storage.');
                 }
 
-                $metadata = $this->validator->validateInFreshProcess($stagingPath);
                 $state = $store->readState();
-                $enabled = ! isset($state[$metadata['id']]) || $state[$metadata['id']]['enabled'];
+                $staticMetadata = $this->validator->inspectStaticMetadata($stagingPath);
+                $enabled = ! isset($state[$staticMetadata['id']]) || $state[$staticMetadata['id']]['enabled'];
+                $candidatePackages = $store->installedPackages();
+                $candidatePackages[$staticMetadata['id']] = $stagingPath;
+
+                if (in_array($staticMetadata['id'], $this->discovery->conflictingIds(
+                    $candidatePackages,
+                    [...$state, $staticMetadata['id'] => ['enabled' => $enabled]],
+                    $this->hostPluginClasses(),
+                    true,
+                ), true)) {
+                    throw new RuntimePluginConflictException('Runtime plugin conflicts with an existing plugin.');
+                }
+
+                $metadata = $this->validator->validateInFreshProcess($stagingPath, $staticMetadata['id']);
                 $this->graph->validateCandidate($metadata, $enabled, $store, $this->hostPluginClasses());
                 $store->promote($metadata['id'], $stagingPath, $enabled);
                 $stagingPath = null;
@@ -101,11 +114,11 @@ final class PluginInstaller
             $state = $store->readState();
 
             if (in_array($id, $this->discovery->conflictingIds(
-                [$id => $path],
+                [...$store->installedPackages(), $id => $path],
                 [...$state, $id => ['enabled' => true]],
                 $this->hostPluginClasses(),
             ), true)) {
-                throw new RuntimePluginConflictException('Runtime plugin conflicts with a Composer or explicit plugin.');
+                throw new RuntimePluginConflictException('Runtime plugin conflicts with an existing plugin.');
             }
 
             $metadata = $this->validator->validateInFreshProcess($path, $id);
@@ -140,7 +153,7 @@ final class PluginInstaller
         $this->store->withLock(function (RuntimePluginStore $store) use ($id, $force): void {
             $recoveryStatus = $store->recoveryStatus();
 
-            if ($force && $recoveryStatus === RuntimePluginStore::RECOVERY_PENDING) {
+            if ($force && $recoveryStatus === RuntimePluginStore::RECOVERY_PENDING && $store->recoveryIdentity() === $id) {
                 try {
                     $store->recoverPendingOperation();
                     $recoveryStatus = $store->recoveryStatus();
@@ -186,7 +199,7 @@ final class PluginInstaller
             }
 
             $store->remove($id);
-        }, ! $force);
+        }, ! $force, $id);
     }
 
     public function cleanupOrphanedMetadata(?string $recoveryId = null, ?string $cleanupKey = null): void

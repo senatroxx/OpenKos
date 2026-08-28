@@ -48,6 +48,9 @@ final class RuntimePluginStore
         $this->ensureDirectory($this->root);
 
         $lockPath = $this->root.'/.lock';
+        if (is_link($lockPath) || (file_exists($lockPath) && ! is_file($lockPath))) {
+            throw new RuntimeException('Runtime plugin lock path is not a regular file.');
+        }
         $this->assertSafeManagedPath($lockPath);
         $handle = fopen($lockPath, 'c+');
 
@@ -59,7 +62,7 @@ final class RuntimePluginStore
             if ($recover) {
                 $recoveryIdentity = $this->recoveryIdentity();
 
-                if ($pluginId === null || $recoveryIdentity === null || $recoveryIdentity === $pluginId) {
+                if ($pluginId === null || $recoveryIdentity === $pluginId) {
                     $this->recoverPendingOperation();
                 }
             }
@@ -269,7 +272,7 @@ final class RuntimePluginStore
             $packages = scandir($vendorPath);
 
             if ($packages === false) {
-                throw new RuntimeException("Could not inspect runtime plugin vendor directory [{$vendor}].");
+                continue;
             }
 
             foreach ($packages as $package) {
@@ -280,7 +283,7 @@ final class RuntimePluginStore
                 $id = $vendor.'/'.$package;
                 $packagePath = $vendorPath.DIRECTORY_SEPARATOR.$package;
 
-                if ($this->isValidId($id) && (is_dir($packagePath) || is_file($packagePath) || is_link($packagePath))) {
+                if ($this->isValidId($id) && (file_exists($packagePath) || is_link($packagePath))) {
                     $entries[$id] = $packagePath;
                 }
             }
@@ -324,65 +327,72 @@ final class RuntimePluginStore
             throw new RuntimeException('Could not inspect runtime plugin storage.');
         }
 
+        $expectedFiles = ['.lock', 'state.json', 'recovery.json', 'recovery.json.tmp'];
+        $expectedDirectories = ['.staging', '.backup'];
+
         foreach ($vendors as $vendor) {
-            if ($vendor === '.' || $vendor === '..' || str_starts_with($vendor, '.')) {
+            if ($vendor === '.' || $vendor === '..') {
                 continue;
             }
 
             $vendorPath = $this->root.'/'.$vendor;
 
-            if (is_link($vendorPath)) {
+            if (in_array($vendor, $expectedFiles, true)) {
+                if (! $this->isRegularFile($vendorPath)) {
+                    $anomalies['internal:'.$vendor] = $vendorPath;
+                }
+
+                continue;
+            }
+
+            if (in_array($vendor, $expectedDirectories, true)) {
+                if (! $this->isRealDirectory($vendorPath)) {
+                    $anomalies['internal:'.$vendor] = $vendorPath;
+                }
+
+                continue;
+            }
+
+            if (str_starts_with($vendor, '.state-') && str_ends_with($vendor, '.tmp')) {
+                if (is_link($vendorPath)) {
+                    $anomalies['internal:'.$vendor] = $vendorPath;
+                }
+
+                continue;
+            }
+
+            if (str_starts_with($vendor, '.')) {
+                $anomalies['internal:'.$vendor] = $vendorPath;
+
+                continue;
+            }
+
+            if (! $this->isRealDirectory($vendorPath)) {
                 $anomalies['vendor:'.$vendor] = $vendorPath;
 
                 continue;
             }
 
-            if (! is_dir($vendorPath)) {
+            $packages = @scandir($vendorPath);
+
+            if ($packages === false) {
+                $anomalies['vendor:'.$vendor] = $vendorPath;
+
                 continue;
             }
 
-            $packages = scandir($vendorPath);
-
-            if ($packages === false) {
-                throw new RuntimeException("Could not inspect runtime plugin vendor directory [{$vendor}].");
-            }
-
             foreach ($packages as $package) {
-                if ($package === '.' || $package === '..' || str_starts_with($package, '.')) {
+                if ($package === '.' || $package === '..') {
                     continue;
                 }
 
                 $id = $vendor.'/'.$package;
                 $packagePath = $vendorPath.'/'.$package;
 
-                if ($this->isValidId($id) && is_link($packagePath)) {
+                if (! $this->isValidId($id)) {
+                    $anomalies['path:'.$vendor.'/'.$package] = $packagePath;
+                } elseif (! $this->isRealDirectory($packagePath)) {
                     $anomalies['package:'.$id] = $packagePath;
-                }
-            }
-        }
-
-        foreach (['.lock', 'state.json', 'recovery.json', 'recovery.json.tmp'] as $name) {
-            $path = $this->root.'/'.$name;
-
-            if (is_link($path) || (file_exists($path) && ! is_file($path))) {
-                $anomalies['internal:'.$name] = $path;
-            }
-        }
-
-        foreach (['.staging', '.backup'] as $name) {
-            $path = $this->root.'/'.$name;
-
-            if (is_link($path)) {
-                $anomalies['internal:'.$name] = $path;
-            }
-        }
-
-        foreach (scandir($this->root) ?: [] as $entry) {
-            if (str_starts_with($entry, '.state-') && str_ends_with($entry, '.tmp')) {
-                $path = $this->root.'/'.$entry;
-
-                if (is_link($path)) {
-                    $anomalies['internal:'.$entry] = $path;
                 }
             }
         }
@@ -622,6 +632,14 @@ final class RuntimePluginStore
                 $this->deleteManagedPath($container);
             }
         }
+
+        if ($this->managedPackageEntries() === []) {
+            $statePath = $this->statePath();
+
+            if (file_exists($statePath) || is_link($statePath)) {
+                $this->deleteManagedPath($statePath);
+            }
+        }
     }
 
     public function forceCleanupFilesystemAnomaly(string $key): void
@@ -824,6 +842,19 @@ final class RuntimePluginStore
         $activePath = $this->packagePath($id);
         $this->assertSafeManagedPath($activePath);
         $state = $this->readState();
+        $recoveryStatus = $this->recoveryStatus();
+        $recoveryIdentity = $this->recoveryIdentity();
+
+        if (
+            in_array($recoveryStatus, [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE], true)
+            && $recoveryIdentity !== $id
+        ) {
+            $this->deleteDirectory($activePath);
+            unset($state[$id]);
+            $this->writeState($state);
+
+            return;
+        }
 
         if (! is_dir($activePath) || is_link($activePath)) {
             $this->deleteDirectory($activePath);
@@ -872,25 +903,36 @@ final class RuntimePluginStore
         $activePath = $this->packagePath($id);
         $this->assertSafeManagedPath($activePath);
         $recoveryStatus = $this->recoveryStatus();
+        $recoveryIdentity = $this->recoveryIdentity();
+        $preserveUnrelatedRecovery = in_array(
+            $recoveryStatus,
+            [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE],
+            true,
+        ) && $recoveryIdentity !== $id;
 
-        if (in_array($recoveryStatus, [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE], true)) {
+        if (
+            in_array($recoveryStatus, [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE], true)
+            && ! $preserveUnrelatedRecovery
+        ) {
             $this->assertRecoveryBelongsTo($id);
         }
 
         if ($recoveryStatus === self::RECOVERY_PENDING) {
-            if (! $allowPendingRecovery) {
+            if (! $preserveUnrelatedRecovery && ! $allowPendingRecovery) {
                 throw new RuntimeException('Runtime plugin recovery is still pending. Complete recovery before forcing removal.');
             }
 
-            try {
-                $this->recoverPendingOperation();
-                $recoveryStatus = $this->recoveryStatus();
-            } catch (Throwable) {
-                $recoveryStatus = self::RECOVERY_UNRECOVERABLE;
+            if (! $preserveUnrelatedRecovery) {
+                try {
+                    $this->recoverPendingOperation();
+                    $recoveryStatus = $this->recoveryStatus();
+                } catch (Throwable) {
+                    $recoveryStatus = self::RECOVERY_UNRECOVERABLE;
+                }
             }
         }
 
-        if ($recoveryStatus === self::RECOVERY_UNRECOVERABLE) {
+        if ($recoveryStatus === self::RECOVERY_UNRECOVERABLE && ! $preserveUnrelatedRecovery) {
             $this->removeRecoveryMarker();
         }
 
@@ -909,7 +951,9 @@ final class RuntimePluginStore
             $this->writeState($state);
         }
 
-        $this->cleanupRecoveryArtifacts();
+        if (! $preserveUnrelatedRecovery) {
+            $this->cleanupRecoveryArtifacts();
+        }
 
         if ($this->managedPackageEntries() === []) {
             $this->forceCleanupOrphanedMetadata();
@@ -1170,6 +1214,9 @@ final class RuntimePluginStore
 
         $contents = json_encode($marker, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR).PHP_EOL;
         $temporaryPath = $recoveryPath.'.tmp';
+        if (is_link($temporaryPath) || (file_exists($temporaryPath) && ! is_file($temporaryPath))) {
+            throw new RuntimeException('Could not persist runtime plugin recovery state through a non-file path.');
+        }
         $this->assertSafeManagedPath($temporaryPath);
 
         if (file_put_contents($temporaryPath, $contents, LOCK_EX) === false || ! rename($temporaryPath, $recoveryPath)) {
@@ -1224,7 +1271,15 @@ final class RuntimePluginStore
 
     private function managedPath(string $relativePath): string
     {
-        if ($relativePath === '' || str_contains($relativePath, '..') || str_starts_with($relativePath, '/')) {
+        $segments = explode('/', $relativePath);
+
+        if (
+            $relativePath === ''
+            || str_contains($relativePath, '..')
+            || str_starts_with($relativePath, '/')
+            || in_array('', $segments, true)
+            || in_array('.', $segments, true)
+        ) {
             throw new RuntimeException('Runtime plugin recovery path is unsafe.');
         }
 
@@ -1283,7 +1338,7 @@ final class RuntimePluginStore
             return;
         }
 
-        if (is_file($path)) {
+        if (! is_dir($path)) {
             $this->assertSafeManagedPath($path);
 
             if (! @unlink($path) || file_exists($path) || is_link($path)) {
@@ -1291,10 +1346,6 @@ final class RuntimePluginStore
             }
 
             return;
-        }
-
-        if (! is_dir($path)) {
-            throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
         }
 
         $this->assertSafeManagedPath($path);
@@ -1416,6 +1467,16 @@ final class RuntimePluginStore
     private function isValidId(string $id): bool
     {
         return preg_match('/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/', $id) === 1;
+    }
+
+    private function isRegularFile(string $path): bool
+    {
+        return is_file($path) && ! is_link($path);
+    }
+
+    private function isRealDirectory(string $path): bool
+    {
+        return is_dir($path) && ! is_link($path);
     }
 
     private function canonicalizePath(string $path): string

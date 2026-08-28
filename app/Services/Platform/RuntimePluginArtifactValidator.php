@@ -130,12 +130,32 @@ final class RuntimePluginArtifactValidator
             throw new InvalidArgumentException('Runtime plugin artifact directory is missing or unsafe.');
         }
 
+        $this->validateTree($directory);
         $metadata = $this->validateManifest($this->readJsonFile($directory.'/manifest.json', 'manifest.json'));
 
         if ($expectedId !== null && $metadata['id'] !== $expectedId) {
             throw new InvalidArgumentException(
                 "Runtime plugin manifest ID [{$metadata['id']}] does not match installed package [{$expectedId}].",
             );
+        }
+
+        $composer = $this->readJsonFile($directory.'/composer.json', 'composer.json');
+        $lock = $this->readJsonFile($directory.'/composer.lock', 'composer.lock');
+
+        if (! is_array($lock['packages'] ?? null)) {
+            throw new InvalidArgumentException('Runtime plugin composer.lock must contain packages.');
+        }
+
+        if (($composer['name'] ?? null) !== $metadata['id']) {
+            throw new InvalidArgumentException('Runtime plugin composer name must match manifest ID.');
+        }
+
+        if (data_get($composer, 'extra.openkos.plugin') !== $metadata['entry_class']) {
+            throw new InvalidArgumentException('Runtime plugin Composer metadata must match manifest entry class.');
+        }
+
+        if (! is_file($directory.'/vendor/autoload.php') || is_link($directory.'/vendor/autoload.php')) {
+            throw new InvalidArgumentException('Runtime plugin artifact must include vendor/autoload.php.');
         }
 
         return $metadata;
@@ -465,6 +485,10 @@ final class RuntimePluginArtifactValidator
 
             if ($file->isLink() || is_link($path)) {
                 throw new InvalidArgumentException("Runtime plugin artifact contains symlink [{$relative}].");
+            }
+
+            if (! $file->isDir() && ! $file->isFile()) {
+                throw new InvalidArgumentException("Runtime plugin artifact contains unsafe filesystem node [{$relative}].");
             }
 
             $entryCount++;

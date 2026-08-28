@@ -260,6 +260,20 @@ it('cleans orphaned lifecycle metadata while holding the store lock', function (
         ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
 });
 
+it('cleans corrupt orphaned state with unknown recovery metadata', function (): void {
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath, 0750, true);
+    file_put_contents($this->runtimePluginPath.'/state.json', '{broken');
+    file_put_contents($this->runtimePluginPath.'/recovery.json', '{broken');
+
+    $store->withLock(function (RuntimePluginStore $store): void {
+        $store->forceCleanupUnknownRecovery();
+    }, false);
+
+    expect(is_file($this->runtimePluginPath.'/state.json'))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
+});
+
 it('surfaces deletion failures instead of reporting force removal success', function (): void {
     $store = app(RuntimePluginStore::class);
     $packagePath = $this->runtimePluginPath.'/acme/failure';
@@ -350,10 +364,12 @@ it('surfaces and removes a non-file recovery marker', function (): void {
     expect(file_exists($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
 });
 
-it('does not remove a different package while forcing recovery', function (): void {
+it('removes a different package without touching recovery for another package', function (): void {
     $store = app(RuntimePluginStore::class);
     $targetPath = $this->runtimePluginPath.'/acme/target';
+    $otherPath = $this->runtimePluginPath.'/acme/other';
     mkdir($targetPath, 0750, true);
+    mkdir($otherPath, 0750, true);
     file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
         'operation' => 'swap',
         'id' => 'acme/other',
@@ -363,13 +379,73 @@ it('does not remove a different package while forcing recovery', function (): vo
         'phase' => 'old_preserved',
     ], JSON_THROW_ON_ERROR));
 
-    expect(fn (): mixed => $store->withLock(
+    $store->withLock(
         fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/target'),
         false,
-    ))->toThrow(RuntimeException::class, 'belongs to a different package');
+    );
 
-    expect(is_dir($targetPath))->toBeTrue()
+    expect(is_dir($targetPath))->toBeFalse()
+        ->and(is_dir($otherPath))->toBeTrue()
         ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeTrue();
+});
+
+it('scopes normal lifecycle changes away from unknown recovery metadata', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $firstPath = $this->runtimePluginPath.'/acme/first';
+    $secondPath = $this->runtimePluginPath.'/acme/second';
+    mkdir($firstPath, 0750, true);
+    mkdir($secondPath, 0750, true);
+    $store->writeState([
+        'acme/first' => ['enabled' => true],
+        'acme/second' => ['enabled' => true],
+    ]);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', '{broken');
+
+    $store->withLock(
+        fn (RuntimePluginStore $store): mixed => $store->setEnabled('acme/second', false),
+        true,
+        'acme/second',
+    );
+    $store->withLock(
+        fn (RuntimePluginStore $store): mixed => $store->remove('acme/second'),
+        true,
+        'acme/second',
+    );
+
+    expect(is_dir($firstPath))->toBeTrue()
+        ->and(is_dir($secondPath))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeTrue()
+        ->and($store->readState())->toBe(['acme/first' => ['enabled' => true]]);
+});
+
+it('surfaces and removes special runtime filesystem nodes', function (): void {
+    if (! function_exists('posix_mkfifo')) {
+        $this->markTestSkipped('The POSIX extension is required for FIFO coverage.');
+    }
+
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath, 0750, true);
+    $path = $this->runtimePluginPath.'/acme';
+    posix_mkfifo($path, 0600);
+
+    expect($store->managedFilesystemAnomalies())->toHaveKey('vendor:acme');
+
+    $store->forceCleanupFilesystemAnomaly('vendor:acme');
+
+    expect(file_exists($path))->toBeFalse();
+});
+
+it('rejects a special lock path before opening it', function (): void {
+    if (! function_exists('posix_mkfifo')) {
+        $this->markTestSkipped('The POSIX extension is required for FIFO coverage.');
+    }
+
+    $store = app(RuntimePluginStore::class);
+    mkdir($this->runtimePluginPath, 0750, true);
+    posix_mkfifo($this->runtimePluginPath.'/.lock', 0600);
+
+    expect(fn (): mixed => $store->withLock(fn (): null => null, false))
+        ->toThrow(RuntimeException::class, 'lock path is not a regular file');
 });
 
 it('clears recovery artifacts without touching another package', function (): void {

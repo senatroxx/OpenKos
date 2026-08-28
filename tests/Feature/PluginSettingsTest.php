@@ -241,6 +241,10 @@ it('allows explicit force recovery from an invalid dependency cycle', function (
         $second['id'] => ['enabled' => true],
     ]);
 
+    $this->artisan('plugin:list')
+        ->assertSuccessful()
+        ->expectsOutputToContain('Invalid (enabled)');
+
     $owner = User::factory()->owner()->create();
     [$vendor, $package] = explode('/', $first['id']);
 
@@ -526,7 +530,7 @@ it('cleans an orphaned recovery marker by identity without touching another pack
         'can_cleanup' => true,
     ]);
     expect(collect($plugins)->firstWhere('managed_id', $other['id']))->toMatchArray([
-        'can_remove' => false,
+        'can_remove' => true,
         'can_force_recovery' => false,
     ]);
 
@@ -568,11 +572,11 @@ it('surfaces unknown recovery metadata independently from installed packages', f
         'can_cleanup' => true,
     ])
         ->and(collect($plugins)->firstWhere('managed_id', $first['id']))->toMatchArray([
-            'can_remove' => false,
+            'can_remove' => true,
             'can_force_recovery' => false,
         ])
         ->and(collect($plugins)->firstWhere('managed_id', $second['id']))->toMatchArray([
-            'can_remove' => false,
+            'can_remove' => true,
             'can_force_recovery' => false,
         ]);
 
@@ -698,9 +702,9 @@ it('keeps a runtime package removable when recovery metadata is corrupt', functi
         ->inertiaProps('plugins');
 
     expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
-        'status' => 'unrecoverable_recovery',
-        'can_disable' => false,
-        'can_remove' => false,
+        'status' => 'enabled',
+        'can_disable' => true,
+        'can_remove' => true,
         'can_force_recovery' => false,
     ]);
 

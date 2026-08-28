@@ -110,7 +110,7 @@ final class RuntimePluginDiscovery
      * @param  array<int, string>  $existingClasses
      * @return array<int, string>
      */
-    public function conflictingIds(array $packages, array $state, array $existingClasses): array
+    public function conflictingIds(array $packages, array $state, array $existingClasses, bool $includeDisabled = false): array
     {
         $existingIds = [];
         $conflictingIds = [];
@@ -128,7 +128,7 @@ final class RuntimePluginDiscovery
         }
 
         foreach ($packages as $id => $path) {
-            if (! ($state[$id]['enabled'] ?? false)) {
+            if (! $includeDisabled && ! ($state[$id]['enabled'] ?? false)) {
                 continue;
             }
 
@@ -178,7 +178,7 @@ final class RuntimePluginDiscovery
     private function readEntryClass(string $path): string
     {
         $manifestPath = $path.'/manifest.json';
-        if (! is_file($manifestPath)) {
+        if (! is_file($manifestPath) || is_link($manifestPath)) {
             throw new InvalidArgumentException('Runtime plugin manifest is missing.');
         }
 

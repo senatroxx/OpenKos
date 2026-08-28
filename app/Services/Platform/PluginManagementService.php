@@ -155,6 +155,18 @@ class PluginManagementService
         foreach ($packages as $id => $path) {
             $enabled = $state[$id]['enabled'] ?? false;
 
+            if (array_key_exists('package:'.$id, $filesystemAnomalies)) {
+                $runtime[$id] = [
+                    'metadata' => null,
+                    'enabled' => $enabled,
+                    'status' => 'broken',
+                    'error' => __('Runtime plugin package path is not a real directory.'),
+                    'cleanup_key' => 'package:'.$id,
+                ];
+
+                continue;
+            }
+
             if (is_link($path)) {
                 $runtime[$id] = [
                     'metadata' => null,
@@ -208,7 +220,7 @@ class PluginManagementService
 
             try {
                 $runtime[$id] = [
-                    'metadata' => $this->validator->validateInFreshProcess($path, $id),
+                    'metadata' => $this->validator->inspectStaticMetadata($path, $id),
                     'enabled' => $enabled,
                 ];
             } catch (Throwable $exception) {
@@ -230,7 +242,7 @@ class PluginManagementService
 
             if (isset($entry['cleanup_key'])) {
                 $rows[] = [
-                    ...$this->filesystemAnomalyRow($entry['cleanup_key']),
+                    ...$this->filesystemAnomalyRow($entry['cleanup_key'], $path),
                     'enabled' => $enabled,
                 ];
 
@@ -315,7 +327,7 @@ class PluginManagementService
                 continue;
             }
 
-            $rows[] = $this->filesystemAnomalyRow($key);
+            $rows[] = $this->filesystemAnomalyRow($key, $path);
         }
 
         $recoveryIdentity = $this->store->recoveryIdentity();
@@ -365,21 +377,7 @@ class PluginManagementService
                     continue;
                 }
 
-                if ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity) {
-                    $row['can_remove'] = false;
-                    $row['can_force_recovery'] = false;
-
-                    continue;
-                }
-
-                if ($recoveryIdentity === null) {
-                    $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
-                    $row['error'] = __('Runtime plugin recovery ownership cannot be determined. Clean up the recovery metadata first.');
-                    $row['can_enable'] = false;
-                    $row['can_disable'] = false;
-                    $row['can_remove'] = false;
-                    $row['can_force_recovery'] = false;
-
+                if ($recoveryIdentity === null || $row['managed_id'] !== $recoveryIdentity) {
                     continue;
                 }
 
@@ -406,7 +404,7 @@ class PluginManagementService
 
             if (is_link($path)) {
                 $rows[] = [
-                    ...$this->filesystemAnomalyRow('package:'.$id),
+                    ...$this->filesystemAnomalyRow('package:'.$id, $path),
                     'enabled' => false,
                 ];
 
@@ -435,7 +433,7 @@ class PluginManagementService
                 continue;
             }
 
-            $rows[] = $this->filesystemAnomalyRow($key);
+            $rows[] = $this->filesystemAnomalyRow($key, $path);
         }
 
         if ($rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
@@ -464,21 +462,7 @@ class PluginManagementService
                     continue;
                 }
 
-                if ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity) {
-                    $row['can_remove'] = false;
-                    $row['can_force_recovery'] = false;
-
-                    continue;
-                }
-
-                if ($recoveryIdentity === null) {
-                    $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
-                    $row['error'] = __('Runtime plugin recovery ownership cannot be determined. Clean up the recovery metadata first.');
-                    $row['can_enable'] = false;
-                    $row['can_disable'] = false;
-                    $row['can_remove'] = false;
-                    $row['can_force_recovery'] = false;
-
+                if ($recoveryIdentity === null || $row['managed_id'] !== $recoveryIdentity) {
                     continue;
                 }
 
@@ -637,10 +621,12 @@ class PluginManagementService
     }
 
     /** @return array<string, mixed> */
-    private function filesystemAnomalyRow(string $key): array
+    private function filesystemAnomalyRow(string $key, ?string $path = null): array
     {
         $managedId = str_starts_with($key, 'package:') ? substr($key, strlen('package:')) : null;
         $label = $managedId ?? substr($key, strpos($key, ':') + 1);
+        $canCleanup = $path === null || $this->canCleanupFilesystemPath($path);
+        $isSymlink = $path !== null && is_link($path);
 
         return [
             'id' => $managedId ?? $key,
@@ -648,7 +634,9 @@ class PluginManagementService
             'declared_id' => null,
             'name' => __('Unsafe runtime filesystem path'),
             'version' => null,
-            'description' => __('A managed runtime path is a symlink and was not followed.'),
+            'description' => $isSymlink
+                ? __('A managed runtime path is a symlink and was not followed.')
+                : __('A managed runtime path has an unexpected filesystem type.'),
             'entry_class' => null,
             'core_version' => null,
             'php' => null,
@@ -656,14 +644,27 @@ class PluginManagementService
             'source' => 'runtime',
             'status' => 'broken',
             'enabled' => false,
-            'error' => __('Runtime path :path is a symlink. Remove the symlink before installing or loading plugins.', ['path' => $label]),
+            'error' => $canCleanup
+                ? ($isSymlink
+                    ? __('Runtime path :path is a symlink. Remove the symlink before installing or loading plugins.', ['path' => $label])
+                    : __('Runtime path :path is an unexpected filesystem node and is not used.', ['path' => $label]))
+                : __('Runtime path :path cannot be safely inspected or removed. Fix its permissions before continuing.', ['path' => $label]),
             'can_enable' => false,
             'can_disable' => false,
             'can_remove' => false,
             'can_force_recovery' => false,
-            'can_cleanup' => true,
+            'can_cleanup' => $canCleanup,
             'cleanup_key' => $key,
         ];
+    }
+
+    private function canCleanupFilesystemPath(string $path): bool
+    {
+        if (is_link($path)) {
+            return true;
+        }
+
+        return ! is_dir($path) || @scandir($path) !== false;
     }
 
     /** @return array<string, mixed> */
