@@ -87,6 +87,61 @@ it('keeps the new package after a committed swap recovery', function (): void {
         ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
 });
 
+it('never resurrects a package after a committed removal recovery', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $activePath = $this->runtimePluginPath.'/acme/removed';
+    $backupPath = $this->runtimePluginPath.'/.backup/acme-removed-test';
+
+    mkdir($backupPath, 0750, true);
+    file_put_contents($backupPath.'/version.txt', 'old');
+    $store->writeState([]);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'remove',
+        'id' => 'acme/removed',
+        'staging' => null,
+        'backup' => '.backup/acme-removed-test',
+        'had_active' => true,
+        'phase' => 'committed',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(fn (): null => null);
+
+    expect(is_dir($activePath))->toBeFalse()
+        ->and(is_dir($backupPath))->toBeFalse()
+        ->and($store->readState())->toBe([])
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
+});
+
+it('recovers an identity-addressed sidecar without touching another marker', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $id = 'acme/sidecar';
+    $activePath = $this->runtimePluginPath.'/'.$id;
+    $backupPath = $this->runtimePluginPath.'/.backup/acme-sidecar-test';
+    $markerPath = $this->runtimePluginPath.'/.recovery/'.bin2hex($id).'.json';
+
+    mkdir($backupPath, 0750, true);
+    file_put_contents($backupPath.'/version.txt', 'old');
+    mkdir($this->runtimePluginPath.'/.staging/sidecar', 0750, true);
+    mkdir(dirname($markerPath), 0750, true);
+    $store->writeState([$id => ['enabled' => true]]);
+    file_put_contents($markerPath, json_encode([
+        'operation' => 'swap',
+        'id' => $id,
+        'staging' => '.staging/sidecar',
+        'backup' => '.backup/acme-sidecar-test',
+        'had_active' => true,
+        'previous_entry' => ['enabled' => false],
+        'next_entry' => ['enabled' => true],
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(fn (): null => null, true, $id);
+
+    expect(file_get_contents($activePath.'/version.txt'))->toBe('old')
+        ->and(is_file($markerPath))->toBeFalse()
+        ->and($store->readState())->toMatchArray([$id => ['enabled' => false]]);
+});
+
 it('finishes an active swap after the new package is promoted', function (): void {
     $store = app(RuntimePluginStore::class);
     $activePath = $this->runtimePluginPath.'/acme/recovery';
@@ -292,6 +347,33 @@ it('surfaces deletion failures instead of reporting force removal success', func
     }
 });
 
+it('does not treat an inaccessible package parent as an absent package', function (): void {
+    if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+        $this->markTestSkipped('The permission test requires a non-root user.');
+    }
+
+    $store = app(RuntimePluginStore::class);
+    $vendorPath = $this->runtimePluginPath.'/acme';
+    $packagePath = $vendorPath.'/inaccessible';
+    mkdir($packagePath, 0750, true);
+    file_put_contents($packagePath.'/plugin.php', 'content');
+    $store->writeState(['acme/inaccessible' => ['enabled' => true]]);
+    chmod($vendorPath, 0000);
+
+    try {
+        expect(fn (): mixed => $store->withLock(
+            fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/inaccessible'),
+            false,
+        ))->toThrow(RuntimeException::class, 'Could not inspect runtime plugin path');
+    } finally {
+        chmod($vendorPath, 0700);
+    }
+
+    expect(is_dir($packagePath))->toBeTrue()
+        ->and(json_decode(file_get_contents($this->runtimePluginPath.'/state.json'), true, 512, JSON_THROW_ON_ERROR))
+        ->toMatchArray(['acme/inaccessible' => ['enabled' => true]]);
+});
+
 it('does not erase another package state when removing with corrupt state', function (): void {
     $store = app(RuntimePluginStore::class);
     $firstPath = $this->runtimePluginPath.'/acme/first';
@@ -387,6 +469,51 @@ it('removes a different package without touching recovery for another package', 
     expect(is_dir($targetPath))->toBeFalse()
         ->and(is_dir($otherPath))->toBeTrue()
         ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeTrue();
+});
+
+it('preserves unrelated recovery when force removing the last package', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $targetPath = $this->runtimePluginPath.'/acme/target';
+    mkdir($targetPath, 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/other',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(
+        fn (RuntimePluginStore $store): mixed => $store->forceRemove('acme/target'),
+        false,
+    );
+
+    expect(is_dir($targetPath))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeTrue();
+});
+
+it('finds identity-scoped recovery markers despite filename casing', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $directory = $this->runtimePluginPath.'/.recovery';
+    mkdir($directory, 0750, true);
+    $markerPath = $directory.'/'.strtoupper(bin2hex('acme/recovery')).'.json';
+    file_put_contents($markerPath, json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    expect($store->hasRecoveryFor('acme/recovery'))->toBeTrue();
+
+    $store->withLock(function (RuntimePluginStore $store): void {
+        $store->forceCleanupRecovery('acme/recovery');
+    }, false);
+
+    expect(is_file($markerPath))->toBeFalse();
 });
 
 it('scopes normal lifecycle changes away from unknown recovery metadata', function (): void {

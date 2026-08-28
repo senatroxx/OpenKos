@@ -147,7 +147,11 @@ class PluginManagementService
 
         $packages = $this->store->managedPackageEntries();
         $hostClasses = $this->hostPluginClasses();
-        $conflictingIds = $this->discovery->conflictingIds($packages, $state, $hostClasses);
+        $conflictingIds = $this->discovery->conflictingIds(
+            $this->store->installedPackages(),
+            $state,
+            $hostClasses,
+        );
         $runtime = [];
         $rows = [];
         $filesystemAnomalies = $this->store->managedFilesystemAnomalies();
@@ -330,65 +334,62 @@ class PluginManagementService
             $rows[] = $this->filesystemAnomalyRow($key, $path);
         }
 
-        $recoveryIdentity = $this->store->recoveryIdentity();
-        if (
-            $recoveryIdentity !== null
-            && ! in_array($recoveryIdentity, array_column($rows, 'managed_id'), true)
-        ) {
-            $rows[] = $this->recoveryRow($recoveryStatus, $recoveryIdentity);
-        } elseif (
-            $recoveryIdentity === null
-            && $recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE
-            && ! array_key_exists('internal:recovery.json', $filesystemAnomalies)
-        ) {
-            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-recovery');
-        } elseif ($recoveryIdentity === null && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
+        $recoveryRecords = $this->store->recoveryRecords();
+
+        foreach ($recoveryRecords as $record) {
+            $recoveryId = $record['id'];
+
+            if ($recoveryId === null) {
+                if (! $this->hasRecoveryFilesystemAnomaly($filesystemAnomalies)) {
+                    $rows[] = $this->orphanedMetadataRow(
+                        $record['status'],
+                        cleanupKey: $record['cleanup_key'],
+                    );
+                }
+
+                continue;
+            }
+
+            $matched = false;
+
+            foreach ($rows as &$row) {
+                if (
+                    $row['source'] !== 'runtime'
+                    || ($row['cleanup_key'] ?? null) !== null
+                    || $row['managed_id'] !== $recoveryId
+                ) {
+                    continue;
+                }
+
+                $matched = true;
+
+                if ($record['status'] === RuntimePluginStore::RECOVERY_PENDING) {
+                    $row['status'] = RuntimePluginStore::RECOVERY_PENDING;
+                    $row['error'] = __('Runtime plugin recovery is pending and will complete before the next lifecycle change.');
+                    $row['can_enable'] = false;
+                    $row['can_disable'] = false;
+                    $row['can_remove'] = true;
+                    $row['can_force_recovery'] = false;
+                } elseif ($record['status'] === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
+                    $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
+                    $row['error'] = __('Runtime plugin recovery cannot be completed. Force remove this package or clean up orphaned metadata.');
+                    $row['can_enable'] = false;
+                    $row['can_disable'] = false;
+                    $row['can_remove'] = false;
+                    $row['can_force_recovery'] = true;
+                }
+            }
+            unset($row);
+
+            if (! $matched) {
+                $rows[] = $this->recoveryRow($record['status'], $recoveryId);
+            }
+        }
+
+        if ($recoveryRecords === [] && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
             $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
-        } elseif ($recoveryIdentity === null && $rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
+        } elseif ($recoveryRecords === [] && $rows === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
             $rows[] = $this->orphanedMetadataRow($recoveryStatus);
-        }
-
-        if ($recoveryStatus === RuntimePluginStore::RECOVERY_PENDING) {
-            foreach ($rows as &$row) {
-                if (
-                    $row['source'] !== 'runtime'
-                    || ($row['cleanup_key'] ?? null) !== null
-                    || ($recoveryIdentity !== null && $row['managed_id'] !== $recoveryIdentity)
-                ) {
-                    continue;
-                }
-
-                $row['status'] = RuntimePluginStore::RECOVERY_PENDING;
-                $row['error'] = __('Runtime plugin recovery is pending and will complete before the next lifecycle change.');
-                $row['can_enable'] = false;
-                $row['can_disable'] = false;
-                $row['can_remove'] = true;
-                $row['can_force_recovery'] = false;
-            }
-            unset($row);
-        }
-
-        if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
-            foreach ($rows as &$row) {
-                if (
-                    $row['source'] !== 'runtime'
-                    || ($row['cleanup_key'] ?? null) !== null
-                ) {
-                    continue;
-                }
-
-                if ($recoveryIdentity === null || $row['managed_id'] !== $recoveryIdentity) {
-                    continue;
-                }
-
-                $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
-                $row['error'] = __('Runtime plugin recovery cannot be completed. Force remove this package or clean up orphaned metadata.');
-                $row['can_enable'] = false;
-                $row['can_disable'] = false;
-                $row['can_remove'] = false;
-                $row['can_force_recovery'] = true;
-            }
-            unset($row);
         }
 
         return $rows;
@@ -440,41 +441,47 @@ class PluginManagementService
             $rows[] = $this->orphanedMetadataRow('orphaned_state', $recoveryStatus);
         }
 
-        $recoveryIdentity = $this->store->recoveryIdentity();
-        if (
-            $recoveryIdentity !== null
-            && ! in_array($recoveryIdentity, array_column($rows, 'managed_id'), true)
-        ) {
-            $rows[] = $this->recoveryRow($recoveryStatus, $recoveryIdentity);
-        } elseif (
-            $recoveryIdentity === null
-            && $recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE
-            && ! array_key_exists('internal:recovery.json', $filesystemAnomalies)
-        ) {
-            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-recovery');
-        } elseif ($recoveryIdentity === null && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
-            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
-        }
+        $recoveryRecords = $this->store->recoveryRecords();
 
-        if ($recoveryStatus === RuntimePluginStore::RECOVERY_UNRECOVERABLE) {
+        foreach ($recoveryRecords as $record) {
+            $recoveryId = $record['id'];
+
+            if ($recoveryId === null) {
+                if (! $this->hasRecoveryFilesystemAnomaly($filesystemAnomalies)) {
+                    $rows[] = $this->orphanedMetadataRow(
+                        $record['status'],
+                        cleanupKey: $record['cleanup_key'],
+                    );
+                }
+
+                continue;
+            }
+
+            $matched = false;
+
             foreach ($rows as &$row) {
-                if (($row['cleanup_key'] ?? null) !== null) {
+                if (($row['cleanup_key'] ?? null) !== null || $row['managed_id'] !== $recoveryId) {
                     continue;
                 }
 
-                if ($recoveryIdentity === null || $row['managed_id'] !== $recoveryIdentity) {
-                    continue;
-                }
-
-                $row['status'] = RuntimePluginStore::RECOVERY_UNRECOVERABLE;
+                $matched = true;
+                $row['status'] = $record['status'];
                 $row['error'] = __('Runtime plugin state and recovery metadata cannot be completed. Clean up orphaned metadata.');
                 $row['can_enable'] = false;
                 $row['can_disable'] = false;
                 $row['can_remove'] = false;
-                $row['can_force_recovery'] = $row['managed_id'] !== null;
-                $row['can_cleanup'] = $row['managed_id'] === null;
+                $row['can_force_recovery'] = true;
+                $row['can_cleanup'] = false;
             }
             unset($row);
+
+            if (! $matched) {
+                $rows[] = $this->recoveryRow($record['status'], $recoveryId);
+            }
+        }
+
+        if ($recoveryRecords === [] && $recoveryStatus === RuntimePluginStore::RECOVERY_ORPHANED_ARTIFACT) {
+            $rows[] = $this->orphanedMetadataRow($recoveryStatus, cleanupKey: 'orphaned-artifacts');
         }
 
         return $rows;
@@ -615,7 +622,7 @@ class PluginManagementService
             'can_disable' => false,
             'can_remove' => false,
             'can_force_recovery' => false,
-            'can_cleanup' => $status === RuntimePluginStore::RECOVERY_UNRECOVERABLE,
+            'can_cleanup' => true,
             'cleanup_key' => 'recovery:'.$id,
         ];
     }
@@ -660,11 +667,27 @@ class PluginManagementService
 
     private function canCleanupFilesystemPath(string $path): bool
     {
+        if (@lstat($path) === false || @scandir(dirname($path)) === false) {
+            return false;
+        }
+
         if (is_link($path)) {
             return true;
         }
 
         return ! is_dir($path) || @scandir($path) !== false;
+    }
+
+    /** @param array<string, string> $anomalies */
+    private function hasRecoveryFilesystemAnomaly(array $anomalies): bool
+    {
+        foreach (array_keys($anomalies) as $key) {
+            if ($key === 'internal:.recovery' || str_starts_with($key, 'internal:.recovery/')) {
+                return true;
+            }
+        }
+
+        return array_key_exists('internal:recovery.json', $anomalies);
     }
 
     /** @return array<string, mixed> */
@@ -772,6 +795,10 @@ class PluginManagementService
     {
         $legacyIds = array_count_values(array_column($legacy, 'id'));
         $legacyClasses = array_column($legacy, 'entry_class');
+        $legacyClassNames = array_map(
+            fn (mixed $class): string => is_string($class) ? $this->canonicalClassName($class) : '',
+            $legacyClasses,
+        );
 
         foreach ($legacy as &$plugin) {
             if (($legacyIds[$plugin['id']] ?? 0) > 1) {
@@ -792,11 +819,17 @@ class PluginManagementService
                 continue;
             }
 
-            if (in_array($plugin['id'], array_column($legacy, 'id'), true) || in_array($plugin['entry_class'], $legacyClasses, true)) {
+            if (
+                in_array($plugin['id'], array_column($legacy, 'id'), true)
+                || in_array($this->canonicalClassName((string) $plugin['entry_class']), $legacyClassNames, true)
+            ) {
                 $this->markConflict($plugin, __('A Composer or explicit plugin has the same identity; this runtime copy is not loaded.'));
 
                 foreach ($legacy as &$legacyPlugin) {
-                    if ($legacyPlugin['id'] === $plugin['id'] || $legacyPlugin['entry_class'] === $plugin['entry_class']) {
+                    if (
+                        $legacyPlugin['id'] === $plugin['id']
+                        || $this->canonicalClassName((string) $legacyPlugin['entry_class']) === $this->canonicalClassName((string) $plugin['entry_class'])
+                    ) {
                         $this->markConflict($legacyPlugin, __('A runtime plugin has the same identity; the Composer or explicit copy takes precedence.'));
                     }
                 }
@@ -815,5 +848,10 @@ class PluginManagementService
         $plugin['can_disable'] = $plugin['source'] === 'runtime' && $plugin['enabled'];
         $plugin['can_remove'] = $plugin['source'] === 'runtime';
         $plugin['can_force_recovery'] = $plugin['source'] === 'runtime';
+    }
+
+    private function canonicalClassName(string $class): string
+    {
+        return strtolower(ltrim(trim($class), '\\'));
     }
 }

@@ -60,10 +60,10 @@ final class RuntimePluginStore
 
         try {
             if ($recover) {
-                $recoveryIdentity = $this->recoveryIdentity();
-
-                if ($pluginId === null || $recoveryIdentity === $pluginId) {
+                if ($pluginId === null) {
                     $this->recoverPendingOperation();
+                } elseif ($this->recoveryMarkerPathForId($pluginId) !== null) {
+                    $this->recoverPendingOperation($pluginId);
                 }
             }
 
@@ -76,71 +76,111 @@ final class RuntimePluginStore
 
     public function recoveryStatus(): string
     {
-        if (is_link($this->root) || (file_exists($this->root) && ! is_dir($this->root))) {
-            return self::RECOVERY_UNRECOVERABLE;
-        }
-
-        $path = $this->recoveryMarkerPath();
-
-        if (is_link($path) || (file_exists($path) && ! is_file($path))) {
-            return self::RECOVERY_UNRECOVERABLE;
-        }
-
-        if (! is_file($path)) {
-            return $this->orphanedRuntimeArtifactPaths() === []
-                ? self::RECOVERY_HEALTHY
-                : self::RECOVERY_ORPHANED_ARTIFACT;
-        }
-
-        $contents = file_get_contents($path);
-
-        if ($contents === false) {
-            return self::RECOVERY_UNRECOVERABLE;
-        }
-
         try {
-            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-            $this->validateRecoveryMarker($marker);
+            $hasPending = false;
 
-            if (! $this->isRecoveryMarkerRecoverable($marker)) {
-                return self::RECOVERY_UNRECOVERABLE;
+            foreach ($this->recoveryMarkerPaths() as $path) {
+                $status = $this->recoveryStatusForPath($path);
+
+                if ($status === self::RECOVERY_UNRECOVERABLE) {
+                    return $status;
+                }
+
+                $hasPending = $hasPending || $status === self::RECOVERY_PENDING;
             }
         } catch (Throwable) {
             return self::RECOVERY_UNRECOVERABLE;
         }
 
-        return self::RECOVERY_PENDING;
+        if ($hasPending) {
+            return self::RECOVERY_PENDING;
+        }
+
+        return $this->orphanedRuntimeArtifactPaths() === []
+            ? self::RECOVERY_HEALTHY
+            : self::RECOVERY_ORPHANED_ARTIFACT;
     }
 
     public function recoveryIdentity(): ?string
     {
-        $path = $this->recoveryMarkerPath();
+        $identities = $this->recoveryIdentities();
+
+        return count($identities) === 1 ? $identities[0] : null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function recoveryIdentities(): array
+    {
+        $identities = [];
+
+        foreach ($this->recoveryMarkerPaths() as $path) {
+            $contents = @file_get_contents($path);
+
+            if ($contents === false) {
+                continue;
+            }
+
+            try {
+                $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+            } catch (Throwable) {
+                continue;
+            }
+
+            $id = $path === $this->recoveryMarkerPath()
+                ? (is_array($marker) ? $marker['id'] ?? null : null)
+                : $this->recoveryIdentityFromPath($path);
+
+            if (is_string($id) && $this->isValidId($id)) {
+                $identities[$id] = true;
+            }
+        }
+
+        return array_keys($identities);
+    }
+
+    public function hasRecoveryFor(string $id): bool
+    {
+        return $this->recoveryMarkerPathForId($id) !== null;
+    }
+
+    /**
+     * @return array<int, array{id: string|null, status: string, cleanup_key: string}>
+     */
+    public function recoveryRecords(): array
+    {
+        $records = [];
 
         try {
-            $this->assertSafeManagedPath($path);
+            $paths = $this->recoveryMarkerPaths();
         } catch (Throwable) {
-            return null;
+            return [[
+                'id' => null,
+                'status' => self::RECOVERY_UNRECOVERABLE,
+                'cleanup_key' => 'orphaned-recovery',
+            ]];
         }
 
-        if (! is_file($path) || is_link($path)) {
-            return null;
+        foreach ($paths as $path) {
+            $id = $path === $this->recoveryMarkerPath()
+                ? $this->markerIdentity($path)
+                : $this->recoveryIdentityFromPath($path);
+
+            try {
+                $status = $this->recoveryStatusForPath($path);
+            } catch (Throwable) {
+                $status = self::RECOVERY_UNRECOVERABLE;
+            }
+
+            $records[] = [
+                'id' => $id,
+                'status' => $status,
+                'cleanup_key' => $id === null ? 'orphaned-recovery' : 'recovery:'.$id,
+            ];
         }
 
-        $contents = file_get_contents($path);
-
-        if ($contents === false) {
-            return null;
-        }
-
-        try {
-            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
-            return null;
-        }
-
-        $id = is_array($marker) ? $marker['id'] ?? null : null;
-
-        return is_string($id) && $this->isValidId($id) ? $id : null;
+        return $records;
     }
 
     /**
@@ -299,10 +339,18 @@ final class RuntimePluginStore
      */
     public function installedPackages(): array
     {
-        return array_filter(
-            $this->managedPackageEntries(),
-            fn (string $path): bool => is_dir($path) && ! is_link($path),
-        );
+        $packages = [];
+
+        foreach ($this->managedPackageEntries() as $id => $path) {
+            if (! $this->isRealDirectory($path)) {
+                continue;
+            }
+
+            $this->assertSafeManagedPath($path);
+            $packages[$id] = $path;
+        }
+
+        return $packages;
     }
 
     /**
@@ -328,7 +376,7 @@ final class RuntimePluginStore
         }
 
         $expectedFiles = ['.lock', 'state.json', 'recovery.json', 'recovery.json.tmp'];
-        $expectedDirectories = ['.staging', '.backup'];
+        $expectedDirectories = ['.staging', '.backup', '.recovery'];
 
         foreach ($vendors as $vendor) {
             if ($vendor === '.' || $vendor === '..') {
@@ -348,6 +396,34 @@ final class RuntimePluginStore
             if (in_array($vendor, $expectedDirectories, true)) {
                 if (! $this->isRealDirectory($vendorPath)) {
                     $anomalies['internal:'.$vendor] = $vendorPath;
+
+                    continue;
+                }
+
+                if ($vendor === '.recovery') {
+                    $recoveryEntries = @scandir($vendorPath);
+
+                    if ($recoveryEntries === false) {
+                        $anomalies['internal:.recovery'] = $vendorPath;
+
+                        continue;
+                    }
+
+                    foreach ($recoveryEntries as $recoveryEntry) {
+                        if ($recoveryEntry === '.' || $recoveryEntry === '..') {
+                            continue;
+                        }
+
+                        $recoveryEntryPath = $vendorPath.'/'.$recoveryEntry;
+
+                        if (
+                            ! str_ends_with($recoveryEntry, '.json')
+                            || ! $this->isRegularFile($recoveryEntryPath)
+                            || $this->recoveryIdentityFromPath($recoveryEntryPath) === null
+                        ) {
+                            $anomalies['internal:.recovery/'.$recoveryEntry] = $recoveryEntryPath;
+                        }
+                    }
                 }
 
                 continue;
@@ -455,13 +531,13 @@ final class RuntimePluginStore
         }
 
         $statePath = $this->statePath();
-        if (file_exists($statePath) || is_link($statePath)) {
+        if ($this->managedEntryExists($statePath)) {
             $this->deleteManagedPath($statePath);
         }
 
         $this->cleanupRecoveryArtifacts();
 
-        if (file_exists($statePath) || is_link($statePath)) {
+        if ($this->managedEntryExists($statePath)) {
             throw new RuntimeException("Could not clean runtime lifecycle path [{$statePath}].");
         }
     }
@@ -485,10 +561,17 @@ final class RuntimePluginStore
     public function forceCleanupRecovery(string $id): void
     {
         $this->assertValidId($id);
-        $markerPath = $this->recoveryMarkerPath();
+        $markerPath = $this->recoveryMarkerPathForId($id);
+
+        if ($markerPath === null) {
+            throw new RuntimeException('Runtime plugin recovery metadata is not available.');
+        }
 
         if (! is_file($markerPath) || is_link($markerPath)) {
-            throw new RuntimeException('Runtime plugin recovery metadata is not available.');
+            $this->deleteManagedPath($markerPath);
+            $this->removeEmptyRecoveryDirectory();
+
+            return;
         }
 
         $contents = file_get_contents($markerPath);
@@ -499,12 +582,20 @@ final class RuntimePluginStore
 
         try {
             $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (Throwable $exception) {
-            throw new RuntimeException('Runtime plugin recovery marker is corrupted.', previous: $exception);
+        } catch (Throwable) {
+            $marker = [];
         }
 
-        if (! is_array($marker) || ($marker['id'] ?? null) !== $id) {
-            throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+        if (! is_array($marker)) {
+            $marker = [];
+        }
+
+        if ($marker !== [] && ($marker['id'] ?? null) !== $id) {
+            if ($this->recoveryIdentityFromPath($markerPath) !== $id) {
+                throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+            }
+
+            $marker = [];
         }
 
         try {
@@ -513,17 +604,11 @@ final class RuntimePluginStore
                 unset($state[$id]);
                 $this->writeState($state);
             }
-        } catch (Throwable) {
-            if ($this->managedPackageEntries() === []) {
-                $statePath = $this->statePath();
-
-                if (file_exists($statePath) || is_link($statePath)) {
-                    $this->deleteManagedPath($statePath);
-                }
-            }
+        } catch (Throwable $exception) {
+            report($exception);
         }
 
-        $paths = [$markerPath, $this->root.'/recovery.json.tmp'];
+        $paths = [$markerPath, $markerPath.'.tmp'];
 
         foreach (['backup', 'staging'] as $key) {
             if (! array_key_exists($key, $marker)) {
@@ -538,15 +623,17 @@ final class RuntimePluginStore
         }
 
         foreach (array_unique($paths) as $path) {
-            if (! file_exists($path) && ! is_link($path)) {
+            if (! $this->managedEntryExists($path)) {
                 continue;
             }
 
             $this->deleteManagedPath($path);
         }
 
+        $this->removeEmptyRecoveryDirectory();
+
         foreach (array_unique($paths) as $path) {
-            if (file_exists($path) || is_link($path)) {
+            if ($this->managedEntryExists($path)) {
                 throw new RuntimeException("Could not clean runtime lifecycle path [{$path}].");
             }
         }
@@ -571,7 +658,7 @@ final class RuntimePluginStore
 
     public function forceCleanupUnknownRecovery(): void
     {
-        if ($this->recoveryIdentity() !== null) {
+        if ($this->markerIdentity($this->recoveryMarkerPath()) !== null) {
             throw new RuntimeException('Runtime plugin recovery belongs to a known package.');
         }
 
@@ -604,7 +691,7 @@ final class RuntimePluginStore
         }
 
         foreach (array_unique($paths) as $path) {
-            if (! file_exists($path) && ! is_link($path)) {
+            if (! $this->managedEntryExists($path)) {
                 continue;
             }
 
@@ -612,7 +699,7 @@ final class RuntimePluginStore
         }
 
         foreach (array_unique($paths) as $path) {
-            if (file_exists($path) || is_link($path)) {
+            if ($this->managedEntryExists($path)) {
                 throw new RuntimeException("Could not clean runtime lifecycle path [{$path}].");
             }
         }
@@ -636,7 +723,7 @@ final class RuntimePluginStore
         if ($this->managedPackageEntries() === []) {
             $statePath = $this->statePath();
 
-            if (file_exists($statePath) || is_link($statePath)) {
+            if ($this->managedEntryExists($statePath)) {
                 $this->deleteManagedPath($statePath);
             }
         }
@@ -673,7 +760,7 @@ final class RuntimePluginStore
         $this->assertSafeManagedPath($this->root);
 
         foreach ($this->recoveryArtifactPaths() as $path) {
-            if (file_exists($path) || is_link($path)) {
+            if ($this->managedEntryExists($path)) {
                 $this->deleteManagedPath($path);
             }
         }
@@ -697,17 +784,17 @@ final class RuntimePluginStore
         }
 
         foreach ($this->recoveryArtifactPaths() as $path) {
-            if (file_exists($path) || is_link($path)) {
+            if ($this->managedEntryExists($path)) {
                 throw new RuntimeException("Could not clean runtime lifecycle path [{$path}].");
             }
         }
+
+        $this->removeEmptyRecoveryDirectory();
     }
 
     private function recoveryMarkerExists(): bool
     {
-        $path = $this->recoveryMarkerPath();
-
-        return file_exists($path) || is_link($path);
+        return $this->recoveryMarkerPaths() !== [];
     }
 
     public function packagePath(string $id): string
@@ -715,6 +802,18 @@ final class RuntimePluginStore
         $this->assertValidId($id);
 
         return $this->root.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $id);
+    }
+
+    public function installedPackagePath(string $id): string
+    {
+        $path = $this->packagePath($id);
+        $this->assertSafeManagedPath($path);
+
+        if (! $this->isRealDirectory($path)) {
+            throw new RuntimeException("Runtime plugin [{$id}] is not installed.");
+        }
+
+        return $path;
     }
 
     public function createStagingPath(string $id): string
@@ -804,12 +903,11 @@ final class RuntimePluginStore
             $this->writeRecoveryMarker($marker);
 
             $this->deleteDirectory($backupPath);
-            $this->assertSafeManagedPath($this->root.'/.staging');
-            $this->deleteDirectory($this->root.'/.staging');
-            $this->removeRecoveryMarker();
+            $this->discardStaging($stagingPath);
+            $this->removeRecoveryMarker($id);
         } catch (Throwable $exception) {
             try {
-                $this->recoverPendingOperation();
+                $this->recoverPendingOperation($id);
             } catch (Throwable $recoveryException) {
                 throw new RuntimeException(
                     'Runtime plugin installation failed and automatic recovery also failed.',
@@ -824,11 +922,7 @@ final class RuntimePluginStore
     public function setEnabled(string $id, bool $enabled): void
     {
         $this->assertValidId($id);
-        $path = $this->packagePath($id);
-
-        if (! is_dir($path) || is_link($path)) {
-            throw new RuntimeException("Runtime plugin [{$id}] is not installed.");
-        }
+        $this->installedPackagePath($id);
 
         $state = $this->readState();
         $state[$id] = ['enabled' => $enabled];
@@ -843,11 +937,10 @@ final class RuntimePluginStore
         $this->assertSafeManagedPath($activePath);
         $state = $this->readState();
         $recoveryStatus = $this->recoveryStatus();
-        $recoveryIdentity = $this->recoveryIdentity();
 
         if (
             in_array($recoveryStatus, [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE], true)
-            && $recoveryIdentity !== $id
+            && ! $this->hasRecoveryFor($id)
         ) {
             $this->deleteDirectory($activePath);
             unset($state[$id]);
@@ -889,9 +982,9 @@ final class RuntimePluginStore
             $this->writeRecoveryMarker($marker);
 
             $this->deleteDirectory($backupPath);
-            $this->removeRecoveryMarker();
+            $this->removeRecoveryMarker($id);
         } catch (Throwable $exception) {
-            $this->recoverPendingOperation();
+            $this->recoverPendingOperation($id);
 
             throw $exception;
         }
@@ -903,12 +996,10 @@ final class RuntimePluginStore
         $activePath = $this->packagePath($id);
         $this->assertSafeManagedPath($activePath);
         $recoveryStatus = $this->recoveryStatus();
-        $recoveryIdentity = $this->recoveryIdentity();
-        $preserveUnrelatedRecovery = in_array(
-            $recoveryStatus,
-            [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE],
-            true,
-        ) && $recoveryIdentity !== $id;
+        $recoveryPaths = $this->recoveryMarkerPaths();
+        $targetRecoveryPath = $this->recoveryMarkerPathForId($id);
+        $preserveUnrelatedRecovery = $recoveryPaths !== []
+            && ($targetRecoveryPath === null || count($recoveryPaths) > 1);
 
         if (
             in_array($recoveryStatus, [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE], true)
@@ -924,16 +1015,12 @@ final class RuntimePluginStore
 
             if (! $preserveUnrelatedRecovery) {
                 try {
-                    $this->recoverPendingOperation();
+                    $this->recoverPendingOperation($id);
                     $recoveryStatus = $this->recoveryStatus();
                 } catch (Throwable) {
                     $recoveryStatus = self::RECOVERY_UNRECOVERABLE;
                 }
             }
-        }
-
-        if ($recoveryStatus === self::RECOVERY_UNRECOVERABLE && ! $preserveUnrelatedRecovery) {
-            $this->removeRecoveryMarker();
         }
 
         $stateWasCorrupt = false;
@@ -951,18 +1038,24 @@ final class RuntimePluginStore
             $this->writeState($state);
         }
 
-        if (! $preserveUnrelatedRecovery) {
-            $this->cleanupRecoveryArtifacts();
+        if ($this->recoveryMarkerPathForId($id) !== null) {
+            $this->forceCleanupRecovery($id);
         }
 
-        if ($this->managedPackageEntries() === []) {
+        if ($this->managedPackageEntries() === [] && $this->recoveryMarkerPaths() === []) {
             $this->forceCleanupOrphanedMetadata();
         }
     }
 
-    public function recoverPendingOperation(): void
+    public function recoverPendingOperation(?string $id = null): void
     {
-        $path = $this->recoveryMarkerPath();
+        $path = $id !== null
+            ? $this->recoveryMarkerPathForId($id)
+            : $this->singleRecoveryMarkerPath();
+
+        if ($path === null) {
+            return;
+        }
 
         if (is_link($path)) {
             throw new RuntimeException('Runtime plugin recovery marker is unsafe.');
@@ -990,6 +1083,11 @@ final class RuntimePluginStore
 
         $this->validateRecoveryMarker($marker);
 
+        $pathIdentity = $this->recoveryIdentityFromPath($path);
+        if (($pathIdentity !== null && $marker['id'] !== $pathIdentity) || ($id !== null && $marker['id'] !== $id)) {
+            throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
+        }
+
         $id = $marker['id'];
         $backupPath = $this->managedPath($marker['backup']);
         $stagingPath = isset($marker['staging']) && is_string($marker['staging'])
@@ -1001,6 +1099,17 @@ final class RuntimePluginStore
         $this->assertSafeManagedPath($activePath);
 
         if ($marker['phase'] === 'committed') {
+            if ($marker['operation'] === 'remove') {
+                if ($this->managedEntryExists($activePath)) {
+                    throw new RuntimeException("Runtime plugin [{$id}] unexpectedly exists after removal was committed.");
+                }
+
+                $this->deleteDirectory($backupPath);
+                $this->removeRecoveryMarker($id, $path);
+
+                return;
+            }
+
             if (! is_dir($activePath)) {
                 if (! is_dir($backupPath)) {
                     throw new RuntimeException("Runtime plugin [{$id}] cannot be recovered: active package is missing.");
@@ -1013,7 +1122,7 @@ final class RuntimePluginStore
 
             $this->deleteDirectory($backupPath);
             $this->deleteDirectory($stagingPath);
-            $this->removeRecoveryMarker();
+            $this->removeRecoveryMarker($id, $path);
 
             return;
         }
@@ -1028,7 +1137,7 @@ final class RuntimePluginStore
 
             $this->deleteDirectory($stagingPath);
             $this->deleteDirectory($backupPath);
-            $this->removeRecoveryMarker();
+            $this->removeRecoveryMarker($id, $path);
 
             return;
         }
@@ -1045,7 +1154,7 @@ final class RuntimePluginStore
             $this->writeState($state);
             $this->deleteDirectory($backupPath);
             $this->deleteDirectory($stagingPath);
-            $this->removeRecoveryMarker();
+            $this->removeRecoveryMarker($id, $path);
 
             return;
         }
@@ -1062,7 +1171,7 @@ final class RuntimePluginStore
         $this->ensureDirectory(dirname($activePath));
         $this->renameOrFail($backupPath, $activePath);
         $this->deleteDirectory($stagingPath);
-        $this->removeRecoveryMarker();
+        $this->removeRecoveryMarker($id, $path);
     }
 
     /**
@@ -1167,7 +1276,7 @@ final class RuntimePluginStore
         return match ($marker['phase']) {
             'prepared' => $activeExists xor $backupExists,
             'old_preserved' => $backupExists && ! $activeExists && $this->stateIsReadable(),
-            'committed' => $backupExists && ! $activeExists && $this->stateIsReadable(),
+            'committed' => ! $activeExists && $backupExists && $this->stateIsReadable(),
             default => false,
         };
     }
@@ -1185,19 +1294,11 @@ final class RuntimePluginStore
 
     private function assertRecoveryBelongsTo(string $id): void
     {
-        $identity = $this->recoveryIdentity();
-
-        if ($identity !== null) {
-            if ($identity !== $id) {
-                throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
-            }
-
+        if ($this->recoveryMarkerPathForId($id) !== null) {
             return;
         }
 
-        if (count($this->managedPackageEntries()) > 1) {
-            throw new RuntimeException('Runtime plugin recovery owner cannot be determined safely.');
-        }
+        throw new RuntimeException('Runtime plugin recovery belongs to a different package.');
     }
 
     /**
@@ -1205,7 +1306,7 @@ final class RuntimePluginStore
      */
     private function writeRecoveryMarker(array $marker): void
     {
-        $recoveryPath = $this->recoveryMarkerPath();
+        $recoveryPath = $this->recoveryMarkerPathForWrite($marker['id']);
         $this->assertSafeManagedPath($recoveryPath);
 
         if (file_exists($recoveryPath) && ! is_file($recoveryPath)) {
@@ -1226,22 +1327,28 @@ final class RuntimePluginStore
         }
     }
 
-    private function removeRecoveryMarker(): void
+    private function removeRecoveryMarker(?string $id = null, ?string $path = null): void
     {
-        $path = $this->recoveryMarkerPath();
+        $path ??= $id !== null
+            ? $this->recoveryMarkerPathForId($id)
+            : $this->recoveryMarkerPath();
 
-        if (! file_exists($path) && ! is_link($path)) {
+        if ($path === null || ! $this->managedEntryExists($path)) {
             return;
         }
 
         $this->deleteManagedPath($path);
+        $this->removeEmptyRecoveryDirectory();
     }
 
     /** @return array<int, string> */
     private function recoveryArtifactPaths(): array
     {
+        $markers = $this->recoveryMarkerPaths();
+
         return [
-            $this->recoveryMarkerPath(),
+            ...$markers,
+            ...array_map(fn (string $path): string => $path.'.tmp', $markers),
             $this->root.'/.staging',
             $this->root.'/.backup',
             $this->root.'/recovery.json.tmp',
@@ -1256,6 +1363,205 @@ final class RuntimePluginStore
     private function recoveryMarkerPath(): string
     {
         return $this->root.'/recovery.json';
+    }
+
+    private function recoveryMarkerPathForWrite(string $id): string
+    {
+        $rootPath = $this->recoveryMarkerPath();
+
+        if (! $this->managedEntryExists($rootPath) || $this->markerIdentity($rootPath) === $id) {
+            return $rootPath;
+        }
+
+        $directory = $this->root.'/.recovery';
+        $this->ensureDirectory($directory);
+
+        return $this->recoveryMarkerPathForId($id, false);
+    }
+
+    private function recoveryMarkerPathForId(string $id, bool $allowMissing = true): ?string
+    {
+        $this->assertValidId($id);
+        $sidecar = $this->root.'/.recovery/'.bin2hex($id).'.json';
+
+        if ($this->managedEntryExists($sidecar)) {
+            return $sidecar;
+        }
+
+        $directory = $this->root.'/.recovery';
+
+        if ($this->managedEntryExists($directory) && is_dir($directory) && ! is_link($directory)) {
+            $entries = scandir($directory);
+
+            if ($entries === false) {
+                throw new RuntimeException("Could not inspect runtime lifecycle path [{$directory}].");
+            }
+
+            foreach ($entries as $entry) {
+                if ($entry === '.' || $entry === '..' || ! str_ends_with($entry, '.json')) {
+                    continue;
+                }
+
+                $path = $directory.'/'.$entry;
+
+                if ($this->recoveryIdentityFromPath($path) === $id && $this->managedEntryExists($path)) {
+                    return $path;
+                }
+            }
+        }
+
+        $rootPath = $this->recoveryMarkerPath();
+
+        if ($this->managedEntryExists($rootPath) && $this->markerIdentity($rootPath) === $id) {
+            return $rootPath;
+        }
+
+        return $allowMissing ? null : $sidecar;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function recoveryMarkerPaths(): array
+    {
+        $paths = [];
+        $rootPath = $this->recoveryMarkerPath();
+
+        if ($this->managedEntryExists($rootPath)) {
+            $paths[] = $rootPath;
+        }
+
+        $directory = $this->root.'/.recovery';
+
+        if (! $this->managedEntryExists($directory)) {
+            return $paths;
+        }
+
+        if (is_link($directory) || ! is_dir($directory)) {
+            $paths[] = $directory;
+
+            return $paths;
+        }
+
+        $entries = scandir($directory);
+
+        if ($entries === false) {
+            $paths[] = $directory;
+
+            return $paths;
+        }
+
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..' || ! str_ends_with($entry, '.json')) {
+                continue;
+            }
+
+            $path = $directory.'/'.$entry;
+
+            if ($this->managedEntryExists($path)) {
+                $paths[] = $path;
+            }
+        }
+
+        sort($paths, SORT_STRING);
+
+        return $paths;
+    }
+
+    private function singleRecoveryMarkerPath(): ?string
+    {
+        $paths = $this->recoveryMarkerPaths();
+
+        if (count($paths) > 1) {
+            throw new RuntimeException('Multiple runtime plugin recovery records require a plugin identity.');
+        }
+
+        return $paths[0] ?? null;
+    }
+
+    private function recoveryStatusForPath(string $path): string
+    {
+        if (is_link($path) || ! is_file($path)) {
+            return self::RECOVERY_UNRECOVERABLE;
+        }
+
+        $contents = @file_get_contents($path);
+
+        if ($contents === false) {
+            return self::RECOVERY_UNRECOVERABLE;
+        }
+
+        try {
+            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+            $this->validateRecoveryMarker($marker);
+
+            $pathIdentity = $this->recoveryIdentityFromPath($path);
+            if ($pathIdentity !== null && $marker['id'] !== $pathIdentity) {
+                return self::RECOVERY_UNRECOVERABLE;
+            }
+        } catch (Throwable) {
+            return self::RECOVERY_UNRECOVERABLE;
+        }
+
+        return $this->isRecoveryMarkerRecoverable($marker)
+            ? self::RECOVERY_PENDING
+            : self::RECOVERY_UNRECOVERABLE;
+    }
+
+    private function markerIdentity(string $path): ?string
+    {
+        if (! is_file($path) || is_link($path)) {
+            return null;
+        }
+
+        $contents = @file_get_contents($path);
+
+        if ($contents === false) {
+            return null;
+        }
+
+        try {
+            $marker = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $id = is_array($marker) ? $marker['id'] ?? null : null;
+
+        return is_string($id) && $this->isValidId($id) ? $id : null;
+    }
+
+    private function recoveryIdentityFromPath(string $path): ?string
+    {
+        $prefix = $this->root.'/.recovery/';
+
+        if (! str_starts_with($path, $prefix) || ! str_ends_with($path, '.json')) {
+            return null;
+        }
+
+        $encoded = substr($path, strlen($prefix), -5);
+        $decoded = ctype_xdigit($encoded) ? hex2bin($encoded) : false;
+
+        return is_string($decoded) && $this->isValidId($decoded) ? $decoded : null;
+    }
+
+    private function removeEmptyRecoveryDirectory(): void
+    {
+        $directory = $this->root.'/.recovery';
+
+        if (! $this->managedEntryExists($directory) || is_link($directory) || ! is_dir($directory)) {
+            return;
+        }
+
+        $entries = scandir($directory);
+
+        if ($entries === false) {
+            throw new RuntimeException("Could not inspect runtime lifecycle path [{$directory}].");
+        }
+
+        if ($entries === ['.', '..']) {
+            $this->deleteManagedPath($directory);
+        }
     }
 
     private function relativeManagedPath(string $path): string
@@ -1324,14 +1630,14 @@ final class RuntimePluginStore
 
     private function deleteDirectory(?string $path): void
     {
-        if ($path === null || (! file_exists($path) && ! is_link($path))) {
+        if ($path === null || ! $this->managedEntryExists($path)) {
             return;
         }
 
         if (is_link($path)) {
             $this->assertSafeManagedLink($path);
 
-            if (! @unlink($path) || file_exists($path) || is_link($path)) {
+            if (! @unlink($path) || $this->managedEntryExists($path)) {
                 throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
             }
 
@@ -1341,7 +1647,7 @@ final class RuntimePluginStore
         if (! is_dir($path)) {
             $this->assertSafeManagedPath($path);
 
-            if (! @unlink($path) || file_exists($path) || is_link($path)) {
+            if (! @unlink($path) || $this->managedEntryExists($path)) {
                 throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
             }
 
@@ -1367,8 +1673,49 @@ final class RuntimePluginStore
 
         $this->assertSafeManagedPath($path);
 
-        if (! @rmdir($path) || file_exists($path) || is_link($path)) {
+        if (! @rmdir($path) || $this->managedEntryExists($path)) {
             throw new RuntimeException("Could not remove runtime plugin path [{$path}].");
+        }
+    }
+
+    private function managedEntryExists(string $path): bool
+    {
+        if (@lstat($path) !== false) {
+            return true;
+        }
+
+        $current = dirname($path);
+        $missingEntry = basename($path);
+
+        while (true) {
+            $stat = @lstat($current);
+
+            if ($stat !== false) {
+                if (is_link($current) || ! is_dir($current)) {
+                    throw new RuntimeException("Could not inspect runtime plugin path [{$current}].");
+                }
+
+                $entries = @scandir($current);
+
+                if ($entries === false) {
+                    throw new RuntimeException("Could not inspect runtime plugin path [{$current}].");
+                }
+
+                if (! in_array($missingEntry, $entries, true)) {
+                    return false;
+                }
+
+                throw new RuntimeException("Could not inspect runtime plugin path [{$path}].");
+            }
+
+            $parent = dirname($current);
+
+            if ($parent === $current) {
+                throw new RuntimeException("Could not inspect runtime plugin path [{$path}].");
+            }
+
+            $missingEntry = basename($current);
+            $current = $parent;
         }
     }
 

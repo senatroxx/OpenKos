@@ -154,6 +154,58 @@ it('does not recover runtime state while listing plugins', function (): void {
         ->and(is_file($this->runtimePluginPath.'/.backup/recover/marker'))->toBeTrue();
 });
 
+it('keeps healthy runtime plugins discoverable when another recovery is unrecoverable', function (): void {
+    $healthy = makeRuntimePluginArtifact();
+    $this->artisan('plugin:install', ['zip' => $healthy['zip']])->assertSuccessful();
+    File::makeDirectory($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/broken-recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $this->bootPlatformWithIsolatedRegistries();
+
+    expect(app(PermissionRegistry::class)->all())->toHaveKey('runtime-fixture.view');
+});
+
+it('does not load runtime code when its static dependency graph is invalid', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+
+    $packagePath = $this->runtimePluginPath.'/'.$artifact['id'];
+    $sourcePath = glob($packagePath.'/src/*.php')[0];
+    file_put_contents($sourcePath, str_replace(
+        'dependencies: [],',
+        "dependencies: ['missing/plugin'],",
+        file_get_contents($sourcePath),
+    ));
+    $manifestPath = $packagePath.'/manifest.json';
+    $manifest = json_decode(file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+    $manifest['dependencies'] = ['missing/plugin'];
+    file_put_contents($manifestPath, json_encode($manifest, JSON_THROW_ON_ERROR));
+
+    $marker = sys_get_temp_dir().'/openkos-invalid-graph-'.bin2hex(random_bytes(8));
+    $parentPid = getmypid();
+    $autoloadPath = $packagePath.'/vendor/autoload.php';
+    $autoload = file_get_contents($autoloadPath);
+    file_put_contents($autoloadPath, str_replace(
+        '<?php',
+        "<?php\nif (getmypid() === ".var_export($parentPid, true).') { file_put_contents('.var_export($marker, true).", 'loaded'); }",
+        $autoload,
+    ));
+
+    $this->bootPlatformWithIsolatedRegistries();
+
+    expect(is_file($marker))->toBeFalse()
+        ->and(app(PermissionRegistry::class)->all())->not->toHaveKey('runtime-fixture.view');
+
+    File::delete($marker);
+});
+
 it('validates updates in a fresh process after the previous class was loaded', function (): void {
     $first = makeRuntimePluginArtifact();
 
@@ -183,6 +235,28 @@ it('revalidates an installed plugin before enabling it', function (): void {
         ->toMatchArray([$artifact['id'] => ['enabled' => false]]);
 });
 
+it('rejects enabling a package whose vendor ancestor is a symlink', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    $outside = sys_get_temp_dir().'/openkos-runtime-vendor-'.bin2hex(random_bytes(8));
+    $packagePath = $this->runtimePluginPath.'/'.$artifact['id'];
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+    $this->artisan('plugin:disable', ['id' => $artifact['id']])->assertSuccessful();
+    File::deleteDirectory($packagePath.'/vendor');
+    File::makeDirectory($outside, 0750, true);
+    symlink($outside, $packagePath.'/vendor');
+
+    try {
+        $this->artisan('plugin:enable', ['id' => $artifact['id']])->assertFailed();
+    } finally {
+        unlink($packagePath.'/vendor');
+        File::deleteDirectory($outside);
+    }
+
+    expect(json_decode(file_get_contents($this->runtimePluginPath.'/state.json'), true, 512, JSON_THROW_ON_ERROR))
+        ->toMatchArray([$artifact['id'] => ['enabled' => false]]);
+});
+
 it('rejects unsafe ZIP paths before extraction', function (): void {
     $zip = makeZip(['../outside.txt' => 'unsafe']);
 
@@ -207,11 +281,29 @@ it('does not overwrite stale runtime artifacts during installation', function ()
     file_put_contents($this->runtimePluginPath.'/.staging/stale/marker', 'keep');
 
     $this->artisan('plugin:install', ['zip' => $artifact['zip']])
-        ->assertFailed()
-        ->expectsOutputToContain('Orphaned runtime artifacts');
+        ->assertSuccessful();
 
     expect(is_file($this->runtimePluginPath.'/.staging/stale/marker'))->toBeTrue()
-        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
+        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeTrue();
+});
+
+it('preserves recovery state for an unrelated plugin during installation', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    File::makeDirectory($this->runtimePluginPath.'/.staging/recovery-a', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'acme/recovery-a',
+        'staging' => '.staging/recovery-a',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+
+    expect(json_decode(file_get_contents($this->runtimePluginPath.'/recovery.json'), true, 512, JSON_THROW_ON_ERROR))
+        ->toMatchArray(['id' => 'acme/recovery-a'])
+        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeTrue();
 });
 
 it('counts archive directories toward the entry limit', function (): void {

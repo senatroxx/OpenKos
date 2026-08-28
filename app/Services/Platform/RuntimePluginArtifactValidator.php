@@ -251,6 +251,10 @@ final class RuntimePluginArtifactValidator
             }
         }
 
+        if (preg_match('/^(?:[A-Za-z_][A-Za-z0-9_]*\\\\)*[A-Za-z_][A-Za-z0-9_]*$/', $manifest['entry_class']) !== 1) {
+            throw new InvalidArgumentException('Runtime plugin manifest entry_class must be a valid PHP class name.');
+        }
+
         if (! preg_match('/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/', $manifest['id'])) {
             throw new InvalidArgumentException("Runtime plugin ID [{$manifest['id']}] is unsafe.");
         }

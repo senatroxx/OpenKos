@@ -328,6 +328,32 @@ it('marks duplicate runtime entry classes as conflicts', function (): void {
         ]);
 });
 
+it('treats runtime entry class names as case-insensitive', function (): void {
+    $report = app(RuntimePluginGraphValidator::class)->validate([
+        'settings/case-a' => [
+            'metadata' => [
+                'id' => 'settings/case-a',
+                'entry_class' => 'SettingsRuntime\\CasePlugin',
+                'core_version' => '*',
+                'dependencies' => [],
+            ],
+            'enabled' => true,
+        ],
+        'settings/case-b' => [
+            'metadata' => [
+                'id' => 'settings/case-b',
+                'entry_class' => 'settingsruntime\\caseplugin',
+                'core_version' => '*',
+                'dependencies' => [],
+            ],
+            'enabled' => true,
+        ],
+    ], []);
+
+    expect($report['loadable'])->toBe([])
+        ->and($report['issues'])->toHaveKeys(['settings/case-a', 'settings/case-b']);
+});
+
 it('keeps the plugins page available when a runtime dependency is missing or disabled', function (): void {
     $dependency = makePluginSettingsArtifact();
     $dependent = makePluginSettingsArtifact(['dependencies' => [$dependency['id']]]);
@@ -503,6 +529,42 @@ it('surfaces and cleans unrecoverable runtime recovery without a package row', f
         ->assertRedirect(route('settings.plugins.index'));
 
     expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
+});
+
+it('offers cleanup for pending recovery without a package row', function (): void {
+    File::makeDirectory($this->runtimePluginPath.'/.backup', 0750, true);
+    File::makeDirectory($this->runtimePluginPath.'/.backup/settings-pending', 0750, true);
+    File::makeDirectory($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'settings/pending-recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/settings-pending',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', 'settings/pending-recovery'))->toMatchArray([
+        'status' => 'pending_recovery',
+        'can_cleanup' => true,
+        'cleanup_key' => 'recovery:settings/pending-recovery',
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'recovery:settings/pending-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.backup'))->toBeFalse()
         ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
 });
 

@@ -30,7 +30,23 @@ final class RuntimePluginDiscovery
                 $state = $store->readState();
                 $packages = $store->installedPackages();
                 $conflictingIds = $this->conflictingIds($packages, $state, $existingClasses);
+                $recoveryStatus = $store->recoveryStatus();
+                $recoveryStatuses = [];
+
+                foreach ($store->recoveryRecords() as $record) {
+                    if ($record['id'] !== null) {
+                        $recoveryStatuses[$record['id']] = $record['status'];
+                    }
+                }
+
                 $runtime = [];
+
+                if ($recoveryStatuses === [] && $recoveryStatus !== RuntimePluginStore::RECOVERY_HEALTHY) {
+                    Log::error('Runtime plugin discovery found recovery state without a trusted package identity.', [
+                        'path' => $store->rootPath(),
+                        'status' => $recoveryStatus,
+                    ]);
+                }
 
                 foreach ($packages as $id => $path) {
                     $enabled = $state[$id]['enabled'] ?? false;
@@ -39,6 +55,23 @@ final class RuntimePluginDiscovery
                         $runtime[$id] = [
                             'metadata' => null,
                             'enabled' => false,
+                        ];
+
+                        continue;
+                    }
+
+                    if (
+                        isset($recoveryStatuses[$id])
+                        && in_array($recoveryStatuses[$id], [
+                            RuntimePluginStore::RECOVERY_PENDING,
+                            RuntimePluginStore::RECOVERY_UNRECOVERABLE,
+                        ], true)
+                    ) {
+                        $runtime[$id] = [
+                            'metadata' => null,
+                            'enabled' => $enabled,
+                            'status' => $recoveryStatuses[$id],
+                            'error' => 'Runtime plugin recovery must complete before the package can be loaded.',
                         ];
 
                         continue;
@@ -57,11 +90,11 @@ final class RuntimePluginDiscovery
 
                     try {
                         $runtime[$id] = [
-                            'metadata' => $this->validator->validate($path, $id),
+                            'metadata' => $this->validator->inspectStaticMetadata($path, $id),
                             'enabled' => $enabled,
                         ];
                     } catch (Throwable $exception) {
-                        Log::error('Runtime plugin could not be loaded.', [
+                        Log::error('Runtime plugin could not be inspected.', [
                             'plugin' => $id,
                             'path' => $path,
                             'exception' => $exception,
@@ -89,11 +122,30 @@ final class RuntimePluginDiscovery
                 }
 
                 foreach ($report['loadable'] as $id) {
-                    $plugins[] = $runtime[$id]['metadata']['entry_class'];
+                    $path = $packages[$id];
+
+                    try {
+                        $metadata = $this->validator->validateInFreshProcess($path, $id);
+                        require_once $path.'/vendor/autoload.php';
+
+                        if (! class_exists($metadata['entry_class'])) {
+                            throw new InvalidArgumentException(
+                                "Runtime plugin entry class [{$metadata['entry_class']}] does not exist.",
+                            );
+                        }
+
+                        $plugins[] = $metadata['entry_class'];
+                    } catch (Throwable $exception) {
+                        Log::error('Runtime plugin failed fresh-process validation.', [
+                            'plugin' => $id,
+                            'path' => $path,
+                            'exception' => $exception,
+                        ]);
+                    }
                 }
 
                 return $plugins;
-            });
+            }, false);
         } catch (Throwable $exception) {
             Log::error('Runtime plugin discovery failed.', [
                 'path' => $this->store->rootPath(),
@@ -115,6 +167,10 @@ final class RuntimePluginDiscovery
         $existingIds = [];
         $conflictingIds = [];
         $runtimeEntryClasses = [];
+        $existingClassNames = array_fill_keys(array_map(
+            fn (string $class): string => $this->canonicalClassName($class),
+            array_values(array_filter($existingClasses, 'is_string')),
+        ), true);
         foreach ($existingClasses as $class) {
             if (! is_string($class) || ! class_exists($class) || ! is_a($class, Plugin::class, true)) {
                 continue;
@@ -144,9 +200,10 @@ final class RuntimePluginDiscovery
                 continue;
             }
 
-            $runtimeEntryClasses[$entryClass][] = $id;
+            $canonicalEntryClass = $this->canonicalClassName($entryClass);
+            $runtimeEntryClasses[$canonicalEntryClass][] = $id;
 
-            if (in_array($entryClass, $existingClasses, true) || isset($existingIds[$id])) {
+            if (isset($existingClassNames[$canonicalEntryClass]) || isset($existingIds[$id])) {
                 $conflictingIds[] = $id;
                 Log::warning('Runtime plugin skipped because a Composer or explicit plugin takes precedence.', [
                     'plugin' => $id,
@@ -198,5 +255,10 @@ final class RuntimePluginDiscovery
         }
 
         return $manifest['entry_class'];
+    }
+
+    private function canonicalClassName(string $class): string
+    {
+        return strtolower(ltrim(trim($class), '\\'));
     }
 }

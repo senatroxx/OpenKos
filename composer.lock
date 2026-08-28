@@ -3317,16 +3317,16 @@
         },
         {
             "name": "openkos/platform",
-            "version": "0.2.3",
+            "version": "0.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/senatroxx/openkos-platform.git",
-                "reference": "e205d385b086a29db98441e961c271b54cd891fe"
+                "reference": "d2af88e90dcf86ee3cf68a5dbd72e21aa2b320de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/senatroxx/openkos-platform/zipball/e205d385b086a29db98441e961c271b54cd891fe",
-                "reference": "e205d385b086a29db98441e961c271b54cd891fe",
+                "url": "https://api.github.com/repos/senatroxx/openkos-platform/zipball/d2af88e90dcf86ee3cf68a5dbd72e21aa2b320de",
+                "reference": "d2af88e90dcf86ee3cf68a5dbd72e21aa2b320de",
                 "shasum": ""
             },
             "require": {
@@ -3364,9 +3364,9 @@
             "description": "The OpenKOS platform and plugin SDK.",
             "support": {
                 "issues": "https://github.com/senatroxx/openkos-platform/issues",
-                "source": "https://github.com/senatroxx/openkos-platform/tree/v0.2.3"
+                "source": "https://github.com/senatroxx/openkos-platform/tree/v0.2.4"
             },
-            "time": "2026-08-24T04:26:34+00:00"
+            "time": "2026-08-28T08:07:02+00:00"
         },
         {
             "name": "paragonie/constant_time_encoding",

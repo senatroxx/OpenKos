@@ -28,6 +28,11 @@ final class RuntimePluginGraphValidator
         [$hostIds] = $this->hostIdentity($hostClasses);
         $issues = [];
         $entryClasses = [];
+        $hostEntryClasses = array_fill_keys(array_map(
+            fn (string $class): string => $this->canonicalClassName($class),
+            array_values(array_filter($hostClasses, 'is_string')),
+        ), true);
+        $entryClassNames = [];
 
         foreach ($plugins as $id => $plugin) {
             if (isset($plugin['status'], $plugin['error'])) {
@@ -48,12 +53,14 @@ final class RuntimePluginGraphValidator
             }
 
             if (is_string($metadata['entry_class'] ?? null)) {
-                $entryClasses[$metadata['entry_class']][] = $id;
+                $canonicalEntryClass = $this->canonicalClassName($metadata['entry_class']);
+                $entryClasses[$canonicalEntryClass][] = $id;
+                $entryClassNames[$canonicalEntryClass] = $metadata['entry_class'];
             }
 
             if (
                 isset($hostIds[$id])
-                || in_array($metadata['entry_class'] ?? null, $hostClasses, true)
+                || isset($hostEntryClasses[$this->canonicalClassName((string) ($metadata['entry_class'] ?? ''))])
             ) {
                 $this->addIssue($issues, $id, 'conflict', "Runtime plugin [{$id}] conflicts with a Composer or explicit plugin.");
 
@@ -92,7 +99,7 @@ final class RuntimePluginGraphValidator
                     $issues,
                     $id,
                     'conflict',
-                    "Runtime plugin [{$id}] conflicts with another runtime plugin entry class [{$entryClass}].",
+                    "Runtime plugin [{$id}] conflicts with another runtime plugin entry class [{$entryClassNames[$entryClass]}].",
                 );
             }
         }
@@ -426,6 +433,11 @@ final class RuntimePluginGraphValidator
         }
 
         return [$ids, $validClasses];
+    }
+
+    private function canonicalClassName(string $class): string
+    {
+        return strtolower(ltrim(trim($class), '\\'));
     }
 
     /**
