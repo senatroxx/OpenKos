@@ -1,6 +1,10 @@
 <?php
 
+use App\Services\Platform\PluginInstaller;
 use App\Services\Platform\PluginManagementService;
+use App\Services\Platform\RuntimePluginArtifactValidator;
+use App\Services\Platform\RuntimePluginDiscovery;
+use App\Services\Platform\RuntimePluginGraphValidator;
 use App\Services\Platform\RuntimePluginStore;
 use Illuminate\Support\Facades\File;
 use OpenKOS\Core\Contracts\PluginDiscovery;
@@ -204,6 +208,58 @@ it('does not load runtime code when its static dependency graph is invalid', fun
         ->and(app(PermissionRegistry::class)->all())->not->toHaveKey('runtime-fixture.view');
 
     File::delete($marker);
+});
+
+it('suppresses runtime dependants when fresh validation fails', function (): void {
+    $dependency = makeRuntimePluginArtifact();
+    $dependent = makeRuntimePluginArtifact(['dependencies' => [$dependency['id']]]);
+
+    app(PluginInstaller::class)->install($dependency['zip']);
+    app(PluginInstaller::class)->install($dependent['zip']);
+
+    $manifestPath = $this->runtimePluginPath.'/'.$dependency['id'].'/manifest.json';
+    $manifest = json_decode(file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+    $manifest['entry_class'] = 'RuntimeArtifact\\MissingPlugin';
+    file_put_contents($manifestPath, json_encode($manifest, JSON_THROW_ON_ERROR));
+    $composerPath = $this->runtimePluginPath.'/'.$dependency['id'].'/composer.json';
+    $composer = json_decode(file_get_contents($composerPath), true, 512, JSON_THROW_ON_ERROR);
+    $composer['extra']['openkos']['plugin'] = $manifest['entry_class'];
+    file_put_contents($composerPath, json_encode($composer, JSON_THROW_ON_ERROR));
+
+    $discovery = new RuntimePluginDiscovery(
+        new RuntimePluginStore,
+        app(RuntimePluginArtifactValidator::class),
+        app(RuntimePluginGraphValidator::class),
+    );
+
+    expect($discovery->discover())->toBe([])
+        ->and($discovery->failureFor($dependency['id']))
+        ->toMatchArray(['status' => 'broken']);
+});
+
+it('surfaces a runtime lifecycle failure as load_failed in the catalog', function (): void {
+    $artifact = makeRuntimePluginArtifact();
+    app(PluginInstaller::class)->install($artifact['zip']);
+
+    $sourcePath = glob($this->runtimePluginPath.'/'.$artifact['id'].'/src/*.php')[0];
+    file_put_contents($sourcePath, str_replace(
+        '        $platform->permissions()->register(\'runtime-fixture.view\', \'Runtime Fixture\');',
+        "        throw new RuntimeException('register failed');",
+        file_get_contents($sourcePath),
+    ));
+
+    $this->bootPlatformWithIsolatedRegistries();
+
+    $plugin = collect(app(PluginManagementService::class)->catalog()['plugins'])
+        ->firstWhere('managed_id', $artifact['id']);
+
+    expect($plugin)->toMatchArray([
+        'status' => 'load_failed',
+        'enabled' => true,
+        'can_enable' => false,
+        'can_disable' => true,
+        'can_remove' => true,
+    ])->and($plugin['error'])->toContain('register');
 });
 
 it('validates updates in a fresh process after the previous class was loaded', function (): void {
@@ -571,7 +627,9 @@ function makeRuntimePluginArtifact(
         'autoload' => ['psr-4' => ['RuntimeArtifact\\' => 'src/']],
         'extra' => ['openkos' => ['plugin' => $entryClass]],
     ];
+    $dependencies = var_export($manifest['dependencies'], true);
     $source = "<?php\n\nnamespace RuntimeArtifact;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$manifest['id']}',\n            name: '{$manifest['name']}',\n            version: '{$manifest['version']}',\n            description: '{$manifest['description']}',\n            coreVersion: '{$manifest['core_version']}',\n            dependencies: [],\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void\n    {\n        \$platform->permissions()->register('runtime-fixture.view', 'Runtime Fixture');\n    }\n}\n";
+    $source = str_replace('dependencies: [],', "dependencies: {$dependencies},", $source);
 
     return makeZip([
         'manifest.json' => json_encode($manifest, JSON_THROW_ON_ERROR),

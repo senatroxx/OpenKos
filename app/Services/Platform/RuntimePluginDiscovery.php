@@ -9,6 +9,9 @@ use Throwable;
 
 final class RuntimePluginDiscovery
 {
+    /** @var array<string, array{status: string, error: string}> */
+    private array $failures = [];
+
     public function __construct(
         private RuntimePluginStore $store,
         private RuntimePluginArtifactValidator $validator,
@@ -21,6 +24,8 @@ final class RuntimePluginDiscovery
      */
     public function discover(array $existingClasses = []): array
     {
+        $this->failures = [];
+
         if (! config('platform.runtime.enabled', true)) {
             return [];
         }
@@ -109,7 +114,65 @@ final class RuntimePluginDiscovery
                 }
 
                 $report = $this->graph->validate($runtime, $existingClasses);
-                $plugins = [];
+                $validated = [];
+                $pending = $report['loadable'];
+
+                while ($pending !== []) {
+                    $progress = false;
+
+                    foreach ($pending as $key => $id) {
+                        $metadata = $runtime[$id]['metadata'];
+                        $dependenciesReady = true;
+
+                        foreach ($metadata['dependencies'] ?? [] as $dependency) {
+                            if (isset($runtime[$dependency]) && ! isset($validated[$dependency])) {
+                                $dependenciesReady = false;
+                                break;
+                            }
+                        }
+
+                        if (! $dependenciesReady) {
+                            continue;
+                        }
+
+                        unset($pending[$key]);
+                        $progress = true;
+                        $path = $packages[$id];
+
+                        try {
+                            $metadata = $this->validator->validateInFreshProcess($path, $id);
+                            require_once $path.'/vendor/autoload.php';
+
+                            if (! class_exists($metadata['entry_class'])) {
+                                throw new InvalidArgumentException(
+                                    "Runtime plugin entry class [{$metadata['entry_class']}] does not exist.",
+                                );
+                            }
+
+                            $runtime[$id]['metadata'] = $metadata;
+                            $validated[$id] = $metadata['entry_class'];
+                            $report = $this->graph->validate($runtime, $existingClasses);
+                        } catch (Throwable $exception) {
+                            Log::error('Runtime plugin failed fresh-process validation.', [
+                                'plugin' => $id,
+                                'path' => $path,
+                                'exception' => $exception,
+                            ]);
+                            $runtime[$id]['status'] = 'broken';
+                            $runtime[$id]['error'] = 'Runtime plugin failed fresh-process validation.';
+                            $this->failures[$id] = [
+                                'status' => 'broken',
+                                'error' => $runtime[$id]['error'],
+                            ];
+                            $report = $this->graph->validate($runtime, $existingClasses);
+                            $pending = array_values(array_diff($report['loadable'], array_keys($validated)));
+                        }
+                    }
+
+                    if (! $progress) {
+                        break;
+                    }
+                }
 
                 foreach ($report['issues'] as $id => $issue) {
                     if (($runtime[$id]['enabled'] ?? false) && ! in_array($id, $conflictingIds, true)) {
@@ -121,30 +184,10 @@ final class RuntimePluginDiscovery
                     }
                 }
 
-                foreach ($report['loadable'] as $id) {
-                    $path = $packages[$id];
-
-                    try {
-                        $metadata = $this->validator->validateInFreshProcess($path, $id);
-                        require_once $path.'/vendor/autoload.php';
-
-                        if (! class_exists($metadata['entry_class'])) {
-                            throw new InvalidArgumentException(
-                                "Runtime plugin entry class [{$metadata['entry_class']}] does not exist.",
-                            );
-                        }
-
-                        $plugins[] = $metadata['entry_class'];
-                    } catch (Throwable $exception) {
-                        Log::error('Runtime plugin failed fresh-process validation.', [
-                            'plugin' => $id,
-                            'path' => $path,
-                            'exception' => $exception,
-                        ]);
-                    }
-                }
-
-                return $plugins;
+                return array_values(array_filter(
+                    array_map(fn (string $id): ?string => $validated[$id] ?? null, $report['loadable']),
+                    'is_string',
+                ));
             }, false);
         } catch (Throwable $exception) {
             Log::error('Runtime plugin discovery failed.', [
@@ -154,6 +197,12 @@ final class RuntimePluginDiscovery
 
             return [];
         }
+    }
+
+    /** @return array{status: string, error: string}|null */
+    public function failureFor(string $id): ?array
+    {
+        return $this->failures[$id] ?? null;
     }
 
     /**

@@ -57,6 +57,7 @@ const statusVariants: Record<
     missing_package: 'destructive',
     pending_recovery: 'outline',
     unrecoverable_recovery: 'destructive',
+    load_failed: 'destructive',
     orphaned_state: 'destructive',
     orphaned_runtime_artifact: 'outline',
 };
@@ -82,6 +83,7 @@ function statusLabel(status: PlatformPlugin['status']): string {
         missing_package: t('Missing package'),
         pending_recovery: t('Pending recovery'),
         unrecoverable_recovery: t('Unrecoverable recovery'),
+        load_failed: t('Load failed'),
         orphaned_state: t('Orphaned state'),
         orphaned_runtime_artifact: t('Orphaned runtime artifact'),
     }[status];

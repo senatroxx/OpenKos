@@ -965,6 +965,7 @@ final class RuntimePluginStore
             'staging' => null,
             'backup' => $this->relativeManagedPath($backupPath),
             'had_active' => true,
+            'previous_entry' => $state[$id] ?? null,
             'phase' => 'prepared',
         ];
 
@@ -1033,7 +1034,9 @@ final class RuntimePluginStore
 
         $this->deleteDirectory($activePath);
 
-        if (! $stateWasCorrupt) {
+        if ($stateWasCorrupt) {
+            $this->rebuildStateFromManagedPackages($id);
+        } else {
             unset($state[$id]);
             $this->writeState($state);
         }
@@ -1045,6 +1048,19 @@ final class RuntimePluginStore
         if ($this->managedPackageEntries() === [] && $this->recoveryMarkerPaths() === []) {
             $this->forceCleanupOrphanedMetadata();
         }
+    }
+
+    private function rebuildStateFromManagedPackages(?string $excludeId = null): void
+    {
+        $state = [];
+
+        foreach ($this->managedPackageEntries() as $id => $path) {
+            if ($id !== $excludeId) {
+                $state[$id] = ['enabled' => false];
+            }
+        }
+
+        $this->writeState($state);
     }
 
     public function recoverPendingOperation(?string $id = null): void

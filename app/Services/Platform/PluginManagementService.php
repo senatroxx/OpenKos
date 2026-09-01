@@ -236,6 +236,12 @@ class PluginManagementService
                     'error' => $this->validationError($exception),
                 ];
             }
+
+            $discoveryFailure = $this->composer->runtimeFailureFor($id);
+            if ($discoveryFailure !== null) {
+                $runtime[$id]['status'] = $discoveryFailure['status'];
+                $runtime[$id]['error'] = $discoveryFailure['error'];
+            }
         }
 
         $health = $this->graph->validate($runtime, $hostClasses);
@@ -268,6 +274,23 @@ class PluginManagementService
                         'can_force_recovery' => true,
                         'can_cleanup' => false,
                         'cleanup_key' => null,
+                    ];
+
+                    continue;
+                }
+
+                $lifecycleFailure = $this->lifecycleFailure($metadata['id'], $metadata['entry_class'] ?? null);
+
+                if ($lifecycleFailure !== null) {
+                    $rows[] = [
+                        ...$this->runtimeRow($metadata, $enabled),
+                        'status' => 'load_failed',
+                        'error' => __('Runtime plugin failed during :phase and was not loaded. Disable or remove it.', [
+                            'phase' => $lifecycleFailure['phase'],
+                        ]),
+                        'can_enable' => false,
+                        'can_disable' => $enabled,
+                        'can_remove' => true,
                     ];
 
                     continue;
@@ -556,6 +579,22 @@ class PluginManagementService
             'can_cleanup' => false,
             'cleanup_key' => null,
         ];
+    }
+
+    /** @return array{phase: string}|null */
+    private function lifecycleFailure(string $id, ?string $entryClass): ?array
+    {
+        $registryClass = 'OpenKOS\\Platform\\Plugin\\PluginLifecycleFailureRegistry';
+
+        if (! class_exists($registryClass) || ! app()->bound($registryClass)) {
+            return null;
+        }
+
+        $failure = app($registryClass)->forPlugin($id, $entryClass);
+
+        return is_array($failure) && is_string($failure['phase'] ?? null)
+            ? ['phase' => $failure['phase']]
+            : null;
     }
 
     /** @return array<string, mixed> */

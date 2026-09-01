@@ -60,6 +60,7 @@ final class ListRuntimePluginsCommand extends Command
             'orphaned_runtime_artifact' => 'Orphaned artifact',
             'pending_recovery' => 'Pending recovery',
             'unrecoverable_recovery' => 'Unrecoverable recovery',
+            'load_failed' => 'Load failed',
             default => ucfirst(str_replace('_', ' ', (string) ($plugin['status'] ?? 'Unknown'))),
         };
     }

@@ -112,6 +112,31 @@ it('never resurrects a package after a committed removal recovery', function ():
         ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
 });
 
+it('restores the previous state after an interrupted removal recovery', function (): void {
+    $store = app(RuntimePluginStore::class);
+    $activePath = $this->runtimePluginPath.'/acme/interrupted';
+    $backupPath = $this->runtimePluginPath.'/.backup/acme-interrupted-remove';
+
+    mkdir($backupPath, 0750, true);
+    file_put_contents($backupPath.'/version.txt', 'old');
+    $store->writeState(['acme/interrupted' => ['enabled' => true]]);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'remove',
+        'id' => 'acme/interrupted',
+        'staging' => null,
+        'backup' => '.backup/acme-interrupted-remove',
+        'had_active' => true,
+        'previous_entry' => ['enabled' => true],
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+
+    $store->withLock(fn (): null => null);
+
+    expect(file_get_contents($activePath.'/version.txt'))->toBe('old')
+        ->and($store->readState())->toMatchArray(['acme/interrupted' => ['enabled' => true]])
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
+});
+
 it('recovers an identity-addressed sidecar without touching another marker', function (): void {
     $store = app(RuntimePluginStore::class);
     $id = 'acme/sidecar';
@@ -374,7 +399,7 @@ it('does not treat an inaccessible package parent as an absent package', functio
         ->toMatchArray(['acme/inaccessible' => ['enabled' => true]]);
 });
 
-it('does not erase another package state when removing with corrupt state', function (): void {
+it('repairs corrupt state while preserving another installed package', function (): void {
     $store = app(RuntimePluginStore::class);
     $firstPath = $this->runtimePluginPath.'/acme/first';
     $secondPath = $this->runtimePluginPath.'/acme/second';
@@ -393,7 +418,9 @@ it('does not erase another package state when removing with corrupt state', func
 
     expect(is_dir($firstPath))->toBeFalse()
         ->and(is_dir($secondPath))->toBeTrue()
-        ->and(file_get_contents($this->runtimePluginPath.'/state.json'))->toBe('{broken');
+        ->and($store->readState())->toBe([
+            'acme/second' => ['enabled' => false],
+        ]);
 });
 
 it('rejects symlinked internal staging paths', function (): void {

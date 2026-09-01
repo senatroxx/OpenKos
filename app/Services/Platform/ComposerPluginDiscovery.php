@@ -47,6 +47,12 @@ final class ComposerPluginDiscovery implements PluginDiscovery
         return $this->discoverComposerPlugins();
     }
 
+    /** @return array{status: string, error: string}|null */
+    public function runtimeFailureFor(string $id): ?array
+    {
+        return $this->runtime->failureFor($id);
+    }
+
     /**
      * @return array<int, class-string<Plugin>>
      */

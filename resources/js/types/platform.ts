@@ -47,6 +47,7 @@ export type PlatformPlugin = {
         | 'missing_package'
         | 'pending_recovery'
         | 'unrecoverable_recovery'
+        | 'load_failed'
         | 'orphaned_state'
         | 'orphaned_runtime_artifact';
     enabled: boolean;
