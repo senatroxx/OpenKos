@@ -244,7 +244,7 @@ it('surfaces a runtime lifecycle failure as load_failed in the catalog', functio
     $sourcePath = glob($this->runtimePluginPath.'/'.$artifact['id'].'/src/*.php')[0];
     file_put_contents($sourcePath, str_replace(
         '        $platform->permissions()->register(\'runtime-fixture.view\', \'Runtime Fixture\');',
-        "        throw new RuntimeException('register failed');",
+        "        throw new \\RuntimeException('register failed');",
         file_get_contents($sourcePath),
     ));
 

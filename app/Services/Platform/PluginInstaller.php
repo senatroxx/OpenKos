@@ -241,7 +241,13 @@ final class PluginInstaller
             }
 
             if (str_starts_with($cleanupKey ?? '', 'recovery:')) {
-                $store->forceCleanupRecovery(substr($cleanupKey, strlen('recovery:')));
+                $recoveryId = substr($cleanupKey, strlen('recovery:'));
+
+                if ($recoveryId === '') {
+                    throw new RuntimeException('Runtime plugin recovery identity is missing.');
+                }
+
+                $store->forceCleanupRecovery($recoveryId);
 
                 return;
             }

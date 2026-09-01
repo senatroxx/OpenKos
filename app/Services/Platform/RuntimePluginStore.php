@@ -936,18 +936,6 @@ final class RuntimePluginStore
         $activePath = $this->packagePath($id);
         $this->assertSafeManagedPath($activePath);
         $state = $this->readState();
-        $recoveryStatus = $this->recoveryStatus();
-
-        if (
-            in_array($recoveryStatus, [self::RECOVERY_PENDING, self::RECOVERY_UNRECOVERABLE], true)
-            && ! $this->hasRecoveryFor($id)
-        ) {
-            $this->deleteDirectory($activePath);
-            unset($state[$id]);
-            $this->writeState($state);
-
-            return;
-        }
 
         if (! is_dir($activePath) || is_link($activePath)) {
             $this->deleteDirectory($activePath);

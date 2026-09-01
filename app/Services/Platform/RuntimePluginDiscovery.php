@@ -141,7 +141,22 @@ final class RuntimePluginDiscovery
 
                         try {
                             $metadata = $this->validator->validateInFreshProcess($path, $id);
-                            require_once $path.'/vendor/autoload.php';
+                            $packagePath = $store->installedPackagePath($id);
+                            $autoloadPath = $packagePath.'/vendor/autoload.php';
+                            $resolvedPackagePath = realpath($packagePath);
+                            $resolvedAutoloadPath = realpath($autoloadPath);
+
+                            if (
+                                ! is_file($autoloadPath)
+                                || is_link($autoloadPath)
+                                || ! is_string($resolvedPackagePath)
+                                || ! is_string($resolvedAutoloadPath)
+                                || ! str_starts_with($resolvedAutoloadPath, $resolvedPackagePath.DIRECTORY_SEPARATOR)
+                            ) {
+                                throw new InvalidArgumentException('Runtime plugin autoloader path is missing or unsafe.');
+                            }
+
+                            require_once $autoloadPath;
 
                             if (! class_exists($metadata['entry_class'])) {
                                 throw new InvalidArgumentException(

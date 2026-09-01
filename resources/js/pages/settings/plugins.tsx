@@ -457,47 +457,43 @@ export default function Plugins({
                                                 </Button>
                                             )}
                                             {plugin.can_disable && (
-                                                <>
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        variant="outline"
-                                                        disabled={
-                                                            processingPlugin ===
-                                                            pluginKey(plugin)
-                                                        }
-                                                        onClick={() =>
-                                                            runAction(
-                                                                plugin,
-                                                                'disable',
-                                                            )
-                                                        }
-                                                    >
-                                                        {t('Disable')}
-                                                    </Button>
-                                                    {plugin.can_force_recovery && (
-                                                        <Button
-                                                            type="button"
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            disabled={
-                                                                processingPlugin ===
-                                                                pluginKey(
-                                                                    plugin,
-                                                                )
-                                                            }
-                                                            onClick={() =>
-                                                                runAction(
-                                                                    plugin,
-                                                                    'disable',
-                                                                    true,
-                                                                )
-                                                            }
-                                                        >
-                                                            {t('Force disable')}
-                                                        </Button>
-                                                    )}
-                                                </>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={
+                                                        processingPlugin ===
+                                                        pluginKey(plugin)
+                                                    }
+                                                    onClick={() =>
+                                                        runAction(
+                                                            plugin,
+                                                            'disable',
+                                                        )
+                                                    }
+                                                >
+                                                    {t('Disable')}
+                                                </Button>
+                                            )}
+                                            {plugin.can_force_recovery && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    disabled={
+                                                        processingPlugin ===
+                                                        pluginKey(plugin)
+                                                    }
+                                                    onClick={() =>
+                                                        runAction(
+                                                            plugin,
+                                                            'disable',
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    {t('Force disable')}
+                                                </Button>
                                             )}
                                             {plugin.can_remove && (
                                                 <Button

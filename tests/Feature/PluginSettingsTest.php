@@ -568,6 +568,11 @@ it('offers cleanup for pending recovery without a package row', function (): voi
         ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
 });
 
+it('rejects a recovery cleanup key without a package identity', function (): void {
+    expect(fn () => app(PluginInstaller::class)->cleanupOrphanedMetadata(null, 'recovery:'))
+        ->toThrow(RuntimeException::class, 'recovery identity is missing');
+});
+
 it('cleans an orphaned recovery marker by identity without touching another package', function (): void {
     $other = makePluginSettingsArtifact();
     app(PluginInstaller::class)->install($other['zip']);
