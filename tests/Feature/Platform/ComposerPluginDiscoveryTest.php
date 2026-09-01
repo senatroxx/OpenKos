@@ -3,6 +3,8 @@
 use App\Services\Platform\ComposerPluginDiscovery;
 use Composer\InstalledVersions;
 use OpenKOS\Core\Contracts\PluginDiscovery;
+use OpenKOS\Platform\PlatformServiceProvider;
+use OpenKOS\Platform\Plugin\PluginLifecycleFailureRegistry;
 use Tests\Support\Fixtures\ComposerDiscoveryFixturePlugin;
 use Tests\Support\Fixtures\ComposerDiscoverySecondFixturePlugin;
 
@@ -147,8 +149,10 @@ it('boots a Composer-discovered plugin through the normal lifecycle', function (
     expect(ComposerDiscoveryFixturePlugin::$registerCalls)->toBe(1);
 });
 
-it('does not run any plugin lifecycle when discovery finds an invalid class', function () {
+it('records an invalid discovered class and continues with healthy plugins', function () {
     ComposerDiscoveryFixturePlugin::$registerCalls = 0;
+    $this->bootPlatformWithIsolatedRegistries();
+
     app()->instance(PluginDiscovery::class, new class implements PluginDiscovery
     {
         public function discover(): array
@@ -159,10 +163,18 @@ it('does not run any plugin lifecycle when discovery finds an invalid class', fu
 
     config(['platform.plugins' => []]);
 
-    expect(fn () => $this->bootPlatformWithIsolatedRegistries())
-        ->toThrow(InvalidArgumentException::class, 'Plugin class [Acme\\MissingPlugin] does not exist.');
+    (new PlatformServiceProvider(app()))->boot();
 
-    expect(ComposerDiscoveryFixturePlugin::$registerCalls)->toBe(0);
+    expect(ComposerDiscoveryFixturePlugin::$registerCalls)->toBe(1)
+        ->and(app(PluginLifecycleFailureRegistry::class)->failures())->toMatchArray([
+            [
+                'id' => null,
+                'version' => null,
+                'entry_class' => 'Acme\\MissingPlugin',
+                'phase' => 'resolve',
+                'exception' => InvalidArgumentException::class,
+            ],
+        ]);
 });
 
 it('loads discovered plugins in deterministic package order', function () {
