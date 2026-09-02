@@ -108,6 +108,68 @@ it('skips disabled Composer packages', function () {
     expect($plugins)->not->toContain(ComposerDiscoveryFixturePlugin::class);
 });
 
+it('ignores Composer metadata installed inside the runtime plugin store', function () {
+    $original = require base_path('vendor/composer/installed.php');
+    $originalDisabledPackages = config('platform.discovery.disabled_packages', []);
+    $originalRuntimePath = config('platform.runtime.path');
+    $runtimeRoot = sys_get_temp_dir().'/openkos-runtime-'.bin2hex(random_bytes(8));
+    $packagePath = $runtimeRoot.'/openkos/payment-xendit';
+
+    mkdir($packagePath, 0755, true);
+    file_put_contents($packagePath.'/composer.json', json_encode([
+        'name' => 'openkos/payment-xendit',
+        'extra' => [
+            'openkos' => ['plugin' => ComposerDiscoveryFixturePlugin::class],
+        ],
+    ], JSON_THROW_ON_ERROR));
+
+    try {
+        config([
+            'platform.runtime.path' => $runtimeRoot,
+            'platform.discovery.disabled_packages' => array_values(array_unique([
+                ...$originalDisabledPackages,
+                ...array_diff(InstalledVersions::getInstalledPackages(), ['openkos/payment-xendit']),
+            ])),
+        ]);
+        InstalledVersions::reload([
+            'root' => [
+                'name' => 'openkos/openkos',
+                'pretty_version' => 'dev-test',
+                'version' => 'dev-test',
+                'reference' => null,
+                'type' => 'project',
+                'install_path' => base_path(),
+                'aliases' => [],
+                'dev' => true,
+            ],
+            'versions' => [
+                'openkos/payment-xendit' => [
+                    'pretty_version' => '0.1.6',
+                    'version' => '0.1.6.0',
+                    'reference' => null,
+                    'type' => 'library',
+                    'install_path' => $packagePath,
+                    'aliases' => [],
+                    'dev_requirement' => false,
+                ],
+            ],
+        ]);
+
+        expect(app(ComposerPluginDiscovery::class)->discoverComposerOnly())
+            ->not->toContain(ComposerDiscoveryFixturePlugin::class);
+    } finally {
+        InstalledVersions::reload($original);
+        config([
+            'platform.runtime.path' => $originalRuntimePath,
+            'platform.discovery.disabled_packages' => $originalDisabledPackages,
+        ]);
+        unlink($packagePath.'/composer.json');
+        rmdir($packagePath);
+        rmdir(dirname($packagePath));
+        rmdir($runtimeRoot);
+    }
+});
+
 it('rejects malformed OpenKOS plugin metadata', function () {
     withComposerDiscoveryFixtures([
         'acme/malformed-plugin' => [
