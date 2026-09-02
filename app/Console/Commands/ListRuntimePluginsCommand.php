@@ -2,10 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Platform\RuntimePluginArtifactValidator;
-use App\Services\Platform\RuntimePluginStore;
+use App\Services\Platform\PluginManagementService;
 use Illuminate\Console\Command;
-use Throwable;
 
 final class ListRuntimePluginsCommand extends Command
 {
@@ -13,35 +11,28 @@ final class ListRuntimePluginsCommand extends Command
 
     protected $description = 'List installed runtime plugins and their state.';
 
-    public function handle(RuntimePluginStore $store, RuntimePluginArtifactValidator $validator): int
+    public function handle(PluginManagementService $management): int
     {
-        try {
-            $rows = $store->withLock(function (RuntimePluginStore $store) use ($validator): array {
-                $state = $store->readState();
-                $rows = [];
+        $catalog = $management->catalog();
 
-                foreach ($store->installedPackages() as $id => $path) {
-                    $enabled = $state[$id]['enabled'] ?? false;
-
-                    try {
-                        $metadata = $validator->validate($path, $id);
-                        $rows[] = [$id, $metadata['version'], $enabled ? 'Enabled' : 'Disabled'];
-                    } catch (Throwable $exception) {
-                        $rows[] = [$id, 'unknown', $enabled ? 'Invalid (enabled)' : 'Invalid (disabled)'];
-                        report($exception);
-                    }
-                }
-
-                foreach (array_diff_key($state, $store->installedPackages()) as $id => $entry) {
-                    $rows[] = [$id, 'missing', $entry['enabled'] ? 'Missing (enabled)' : 'Missing (disabled)'];
-                }
-
-                return $rows;
-            });
-        } catch (Throwable $exception) {
-            $this->error($exception->getMessage());
+        if ($catalog['error'] !== null) {
+            $this->error($catalog['error']);
 
             return self::FAILURE;
+        }
+
+        $rows = [];
+
+        foreach ($catalog['plugins'] as $plugin) {
+            if (($plugin['source'] ?? null) !== 'runtime') {
+                continue;
+            }
+
+            $rows[] = [
+                $plugin['managed_id'] ?? $plugin['id'],
+                $plugin['version'] ?? (($plugin['status'] ?? null) === 'missing_package' ? 'missing' : 'unknown'),
+                $this->stateLabel($plugin),
+            ];
         }
 
         if ($rows === []) {
@@ -53,5 +44,24 @@ final class ListRuntimePluginsCommand extends Command
         $this->table(['Plugin', 'Version', 'State'], $rows);
 
         return self::SUCCESS;
+    }
+
+    /** @param array<string, mixed> $plugin */
+    private function stateLabel(array $plugin): string
+    {
+        return match ($plugin['status'] ?? null) {
+            'enabled' => 'Enabled',
+            'disabled' => 'Disabled',
+            'conflict' => 'Conflict',
+            'incompatible' => 'Incompatible',
+            'broken' => ($plugin['enabled'] ?? false) ? 'Invalid (enabled)' : 'Invalid (disabled)',
+            'missing_package' => ($plugin['enabled'] ?? false) ? 'Missing (enabled)' : 'Missing (disabled)',
+            'orphaned_state' => 'Orphaned state',
+            'orphaned_runtime_artifact' => 'Orphaned artifact',
+            'pending_recovery' => 'Pending recovery',
+            'unrecoverable_recovery' => 'Unrecoverable recovery',
+            'load_failed' => 'Load failed',
+            default => ucfirst(str_replace('_', ' ', (string) ($plugin['status'] ?? 'Unknown'))),
+        };
     }
 }

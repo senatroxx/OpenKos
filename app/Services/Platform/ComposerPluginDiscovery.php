@@ -22,7 +22,14 @@ final class ComposerPluginDiscovery implements PluginDiscovery
             ...$composerPlugins,
         ]);
 
-        $duplicateClasses = array_intersect($composerPlugins, $runtimePlugins);
+        $composerClassNames = array_fill_keys(array_map(
+            fn (string $class): string => $this->canonicalClassName($class),
+            $composerPlugins,
+        ), true);
+        $duplicateClasses = array_values(array_filter(
+            $runtimePlugins,
+            fn (string $class): bool => isset($composerClassNames[$this->canonicalClassName($class)]),
+        ));
         if ($duplicateClasses !== []) {
             throw new InvalidArgumentException(
                 'Runtime plugin entry class conflicts with an existing plugin: '.implode(', ', $duplicateClasses),
@@ -38,6 +45,12 @@ final class ComposerPluginDiscovery implements PluginDiscovery
     public function discoverComposerOnly(): array
     {
         return $this->discoverComposerPlugins();
+    }
+
+    /** @return array{status: string, error: string}|null */
+    public function runtimeFailureFor(string $id): ?array
+    {
+        return $this->runtime->failureFor($id);
     }
 
     /**
@@ -116,5 +129,10 @@ final class ComposerPluginDiscovery implements PluginDiscovery
         }
 
         return $metadata;
+    }
+
+    private function canonicalClassName(string $class): string
+    {
+        return strtolower(ltrim(trim($class), '\\'));
     }
 }

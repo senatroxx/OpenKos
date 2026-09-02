@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Services\Platform\ComposerPluginDiscovery;
 use App\Services\Platform\RuntimePluginDiscovery;
 use App\Services\Platform\RuntimePluginStore;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -31,6 +32,8 @@ abstract class TestCase extends BaseTestCase
             PaymentRegistry::class,
             PermissionRegistry::class,
             OpenKOSManager::class,
+            PluginDiscovery::class,
+            ComposerPluginDiscovery::class,
             RuntimePluginDiscovery::class,
             RuntimePluginStore::class,
         ] as $singleton) {

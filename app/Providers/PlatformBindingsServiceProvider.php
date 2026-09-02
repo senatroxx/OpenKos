@@ -14,7 +14,8 @@ class PlatformBindingsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(PluginDiscovery::class, ComposerPluginDiscovery::class);
+        $this->app->singleton(ComposerPluginDiscovery::class);
+        $this->app->alias(ComposerPluginDiscovery::class, PluginDiscovery::class);
     }
 
     public function boot(): void

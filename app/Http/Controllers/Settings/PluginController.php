@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\InstallPluginRequest;
 use App\Services\Platform\PluginManagementService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -53,14 +54,34 @@ class PluginController extends Controller
         return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->enable($id), __('Plugin enabled. Restart required for changes to take effect.'));
     }
 
-    public function disable(string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
+    public function disable(Request $request, string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
     {
-        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->disable($id), __('Plugin disabled. Restart required for changes to take effect.'));
+        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->disable($id, $request->boolean('force')), __('Plugin disabled. Restart required for changes to take effect.'));
     }
 
-    public function destroy(string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
+    public function destroy(Request $request, string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
     {
-        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->remove($id), __('Plugin removed. Restart required for changes to take effect.'));
+        return $this->runLifecycle($plugins, $vendor.'/'.$package, fn (string $id): mixed => $plugins->remove($id, $request->boolean('force')), __('Plugin removed. Restart required for changes to take effect.'));
+    }
+
+    public function cleanup(Request $request, PluginManagementService $plugins): RedirectResponse
+    {
+        try {
+            $plugins->cleanupOrphanedMetadata(
+                $request->string('recovery_id')->trim()->toString() ?: null,
+                $request->string('cleanup_key')->trim()->toString() ?: null,
+            );
+        } catch (Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'plugin' => $plugins->userMessage($exception),
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Runtime plugin metadata cleaned.')]);
+
+        return to_route('settings.plugins.index');
     }
 
     /** @param callable(string): mixed $action */

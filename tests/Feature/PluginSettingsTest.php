@@ -217,6 +217,63 @@ it('rejects disabling or removing a runtime dependency of an enabled plugin', fu
         ->and(is_dir($this->runtimePluginPath.'/'.$dependency['id']))->toBeTrue();
 });
 
+it('allows explicit force recovery from an invalid dependency cycle', function (): void {
+    $first = makePluginSettingsArtifact([
+        'id' => 'settings/cycle-a',
+        'dependencies' => ['settings/cycle-b'],
+    ]);
+    $second = makePluginSettingsArtifact([
+        'id' => 'settings/cycle-b',
+        'dependencies' => [$first['id']],
+    ]);
+
+    foreach ([$first, $second] as $artifact) {
+        $path = $this->runtimePluginPath.'/'.$artifact['id'];
+        File::makeDirectory($path, 0750, true);
+        $zip = new ZipArchive;
+        $zip->open($artifact['zip']);
+        $zip->extractTo($path);
+        $zip->close();
+    }
+
+    app(RuntimePluginStore::class)->writeState([
+        $first['id'] => ['enabled' => true],
+        $second['id'] => ['enabled' => true],
+    ]);
+
+    $this->artisan('plugin:list')
+        ->assertSuccessful()
+        ->expectsOutputToContain('Invalid (enabled)');
+
+    $owner = User::factory()->owner()->create();
+    [$vendor, $package] = explode('/', $first['id']);
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.disable', ['vendor' => $vendor, 'package' => $package]))
+        ->assertSessionHasErrors('plugin');
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.disable', ['vendor' => $vendor, 'package' => $package]), ['force' => true])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(app(RuntimePluginStore::class)->readState())
+        ->toMatchArray([$first['id'] => ['enabled' => false]]);
+});
+
+it('does not let an unrelated broken runtime plugin block a candidate', function (): void {
+    $broken = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($broken['zip']);
+    File::delete($this->runtimePluginPath.'/'.$broken['id'].'/manifest.json');
+
+    $candidate = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($candidate['zip']);
+    app(PluginInstaller::class)->disable($candidate['id']);
+    app(PluginInstaller::class)->enable($candidate['id']);
+
+    expect(is_dir($this->runtimePluginPath.'/'.$candidate['id']))->toBeTrue()
+        ->and(app(RuntimePluginStore::class)->readState()[$candidate['id']]['enabled'])->toBeTrue();
+});
+
 it('marks enabled runtime dependency cycles as unavailable', function (): void {
     $report = app(RuntimePluginGraphValidator::class)->validate([
         'settings/cycle-a' => [
@@ -269,6 +326,32 @@ it('marks duplicate runtime entry classes as conflicts', function (): void {
                 'error' => 'Runtime plugin [settings/duplicate-b] conflicts with another runtime plugin entry class [SettingsRuntime\\DuplicatePlugin].',
             ],
         ]);
+});
+
+it('treats runtime entry class names as case-insensitive', function (): void {
+    $report = app(RuntimePluginGraphValidator::class)->validate([
+        'settings/case-a' => [
+            'metadata' => [
+                'id' => 'settings/case-a',
+                'entry_class' => 'SettingsRuntime\\CasePlugin',
+                'core_version' => '*',
+                'dependencies' => [],
+            ],
+            'enabled' => true,
+        ],
+        'settings/case-b' => [
+            'metadata' => [
+                'id' => 'settings/case-b',
+                'entry_class' => 'settingsruntime\\caseplugin',
+                'core_version' => '*',
+                'dependencies' => [],
+            ],
+            'enabled' => true,
+        ],
+    ], []);
+
+    expect($report['loadable'])->toBe([])
+        ->and($report['issues'])->toHaveKeys(['settings/case-a', 'settings/case-b']);
 });
 
 it('keeps the plugins page available when a runtime dependency is missing or disabled', function (): void {
@@ -366,11 +449,371 @@ it('uses the managed package identity to recover a mismatched manifest', functio
     expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
 });
 
+it('keeps a runtime package removable when state metadata is corrupt', function (): void {
+    $artifact = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($artifact['zip']);
+    file_put_contents($this->runtimePluginPath.'/state.json', '{broken');
+    $owner = User::factory()->owner()->create();
+    [$vendor, $package] = explode('/', $artifact['id']);
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
+        'status' => 'broken',
+        'can_enable' => false,
+        'can_disable' => false,
+        'can_remove' => false,
+        'can_force_recovery' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]), ['force' => true])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/state.json'))->toBeFalse();
+});
+
+it('surfaces and cleans orphaned runtime state without a package row', function (): void {
+    File::makeDirectory($this->runtimePluginPath, 0750, true);
+    file_put_contents($this->runtimePluginPath.'/state.json', '{broken');
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('status', 'orphaned_state'))->toMatchArray([
+        'managed_id' => null,
+        'can_cleanup' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'))
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/state.json'))->toBeFalse();
+});
+
+it('surfaces and cleans unrecoverable runtime recovery without a package row', function (): void {
+    File::makeDirectory($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'settings/missing-backup',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('status', 'unrecoverable_recovery'))->toMatchArray([
+        'managed_id' => 'settings/missing-backup',
+        'can_cleanup' => true,
+        'cleanup_key' => 'recovery:settings/missing-backup',
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'recovery:settings/missing-backup',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
+});
+
+it('offers cleanup for pending recovery without a package row', function (): void {
+    File::makeDirectory($this->runtimePluginPath.'/.backup', 0750, true);
+    File::makeDirectory($this->runtimePluginPath.'/.backup/settings-pending', 0750, true);
+    File::makeDirectory($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'settings/pending-recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/settings-pending',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', 'settings/pending-recovery'))->toMatchArray([
+        'status' => 'pending_recovery',
+        'can_cleanup' => true,
+        'cleanup_key' => 'recovery:settings/pending-recovery',
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'recovery:settings/pending-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.backup'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse();
+});
+
+it('rejects a recovery cleanup key without a package identity', function (): void {
+    expect(fn () => app(PluginInstaller::class)->cleanupOrphanedMetadata(null, 'recovery:'))
+        ->toThrow(RuntimeException::class, 'recovery identity is missing');
+});
+
+it('cleans an orphaned recovery marker by identity without touching another package', function (): void {
+    $other = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($other['zip']);
+    File::makeDirectory($this->runtimePluginPath.'/.staging/incoming', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', json_encode([
+        'operation' => 'swap',
+        'id' => 'settings/missing-recovery',
+        'staging' => '.staging/incoming',
+        'backup' => '.backup/missing',
+        'had_active' => true,
+        'phase' => 'old_preserved',
+    ], JSON_THROW_ON_ERROR));
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', 'settings/missing-recovery'))->toMatchArray([
+        'status' => 'unrecoverable_recovery',
+        'can_cleanup' => true,
+    ]);
+    expect(collect($plugins)->firstWhere('managed_id', $other['id']))->toMatchArray([
+        'can_remove' => true,
+        'can_force_recovery' => false,
+    ]);
+
+    [$otherVendor, $otherPackage] = explode('/', $other['id']);
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.disable', ['vendor' => $otherVendor, 'package' => $otherPackage]))
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(app(RuntimePluginStore::class)->readState()[$other['id']]['enabled'])->toBeFalse();
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'recovery:settings/missing-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_dir($this->runtimePluginPath.'/'.$other['id']))->toBeTrue()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/.staging/incoming'))->toBeFalse();
+});
+
+it('surfaces unknown recovery metadata independently from installed packages', function (): void {
+    $first = makePluginSettingsArtifact();
+    $second = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($first['zip']);
+    app(PluginInstaller::class)->install($second['zip']);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', '{broken');
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('cleanup_key', 'orphaned-recovery'))->toMatchArray([
+        'status' => 'unrecoverable_recovery',
+        'managed_id' => null,
+        'can_cleanup' => true,
+    ])
+        ->and(collect($plugins)->firstWhere('managed_id', $first['id']))->toMatchArray([
+            'can_remove' => true,
+            'can_force_recovery' => false,
+        ])
+        ->and(collect($plugins)->firstWhere('managed_id', $second['id']))->toMatchArray([
+            'can_remove' => true,
+            'can_force_recovery' => false,
+        ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'orphaned-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse()
+        ->and(is_dir($this->runtimePluginPath.'/'.$first['id']))->toBeTrue()
+        ->and(is_dir($this->runtimePluginPath.'/'.$second['id']))->toBeTrue();
+});
+
+it('surfaces and cleans stale runtime artifacts without touching a package', function (): void {
+    $artifact = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($artifact['zip']);
+    File::makeDirectory($this->runtimePluginPath.'/.staging/stale', 0750, true);
+    file_put_contents($this->runtimePluginPath.'/.state-stale.tmp', 'stale');
+    $owner = User::factory()->owner()->create();
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('status', 'orphaned_runtime_artifact'))->toMatchArray([
+        'managed_id' => null,
+        'can_cleanup' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'orphaned-artifacts',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeTrue()
+        ->and(is_dir($this->runtimePluginPath.'/.staging'))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/.state-stale.tmp'))->toBeFalse();
+});
+
+it('surfaces and removes a symlinked runtime package without following it', function (): void {
+    $outside = sys_get_temp_dir().'/openkos-settings-outside-'.bin2hex(random_bytes(8));
+    File::makeDirectory($outside, 0750, true);
+    File::makeDirectory($this->runtimePluginPath.'/settings', 0750, true);
+    symlink($outside, $this->runtimePluginPath.'/settings/runtime');
+    $owner = User::factory()->owner()->create();
+
+    try {
+        $plugins = $this->actingAs($owner)
+            ->get(route('settings.plugins.index'))
+            ->assertSuccessful()
+            ->inertiaProps('plugins');
+
+        expect(collect($plugins)->firstWhere('managed_id', 'settings/runtime'))->toMatchArray([
+            'status' => 'broken',
+            'can_cleanup' => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->delete(route('settings.plugins.recovery.cleanup'), [
+                'cleanup_key' => 'package:settings/runtime',
+            ])
+            ->assertRedirect(route('settings.plugins.index'));
+
+        expect(is_link($this->runtimePluginPath.'/settings/runtime'))->toBeFalse()
+            ->and(is_dir($outside))->toBeTrue();
+    } finally {
+        File::deleteDirectory($outside);
+        File::delete($this->runtimePluginPath.'/settings/runtime');
+    }
+});
+
+it('surfaces and removes a symlinked runtime vendor without following it', function (): void {
+    $outside = sys_get_temp_dir().'/openkos-settings-vendor-'.bin2hex(random_bytes(8));
+    File::makeDirectory($outside, 0750, true);
+    File::makeDirectory($this->runtimePluginPath, 0750, true);
+    symlink($outside, $this->runtimePluginPath.'/settings');
+    app(RuntimePluginStore::class)->writeState(['settings/runtime' => ['enabled' => true]]);
+    $owner = User::factory()->owner()->create();
+
+    try {
+        $plugins = $this->actingAs($owner)
+            ->get(route('settings.plugins.index'))
+            ->assertSuccessful()
+            ->inertiaProps('plugins');
+
+        expect(collect($plugins)->firstWhere('cleanup_key', 'vendor:settings'))->toMatchArray([
+            'status' => 'broken',
+            'can_cleanup' => true,
+        ])
+            ->and(collect($plugins)->firstWhere('managed_id', 'settings/runtime'))->toMatchArray([
+                'status' => 'missing_package',
+                'can_remove' => false,
+                'can_force_recovery' => false,
+            ]);
+
+        $this->actingAs($owner)
+            ->delete(route('settings.plugins.recovery.cleanup'), [
+                'cleanup_key' => 'vendor:settings',
+            ])
+            ->assertRedirect(route('settings.plugins.index'));
+
+        expect(is_link($this->runtimePluginPath.'/settings'))->toBeFalse()
+            ->and(is_dir($outside))->toBeTrue();
+    } finally {
+        File::deleteDirectory($outside);
+        File::delete($this->runtimePluginPath.'/settings');
+    }
+});
+
+it('keeps a runtime package removable when recovery metadata is corrupt', function (): void {
+    $artifact = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($artifact['zip']);
+    file_put_contents($this->runtimePluginPath.'/recovery.json', '{broken');
+    $owner = User::factory()->owner()->create();
+    [$vendor, $package] = explode('/', $artifact['id']);
+
+    $plugins = $this->actingAs($owner)
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful()
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
+        'status' => 'enabled',
+        'can_disable' => true,
+        'can_remove' => true,
+        'can_force_recovery' => false,
+    ]);
+
+    expect(collect($plugins)->firstWhere('cleanup_key', 'orphaned-recovery'))->toMatchArray([
+        'can_cleanup' => true,
+    ]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.recovery.cleanup'), [
+            'cleanup_key' => 'orphaned-recovery',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    $this->actingAs($owner)
+        ->delete(route('settings.plugins.destroy', ['vendor' => $vendor, 'package' => $package]))
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse()
+        ->and(is_file($this->runtimePluginPath.'/recovery.json'))->toBeFalse();
+});
+
+it('does not offer disable for a package missing from the managed directory', function (): void {
+    $artifact = makePluginSettingsArtifact();
+    app(PluginInstaller::class)->install($artifact['zip']);
+    File::deleteDirectory($this->runtimePluginPath.'/'.$artifact['id']);
+
+    $plugins = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.index'))
+        ->inertiaProps('plugins');
+
+    expect(collect($plugins)->firstWhere('managed_id', $artifact['id']))->toMatchArray([
+        'status' => 'missing_package',
+        'can_disable' => false,
+        'can_remove' => true,
+    ]);
+});
+
 /** @return array{zip: string, id: string, class: string} */
 function makePluginSettingsArtifact(array $overrides = []): array
 {
     $suffix = (string) random_int(100000, 999999);
-    $id = "settings/runtime-{$suffix}";
+    $id = $overrides['id'] ?? "settings/runtime-{$suffix}";
     $classShort = "Runtime{$suffix}Plugin";
     $entryClass = "SettingsRuntime\\{$classShort}";
     $manifest = [

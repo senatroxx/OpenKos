@@ -28,6 +28,11 @@ final class RuntimePluginGraphValidator
         [$hostIds] = $this->hostIdentity($hostClasses);
         $issues = [];
         $entryClasses = [];
+        $hostEntryClasses = array_fill_keys(array_map(
+            fn (string $class): string => $this->canonicalClassName($class),
+            array_values(array_filter($hostClasses, 'is_string')),
+        ), true);
+        $entryClassNames = [];
 
         foreach ($plugins as $id => $plugin) {
             if (isset($plugin['status'], $plugin['error'])) {
@@ -48,12 +53,14 @@ final class RuntimePluginGraphValidator
             }
 
             if (is_string($metadata['entry_class'] ?? null)) {
-                $entryClasses[$metadata['entry_class']][] = $id;
+                $canonicalEntryClass = $this->canonicalClassName($metadata['entry_class']);
+                $entryClasses[$canonicalEntryClass][] = $id;
+                $entryClassNames[$canonicalEntryClass] = $metadata['entry_class'];
             }
 
             if (
                 isset($hostIds[$id])
-                || in_array($metadata['entry_class'] ?? null, $hostClasses, true)
+                || isset($hostEntryClasses[$this->canonicalClassName((string) ($metadata['entry_class'] ?? ''))])
             ) {
                 $this->addIssue($issues, $id, 'conflict', "Runtime plugin [{$id}] conflicts with a Composer or explicit plugin.");
 
@@ -92,7 +99,7 @@ final class RuntimePluginGraphValidator
                     $issues,
                     $id,
                     'conflict',
-                    "Runtime plugin [{$id}] conflicts with another runtime plugin entry class [{$entryClass}].",
+                    "Runtime plugin [{$id}] conflicts with another runtime plugin entry class [{$entryClassNames[$entryClass]}].",
                 );
             }
         }
@@ -176,42 +183,18 @@ final class RuntimePluginGraphValidator
      */
     public function validateCandidate(array $metadata, bool $enabled, RuntimePluginStore $store, array $hostClasses): void
     {
-        $state = $store->readState();
-        $plugins = [];
-
-        foreach ($store->installedPackages() as $id => $path) {
-            if ($id === $metadata['id']) {
-                continue;
-            }
-
-            $packageEnabled = $state[$id]['enabled'] ?? false;
-
-            try {
-                $plugins[$id] = [
-                    'metadata' => $this->validator->validateInFreshProcess($path, $id),
-                    'enabled' => $packageEnabled,
-                ];
-            } catch (Throwable $exception) {
-                $plugins[$id] = [
-                    'metadata' => null,
-                    'enabled' => $packageEnabled,
-                    'status' => $this->validationStatus($exception),
-                    'error' => $this->validationError($exception),
-                ];
-            }
-        }
+        $plugins = $this->installedPlugins($store, $metadata['id']);
 
         $plugins[$metadata['id']] = [
             'metadata' => $metadata,
             'enabled' => $enabled,
         ];
 
+        [$hostIds] = $this->hostIdentity($hostClasses);
         $result = $this->validate($plugins, $hostClasses);
-        $idsToCheck = array_keys(array_filter(
-            $plugins,
-            fn (array $plugin, string $id): bool => $id === $metadata['id'] || $plugin['enabled'],
-            ARRAY_FILTER_USE_BOTH,
-        ));
+        $idsToCheck = $enabled
+            ? $this->dependencyClosure($metadata['id'], $plugins, $hostIds)
+            : [$metadata['id']];
 
         foreach ($idsToCheck as $id) {
             if (isset($result['issues'][$id])) {
@@ -228,9 +211,41 @@ final class RuntimePluginGraphValidator
 
     /**
      * @param  array<int, string>  $hostClasses
+     */
+    public function canForceRecover(string $id, RuntimePluginStore $store, array $hostClasses): bool
+    {
+        $plugins = $this->installedPlugins($store);
+        $result = $this->validate($plugins, $hostClasses);
+
+        if (isset($result['issues'][$id])) {
+            return true;
+        }
+
+        $dependants = $this->dependantsFromPlugins($id, $plugins, $hostClasses);
+
+        return $dependants !== [] && ! array_diff($dependants, array_keys($result['issues']));
+    }
+
+    /**
+     * @param  array<int, string>  $hostClasses
      * @return array<int, string>
      */
     public function enabledDependants(string $id, RuntimePluginStore $store, array $hostClasses): array
+    {
+        return $this->dependantsFromPlugins($id, $this->installedPlugins($store), $hostClasses);
+    }
+
+    /**
+     * @param  array<string, array{
+     *     metadata: array<string, mixed>|null,
+     *     enabled: bool,
+     *     status?: string,
+     *     error?: string
+     * }>  $plugins
+     * @param  array<int, string>  $hostClasses
+     * @return array<int, string>
+     */
+    private function dependantsFromPlugins(string $id, array $plugins, array $hostClasses): array
     {
         [$hostIds, $validHostClasses] = $this->hostIdentity($hostClasses);
 
@@ -238,21 +253,14 @@ final class RuntimePluginGraphValidator
             return [];
         }
 
-        $state = $store->readState();
         $dependants = [];
 
-        foreach ($store->installedPackages() as $packageId => $path) {
-            if ($packageId === $id || ! ($state[$packageId]['enabled'] ?? false)) {
+        foreach ($plugins as $packageId => $plugin) {
+            if ($packageId === $id || ! $plugin['enabled'] || ! is_array($plugin['metadata'])) {
                 continue;
             }
 
-            try {
-                $metadata = $this->validator->validateInFreshProcess($path, $packageId);
-            } catch (Throwable) {
-                continue;
-            }
-
-            if (in_array($id, $metadata['dependencies'], true)) {
+            if (in_array($id, $plugin['metadata']['dependencies'], true)) {
                 $dependants[] = $packageId;
             }
         }
@@ -266,6 +274,83 @@ final class RuntimePluginGraphValidator
         sort($dependants, SORT_STRING);
 
         return array_values(array_unique($dependants));
+    }
+
+    /**
+     * @param  array<string, array{
+     *     metadata: array<string, mixed>|null,
+     *     enabled: bool,
+     *     status?: string,
+     *     error?: string
+     * }>  $plugins
+     * @param  array<string, bool>  $hostIds
+     * @return array<int, string>
+     */
+    private function dependencyClosure(string $id, array $plugins, array $hostIds): array
+    {
+        $closure = [];
+        $pending = [$id];
+
+        while ($pending !== []) {
+            $current = array_pop($pending);
+
+            if (! is_string($current) || isset($closure[$current])) {
+                continue;
+            }
+
+            $closure[$current] = true;
+            $metadata = $plugins[$current]['metadata'] ?? null;
+
+            if (! is_array($metadata)) {
+                continue;
+            }
+
+            foreach ($metadata['dependencies'] ?? [] as $dependency) {
+                if (! isset($hostIds[$dependency]) && isset($plugins[$dependency])) {
+                    $pending[] = $dependency;
+                }
+            }
+        }
+
+        return array_keys($closure);
+    }
+
+    /**
+     * @return array<string, array{
+     *     metadata: array<string, mixed>|null,
+     *     enabled: bool,
+     *     status?: string,
+     *     error?: string
+     * }>
+     */
+    private function installedPlugins(RuntimePluginStore $store, ?string $exceptId = null): array
+    {
+        $state = $store->readState();
+        $plugins = [];
+
+        foreach ($store->installedPackages() as $id => $path) {
+            if ($id === $exceptId) {
+                continue;
+            }
+
+            $enabled = $state[$id]['enabled'] ?? false;
+
+            try {
+                $plugins[$id] = [
+                    'metadata' => $this->validator->inspectStaticMetadata($path, $id),
+                    'enabled' => $enabled,
+                ];
+            } catch (Throwable $exception) {
+                $plugins[$id] = [
+                    'metadata' => null,
+                    'enabled' => $enabled,
+                    'status' => $this->validationStatus($exception),
+                    'error' => $this->validationError($exception),
+                ];
+            }
+        }
+
+        return $plugins;
     }
 
     /**
@@ -348,6 +433,11 @@ final class RuntimePluginGraphValidator
         }
 
         return [$ids, $validClasses];
+    }
+
+    private function canonicalClassName(string $class): string
+    {
+        return strtolower(ltrim(trim($class), '\\'));
     }
 
     /**

@@ -3317,16 +3317,16 @@
         },
         {
             "name": "openkos/platform",
-            "version": "0.2.3",
+            "version": "0.2.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/senatroxx/openkos-platform.git",
-                "reference": "e205d385b086a29db98441e961c271b54cd891fe"
+                "reference": "b7862bffe119a9d1cf85488a7f588b785cd59761"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/senatroxx/openkos-platform/zipball/e205d385b086a29db98441e961c271b54cd891fe",
-                "reference": "e205d385b086a29db98441e961c271b54cd891fe",
+                "url": "https://api.github.com/repos/senatroxx/openkos-platform/zipball/b7862bffe119a9d1cf85488a7f588b785cd59761",
+                "reference": "b7862bffe119a9d1cf85488a7f588b785cd59761",
                 "shasum": ""
             },
             "require": {
@@ -3357,16 +3357,28 @@
                     "OpenKOS\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "pest --compact"
+                ],
+                "lint": [
+                    "pint"
+                ]
+            },
             "license": [
                 "Apache-2.0"
             ],
             "description": "The OpenKOS platform and plugin SDK.",
             "support": {
                 "issues": "https://github.com/senatroxx/openkos-platform/issues",
-                "source": "https://github.com/senatroxx/openkos-platform/tree/v0.2.3"
+                "source": "https://github.com/senatroxx/openkos-platform/tree/v0.2.5"
             },
-            "time": "2026-08-24T04:26:34+00:00"
+            "time": "2026-09-01T14:29:41+07:00"
         },
         {
             "name": "paragonie/constant_time_encoding",

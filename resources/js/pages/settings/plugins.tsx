@@ -30,12 +30,18 @@ import {
     index,
     install,
 } from '@/routes/settings/plugins';
+import { cleanup as cleanupRecovery } from '@/routes/settings/plugins/recovery';
 import type { PlatformPlugin } from '@/types/platform';
 
 type Props = {
     plugins: PlatformPlugin[];
     error: string | null;
     max_upload_bytes: number;
+};
+
+type RemoveConfirmation = {
+    plugin: PlatformPlugin;
+    force: boolean;
 };
 
 const statusVariants: Record<
@@ -48,7 +54,12 @@ const statusVariants: Record<
     incompatible: 'destructive',
     broken: 'destructive',
     conflict: 'destructive',
-    missing: 'destructive',
+    missing_package: 'destructive',
+    pending_recovery: 'outline',
+    unrecoverable_recovery: 'destructive',
+    load_failed: 'destructive',
+    orphaned_state: 'destructive',
+    orphaned_runtime_artifact: 'outline',
 };
 
 function formatBytes(bytes: number): string {
@@ -69,8 +80,17 @@ function statusLabel(status: PlatformPlugin['status']): string {
         incompatible: t('Incompatible'),
         broken: t('Broken'),
         conflict: t('Conflict'),
-        missing: t('Missing'),
+        missing_package: t('Missing package'),
+        pending_recovery: t('Pending recovery'),
+        unrecoverable_recovery: t('Unrecoverable recovery'),
+        load_failed: t('Load failed'),
+        orphaned_state: t('Orphaned state'),
+        orphaned_runtime_artifact: t('Orphaned runtime artifact'),
     }[status];
+}
+
+function pluginKey(plugin: PlatformPlugin): string {
+    return plugin.managed_id ?? plugin.id;
 }
 
 export default function Plugins({
@@ -81,7 +101,7 @@ export default function Plugins({
     const fileInput = useRef<HTMLInputElement>(null);
     const [uploadConfirmationOpen, setUploadConfirmationOpen] = useState(false);
     const [removeConfirmation, setRemoveConfirmation] =
-        useState<PlatformPlugin | null>(null);
+        useState<RemoveConfirmation | null>(null);
     const [processingPlugin, setProcessingPlugin] = useState<string | null>(
         null,
     );
@@ -111,21 +131,25 @@ export default function Plugins({
         });
     }
 
-    function runAction(plugin: PlatformPlugin, action: 'enable' | 'disable') {
+    function runAction(
+        plugin: PlatformPlugin,
+        action: 'enable' | 'disable',
+        force = false,
+    ) {
+        if (plugin.managed_id === null) {
+            return;
+        }
+
         const parts = routeParts(plugin.managed_id);
         const route = action === 'enable' ? enable(parts) : disable(parts);
 
         setActionError(null);
-        setProcessingPlugin(plugin.managed_id);
-        router.post(
-            route.url,
-            {},
-            {
-                preserveScroll: true,
-                onError: (errors) => setActionError(errors.plugin ?? null),
-                onFinish: () => setProcessingPlugin(null),
-            },
-        );
+        setProcessingPlugin(pluginKey(plugin));
+        router.post(route.url, force ? { force: true } : {}, {
+            preserveScroll: true,
+            onError: (errors) => setActionError(errors.plugin ?? null),
+            onFinish: () => setProcessingPlugin(null),
+        });
     }
 
     function confirmRemove() {
@@ -133,11 +157,35 @@ export default function Plugins({
             return;
         }
 
-        const plugin = removeConfirmation;
+        const { plugin, force } = removeConfirmation;
+
+        if (plugin.managed_id === null) {
+            return;
+        }
+
         setRemoveConfirmation(null);
         setActionError(null);
-        setProcessingPlugin(plugin.managed_id);
+        setProcessingPlugin(pluginKey(plugin));
         router.delete(destroy(routeParts(plugin.managed_id)).url, {
+            data: force ? { force: true } : {},
+            preserveScroll: true,
+            onError: (errors) => setActionError(errors.plugin ?? null),
+            onFinish: () => setProcessingPlugin(null),
+        });
+    }
+
+    function cleanupMetadata(plugin: PlatformPlugin) {
+        const key = pluginKey(plugin);
+        const data = plugin.cleanup_key
+            ? { cleanup_key: plugin.cleanup_key }
+            : plugin.managed_id
+              ? { recovery_id: plugin.managed_id }
+              : {};
+
+        setActionError(null);
+        setProcessingPlugin(key);
+        router.delete(cleanupRecovery().url, {
+            data,
             preserveScroll: true,
             onError: (errors) => setActionError(errors.plugin ?? null),
             onFinish: () => setProcessingPlugin(null),
@@ -249,13 +297,13 @@ export default function Plugins({
                 ) : (
                     <div className="grid gap-4 lg:grid-cols-2">
                         {plugins.map((plugin) => (
-                            <Card key={`${plugin.source}:${plugin.managed_id}`}>
+                            <Card key={`${plugin.source}:${pluginKey(plugin)}`}>
                                 <CardHeader>
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div>
                                             <CardTitle>{plugin.name}</CardTitle>
                                             <CardDescription className="mt-1 font-mono">
-                                                {plugin.managed_id}
+                                                {plugin.managed_id ?? plugin.id}
                                             </CardDescription>
                                         </div>
                                         <Badge
@@ -356,9 +404,39 @@ export default function Plugins({
                                         </Alert>
                                     )}
 
+                                    {plugin.can_force_recovery && (
+                                        <Alert variant="destructive">
+                                            <AlertDescription>
+                                                {t(
+                                                    'Recovery actions are available because this runtime package or its dependency graph is invalid. They may leave dependent plugins unavailable.',
+                                                )}
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+
+                                    {plugin.can_cleanup && (
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="destructive"
+                                                disabled={
+                                                    processingPlugin ===
+                                                    pluginKey(plugin)
+                                                }
+                                                onClick={() =>
+                                                    cleanupMetadata(plugin)
+                                                }
+                                            >
+                                                {t('Clean up metadata')}
+                                            </Button>
+                                        </div>
+                                    )}
+
                                     {(plugin.can_enable ||
                                         plugin.can_disable ||
-                                        plugin.can_remove) && (
+                                        plugin.can_remove ||
+                                        plugin.can_force_recovery) && (
                                         <div className="flex flex-wrap gap-2">
                                             {plugin.can_enable && (
                                                 <Button
@@ -366,7 +444,7 @@ export default function Plugins({
                                                     size="sm"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.managed_id
+                                                        pluginKey(plugin)
                                                     }
                                                     onClick={() =>
                                                         runAction(
@@ -385,7 +463,7 @@ export default function Plugins({
                                                     variant="outline"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.managed_id
+                                                        pluginKey(plugin)
                                                     }
                                                     onClick={() =>
                                                         runAction(
@@ -397,6 +475,26 @@ export default function Plugins({
                                                     {t('Disable')}
                                                 </Button>
                                             )}
+                                            {plugin.can_force_recovery && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    disabled={
+                                                        processingPlugin ===
+                                                        pluginKey(plugin)
+                                                    }
+                                                    onClick={() =>
+                                                        runAction(
+                                                            plugin,
+                                                            'disable',
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    {t('Force disable')}
+                                                </Button>
+                                            )}
                                             {plugin.can_remove && (
                                                 <Button
                                                     type="button"
@@ -404,15 +502,35 @@ export default function Plugins({
                                                     variant="destructive"
                                                     disabled={
                                                         processingPlugin ===
-                                                        plugin.managed_id
+                                                        pluginKey(plugin)
                                                     }
                                                     onClick={() =>
-                                                        setRemoveConfirmation(
+                                                        setRemoveConfirmation({
                                                             plugin,
-                                                        )
+                                                            force: false,
+                                                        })
                                                     }
                                                 >
                                                     {t('Remove')}
+                                                </Button>
+                                            )}
+                                            {plugin.can_force_recovery && (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    disabled={
+                                                        processingPlugin ===
+                                                        pluginKey(plugin)
+                                                    }
+                                                    onClick={() =>
+                                                        setRemoveConfirmation({
+                                                            plugin,
+                                                            force: true,
+                                                        })
+                                                    }
+                                                >
+                                                    {t('Force remove')}
                                                 </Button>
                                             )}
                                         </div>
@@ -458,11 +576,19 @@ export default function Plugins({
             >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>{t('Remove runtime plugin?')}</DialogTitle>
+                        <DialogTitle>
+                            {removeConfirmation?.force
+                                ? t('Force remove runtime plugin?')
+                                : t('Remove runtime plugin?')}
+                        </DialogTitle>
                         <DialogDescription>
-                            {t(
-                                'This removes only the runtime package and its activation state. Plugin-owned database data will not be deleted. A restart is required for changes to take effect.',
-                            )}
+                            {removeConfirmation?.force
+                                ? t(
+                                      'This recovery action removes the managed package directory even when lifecycle metadata is corrupt. Plugin-owned database data will not be deleted. A restart is required for changes to take effect.',
+                                  )
+                                : t(
+                                      'This removes only the runtime package and its activation state. Plugin-owned database data will not be deleted. A restart is required for changes to take effect.',
+                                  )}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -476,7 +602,9 @@ export default function Plugins({
                             variant="destructive"
                             onClick={confirmRemove}
                         >
-                            {t('Remove plugin')}
+                            {removeConfirmation?.force
+                                ? t('Force remove plugin')
+                                : t('Remove plugin')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

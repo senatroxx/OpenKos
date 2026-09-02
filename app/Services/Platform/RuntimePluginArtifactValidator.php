@@ -111,6 +111,57 @@ final class RuntimePluginArtifactValidator
     }
 
     /**
+     * Read manifest metadata without loading the runtime package.
+     *
+     * @return array{
+     *     id: string,
+     *     name: string,
+     *     version: string,
+     *     description: string,
+     *     entry_class: class-string<Plugin>,
+     *     core_version: string,
+     *     php: string,
+     *     dependencies: array<int, string>
+     * }
+     */
+    public function inspectStaticMetadata(string $directory, ?string $expectedId = null): array
+    {
+        if (! is_dir($directory) || is_link($directory)) {
+            throw new InvalidArgumentException('Runtime plugin artifact directory is missing or unsafe.');
+        }
+
+        $this->validateTree($directory);
+        $metadata = $this->validateManifest($this->readJsonFile($directory.'/manifest.json', 'manifest.json'));
+
+        if ($expectedId !== null && $metadata['id'] !== $expectedId) {
+            throw new InvalidArgumentException(
+                "Runtime plugin manifest ID [{$metadata['id']}] does not match installed package [{$expectedId}].",
+            );
+        }
+
+        $composer = $this->readJsonFile($directory.'/composer.json', 'composer.json');
+        $lock = $this->readJsonFile($directory.'/composer.lock', 'composer.lock');
+
+        if (! is_array($lock['packages'] ?? null)) {
+            throw new InvalidArgumentException('Runtime plugin composer.lock must contain packages.');
+        }
+
+        if (($composer['name'] ?? null) !== $metadata['id']) {
+            throw new InvalidArgumentException('Runtime plugin composer name must match manifest ID.');
+        }
+
+        if (data_get($composer, 'extra.openkos.plugin') !== $metadata['entry_class']) {
+            throw new InvalidArgumentException('Runtime plugin Composer metadata must match manifest entry class.');
+        }
+
+        if (! is_file($directory.'/vendor/autoload.php') || is_link($directory.'/vendor/autoload.php')) {
+            throw new InvalidArgumentException('Runtime plugin artifact must include vendor/autoload.php.');
+        }
+
+        return $metadata;
+    }
+
+    /**
      * @return array{
      *     id: string,
      *     name: string,
@@ -198,6 +249,10 @@ final class RuntimePluginArtifactValidator
             if (! is_string($manifest[$key]) || trim($manifest[$key]) === '') {
                 throw new InvalidArgumentException("Runtime plugin manifest field [{$key}] must be a non-empty string.");
             }
+        }
+
+        if (preg_match('/^(?:[A-Za-z_][A-Za-z0-9_]*\\\\)*[A-Za-z_][A-Za-z0-9_]*$/', $manifest['entry_class']) !== 1) {
+            throw new InvalidArgumentException('Runtime plugin manifest entry_class must be a valid PHP class name.');
         }
 
         if (! preg_match('/^[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$/', $manifest['id'])) {
@@ -434,6 +489,10 @@ final class RuntimePluginArtifactValidator
 
             if ($file->isLink() || is_link($path)) {
                 throw new InvalidArgumentException("Runtime plugin artifact contains symlink [{$relative}].");
+            }
+
+            if (! $file->isDir() && ! $file->isFile()) {
+                throw new InvalidArgumentException("Runtime plugin artifact contains unsafe filesystem node [{$relative}].");
             }
 
             $entryCount++;
