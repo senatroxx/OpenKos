@@ -392,6 +392,32 @@ it('validates bundled dependency versions and rejects bundled host packages', fu
         ->expectsOutputToContain('must not bundle host package [laravel/framework]');
 });
 
+it('accepts Composer virtual packages and resolves host-provided Illuminate versions', function (): void {
+    $artifact = makeRuntimePluginArtifact(
+        additionalRequirements: ['illuminate/support' => '^13.0'],
+        additionalInstalledMetadata: [
+            'illuminate/support' => [
+                'dev_requirement' => false,
+                'replaced' => ['v13.25.0'],
+            ],
+        ],
+    );
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+});
+
+it('rejects malformed concrete Composer vendor metadata', function (): void {
+    $artifact = makeRuntimePluginArtifact(
+        additionalInstalledMetadata: [
+            'acme/concrete' => ['dev_requirement' => false],
+        ],
+    );
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('Runtime plugin vendor package metadata is malformed.');
+});
+
 it('reports an enabled package with a malformed manifest without booting it', function (): void {
     $artifact = makeRuntimePluginArtifact();
 
@@ -592,6 +618,7 @@ it('surfaces corrupted runtime state instead of treating it as disabled', functi
  * @param  array<string, mixed>  $overrides
  * @param  array<string, string>  $bundledPackages
  * @param  array<string, string>  $additionalRequirements
+ * @param  array<string, array<string, mixed>>  $additionalInstalledMetadata
  * @return array{zip: string, id: string, class: string}
  */
 function makeRuntimePluginArtifact(
@@ -600,6 +627,7 @@ function makeRuntimePluginArtifact(
     ?string $classShort = null,
     array $bundledPackages = [],
     array $additionalRequirements = [],
+    array $additionalInstalledMetadata = [],
 ): array {
     $suffix = (string) random_int(100000, 999999);
     $id ??= "acme/runtime-{$suffix}";
@@ -631,6 +659,14 @@ function makeRuntimePluginArtifact(
     $source = "<?php\n\nnamespace RuntimeArtifact;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$manifest['id']}',\n            name: '{$manifest['name']}',\n            version: '{$manifest['version']}',\n            description: '{$manifest['description']}',\n            coreVersion: '{$manifest['core_version']}',\n            dependencies: [],\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void\n    {\n        \$platform->permissions()->register('runtime-fixture.view', 'Runtime Fixture');\n    }\n}\n";
     $source = str_replace('dependencies: [],', "dependencies: {$dependencies},", $source);
 
+    $installedPackages = [
+        ...array_map(
+            fn (string $version): array => ['pretty_version' => $version],
+            $bundledPackages,
+        ),
+        ...$additionalInstalledMetadata,
+    ];
+
     return makeZip([
         'manifest.json' => json_encode($manifest, JSON_THROW_ON_ERROR),
         'composer.json' => json_encode($composer, JSON_THROW_ON_ERROR),
@@ -647,10 +683,7 @@ function makeRuntimePluginArtifact(
         ], JSON_THROW_ON_ERROR),
         'src/'.$classShort.'.php' => $source,
         'vendor/autoload.php' => "<?php\nspl_autoload_register(static function (string \$class): void {\n    if (\$class === '{$entryClass}') {\n        require_once __DIR__.'/../src/{$classShort}.php';\n    }\n});\n",
-        'vendor/composer/installed.php' => "<?php\nreturn ['versions' => ".var_export(array_map(
-            fn (string $version): array => ['pretty_version' => $version],
-            $bundledPackages,
-        ), true)."];\n",
+        'vendor/composer/installed.php' => "<?php\nreturn ['versions' => ".var_export($installedPackages, true)."];\n",
     ], $manifest['id'], $entryClass);
 }
 

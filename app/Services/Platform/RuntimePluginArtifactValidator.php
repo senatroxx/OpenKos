@@ -355,7 +355,7 @@ final class RuntimePluginArtifactValidator
                 }
 
                 $this->assertSatisfies(
-                    (string) InstalledVersions::getPrettyVersion($package),
+                    $this->installedPackageVersion($package),
                     $constraint,
                     "Host package [{$package}]",
                 );
@@ -379,7 +379,7 @@ final class RuntimePluginArtifactValidator
 
             if (InstalledVersions::isInstalled($package)) {
                 $this->assertSatisfies(
-                    (string) InstalledVersions::getPrettyVersion($package),
+                    $this->installedPackageVersion($package),
                     $constraint,
                     "Host package [{$package}]",
                 );
@@ -411,7 +411,15 @@ final class RuntimePluginArtifactValidator
 
         $packages = [];
         foreach ($versions as $package => $metadata) {
-            if (! is_string($package) || ! is_array($metadata) || ! is_string($metadata['pretty_version'] ?? null)) {
+            if (! is_string($package) || ! is_array($metadata)) {
+                throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
+            }
+
+            if (! is_string($metadata['pretty_version'] ?? null)) {
+                if (isset($metadata['provided']) || isset($metadata['replaced'])) {
+                    continue;
+                }
+
                 throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
             }
 
@@ -538,6 +546,25 @@ final class RuntimePluginArtifactValidator
         return in_array($package, config('platform.runtime.shared_packages', []), true)
             || collect(config('platform.runtime.shared_package_prefixes', []))
                 ->contains(fn (string $prefix): bool => str_starts_with($package, $prefix));
+    }
+
+    private function installedPackageVersion(string $package): string
+    {
+        $version = InstalledVersions::getPrettyVersion($package);
+
+        if (is_string($version) && trim($version) !== '') {
+            return $version;
+        }
+
+        if (str_starts_with($package, 'illuminate/')) {
+            $frameworkVersion = InstalledVersions::getPrettyVersion('laravel/framework');
+
+            if (is_string($frameworkVersion) && trim($frameworkVersion) !== '') {
+                return $frameworkVersion;
+            }
+        }
+
+        throw new InvalidArgumentException("Host package [{$package}] does not expose a concrete version.");
     }
 
     private function assertSatisfies(string $version, string $constraint, string $subject): void
