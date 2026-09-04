@@ -448,6 +448,19 @@ it('rejects physical host package trees even when metadata claims a virtual pack
         ->expectsOutputToContain('must not bundle host package [openkos/platform]');
 });
 
+it('rejects unsafe configured host package paths', function (): void {
+    $originalPrefixes = config('platform.runtime.shared_package_prefixes');
+    config(['platform.runtime.shared_package_prefixes' => ['../outside/']]);
+
+    try {
+        $this->artisan('plugin:install', ['zip' => makeRuntimePluginArtifact()['zip']])
+            ->assertFailed()
+            ->expectsOutputToContain('is unsafe');
+    } finally {
+        config(['platform.runtime.shared_package_prefixes' => $originalPrefixes]);
+    }
+});
+
 it('rejects malformed concrete Composer vendor metadata', function (): void {
     $artifact = makeRuntimePluginArtifact(
         additionalInstalledMetadata: [

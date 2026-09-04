@@ -604,6 +604,10 @@ final class RuntimePluginArtifactValidator
         $segments = explode('/', trim($relative, '/'));
 
         foreach ($segments as $key => $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..') {
+                throw new InvalidArgumentException("Runtime plugin path [{$relative}] is unsafe.");
+            }
+
             $entries = @scandir($current);
 
             if ($entries === false) {
