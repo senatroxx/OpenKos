@@ -31,8 +31,13 @@ final class PluginInstaller
      *     dependencies: array<int, string>
      * }
      */
-    public function install(string $zipPath): array
-    {
+    /** @param  array<string, mixed>|null  $provenance */
+    public function install(
+        string $zipPath,
+        ?string $expectedId = null,
+        ?string $expectedVersion = null,
+        ?array $provenance = null,
+    ): array {
         if (! config('platform.runtime.enabled', true)) {
             throw new RuntimeException('Runtime plugin installation is disabled.');
         }
@@ -62,10 +67,15 @@ final class PluginInstaller
                 $archive->close();
             }
 
-            $staticMetadata = $this->validator->inspectStaticMetadata($inspectionPath);
+            $staticMetadata = $this->validator->inspectStaticMetadata($inspectionPath, $expectedId);
+
+            if ($expectedVersion !== null && $staticMetadata['version'] !== $expectedVersion) {
+                throw new InvalidArgumentException('Runtime plugin artifact version does not match the expected version.');
+            }
+
             $pluginId = $staticMetadata['id'];
 
-            return $this->store->withLock(function (RuntimePluginStore $store) use (&$inspectionPath, $pluginId): array {
+            return $this->store->withLock(function (RuntimePluginStore $store) use (&$inspectionPath, $pluginId, $expectedVersion, $provenance): array {
                 $stagingPath = null;
 
                 try {
@@ -92,8 +102,13 @@ final class PluginInstaller
                     }
 
                     $metadata = $this->validator->validateInFreshProcess($stagingPath, $staticMetadata['id']);
+
+                    if ($expectedVersion !== null && $metadata['version'] !== $expectedVersion) {
+                        throw new InvalidArgumentException('Runtime plugin artifact version does not match the expected version.');
+                    }
+
                     $this->graph->validateCandidate($metadata, $enabled, $store, $this->hostPluginClasses());
-                    $store->promote($metadata['id'], $stagingPath, $enabled);
+                    $store->promote($metadata['id'], $stagingPath, $enabled, $provenance);
                     $stagingPath = null;
 
                     return $metadata;

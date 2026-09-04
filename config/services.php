@@ -4,6 +4,14 @@ use App\Notifications\Drivers\WhatsappLogDriver;
 
 return [
 
+    'marketplace' => [
+        'url' => env('OPENKOS_MARKETPLACE_URL', 'https://marketplace.openkos.id'),
+        'connect_timeout' => (int) env('OPENKOS_MARKETPLACE_CONNECT_TIMEOUT', 3),
+        'timeout' => (int) env('OPENKOS_MARKETPLACE_TIMEOUT', 15),
+        'max_response_bytes' => (int) env('OPENKOS_MARKETPLACE_MAX_RESPONSE_BYTES', 1024 * 1024),
+        'max_artifact_bytes' => (int) env('OPENKOS_MARKETPLACE_MAX_ARTIFACT_BYTES', 64 * 1024 * 1024),
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
