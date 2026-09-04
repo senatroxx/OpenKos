@@ -26,4 +26,7 @@ return [
             ],
         ],
     ],
+    'dataset' => [
+        'enabled' => filter_var(env('LOAD_TEST_DATASET_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+    ],
 ];
