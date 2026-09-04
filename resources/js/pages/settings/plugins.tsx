@@ -63,6 +63,7 @@ type MarketplaceSectionProps = {
     onSearchChange: (value: string) => void;
     onSearch: (event: React.FormEvent<HTMLFormElement>) => void;
     onRetry: () => void;
+    onPageChange: (page: number) => void;
     onAction: (pluginId: string, version: string, update: boolean) => void;
 };
 
@@ -140,6 +141,7 @@ function MarketplaceSection({
     onSearchChange,
     onSearch,
     onRetry,
+    onPageChange,
     onAction,
 }: MarketplaceSectionProps) {
     function actionFor(plugin: MarketplacePlugin): {
@@ -258,7 +260,9 @@ function MarketplaceSection({
                         />
                     ))}
                 </div>
-            ) : data !== null && data.plugins.length === 0 ? (
+            ) : data !== null &&
+              data.error === null &&
+              data.plugins.length === 0 ? (
                 <Alert>
                     <AlertTitle>{t('No marketplace plugins found')}</AlertTitle>
                     <AlertDescription>
@@ -337,8 +341,11 @@ function MarketplaceSection({
                         {data.plugins.map((plugin) => {
                             const compatible = plugin.latest_compatible_version;
                             const action = actionFor(plugin);
-                            const projectUrl = safeExternalUrl(
-                                plugin.repository_url ?? plugin.homepage_url,
+                            const projectUrl =
+                                safeExternalUrl(plugin.repository_url) ??
+                                safeExternalUrl(plugin.homepage_url);
+                            const publisherUrl = safeExternalUrl(
+                                plugin.publisher?.url ?? null,
                             );
                             const actionKey =
                                 action === null
@@ -403,6 +410,34 @@ function MarketplaceSection({
                                                         {formatBytes(
                                                             compatible.artifact
                                                                 .size,
+                                                        )}
+                                                    </dd>
+                                                </div>
+                                            )}
+                                            {plugin.publisher?.name && (
+                                                <div>
+                                                    <dt className="text-muted-foreground">
+                                                        {t('Publisher')}
+                                                    </dt>
+                                                    <dd className="break-words">
+                                                        {publisherUrl ? (
+                                                            <a
+                                                                className="text-primary underline-offset-4 hover:underline"
+                                                                href={
+                                                                    publisherUrl
+                                                                }
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                            >
+                                                                {
+                                                                    plugin
+                                                                        .publisher
+                                                                        .name
+                                                                }
+                                                            </a>
+                                                        ) : (
+                                                            plugin.publisher
+                                                                .name
                                                         )}
                                                     </dd>
                                                 </div>
@@ -493,6 +528,51 @@ function MarketplaceSection({
                             );
                         })}
                     </div>
+                    {data.pagination.total_page > 1 && (
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm text-muted-foreground">
+                                {t('Page :current of :total', {
+                                    current: data.pagination.current_page,
+                                    total: data.pagination.total_page,
+                                })}
+                            </p>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                        processing ||
+                                        data.pagination.current_page <= 1
+                                    }
+                                    onClick={() =>
+                                        onPageChange(
+                                            data.pagination.current_page - 1,
+                                        )
+                                    }
+                                >
+                                    {t('Previous')}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                        processing ||
+                                        data.pagination.current_page >=
+                                            data.pagination.total_page
+                                    }
+                                    onClick={() =>
+                                        onPageChange(
+                                            data.pagination.current_page + 1,
+                                        )
+                                    }
+                                >
+                                    {t('Next')}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </>
             ) : null}
         </div>
@@ -521,22 +601,27 @@ export default function Plugins({
         null,
     );
     const [marketplaceSearch, setMarketplaceSearch] = useState('');
+    const [marketplacePage, setMarketplacePage] = useState(1);
     const marketplaceRequest = useHttp<
         Record<string, never>,
         MarketplaceCatalog
     >({});
     const uploadForm = useForm<{ file: File | null }>({ file: null });
 
-    function loadMarketplace(search = marketplaceSearch) {
+    function loadMarketplace(
+        search = marketplaceSearch,
+        page = marketplacePage,
+    ) {
         setMarketplaceError(null);
         marketplaceRequest.get(
             marketplaceIndex({
-                query: { q: search || undefined, page: 1, limit: 20 },
+                query: { q: search || undefined, page, limit: 20 },
             }).url,
             {
                 onSuccess: (response) => {
                     setMarketplaceData(response);
                     setMarketplaceError(response.error);
+                    setMarketplacePage(response.pagination.current_page);
                 },
                 onError: () =>
                     setMarketplaceError(
@@ -593,6 +678,11 @@ export default function Plugins({
             { plugin_id: pluginId, version },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    setMarketplaceData(null);
+                    setMarketplaceError(null);
+                    setActiveSection('installed');
+                },
                 onError: (errors) => setActionError(errors.marketplace ?? null),
                 onFinish: () => setProcessingPlugin(null),
             },
@@ -614,6 +704,8 @@ export default function Plugins({
             preserveScroll: true,
             onSuccess: () => {
                 uploadForm.reset();
+                setMarketplaceData(null);
+                setMarketplaceError(null);
 
                 if (fileInput.current) {
                     fileInput.current.value = '';
@@ -660,6 +752,10 @@ export default function Plugins({
         router.delete(destroy(routeParts(plugin.managed_id)).url, {
             data: force ? { force: true } : {},
             preserveScroll: true,
+            onSuccess: () => {
+                setMarketplaceData(null);
+                setMarketplaceError(null);
+            },
             onError: (errors) => setActionError(errors.plugin ?? null),
             onFinish: () => setProcessingPlugin(null),
         });
@@ -759,9 +855,14 @@ export default function Plugins({
                         onSearchChange={setMarketplaceSearch}
                         onSearch={(event) => {
                             event.preventDefault();
-                            loadMarketplace();
+                            setMarketplacePage(1);
+                            loadMarketplace(marketplaceSearch, 1);
                         }}
                         onRetry={() => loadMarketplace()}
+                        onPageChange={(page) => {
+                            setMarketplacePage(page);
+                            loadMarketplace(marketplaceSearch, page);
+                        }}
                         onAction={runMarketplaceAction}
                     />
                 ) : (

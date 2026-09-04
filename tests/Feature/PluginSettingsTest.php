@@ -885,6 +885,25 @@ it('installs an exact marketplace artifact with verified provenance', function (
     Http::assertSent(fn (Request $request): bool => parse_url($request->url(), PHP_URL_HOST) === 'marketplace.test');
 });
 
+it('rejects marketplace metadata that disagrees with the package', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    $metadata['compatibility']['platform'] = '^9.0';
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe([])
+        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse()
+        ->and(Storage::disk('local')->allFiles('plugin-downloads'))->toBe([]);
+});
+
 it('leaves local state untouched when marketplace checksum verification fails', function (): void {
     configureMarketplaceForTests();
     $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
@@ -978,6 +997,106 @@ it('updates a marketplace plugin through the installer boundary', function (): v
     Http::assertSentCount(2);
 });
 
+it('preserves the previous marketplace installation when an update fails integrity checks', function (): void {
+    configureMarketplaceForTests();
+    $old = makePluginSettingsArtifact(['id' => 'settings/checksum-fixture', 'version' => '1.0.0']);
+    fakeMarketplace($old, ['1.0.0' => marketplaceVersionMetadata($old, '1.0.0')], '1.0.0');
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $stateBefore = app(RuntimePluginStore::class)->readState();
+    $new = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.1.0']);
+    $newMetadata = marketplaceVersionMetadata($new, '1.1.0');
+    $newMetadata['artifact']['sha256'] = str_repeat('b', 64);
+    fakeMarketplace($new, ['1.1.0' => $newMetadata], '1.1.0');
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe($stateBefore)
+        ->and(json_decode(
+            file_get_contents($this->runtimePluginPath.'/'.$old['id'].'/manifest.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        )['version'])->toBe('1.0.0')
+        ->and(Storage::disk('local')->allFiles('plugin-downloads'))->toBe([]);
+});
+
+it('does not overwrite a manual replacement during a marketplace update', function (): void {
+    configureMarketplaceForTests();
+    $old = makePluginSettingsArtifact(['id' => 'settings/race-fixture', 'version' => '1.0.0']);
+    fakeMarketplace($old, ['1.0.0' => marketplaceVersionMetadata($old, '1.0.0')], '1.0.0');
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $manual = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.2.0']);
+    $marketplace = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.1.0']);
+    $metadata = marketplaceVersionMetadata($marketplace, '1.1.0');
+
+    Http::swap(new Factory);
+    Http::fake(function (Request $request) use ($manual, $marketplace, $metadata) {
+        $path = parse_url($request->url(), PHP_URL_PATH);
+
+        if (is_string($path) && str_ends_with($path, '/artifact')) {
+            app(PluginInstaller::class)->install(
+                $manual['zip'],
+                provenance: [
+                    'source' => 'manual',
+                    'installed_at' => now()->toIso8601String(),
+                ],
+            );
+
+            $contents = file_get_contents($marketplace['zip']);
+
+            return Http::response($contents === false ? '' : $contents, 200, [
+                'Content-Type' => 'application/zip',
+                'Content-Length' => (string) filesize($marketplace['zip']),
+            ]);
+        }
+
+        return Http::response(['data' => $metadata]);
+    });
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState()[$old['id']])->toMatchArray([
+        'source' => 'manual',
+    ])->not->toHaveKeys([
+        'marketplace_plugin_id',
+        'marketplace_version',
+        'artifact_sha256',
+    ])
+        ->and(json_decode(
+            file_get_contents($this->runtimePluginPath.'/'.$old['id'].'/manifest.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        )['version'])->toBe('1.2.0');
+    Http::assertSentCount(2);
+});
+
 it('changes marketplace provenance to manual after a manual replacement', function (): void {
     configureMarketplaceForTests();
     $marketplaceArtifact = makePluginSettingsArtifact([
@@ -1047,6 +1166,35 @@ it('contains oversized marketplace responses without changing local state', func
         ->assertJsonPath('plugins', [])
         ->assertJsonPath('updates', []);
     expect(app(RuntimePluginStore::class)->readState())->toBe([]);
+});
+
+it('rejects malformed nested marketplace catalog data', function (): void {
+    configureMarketplaceForTests();
+    Http::fake(fn () => Http::response([
+        'data' => [
+            'current_page' => 1,
+            'total_page' => 1,
+            'total_records' => 1,
+            'records' => [[
+                'id' => 'settings/malformed',
+                'name' => ['not', 'text'],
+                'summary' => null,
+                'description' => null,
+                'publisher' => null,
+                'repository_url' => null,
+                'homepage_url' => null,
+                'latest_version' => null,
+            ]],
+        ],
+    ]));
+
+    $response = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.marketplace.index'));
+
+    $response->assertSuccessful()
+        ->assertJsonPath('plugins', [])
+        ->assertJsonPath('updates', [])
+        ->assertJsonPath('error', 'The marketplace is currently unavailable. Installed plugins and manual ZIP management are still available.');
 });
 
 it('rejects marketplace artifacts over the configured limit before downloading', function (): void {
@@ -1136,6 +1284,21 @@ function configureMarketplaceForTests(): void
 /** @return array<string, mixed> */
 function marketplaceVersionMetadata(array $artifact, string $version): array
 {
+    $zip = new ZipArchive;
+
+    if ($zip->open($artifact['zip']) !== true) {
+        throw new RuntimeException('Could not open marketplace fixture ZIP.');
+    }
+
+    $manifestContents = $zip->getFromName('manifest.json');
+    $zip->close();
+
+    if (! is_string($manifestContents)) {
+        throw new RuntimeException('Marketplace fixture ZIP has no manifest.');
+    }
+
+    $manifest = json_decode($manifestContents, true, 512, JSON_THROW_ON_ERROR);
+
     return [
         'version' => $version,
         'entry_class' => $artifact['class'],
@@ -1145,6 +1308,9 @@ function marketplaceVersionMetadata(array $artifact, string $version): array
             'php' => '^8.3',
         ],
         'published_at' => now()->toIso8601String(),
+        'dependencies' => $manifest['dependencies'],
+        'release_notes' => null,
+        'manifest' => $manifest,
         'artifact' => [
             'size' => (int) filesize($artifact['zip']),
             'sha256' => hash_file('sha256', $artifact['zip']),

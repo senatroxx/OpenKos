@@ -239,7 +239,7 @@ class PluginManagementService
             throw new \RuntimeException('Marketplace updates require matching marketplace provenance.');
         }
 
-        return $this->installMarketplaceArtifact($pluginId, $version);
+        return $this->installMarketplaceArtifact($pluginId, $version, $entry);
     }
 
     /**
@@ -275,6 +275,10 @@ class PluginManagementService
 
         if (str_contains($message, 'marketplace provenance')) {
             return __('Marketplace updates require a plugin installed from the marketplace.');
+        }
+
+        if (str_contains($message, 'changed during marketplace update')) {
+            return __('This plugin changed while the update was downloading. Refresh the page and try again.');
         }
 
         if ($exception instanceof RuntimePluginDependencyException) {
@@ -359,7 +363,8 @@ class PluginManagementService
     }
 
     /** @return array<string, mixed> */
-    private function installMarketplaceArtifact(string $pluginId, string $version): array
+    /** @param array<string, mixed>|null $expectedCurrentState */
+    private function installMarketplaceArtifact(string $pluginId, string $version, ?array $expectedCurrentState = null): array
     {
         $versionMetadata = $this->marketplace->getVersion($pluginId, $version);
         $artifact = $versionMetadata['artifact'] ?? null;
@@ -370,6 +375,20 @@ class PluginManagementService
             || ! is_string($artifact['sha256'] ?? null)
         ) {
             throw new MarketplaceException('Marketplace returned invalid artifact metadata.');
+        }
+
+        $compatibility = $versionMetadata['compatibility'] ?? null;
+
+        if (
+            ! is_array($compatibility)
+            || ! is_string($versionMetadata['entry_class'] ?? null)
+            || ! is_array($versionMetadata['dependencies'] ?? null)
+            || ! is_array($versionMetadata['manifest'] ?? null)
+            || ! is_string($compatibility['openkos'] ?? null)
+            || ! is_string($compatibility['platform'] ?? null)
+            || ! is_string($compatibility['php'] ?? null)
+        ) {
+            throw new MarketplaceException('Marketplace returned invalid plugin metadata.');
         }
 
         $path = $this->marketplace->downloadArtifact(
@@ -390,6 +409,15 @@ class PluginManagementService
                     'marketplace_version' => $version,
                     'artifact_sha256' => strtolower($artifact['sha256']),
                     'installed_at' => now()->toIso8601String(),
+                ],
+                expectedCurrentState: $expectedCurrentState,
+                expectedMetadata: [
+                    'entry_class' => $versionMetadata['entry_class'],
+                    'core_version' => $compatibility['openkos'],
+                    'platform_constraint' => $compatibility['platform'],
+                    'php' => $compatibility['php'],
+                    'dependencies' => $versionMetadata['dependencies'],
+                    'manifest' => $versionMetadata['manifest'],
                 ],
             );
         } finally {

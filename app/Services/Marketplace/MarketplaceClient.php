@@ -42,7 +42,7 @@ final class MarketplaceClient
         }
 
         try {
-            return $this->getJson('plugins', $query);
+            return $this->validateCatalog($this->getJson('plugins', $query));
         } catch (MarketplaceException $exception) {
             if ($exception->status === 404) {
                 throw new MarketplaceException('Marketplace catalog is unavailable.', previous: $exception);
@@ -60,7 +60,7 @@ final class MarketplaceClient
         string $phpVersion,
     ): ?array {
         try {
-            return $this->getJson(
+            $data = $this->getJson(
                 'plugins/'.rawurlencode($this->pluginId($pluginId)).'/versions/resolve',
                 [
                     'openkos_version' => $openkosVersion,
@@ -68,6 +68,8 @@ final class MarketplaceClient
                     'php_version' => $phpVersion,
                 ],
             );
+
+            return $this->validateVersion($data, $pluginId, false);
         } catch (MarketplaceException $exception) {
             if ($exception->status === 404) {
                 return null;
@@ -97,7 +99,7 @@ final class MarketplaceClient
             throw new MarketplaceException('Marketplace returned a different plugin version.');
         }
 
-        return $data;
+        return $this->validateVersion($data, $pluginId, true);
     }
 
     public function downloadArtifact(
@@ -229,6 +231,238 @@ final class MarketplaceClient
         }
 
         return $payload['data'];
+    }
+
+    /** @param array<string, mixed> $data @return array<string, mixed> */
+    private function validateCatalog(array $data): array
+    {
+        if (
+            ! is_int($data['current_page'] ?? null)
+            || ! is_int($data['total_page'] ?? null)
+            || ! is_int($data['total_records'] ?? null)
+            || $data['current_page'] < 1
+            || $data['total_page'] < 0
+            || $data['total_records'] < 0
+            || ! is_array($data['records'] ?? null)
+            || ! array_is_list($data['records'])
+        ) {
+            throw new MarketplaceException('Marketplace returned a malformed plugin listing.');
+        }
+
+        $records = [];
+
+        foreach ($data['records'] as $record) {
+            if (! is_array($record)) {
+                throw new MarketplaceException('Marketplace returned a malformed plugin listing.');
+            }
+
+            $records[] = $this->validatePluginRecord($record);
+        }
+
+        return [
+            'current_page' => $data['current_page'],
+            'total_page' => $data['total_page'],
+            'total_records' => $data['total_records'],
+            'records' => $records,
+        ];
+    }
+
+    /** @param array<string, mixed> $record @return array<string, mixed> */
+    private function validatePluginRecord(array $record): array
+    {
+        foreach (['id', 'name', 'summary', 'description', 'publisher', 'repository_url', 'homepage_url', 'latest_version'] as $key) {
+            if (! array_key_exists($key, $record)) {
+                throw new MarketplaceException('Marketplace returned a malformed plugin listing.');
+            }
+        }
+
+        $id = $record['id'];
+
+        if (! is_string($id) || preg_match('/\A[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*\z/', $id) !== 1) {
+            throw new MarketplaceException('Marketplace returned a malformed plugin identity.');
+        }
+
+        if (! is_string($record['name']) || trim($record['name']) === '') {
+            throw new MarketplaceException('Marketplace returned a malformed plugin listing.');
+        }
+
+        foreach (['summary', 'description'] as $key) {
+            if ($record[$key] !== null && ! is_string($record[$key])) {
+                throw new MarketplaceException('Marketplace returned a malformed plugin listing.');
+            }
+        }
+
+        $publisher = $record['publisher'];
+
+        if ($publisher !== null && (! is_array($publisher) || ! is_string($publisher['name'] ?? null) || trim($publisher['name']) === '')) {
+            throw new MarketplaceException('Marketplace returned a malformed publisher.');
+        }
+
+        if (is_array($publisher) && (! array_key_exists('url', $publisher) || $publisher['url'] !== null && ! is_string($publisher['url']))) {
+            throw new MarketplaceException('Marketplace returned a malformed publisher.');
+        }
+
+        foreach (['repository_url', 'homepage_url'] as $key) {
+            if ($record[$key] !== null && (! is_string($record[$key]) || $this->isValidUrl($record[$key]) === false)) {
+                throw new MarketplaceException('Marketplace returned a malformed plugin URL.');
+            }
+        }
+
+        if (is_array($publisher) && $publisher['url'] !== null && $this->isValidUrl($publisher['url']) === false) {
+            throw new MarketplaceException('Marketplace returned a malformed publisher URL.');
+        }
+
+        return [
+            'id' => $id,
+            'name' => $record['name'],
+            'summary' => $record['summary'],
+            'description' => $record['description'],
+            'publisher' => $publisher === null ? null : [
+                'name' => $publisher['name'],
+                'url' => $publisher['url'],
+            ],
+            'repository_url' => $record['repository_url'],
+            'homepage_url' => $record['homepage_url'],
+            'latest_version' => $record['latest_version'] === null
+                ? null
+                : $this->validateVersion($record['latest_version'], $id, false),
+        ];
+    }
+
+    /** @param array<string, mixed> $data @return array<string, mixed> */
+    private function validateVersion(array $data, string $pluginId, bool $includeManifest): array
+    {
+        if (
+            ! is_string($data['version'] ?? null)
+            || preg_match('/\A\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\z/', $data['version']) !== 1
+            || ! is_string($data['entry_class'] ?? null)
+            || preg_match('/\A(?:[A-Za-z_][A-Za-z0-9_]*\\\\)*[A-Za-z_][A-Za-z0-9_]*\z/', $data['entry_class']) !== 1
+            || ! is_array($data['compatibility'] ?? null)
+            || ! is_string($data['published_at'] ?? null)
+            || trim($data['published_at']) === ''
+            || ! is_array($data['artifact'] ?? null)
+            || ! is_int($data['artifact']['size'] ?? null)
+            || $data['artifact']['size'] < 1
+            || $data['artifact']['size'] > (int) config('services.marketplace.max_artifact_bytes')
+            || ! is_string($data['artifact']['sha256'] ?? null)
+            || preg_match('/\A[a-f0-9]{64}\z/i', $data['artifact']['sha256']) !== 1
+        ) {
+            throw new MarketplaceException('Marketplace returned malformed plugin version metadata.');
+        }
+
+        foreach (['openkos', 'platform', 'php'] as $key) {
+            if (! is_string($data['compatibility'][$key] ?? null) || trim($data['compatibility'][$key]) === '') {
+                throw new MarketplaceException('Marketplace returned malformed compatibility metadata.');
+            }
+        }
+
+        $normalized = [
+            'version' => $data['version'],
+            'entry_class' => $data['entry_class'],
+            'compatibility' => [
+                'openkos' => $data['compatibility']['openkos'],
+                'platform' => $data['compatibility']['platform'],
+                'php' => $data['compatibility']['php'],
+            ],
+            'published_at' => $data['published_at'],
+            'artifact' => [
+                'size' => $data['artifact']['size'],
+                'sha256' => strtolower($data['artifact']['sha256']),
+            ],
+        ];
+
+        if (! $includeManifest) {
+            return $normalized;
+        }
+
+        if (
+            ! array_key_exists('dependencies', $data)
+            || ! is_array($data['dependencies'])
+            || ! array_is_list($data['dependencies'])
+            || ! array_key_exists('release_notes', $data)
+            || ($data['release_notes'] !== null && ! is_string($data['release_notes']))
+            || ! is_array($data['manifest'] ?? null)
+        ) {
+            throw new MarketplaceException('Marketplace returned incomplete plugin version metadata.');
+        }
+
+        $dependencies = $this->validateDependencies($data['dependencies']);
+        $manifest = $this->validateManifest($data['manifest'], $pluginId, $data['version'], $data['entry_class'], $data['compatibility']);
+
+        if ($dependencies !== $manifest['dependencies']) {
+            throw new MarketplaceException('Marketplace version dependencies do not match its manifest.');
+        }
+
+        return [
+            ...$normalized,
+            'dependencies' => $dependencies,
+            'release_notes' => $data['release_notes'],
+            'manifest' => $manifest,
+        ];
+    }
+
+    /** @param array<string, mixed> $manifest @param array<string, mixed> $compatibility @return array<string, mixed> */
+    private function validateManifest(array $manifest, string $pluginId, string $version, string $entryClass, array $compatibility): array
+    {
+        foreach (['id', 'name', 'version', 'description', 'entry_class', 'core_version', 'php', 'dependencies'] as $key) {
+            if (! array_key_exists($key, $manifest)) {
+                throw new MarketplaceException('Marketplace returned an incomplete plugin manifest.');
+            }
+        }
+
+        foreach (['id', 'name', 'version', 'description', 'entry_class', 'core_version', 'php'] as $key) {
+            if (! is_string($manifest[$key]) || ($key !== 'description' && trim($manifest[$key]) === '')) {
+                throw new MarketplaceException('Marketplace returned an invalid plugin manifest.');
+            }
+        }
+
+        if (
+            $manifest['id'] !== $pluginId
+            || $manifest['version'] !== $version
+            || $manifest['entry_class'] !== $entryClass
+            || $manifest['core_version'] !== $compatibility['openkos']
+            || $manifest['php'] !== $compatibility['php']
+        ) {
+            throw new MarketplaceException('Marketplace version metadata does not match its manifest.');
+        }
+
+        return [
+            'id' => $manifest['id'],
+            'name' => $manifest['name'],
+            'version' => $manifest['version'],
+            'description' => $manifest['description'],
+            'entry_class' => $manifest['entry_class'],
+            'core_version' => $manifest['core_version'],
+            'php' => $manifest['php'],
+            'dependencies' => $this->validateDependencies($manifest['dependencies']),
+        ];
+    }
+
+    /** @param mixed $dependencies @return array<int, string> */
+    private function validateDependencies(mixed $dependencies): array
+    {
+        if (! is_array($dependencies) || ! array_is_list($dependencies)) {
+            throw new MarketplaceException('Marketplace returned invalid plugin dependencies.');
+        }
+
+        foreach ($dependencies as $dependency) {
+            if (! is_string($dependency) || preg_match('/\A[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*\z/', $dependency) !== 1) {
+                throw new MarketplaceException('Marketplace returned invalid plugin dependencies.');
+            }
+        }
+
+        return array_values($dependencies);
+    }
+
+    private function isValidUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+
+        return is_array($parts)
+            && in_array(strtolower((string) ($parts['scheme'] ?? '')), ['http', 'https'], true)
+            && is_string($parts['host'] ?? null)
+            && ($parts['host'] ?? '') !== ''
+            && ! isset($parts['user'], $parts['pass']);
     }
 
     /** @param array<string, mixed> $query */
