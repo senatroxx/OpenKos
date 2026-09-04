@@ -65,6 +65,9 @@ npm run dev                            # Vite dev server with HMR
 php artisan test --compact
 ```
 
+Load-test fixture setup and persona assumptions are documented in
+[docs/load-testing.md](docs/load-testing.md).
+
 ## Plugin Development
 
 OpenKOS has a plugin system that lets you register navigation items, dashboard pages, workspace tabs, settings pages, notification drivers, and payment gateways — all from a single plugin class without modifying core.
