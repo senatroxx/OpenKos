@@ -394,16 +394,58 @@ it('validates bundled dependency versions and rejects bundled host packages', fu
 
 it('accepts Composer virtual packages and resolves host-provided Illuminate versions', function (): void {
     $artifact = makeRuntimePluginArtifact(
-        additionalRequirements: ['illuminate/support' => '^13.0'],
+        additionalRequirements: [
+            'illuminate/support' => '^13.0',
+            'psr/log-implementation' => '^3.0',
+            'acme/implementation' => '^1.0',
+        ],
         additionalInstalledMetadata: [
             'illuminate/support' => [
                 'dev_requirement' => false,
                 'replaced' => ['v13.25.0'],
             ],
+            'acme/implementation' => [
+                'dev_requirement' => false,
+                'provided' => ['1.0'],
+            ],
         ],
     );
 
     $this->artisan('plugin:install', ['zip' => $artifact['zip']])->assertSuccessful();
+});
+
+it('rejects malformed Composer virtual vendor metadata', function (): void {
+    $artifact = makeRuntimePluginArtifact(
+        additionalRequirements: ['acme/implementation' => '^1.0'],
+        additionalInstalledMetadata: [
+            'acme/implementation' => [
+                'dev_requirement' => false,
+                'provided' => true,
+            ],
+        ],
+    );
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('Runtime plugin vendor package metadata is malformed.');
+});
+
+it('rejects physical host package trees even when metadata claims a virtual package', function (): void {
+    $artifact = makeRuntimePluginArtifact(
+        additionalInstalledMetadata: [
+            'openkos/platform' => [
+                'dev_requirement' => false,
+                'replaced' => ['*'],
+            ],
+        ],
+        additionalFiles: [
+            'vendor/openkos/platform/README.md' => 'forged host package',
+        ],
+    );
+
+    $this->artisan('plugin:install', ['zip' => $artifact['zip']])
+        ->assertFailed()
+        ->expectsOutputToContain('must not bundle host package [openkos/platform]');
 });
 
 it('rejects malformed concrete Composer vendor metadata', function (): void {
@@ -619,6 +661,7 @@ it('surfaces corrupted runtime state instead of treating it as disabled', functi
  * @param  array<string, string>  $bundledPackages
  * @param  array<string, string>  $additionalRequirements
  * @param  array<string, array<string, mixed>>  $additionalInstalledMetadata
+ * @param  array<string, string>  $additionalFiles
  * @return array{zip: string, id: string, class: string}
  */
 function makeRuntimePluginArtifact(
@@ -628,6 +671,7 @@ function makeRuntimePluginArtifact(
     array $bundledPackages = [],
     array $additionalRequirements = [],
     array $additionalInstalledMetadata = [],
+    array $additionalFiles = [],
 ): array {
     $suffix = (string) random_int(100000, 999999);
     $id ??= "acme/runtime-{$suffix}";
@@ -684,6 +728,7 @@ function makeRuntimePluginArtifact(
         'src/'.$classShort.'.php' => $source,
         'vendor/autoload.php' => "<?php\nspl_autoload_register(static function (string \$class): void {\n    if (\$class === '{$entryClass}') {\n        require_once __DIR__.'/../src/{$classShort}.php';\n    }\n});\n",
         'vendor/composer/installed.php' => "<?php\nreturn ['versions' => ".var_export($installedPackages, true)."];\n",
+        ...$additionalFiles,
     ], $manifest['id'], $entryClass);
 }
 
