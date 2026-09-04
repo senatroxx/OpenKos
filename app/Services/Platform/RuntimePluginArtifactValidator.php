@@ -3,7 +3,7 @@
 namespace App\Services\Platform;
 
 use Composer\InstalledVersions;
-use Composer\Semver\Semver;
+use Composer\Semver\VersionParser;
 use InvalidArgumentException;
 use OpenKOS\Platform\Plugin\Plugin;
 use Symfony\Component\Process\Process;
@@ -131,6 +131,7 @@ final class RuntimePluginArtifactValidator
         }
 
         $this->validateTree($directory);
+        $this->assertNoBundledHostPackagePaths($directory);
         $metadata = $this->validateManifest($this->readJsonFile($directory.'/manifest.json', 'manifest.json'));
 
         if ($expectedId !== null && $metadata['id'] !== $expectedId) {
@@ -314,6 +315,8 @@ final class RuntimePluginArtifactValidator
             throw new InvalidArgumentException('Runtime plugin composer.lock must contain packages.');
         }
 
+        $this->assertNoBundledHostPackagePaths($directory);
+
         $requires = is_array($composer['require'] ?? null) ? $composer['require'] : [];
         $lockedPackages = [];
         foreach ([...$lock['packages'], ...(is_array($lock['packages-dev'] ?? null) ? $lock['packages-dev'] : [])] as $package) {
@@ -324,8 +327,8 @@ final class RuntimePluginArtifactValidator
 
         $bundledPackages = $this->bundledPackages($directory.'/vendor/composer/installed.php');
 
-        foreach (array_keys($bundledPackages) as $package) {
-            if ($this->isSharedPackage($package)) {
+        foreach ($bundledPackages as $package => $metadata) {
+            if ($metadata['version'] !== null && $this->isSharedPackage($package)) {
                 throw new InvalidArgumentException("Runtime plugin must not bundle host package [{$package}].");
             }
         }
@@ -354,16 +357,12 @@ final class RuntimePluginArtifactValidator
                     throw new InvalidArgumentException("Host package [{$package}] is not installed.");
                 }
 
-                $this->assertSatisfies(
-                    (string) InstalledVersions::getPrettyVersion($package),
-                    $constraint,
-                    "Host package [{$package}]",
-                );
+                $this->assertHostPackageSatisfies($package, $constraint);
 
                 continue;
             }
 
-            if (! isset($lockedPackages[$package]) && ! InstalledVersions::isInstalled($package)) {
+            if (! isset($lockedPackages[$package]) && ! InstalledVersions::isInstalled($package) && ! isset($bundledPackages[$package])) {
                 throw new InvalidArgumentException(
                     "Runtime plugin dependency [{$package}] is absent from composer.lock and the host.",
                 );
@@ -371,18 +370,14 @@ final class RuntimePluginArtifactValidator
 
             if (isset($bundledPackages[$package])) {
                 $this->assertSatisfies(
-                    $bundledPackages[$package],
+                    $bundledPackages[$package]['ranges'],
                     $constraint,
                     "Bundled package [{$package}]",
                 );
             }
 
             if (InstalledVersions::isInstalled($package)) {
-                $this->assertSatisfies(
-                    (string) InstalledVersions::getPrettyVersion($package),
-                    $constraint,
-                    "Host package [{$package}]",
-                );
+                $this->assertHostPackageSatisfies($package, $constraint);
             } elseif (! isset($bundledPackages[$package])) {
                 throw new InvalidArgumentException(
                     "Runtime plugin dependency [{$package}] is not bundled in vendor/.",
@@ -394,7 +389,7 @@ final class RuntimePluginArtifactValidator
     }
 
     /**
-     * @return array<string, string>
+     * @return array<string, array{version: string|null, ranges: array<int, string>}>
      */
     private function bundledPackages(string $installedPath): array
     {
@@ -411,11 +406,48 @@ final class RuntimePluginArtifactValidator
 
         $packages = [];
         foreach ($versions as $package => $metadata) {
-            if (! is_string($package) || ! is_array($metadata) || ! is_string($metadata['pretty_version'] ?? null)) {
+            if (! is_string($package) || ! is_array($metadata)) {
                 throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
             }
 
-            $packages[$package] = $metadata['pretty_version'];
+            $ranges = [];
+            $version = null;
+
+            if (array_key_exists('pretty_version', $metadata)) {
+                if (! is_string($metadata['pretty_version']) || trim($metadata['pretty_version']) === '') {
+                    throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
+                }
+
+                $version = $metadata['pretty_version'];
+                $ranges[] = $version;
+            }
+
+            foreach (['provided', 'replaced'] as $field) {
+                if (! array_key_exists($field, $metadata)) {
+                    continue;
+                }
+
+                if (! is_array($metadata[$field]) || ! array_is_list($metadata[$field]) || $metadata[$field] === []) {
+                    throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
+                }
+
+                foreach ($metadata[$field] as $range) {
+                    if (! is_string($range) || trim($range) === '') {
+                        throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
+                    }
+
+                    $ranges[] = $range;
+                }
+            }
+
+            if ($ranges === []) {
+                throw new InvalidArgumentException('Runtime plugin vendor package metadata is malformed.');
+            }
+
+            $packages[$package] = [
+                'version' => $version,
+                'ranges' => array_values(array_unique($ranges)),
+            ];
         }
 
         return $packages;
@@ -540,16 +572,109 @@ final class RuntimePluginArtifactValidator
                 ->contains(fn (string $prefix): bool => str_starts_with($package, $prefix));
     }
 
-    private function assertSatisfies(string $version, string $constraint, string $subject): void
+    private function assertNoBundledHostPackagePaths(string $directory): void
     {
+        $paths = [
+            ...array_map(
+                fn (string $package): string => $directory.'/vendor/'.$package,
+                array_filter(config('platform.runtime.shared_packages', []), 'is_string'),
+            ),
+            ...array_map(
+                fn (string $prefix): string => $directory.'/vendor/'.rtrim($prefix, '/'),
+                array_filter(config('platform.runtime.shared_package_prefixes', []), 'is_string'),
+            ),
+        ];
+
+        foreach (array_unique($paths) as $path) {
+            $relative = str_replace($directory.'/vendor/', '', $path);
+
+            if ($this->managedPathExists($directory.'/vendor', $relative)) {
+                throw new InvalidArgumentException("Runtime plugin must not bundle host package [{$relative}].");
+            }
+        }
+    }
+
+    private function managedPathExists(string $root, string $relative): bool
+    {
+        if (! is_dir($root) || is_link($root)) {
+            return false;
+        }
+
+        $current = $root;
+        $segments = explode('/', trim($relative, '/'));
+
+        foreach ($segments as $key => $segment) {
+            if ($segment === '' || $segment === '.' || $segment === '..') {
+                throw new InvalidArgumentException("Runtime plugin path [{$relative}] is unsafe.");
+            }
+
+            $entries = @scandir($current);
+
+            if ($entries === false) {
+                throw new InvalidArgumentException("Runtime plugin path [{$relative}] cannot be inspected.");
+            }
+
+            if (! in_array($segment, $entries, true)) {
+                return false;
+            }
+
+            $current .= DIRECTORY_SEPARATOR.$segment;
+            $stat = @lstat($current);
+
+            if ($stat === false || is_link($current)) {
+                throw new InvalidArgumentException("Runtime plugin path [{$relative}] is unsafe.");
+            }
+
+            if ($key < count($segments) - 1 && ! is_dir($current)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function assertHostPackageSatisfies(string $package, string $constraint): void
+    {
+        if (str_starts_with($package, 'illuminate/')) {
+            $frameworkVersion = InstalledVersions::getPrettyVersion('laravel/framework');
+
+            if (is_string($frameworkVersion) && trim($frameworkVersion) !== '') {
+                $this->assertSatisfies($frameworkVersion, $constraint, "Host package [{$package}]");
+
+                return;
+            }
+        }
+
         try {
-            $satisfies = Semver::satisfies($version, $constraint);
+            $ranges = InstalledVersions::getVersionRanges($package);
+        } catch (Throwable $exception) {
+            throw new InvalidArgumentException("Host package [{$package}] does not expose a usable version.", previous: $exception);
+        }
+
+        if (! is_string($ranges) || trim($ranges) === '') {
+            throw new InvalidArgumentException("Host package [{$package}] does not expose a usable version.");
+        }
+
+        $this->assertSatisfies($ranges, $constraint, "Host package [{$package}]");
+    }
+
+    /**
+     * @param  string|array<int, string>  $version
+     */
+    private function assertSatisfies(string|array $version, string $constraint, string $subject): void
+    {
+        $versionRanges = is_array($version) ? implode(' || ', $version) : $version;
+
+        try {
+            $required = (new VersionParser)->parseConstraints($constraint);
+            $provided = (new VersionParser)->parseConstraints($versionRanges);
+            $satisfies = $provided->matches($required);
         } catch (Throwable $exception) {
             throw new InvalidArgumentException("{$subject} constraint [{$constraint}] is invalid.", previous: $exception);
         }
 
         if (! $satisfies) {
-            throw new InvalidArgumentException("{$subject} version [{$version}] does not satisfy [{$constraint}].");
+            throw new InvalidArgumentException("{$subject} version [{$versionRanges}] does not satisfy [{$constraint}].");
         }
     }
 }

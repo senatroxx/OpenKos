@@ -76,6 +76,10 @@ final class ComposerPluginDiscovery implements PluginDiscovery
                 continue;
             }
 
+            if ($this->isRuntimePackagePath($installPath)) {
+                continue;
+            }
+
             $composerFile = $installPath.'/composer.json';
 
             if (! is_file($composerFile)) {
@@ -134,5 +138,21 @@ final class ComposerPluginDiscovery implements PluginDiscovery
     private function canonicalClassName(string $class): string
     {
         return strtolower(ltrim(trim($class), '\\'));
+    }
+
+    private function isRuntimePackagePath(string $installPath): bool
+    {
+        $runtimePath = config('platform.runtime.path');
+
+        if (! is_string($runtimePath)) {
+            return false;
+        }
+
+        $runtimeRoot = realpath($runtimePath);
+        $packagePath = realpath($installPath);
+
+        return is_string($runtimeRoot)
+            && is_string($packagePath)
+            && ($packagePath === $runtimeRoot || str_starts_with($packagePath, $runtimeRoot.DIRECTORY_SEPARATOR));
     }
 }
