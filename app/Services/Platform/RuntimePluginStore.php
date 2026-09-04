@@ -184,7 +184,7 @@ final class RuntimePluginStore
     }
 
     /**
-     * @return array<string, array{enabled: bool}>
+     * @return array<string, array<string, mixed>>
      */
     public function readState(): array
     {
@@ -233,19 +233,18 @@ final class RuntimePluginStore
         }
 
         foreach ($state as $id => $entry) {
-            if (! is_string($id) || ! $this->isValidId($id) || ! is_array($entry) || ! is_bool($entry['enabled'] ?? null)) {
+            if (! is_string($id) || ! $this->isValidId($id) || ! $this->isValidStateEntry($entry, $id)) {
                 throw new RuntimeException(
                     'Runtime plugin state is corrupted. Repair or remove '.$path.' before continuing.',
                 );
             }
         }
 
-        /** @var array<string, array{enabled: bool}> $state */
         return $state;
     }
 
     /**
-     * @param  array<string, array{enabled: bool}>  $state
+     * @param  array<string, array<string, mixed>>  $state
      */
     public function writeState(array $state): void
     {
@@ -255,6 +254,12 @@ final class RuntimePluginStore
 
         if (file_exists($statePath) && ! is_file($statePath)) {
             throw new RuntimeException('Could not persist runtime plugin state through a non-file path.');
+        }
+
+        foreach ($state as $id => $entry) {
+            if (! is_string($id) || ! $this->isValidId($id) || ! $this->isValidStateEntry($entry, $id)) {
+                throw new RuntimeException('Could not persist invalid runtime plugin state.');
+            }
         }
 
         try {
@@ -857,7 +862,8 @@ final class RuntimePluginStore
         }
     }
 
-    public function promote(string $id, string $stagingPath, bool $enabled): void
+    /** @param  array<string, mixed>|null  $provenance */
+    public function promote(string $id, string $stagingPath, bool $enabled, ?array $provenance = null): void
     {
         $this->assertValidId($id);
 
@@ -870,6 +876,7 @@ final class RuntimePluginStore
         $this->assertSafeManagedPath(dirname($backupPath));
         $hadActivePackage = is_dir($activePath) && ! is_link($activePath);
         $state = $this->readState();
+        $nextEntry = $this->stateEntry($enabled, $provenance, $id);
         $marker = [
             'operation' => 'swap',
             'id' => $id,
@@ -877,7 +884,7 @@ final class RuntimePluginStore
             'backup' => $relativeBackupPath,
             'had_active' => $hadActivePackage,
             'previous_entry' => $state[$id] ?? null,
-            'next_entry' => ['enabled' => $enabled],
+            'next_entry' => $nextEntry,
             'phase' => 'prepared',
         ];
 
@@ -897,7 +904,7 @@ final class RuntimePluginStore
             $marker['phase'] = 'new_active';
             $this->writeRecoveryMarker($marker);
 
-            $state[$id] = ['enabled' => $enabled];
+            $state[$id] = $nextEntry;
             $this->writeState($state);
             $marker['phase'] = 'committed';
             $this->writeRecoveryMarker($marker);
@@ -925,7 +932,10 @@ final class RuntimePluginStore
         $this->installedPackagePath($id);
 
         $state = $this->readState();
-        $state[$id] = ['enabled' => $enabled];
+        $state[$id] = [
+            ...($state[$id] ?? []),
+            'enabled' => $enabled,
+        ];
         $this->writeState($state);
     }
 
@@ -1154,7 +1164,7 @@ final class RuntimePluginStore
                 throw new RuntimeException('Runtime plugin recovery marker has invalid next state.');
             }
 
-            $state[$id] = ['enabled' => $nextEntry['enabled']];
+            $state[$id] = $nextEntry;
             $this->writeState($state);
             $this->deleteDirectory($backupPath);
             $this->deleteDirectory($stagingPath);
@@ -1188,7 +1198,7 @@ final class RuntimePluginStore
         $previousEntry = $marker['previous_entry'] ?? null;
 
         if (is_array($previousEntry) && is_bool($previousEntry['enabled'] ?? null)) {
-            $state[$id] = ['enabled' => $previousEntry['enabled']];
+            $state[$id] = $previousEntry;
         } else {
             unset($state[$id]);
         }
@@ -1207,6 +1217,14 @@ final class RuntimePluginStore
             ! is_bool($marker['had_active'] ?? null) ||
             ! str_starts_with($marker['backup'], '.backup/') ||
             (isset($marker['staging']) && $marker['staging'] !== null && (! is_string($marker['staging']) || ! str_starts_with($marker['staging'], '.staging/')))
+        ) {
+            throw new RuntimeException('Runtime plugin recovery marker is invalid.');
+        }
+
+        if (
+            isset($marker['previous_entry'])
+            && $marker['previous_entry'] !== null
+            && ! $this->isValidStateEntry($marker['previous_entry'], $marker['id'])
         ) {
             throw new RuntimeException('Runtime plugin recovery marker is invalid.');
         }
@@ -1233,10 +1251,76 @@ final class RuntimePluginStore
         if (
             $marker['operation'] === 'swap'
             && $marker['phase'] === 'new_active'
-            && (! is_array($marker['next_entry'] ?? null) || ! is_bool($marker['next_entry']['enabled'] ?? null))
+            && ! $this->isValidStateEntry($marker['next_entry'] ?? null, $marker['id'])
         ) {
             throw new RuntimeException('Runtime plugin recovery marker has invalid next state.');
         }
+    }
+
+    /** @param  array<string, mixed>|null  $provenance @return array<string, mixed> */
+    private function stateEntry(bool $enabled, ?array $provenance, string $id): array
+    {
+        $entry = [...($provenance ?? []), 'enabled' => $enabled];
+
+        if (! $this->isValidStateEntry($entry, $id)) {
+            throw new RuntimeException('Runtime plugin provenance is invalid.');
+        }
+
+        return $entry;
+    }
+
+    private function isValidStateEntry(mixed $entry, ?string $id = null): bool
+    {
+        if (! is_array($entry) || ! is_bool($entry['enabled'] ?? null)) {
+            return false;
+        }
+
+        $allowedKeys = [
+            'enabled',
+            'source',
+            'marketplace_plugin_id',
+            'marketplace_version',
+            'artifact_sha256',
+            'installed_at',
+        ];
+
+        if (array_diff(array_keys($entry), $allowedKeys) !== []) {
+            return false;
+        }
+
+        $source = $entry['source'] ?? null;
+
+        if ($source !== null && ! in_array($source, ['manual', 'marketplace'], true)) {
+            return false;
+        }
+
+        $marketplaceKeys = [
+            'marketplace_plugin_id',
+            'marketplace_version',
+            'artifact_sha256',
+        ];
+
+        if ($source !== 'marketplace' && array_intersect(array_keys($entry), $marketplaceKeys) !== []) {
+            return false;
+        }
+
+        if (
+            $source === 'marketplace'
+            && (
+                ! is_string($entry['marketplace_plugin_id'] ?? null)
+                || ! $this->isValidId($entry['marketplace_plugin_id'])
+                || ($id !== null && $entry['marketplace_plugin_id'] !== $id)
+                || ! is_string($entry['marketplace_version'] ?? null)
+                || ! preg_match('/\A\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\z/', $entry['marketplace_version'])
+                || ! is_string($entry['artifact_sha256'] ?? null)
+                || ! preg_match('/\A[a-f0-9]{64}\z/i', $entry['artifact_sha256'])
+                || ! is_string($entry['installed_at'] ?? null)
+            )
+        ) {
+            return false;
+        }
+
+        return ! array_key_exists('installed_at', $entry) || is_string($entry['installed_at']);
     }
 
     /**

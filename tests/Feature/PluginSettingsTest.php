@@ -1,13 +1,17 @@
 <?php
 
 use App\Models\User;
+use App\Services\Platform\BuildInfo;
 use App\Services\Platform\PluginInstaller;
 use App\Services\Platform\RuntimePluginDiscovery;
 use App\Services\Platform\RuntimePluginGraphValidator;
 use App\Services\Platform\RuntimePluginStore;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use OpenKOS\Core\Contracts\PluginDiscovery;
@@ -16,6 +20,8 @@ use OpenKOS\Plugins\Mail\MailPlugin;
 beforeEach(function (): void {
     $this->runtimePluginPath = sys_get_temp_dir().'/openkos-settings-runtime-'.bin2hex(random_bytes(8));
     $this->originalRuntimePath = config('platform.runtime.path');
+    $this->originalBuildVersion = config('app.build.version');
+    $this->originalPlatformVersion = config('platform.version');
 
     config([
         'platform.runtime.path' => $this->runtimePluginPath,
@@ -30,7 +36,10 @@ afterEach(function (): void {
     File::deleteDirectory($this->runtimePluginPath);
     config([
         'platform.runtime.path' => $this->originalRuntimePath,
+        'app.build.version' => $this->originalBuildVersion,
+        'platform.version' => $this->originalPlatformVersion,
     ]);
+    app()->forgetInstance(BuildInfo::class);
 });
 
 it('redirects guests and forbids non-owners from plugin management', function (): void {
@@ -45,6 +54,18 @@ it('redirects guests and forbids non-owners from plugin management', function ()
 
     $this->actingAs($user)
         ->post(route('settings.plugins.install'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->get(route('settings.plugins.marketplace.index'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->post(route('settings.plugins.marketplace.install'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->post(route('settings.plugins.marketplace.update'))
         ->assertForbidden();
 
     $this->actingAs($user)
@@ -809,6 +830,391 @@ it('does not offer disable for a package missing from the managed directory', fu
     ]);
 });
 
+it('does not contact the marketplace while rendering local plugin management', function (): void {
+    Http::fake();
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.index'))
+        ->assertSuccessful();
+
+    Http::assertNothingSent();
+});
+
+it('lists marketplace plugins with the latest compatible version', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $compatible = marketplaceVersionMetadata($artifact, '1.0.0');
+    $latest = marketplaceVersionMetadata($artifact, '1.1.0');
+    fakeMarketplace($artifact, ['1.0.0' => $compatible], '1.0.0', $latest);
+
+    $response = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.marketplace.index').'?q=settings');
+
+    $response->assertSuccessful()
+        ->assertJsonPath('plugins.0.id', $artifact['id'])
+        ->assertJsonPath('plugins.0.latest_version.version', '1.1.0')
+        ->assertJsonPath('plugins.0.latest_compatible_version.version', '1.0.0')
+        ->assertJsonPath('plugins.0.compatible', true);
+    Http::assertSentCount(2);
+});
+
+it('installs an exact marketplace artifact with verified provenance', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    $metadata['artifact']['url'] = 'https://unexpected.example/artifact.zip';
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    $state = app(RuntimePluginStore::class)->readState();
+    expect($state[$artifact['id']])->toMatchArray([
+        'enabled' => true,
+        'source' => 'marketplace',
+        'marketplace_plugin_id' => $artifact['id'],
+        'marketplace_version' => '1.0.0',
+        'artifact_sha256' => $metadata['artifact']['sha256'],
+    ])
+        ->and(Storage::disk('local')->allFiles('plugin-downloads'))->toBe([]);
+    Http::assertSentCount(2);
+    Http::assertSent(fn (Request $request): bool => parse_url($request->url(), PHP_URL_HOST) === 'marketplace.test');
+});
+
+it('rejects marketplace metadata that disagrees with the package', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    $metadata['compatibility']['platform'] = '^9.0';
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe([])
+        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse()
+        ->and(Storage::disk('local')->allFiles('plugin-downloads'))->toBe([]);
+});
+
+it('leaves local state untouched when marketplace checksum verification fails', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    $metadata['artifact']['sha256'] = str_repeat('a', 64);
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe([])
+        ->and(Storage::disk('local')->allFiles('plugin-downloads'))->toBe([])
+        ->and(is_dir($this->runtimePluginPath.'/'.$artifact['id']))->toBeFalse();
+});
+
+it('pins a yanked update version and preserves the previous installation', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $stateBefore = app(RuntimePluginStore::class)->readState();
+    Http::swap(new Factory);
+    Http::fake(fn () => Http::response([], 404));
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe($stateBefore)
+        ->and(json_decode(
+            file_get_contents($this->runtimePluginPath.'/'.$artifact['id'].'/manifest.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        )['version'])->toBe('1.0.0');
+    Http::assertSentCount(1);
+    Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), '/versions/1.1.0'));
+});
+
+it('updates a marketplace plugin through the installer boundary', function (): void {
+    configureMarketplaceForTests();
+    $old = makePluginSettingsArtifact(['id' => 'settings/update-fixture', 'version' => '1.0.0']);
+    $new = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.1.0']);
+    fakeMarketplace($old, ['1.0.0' => marketplaceVersionMetadata($old, '1.0.0')], '1.0.0');
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $newMetadata = marketplaceVersionMetadata($new, '1.1.0');
+    fakeMarketplace($new, ['1.1.0' => $newMetadata], '1.1.0');
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(app(RuntimePluginStore::class)->readState()[$old['id']])->toMatchArray([
+        'source' => 'marketplace',
+        'marketplace_version' => '1.1.0',
+        'artifact_sha256' => $newMetadata['artifact']['sha256'],
+    ])
+        ->and(json_decode(
+            file_get_contents($this->runtimePluginPath.'/'.$old['id'].'/manifest.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        )['version'])->toBe('1.1.0');
+    Http::assertSentCount(2);
+});
+
+it('preserves the previous marketplace installation when an update fails integrity checks', function (): void {
+    configureMarketplaceForTests();
+    $old = makePluginSettingsArtifact(['id' => 'settings/checksum-fixture', 'version' => '1.0.0']);
+    fakeMarketplace($old, ['1.0.0' => marketplaceVersionMetadata($old, '1.0.0')], '1.0.0');
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $stateBefore = app(RuntimePluginStore::class)->readState();
+    $new = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.1.0']);
+    $newMetadata = marketplaceVersionMetadata($new, '1.1.0');
+    $newMetadata['artifact']['sha256'] = str_repeat('b', 64);
+    fakeMarketplace($new, ['1.1.0' => $newMetadata], '1.1.0');
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe($stateBefore)
+        ->and(json_decode(
+            file_get_contents($this->runtimePluginPath.'/'.$old['id'].'/manifest.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        )['version'])->toBe('1.0.0')
+        ->and(Storage::disk('local')->allFiles('plugin-downloads'))->toBe([]);
+});
+
+it('does not overwrite a manual replacement during a marketplace update', function (): void {
+    configureMarketplaceForTests();
+    $old = makePluginSettingsArtifact(['id' => 'settings/race-fixture', 'version' => '1.0.0']);
+    fakeMarketplace($old, ['1.0.0' => marketplaceVersionMetadata($old, '1.0.0')], '1.0.0');
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $manual = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.2.0']);
+    $marketplace = makePluginSettingsArtifact(['id' => $old['id'], 'version' => '1.1.0']);
+    $metadata = marketplaceVersionMetadata($marketplace, '1.1.0');
+
+    Http::swap(new Factory);
+    Http::fake(function (Request $request) use ($manual, $marketplace, $metadata) {
+        $path = parse_url($request->url(), PHP_URL_PATH);
+
+        if (is_string($path) && str_ends_with($path, '/artifact')) {
+            app(PluginInstaller::class)->install(
+                $manual['zip'],
+                provenance: [
+                    'source' => 'manual',
+                    'installed_at' => now()->toIso8601String(),
+                ],
+            );
+
+            $contents = file_get_contents($marketplace['zip']);
+
+            return Http::response($contents === false ? '' : $contents, 200, [
+                'Content-Type' => 'application/zip',
+                'Content-Length' => (string) filesize($marketplace['zip']),
+            ]);
+        }
+
+        return Http::response(['data' => $metadata]);
+    });
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $old['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState()[$old['id']])->toMatchArray([
+        'source' => 'manual',
+    ])->not->toHaveKeys([
+        'marketplace_plugin_id',
+        'marketplace_version',
+        'artifact_sha256',
+    ])
+        ->and(json_decode(
+            file_get_contents($this->runtimePluginPath.'/'.$old['id'].'/manifest.json'),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        )['version'])->toBe('1.2.0');
+    Http::assertSentCount(2);
+});
+
+it('changes marketplace provenance to manual after a manual replacement', function (): void {
+    configureMarketplaceForTests();
+    $marketplaceArtifact = makePluginSettingsArtifact([
+        'id' => 'settings/provenance-fixture',
+        'version' => '1.0.0',
+    ]);
+    $manualArtifact = makePluginSettingsArtifact([
+        'id' => $marketplaceArtifact['id'],
+        'version' => '1.1.0',
+    ]);
+    fakeMarketplace(
+        $marketplaceArtifact,
+        ['1.0.0' => marketplaceVersionMetadata($marketplaceArtifact, '1.0.0')],
+        '1.0.0',
+    );
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $marketplaceArtifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($owner)
+        ->post(route('settings.plugins.install'), [
+            'file' => new UploadedFile($manualArtifact['zip'], 'runtime.zip', 'application/zip', null, true),
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
+
+    expect(app(RuntimePluginStore::class)->readState()[$marketplaceArtifact['id']])->toMatchArray([
+        'source' => 'manual',
+    ])->not->toHaveKeys([
+        'marketplace_plugin_id',
+        'marketplace_version',
+        'artifact_sha256',
+    ]);
+});
+
+it('does not allow marketplace updates for unprovenanced runtime plugins', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    app(PluginInstaller::class)->install($artifact['zip']);
+    Http::fake();
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.update'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.1.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    Http::assertNothingSent();
+});
+
+it('contains oversized marketplace responses without changing local state', function (): void {
+    configureMarketplaceForTests();
+    config(['services.marketplace.max_response_bytes' => 10]);
+    Http::fake(fn () => Http::response(str_repeat('x', 11), 200, [
+        'Content-Length' => '11',
+    ]));
+
+    $response = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.marketplace.index'));
+
+    $response->assertSuccessful()
+        ->assertJsonPath('plugins', [])
+        ->assertJsonPath('updates', []);
+    expect(app(RuntimePluginStore::class)->readState())->toBe([]);
+});
+
+it('rejects malformed nested marketplace catalog data', function (): void {
+    configureMarketplaceForTests();
+    Http::fake(fn () => Http::response([
+        'data' => [
+            'current_page' => 1,
+            'total_page' => 1,
+            'total_records' => 1,
+            'records' => [[
+                'id' => 'settings/malformed',
+                'name' => ['not', 'text'],
+                'summary' => null,
+                'description' => null,
+                'publisher' => null,
+                'repository_url' => null,
+                'homepage_url' => null,
+                'latest_version' => null,
+            ]],
+        ],
+    ]));
+
+    $response = $this->actingAs(User::factory()->owner()->create())
+        ->get(route('settings.plugins.marketplace.index'));
+
+    $response->assertSuccessful()
+        ->assertJsonPath('plugins', [])
+        ->assertJsonPath('updates', [])
+        ->assertJsonPath('error', 'The marketplace is currently unavailable. Installed plugins and manual ZIP management are still available.');
+});
+
+it('rejects marketplace artifacts over the configured limit before downloading', function (): void {
+    configureMarketplaceForTests();
+    config(['services.marketplace.max_artifact_bytes' => 1]);
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertSessionHasErrors('marketplace');
+
+    expect(app(RuntimePluginStore::class)->readState())->toBe([]);
+    Http::assertSentCount(1);
+});
+
 /** @return array{zip: string, id: string, class: string} */
 function makePluginSettingsArtifact(array $overrides = []): array
 {
@@ -829,6 +1235,7 @@ function makePluginSettingsArtifact(array $overrides = []): array
     ];
     $dependencies = var_export($manifest['dependencies'], true);
     $source = "<?php\n\nnamespace SettingsRuntime;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$id}',\n            name: 'Settings Runtime Fixture',\n            version: '1.0.0',\n            description: 'Settings runtime fixture.',\n            coreVersion: '^0.2',\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void {}\n}\n";
+    $source = str_replace("version: '1.0.0',", "version: '{$manifest['version']}',", $source);
     $source = str_replace("coreVersion: '^0.2',", "coreVersion: '{$manifest['core_version']}',\n            dependencies: {$dependencies},", $source);
 
     $directory = sys_get_temp_dir().'/openkos-settings-zip-'.bin2hex(random_bytes(8));
@@ -862,4 +1269,114 @@ function makePluginSettingsArtifact(array $overrides = []): array
     File::deleteDirectory($directory);
 
     return ['zip' => $zipPath, 'id' => $id, 'class' => $entryClass];
+}
+
+function configureMarketplaceForTests(): void
+{
+    config([
+        'app.build.version' => '0.2.3',
+        'platform.version' => '0.2.3',
+        'services.marketplace.url' => 'https://marketplace.test',
+    ]);
+    app()->forgetInstance(BuildInfo::class);
+}
+
+/** @return array<string, mixed> */
+function marketplaceVersionMetadata(array $artifact, string $version): array
+{
+    $zip = new ZipArchive;
+
+    if ($zip->open($artifact['zip']) !== true) {
+        throw new RuntimeException('Could not open marketplace fixture ZIP.');
+    }
+
+    $manifestContents = $zip->getFromName('manifest.json');
+    $zip->close();
+
+    if (! is_string($manifestContents)) {
+        throw new RuntimeException('Marketplace fixture ZIP has no manifest.');
+    }
+
+    $manifest = json_decode($manifestContents, true, 512, JSON_THROW_ON_ERROR);
+
+    return [
+        'version' => $version,
+        'entry_class' => $artifact['class'],
+        'compatibility' => [
+            'openkos' => '^0.2',
+            'platform' => '^0.2',
+            'php' => '^8.3',
+        ],
+        'published_at' => now()->toIso8601String(),
+        'dependencies' => $manifest['dependencies'],
+        'release_notes' => null,
+        'manifest' => $manifest,
+        'artifact' => [
+            'size' => (int) filesize($artifact['zip']),
+            'sha256' => hash_file('sha256', $artifact['zip']),
+        ],
+    ];
+}
+
+/**
+ * @param  array<string, array<string, mixed>>  $versions
+ * @param  array<string, mixed>|null  $latest
+ */
+function fakeMarketplace(
+    array $artifact,
+    array $versions,
+    ?string $resolvedVersion,
+    ?array $latest = null,
+): void {
+    $latest ??= array_values($versions)[count($versions) - 1] ?? null;
+
+    Http::swap(new Factory);
+    Http::fake(function (Request $request) use ($artifact, $versions, $resolvedVersion, $latest) {
+        $path = parse_url($request->url(), PHP_URL_PATH);
+
+        if ($path === '/api/v1/plugins') {
+            return Http::response([
+                'data' => [
+                    'current_page' => 1,
+                    'total_page' => 1,
+                    'total_records' => 1,
+                    'records' => [[
+                        'id' => $artifact['id'],
+                        'name' => 'Marketplace Runtime Fixture',
+                        'summary' => 'Marketplace runtime fixture.',
+                        'description' => 'Marketplace runtime fixture.',
+                        'publisher' => ['name' => 'OpenKOS', 'url' => null],
+                        'repository_url' => null,
+                        'homepage_url' => null,
+                        'latest_version' => $latest,
+                    ]],
+                ],
+            ]);
+        }
+
+        if (is_string($path) && str_ends_with($path, '/versions/resolve')) {
+            return $resolvedVersion === null
+                ? Http::response([], 404)
+                : Http::response(['data' => $versions[$resolvedVersion]]);
+        }
+
+        if (is_string($path) && str_ends_with($path, '/artifact')) {
+            $contents = file_get_contents($artifact['zip']);
+
+            return Http::response($contents === false ? '' : $contents, 200, [
+                'Content-Type' => 'application/zip',
+                'Content-Length' => (string) filesize($artifact['zip']),
+            ]);
+        }
+
+        if (is_string($path) && preg_match('#/versions/([^/]+)$#', $path, $matches) === 1) {
+            $version = rawurldecode($matches[1]);
+
+            return isset($versions[$version])
+                ? Http::response(['data' => $versions[$version]])
+                : Http::response([], 404);
+        }
+
+        return Http::response([], 404);
+    });
 }

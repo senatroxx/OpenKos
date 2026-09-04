@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\InstallPluginRequest;
+use App\Http\Requests\Settings\MarketplaceActionRequest;
+use App\Http\Requests\Settings\MarketplaceBrowseRequest;
 use App\Services\Platform\PluginManagementService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -47,6 +50,25 @@ class PluginController extends Controller
         ]);
 
         return to_route('settings.plugins.index');
+    }
+
+    public function marketplace(MarketplaceBrowseRequest $request, PluginManagementService $plugins): JsonResponse
+    {
+        return response()->json($plugins->marketplaceCatalog(
+            $request->string('q')->trim()->toString() ?: null,
+            $request->integer('page', 1),
+            $request->integer('limit', 20),
+        ));
+    }
+
+    public function marketplaceInstall(MarketplaceActionRequest $request, PluginManagementService $plugins): RedirectResponse
+    {
+        return $this->runMarketplaceAction($request, $plugins, false);
+    }
+
+    public function marketplaceUpdate(MarketplaceActionRequest $request, PluginManagementService $plugins): RedirectResponse
+    {
+        return $this->runMarketplaceAction($request, $plugins, true);
     }
 
     public function enable(string $vendor, string $package, PluginManagementService $plugins): RedirectResponse
@@ -98,6 +120,35 @@ class PluginController extends Controller
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => $success]);
+
+        return to_route('settings.plugins.index');
+    }
+
+    private function runMarketplaceAction(MarketplaceActionRequest $request, PluginManagementService $plugins, bool $update): RedirectResponse
+    {
+        $pluginId = $request->string('plugin_id')->toString();
+        $version = $request->string('version')->toString();
+
+        try {
+            if ($update) {
+                $plugins->updateFromMarketplace($pluginId, $version);
+            } else {
+                $plugins->installFromMarketplace($pluginId, $version);
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+
+            throw ValidationException::withMessages([
+                'marketplace' => $plugins->userMessage($exception),
+            ]);
+        }
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $update
+                ? __('Plugin updated from the marketplace. Restart required for changes to take effect.')
+                : __('Plugin installed from the marketplace. Restart required for changes to take effect.'),
+        ]);
 
         return to_route('settings.plugins.index');
     }

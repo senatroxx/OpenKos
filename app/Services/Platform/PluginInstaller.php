@@ -31,8 +31,19 @@ final class PluginInstaller
      *     dependencies: array<int, string>
      * }
      */
-    public function install(string $zipPath): array
-    {
+    /**
+     * @param  array<string, mixed>|null  $provenance
+     * @param  array<string, mixed>|null  $expectedCurrentState
+     * @param  array<string, mixed>|null  $expectedMetadata
+     */
+    public function install(
+        string $zipPath,
+        ?string $expectedId = null,
+        ?string $expectedVersion = null,
+        ?array $provenance = null,
+        ?array $expectedCurrentState = null,
+        ?array $expectedMetadata = null,
+    ): array {
         if (! config('platform.runtime.enabled', true)) {
             throw new RuntimeException('Runtime plugin installation is disabled.');
         }
@@ -62,10 +73,17 @@ final class PluginInstaller
                 $archive->close();
             }
 
-            $staticMetadata = $this->validator->inspectStaticMetadata($inspectionPath);
+            $staticMetadata = $this->validator->inspectStaticMetadata($inspectionPath, $expectedId);
+
+            if ($expectedVersion !== null && $staticMetadata['version'] !== $expectedVersion) {
+                throw new InvalidArgumentException('Runtime plugin artifact version does not match the expected version.');
+            }
+
+            $this->assertExpectedMetadata($staticMetadata, $expectedMetadata);
+
             $pluginId = $staticMetadata['id'];
 
-            return $this->store->withLock(function (RuntimePluginStore $store) use (&$inspectionPath, $pluginId): array {
+            return $this->store->withLock(function (RuntimePluginStore $store) use (&$inspectionPath, $pluginId, $expectedVersion, $provenance, $expectedCurrentState, $expectedMetadata): array {
                 $stagingPath = null;
 
                 try {
@@ -77,7 +95,9 @@ final class PluginInstaller
 
                     $inspectionPath = null;
                     $state = $store->readState();
+                    $this->assertExpectedCurrentState($state, $pluginId, $expectedCurrentState);
                     $staticMetadata = $this->validator->inspectStaticMetadata($stagingPath, $pluginId);
+                    $this->assertExpectedMetadata($staticMetadata, $expectedMetadata);
                     $enabled = ! isset($state[$pluginId]) || $state[$pluginId]['enabled'];
                     $candidatePackages = $store->installedPackages();
                     $candidatePackages[$pluginId] = $stagingPath;
@@ -92,8 +112,13 @@ final class PluginInstaller
                     }
 
                     $metadata = $this->validator->validateInFreshProcess($stagingPath, $staticMetadata['id']);
+
+                    if ($expectedVersion !== null && $metadata['version'] !== $expectedVersion) {
+                        throw new InvalidArgumentException('Runtime plugin artifact version does not match the expected version.');
+                    }
+
                     $this->graph->validateCandidate($metadata, $enabled, $store, $this->hostPluginClasses());
-                    $store->promote($metadata['id'], $stagingPath, $enabled);
+                    $store->promote($metadata['id'], $stagingPath, $enabled, $provenance);
                     $stagingPath = null;
 
                     return $metadata;
@@ -348,6 +373,69 @@ final class PluginInstaller
 
             if (preg_match('/(^|\/)(install|post-install|pre-install)\.(php|sh|bash|bat|cmd|exe)$/i', $normalizedName)) {
                 throw new InvalidArgumentException("Plugin ZIP contains an install script [{$name}].");
+            }
+        }
+    }
+
+    /** @param array<string, mixed> $metadata @param array<string, mixed>|null $expected */
+    private function assertExpectedMetadata(array $metadata, ?array $expected): void
+    {
+        if ($expected === null) {
+            return;
+        }
+
+        $manifest = $expected['manifest'] ?? null;
+
+        if (! is_array($manifest)) {
+            throw new InvalidArgumentException('Marketplace package metadata is incomplete.');
+        }
+
+        $actual = [
+            'id' => $metadata['id'] ?? null,
+            'name' => $metadata['name'] ?? null,
+            'version' => $metadata['version'] ?? null,
+            'description' => $metadata['description'] ?? null,
+            'entry_class' => $metadata['entry_class'] ?? null,
+            'core_version' => $metadata['core_version'] ?? null,
+            'php' => $metadata['php'] ?? null,
+            'dependencies' => $metadata['dependencies'] ?? null,
+            'platform_constraint' => $metadata['platform_constraint'] ?? null,
+        ];
+        $expectedManifest = [
+            'id' => $manifest['id'] ?? null,
+            'name' => $manifest['name'] ?? null,
+            'version' => $manifest['version'] ?? null,
+            'description' => $manifest['description'] ?? null,
+            'entry_class' => $manifest['entry_class'] ?? null,
+            'core_version' => $manifest['core_version'] ?? null,
+            'php' => $manifest['php'] ?? null,
+            'dependencies' => $manifest['dependencies'] ?? null,
+            'platform_constraint' => $expected['platform_constraint'] ?? null,
+        ];
+
+        if (
+            $actual !== $expectedManifest
+            || ($expected['entry_class'] ?? null) !== $actual['entry_class']
+            || ($expected['core_version'] ?? null) !== $actual['core_version']
+            || ($expected['php'] ?? null) !== $actual['php']
+            || ($expected['dependencies'] ?? null) !== $actual['dependencies']
+        ) {
+            throw new InvalidArgumentException('Marketplace metadata does not match the plugin package.');
+        }
+    }
+
+    /** @param array<string, array<string, mixed>> $state @param array<string, mixed>|null $expected */
+    private function assertExpectedCurrentState(array $state, string $pluginId, ?array $expected): void
+    {
+        if ($expected === null) {
+            return;
+        }
+
+        $current = $state[$pluginId] ?? null;
+
+        foreach (['source', 'marketplace_plugin_id', 'marketplace_version', 'artifact_sha256'] as $key) {
+            if (! is_array($current) || ($current[$key] ?? null) !== ($expected[$key] ?? null)) {
+                throw new RuntimeException('Runtime plugin state changed during marketplace update.');
             }
         }
     }
