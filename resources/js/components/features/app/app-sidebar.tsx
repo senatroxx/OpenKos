@@ -47,7 +47,16 @@ export function AppSidebar() {
     const permissions = auth.permissions;
     const isOwner = auth.role === 'owner';
     const home = auth.tenant ? portalDashboard() : dashboard();
-    const settingsNavItems = platformPageNavItems(platform.settings, auth);
+    const settingsNavItems = [
+        ...platformPageNavItems(
+            platform.settings.filter((page) => page.key !== 'about'),
+            auth,
+        ),
+        ...platformPageNavItems(
+            platform.settings.filter((page) => page.key === 'about'),
+            auth,
+        ),
+    ];
 
     const navSections: NavSection[] = auth.tenant
         ? [

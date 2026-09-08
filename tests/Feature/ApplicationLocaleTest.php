@@ -29,6 +29,10 @@ test('http requests apply the configured locale and share its catalogs', functio
             ->where('app.intl_locale', 'id-ID')
             ->where('i18n.locale', 'id')
             ->where('i18n.messages.General settings', 'Pengaturan umum')
+            ->where('i18n.messages.Install :name?', 'Pasang :name?')
+            ->where('i18n.messages.Update :name?', 'Perbarui :name?')
+            ->where('i18n.messages.Install plugin', 'Pasang plugin')
+            ->where('i18n.messages.Update plugin', 'Perbarui plugin')
             ->where('i18n.fallback', [])
         );
 });

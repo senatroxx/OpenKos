@@ -54,6 +54,13 @@ type RemoveConfirmation = {
     force: boolean;
 };
 
+type MarketplaceConfirmation = {
+    pluginId: string;
+    name: string;
+    version: string;
+    update: boolean;
+};
+
 type MarketplaceSectionProps = {
     data: MarketplaceCatalog | null;
     error: string | null;
@@ -64,7 +71,10 @@ type MarketplaceSectionProps = {
     onSearch: (event: React.FormEvent<HTMLFormElement>) => void;
     onRetry: () => void;
     onPageChange: (page: number) => void;
-    onAction: (pluginId: string, version: string, update: boolean) => void;
+    onAction: (
+        action: MarketplaceConfirmation,
+        trigger: HTMLButtonElement,
+    ) => void;
 };
 
 const statusVariants: Record<
@@ -191,43 +201,42 @@ function MarketplaceSection({
     }
 
     return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>{t('Find a plugin')}</CardTitle>
-                    <CardDescription>
-                        {t(
-                            'Browse compatible runtime plugins from the OpenKOS Marketplace.',
-                        )}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form
-                        className="flex flex-col gap-3 sm:flex-row"
-                        onSubmit={onSearch}
+        <div
+            id="plugins-panel"
+            role="tabpanel"
+            aria-labelledby="marketplace-plugins-tab"
+            tabIndex={0}
+            className="space-y-4"
+        >
+            <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                    {t(
+                        'Browse compatible runtime plugins from the OpenKOS Marketplace.',
+                    )}
+                </p>
+                <form
+                    className="flex flex-col gap-2 sm:max-w-xl sm:flex-row"
+                    onSubmit={onSearch}
+                >
+                    <Label className="sr-only" htmlFor="marketplace_search">
+                        {t('Search marketplace')}
+                    </Label>
+                    <Input
+                        id="marketplace_search"
+                        value={search}
+                        placeholder={t('Search by plugin name or ID')}
+                        onChange={(event) => onSearchChange(event.target.value)}
+                        disabled={processing}
+                    />
+                    <Button
+                        type="submit"
+                        variant="outline"
+                        disabled={processing}
                     >
-                        <Label className="sr-only" htmlFor="marketplace_search">
-                            {t('Search marketplace')}
-                        </Label>
-                        <Input
-                            id="marketplace_search"
-                            value={search}
-                            placeholder={t('Search by plugin name or ID')}
-                            onChange={(event) =>
-                                onSearchChange(event.target.value)
-                            }
-                            disabled={processing}
-                        />
-                        <Button
-                            type="submit"
-                            variant="outline"
-                            disabled={processing}
-                        >
-                            {processing ? t('Searching...') : t('Search')}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
+                        {processing ? t('Searching...') : t('Search')}
+                    </Button>
+                </form>
+            </div>
 
             {(error || data?.error) && (
                 <Alert variant="destructive">
@@ -256,7 +265,7 @@ function MarketplaceSection({
                     {[1, 2].map((item) => (
                         <div
                             key={item}
-                            className="h-56 animate-pulse rounded-lg border bg-muted/40"
+                            className="h-48 animate-pulse rounded-lg border bg-muted/40"
                         />
                     ))}
                 </div>
@@ -272,8 +281,8 @@ function MarketplaceSection({
             ) : data !== null ? (
                 <>
                     {data.updates.length > 0 && (
-                        <Card>
-                            <CardHeader>
+                        <Card className="gap-3 py-4 shadow-none">
+                            <CardHeader className="px-4">
                                 <CardTitle>{t('Updates available')}</CardTitle>
                                 <CardDescription>
                                     {t(
@@ -281,7 +290,7 @@ function MarketplaceSection({
                                     )}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="space-y-3">
+                            <CardContent className="space-y-2 px-4">
                                 {data.updates.map(
                                     (update: MarketplaceUpdate) => {
                                         const key = `${update.plugin_id}@${update.available_version.version}`;
@@ -291,7 +300,7 @@ function MarketplaceSection({
                                                 key={key}
                                                 className="flex flex-wrap items-center justify-between gap-3 rounded-md border p-3"
                                             >
-                                                <div>
+                                                <div className="min-w-0 break-words">
                                                     <p className="font-medium">
                                                         {update.name}
                                                     </p>
@@ -315,13 +324,19 @@ function MarketplaceSection({
                                                     disabled={
                                                         processingPlugin === key
                                                     }
-                                                    onClick={() =>
+                                                    onClick={(event) =>
                                                         onAction(
-                                                            update.plugin_id,
-                                                            update
-                                                                .available_version
-                                                                .version,
-                                                            true,
+                                                            {
+                                                                pluginId:
+                                                                    update.plugin_id,
+                                                                name: update.name,
+                                                                version:
+                                                                    update
+                                                                        .available_version
+                                                                        .version,
+                                                                update: true,
+                                                            },
+                                                            event.currentTarget,
                                                         )
                                                     }
                                                 >
@@ -356,14 +371,17 @@ function MarketplaceSection({
                                 processingPlugin === actionKey;
 
                             return (
-                                <Card key={plugin.id}>
-                                    <CardHeader>
+                                <Card
+                                    key={plugin.id}
+                                    className="min-w-0 gap-3 py-4 shadow-none"
+                                >
+                                    <CardHeader className="px-4">
                                         <div className="flex flex-wrap items-start justify-between gap-3">
-                                            <div>
-                                                <CardTitle>
+                                            <div className="min-w-0 flex-1">
+                                                <CardTitle className="leading-snug break-words">
                                                     {plugin.name}
                                                 </CardTitle>
-                                                <CardDescription className="mt-1 font-mono">
+                                                <CardDescription className="mt-1 font-mono text-xs break-all">
                                                     {plugin.id}
                                                 </CardDescription>
                                             </div>
@@ -374,14 +392,14 @@ function MarketplaceSection({
                                             )}
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <p className="text-sm text-muted-foreground">
+                                    <CardContent className="flex flex-1 flex-col gap-3 px-4">
+                                        <p className="text-sm break-words text-muted-foreground">
                                             {plugin.summary ??
                                                 plugin.description ??
                                                 t('No description provided.')}
                                         </p>
 
-                                        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm [&_dd]:break-words [&>div]:min-w-0">
                                             <div>
                                                 <dt className="text-muted-foreground">
                                                     {t('Installed')}
@@ -475,17 +493,23 @@ function MarketplaceSection({
                                             </Alert>
                                         )}
 
-                                        <div className="flex flex-wrap items-center gap-2">
+                                        <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 [&_button]:h-auto [&_button]:min-h-8 [&_button]:max-w-full [&_button]:whitespace-normal">
                                             {action !== null ? (
                                                 <Button
                                                     type="button"
                                                     size="sm"
                                                     disabled={isProcessing}
-                                                    onClick={() =>
+                                                    onClick={(event) =>
                                                         onAction(
-                                                            plugin.id,
-                                                            action.version,
-                                                            action.update,
+                                                            {
+                                                                pluginId:
+                                                                    plugin.id,
+                                                                name: plugin.name,
+                                                                version:
+                                                                    action.version,
+                                                                update: action.update,
+                                                            },
+                                                            event.currentTarget,
                                                         )
                                                     }
                                                 >
@@ -585,6 +609,11 @@ export default function Plugins({
     max_upload_bytes: maxUploadBytes,
 }: Props) {
     const fileInput = useRef<HTMLInputElement>(null);
+    const marketplaceTrigger = useRef<HTMLButtonElement | null>(null);
+    const installedTab = useRef<HTMLButtonElement>(null);
+    const marketplaceActionInFlight = useRef(false);
+    const [marketplaceConfirmation, setMarketplaceConfirmation] =
+        useState<MarketplaceConfirmation | null>(null);
     const [uploadConfirmationOpen, setUploadConfirmationOpen] = useState(false);
     const [removeConfirmation, setRemoveConfirmation] =
         useState<RemoveConfirmation | null>(null);
@@ -651,26 +680,13 @@ export default function Plugins({
         }
     }
 
-    function runMarketplaceAction(
-        pluginId: string,
-        version: string,
-        update: boolean,
-    ) {
-        if (
-            !window.confirm(
-                t(
-                    update
-                        ? 'Update plugin to :version?'
-                        : 'Install plugin version :version?',
-                    {
-                        version,
-                    },
-                ),
-            )
-        ) {
+    function runMarketplaceAction() {
+        if (!marketplaceConfirmation || marketplaceActionInFlight.current) {
             return;
         }
 
+        const { pluginId, version, update } = marketplaceConfirmation;
+        marketplaceActionInFlight.current = true;
         setActionError(null);
         setProcessingPlugin(`${pluginId}@${version}`);
         router.post(
@@ -684,7 +700,11 @@ export default function Plugins({
                     setActiveSection('installed');
                 },
                 onError: (errors) => setActionError(errors.marketplace ?? null),
-                onFinish: () => setProcessingPlugin(null),
+                onFinish: () => {
+                    marketplaceActionInFlight.current = false;
+                    setProcessingPlugin(null);
+                    setMarketplaceConfirmation(null);
+                },
             },
         );
     }
@@ -783,7 +803,7 @@ export default function Plugins({
         <>
             <Head title={t('Plugins')} />
 
-            <div className="space-y-6">
+            <div className="space-y-4">
                 <div>
                     <h1 className="text-lg font-medium">{t('Plugins')}</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -791,6 +811,65 @@ export default function Plugins({
                             'Inspect and manage trusted OpenKOS plugin packages.',
                         )}
                     </p>
+                </div>
+
+                <div
+                    className="flex gap-4 border-b"
+                    role="tablist"
+                    aria-label={t('Plugins')}
+                    onKeyDown={(event) => {
+                        const tabs = Array.from(
+                            event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                                '[role="tab"]',
+                            ),
+                        );
+                        const current = tabs.indexOf(
+                            event.target as HTMLButtonElement,
+                        );
+                        const next =
+                            event.key === 'Home'
+                                ? 0
+                                : event.key === 'End'
+                                  ? tabs.length - 1
+                                  : event.key === 'ArrowRight'
+                                    ? (current + 1) % tabs.length
+                                    : event.key === 'ArrowLeft'
+                                      ? (current + tabs.length - 1) %
+                                        tabs.length
+                                      : null;
+
+                        if (next !== null) {
+                            event.preventDefault();
+                            tabs[next].focus();
+                            tabs[next].click();
+                        }
+                    }}
+                >
+                    <button
+                        ref={installedTab}
+                        id="installed-plugins-tab"
+                        type="button"
+                        className={`-mb-px min-h-10 border-b-2 pb-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring ${activeSection === 'installed' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                        role="tab"
+                        aria-selected={activeSection === 'installed'}
+                        aria-controls="plugins-panel"
+                        tabIndex={activeSection === 'installed' ? 0 : -1}
+                        onClick={() => setActiveSection('installed')}
+                    >
+                        {t('Installed plugins')}
+                    </button>
+                    <button
+                        id="marketplace-plugins-tab"
+                        type="button"
+                        className={`-mb-px min-h-10 border-b-2 pb-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring ${activeSection === 'marketplace' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                        role="tab"
+                        aria-selected={activeSection === 'marketplace'}
+                        aria-controls="plugins-panel"
+                        tabIndex={activeSection === 'marketplace' ? 0 : -1}
+                        onClick={openMarketplace}
+                    >
+                        {t('Marketplace')}
+                    </button>
                 </div>
 
                 <Alert>
@@ -818,33 +897,6 @@ export default function Plugins({
                     </Alert>
                 )}
 
-                <div className="flex gap-2 border-b" role="tablist">
-                    <Button
-                        type="button"
-                        variant={
-                            activeSection === 'installed' ? 'default' : 'ghost'
-                        }
-                        role="tab"
-                        aria-selected={activeSection === 'installed'}
-                        onClick={() => setActiveSection('installed')}
-                    >
-                        {t('Installed plugins')}
-                    </Button>
-                    <Button
-                        type="button"
-                        variant={
-                            activeSection === 'marketplace'
-                                ? 'default'
-                                : 'ghost'
-                        }
-                        role="tab"
-                        aria-selected={activeSection === 'marketplace'}
-                        onClick={openMarketplace}
-                    >
-                        {t('Marketplace')}
-                    </Button>
-                </div>
-
                 {activeSection === 'marketplace' ? (
                     <MarketplaceSection
                         data={marketplaceData}
@@ -863,43 +915,67 @@ export default function Plugins({
                             setMarketplacePage(page);
                             loadMarketplace(marketplaceSearch, page);
                         }}
-                        onAction={runMarketplaceAction}
+                        onAction={(action, trigger) => {
+                            marketplaceTrigger.current = trigger;
+                            setMarketplaceConfirmation(action);
+                        }}
                     />
                 ) : (
-                    <>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{t('Install plugin')}</CardTitle>
-                                <CardDescription>
-                                    {t(
-                                        'Upload a prepared runtime plugin ZIP, up to :size.',
-                                        {
-                                            size: formatBytes(maxUploadBytes),
-                                        },
-                                    )}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <form
-                                    onSubmit={requestUpload}
-                                    className="grid gap-3"
+                    <div
+                        id="plugins-panel"
+                        role="tabpanel"
+                        aria-labelledby="installed-plugins-tab"
+                        tabIndex={0}
+                        className="space-y-4"
+                    >
+                        <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                                {t(
+                                    'Upload a prepared runtime plugin ZIP, up to :size.',
+                                    {
+                                        size: formatBytes(maxUploadBytes),
+                                    },
+                                )}
+                            </p>
+                            <form
+                                onSubmit={requestUpload}
+                                className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+                            >
+                                <Label
+                                    className="sr-only"
+                                    htmlFor="plugin_file"
                                 >
-                                    <Label htmlFor="plugin_file">
-                                        {t('Plugin ZIP')}
-                                    </Label>
-                                    <Input
-                                        ref={fileInput}
-                                        id="plugin_file"
-                                        type="file"
-                                        accept=".zip,application/zip"
-                                        onChange={(event) =>
-                                            uploadForm.setData(
-                                                'file',
-                                                event.target.files?.[0] ?? null,
-                                            )
+                                    {t('Plugin ZIP')}
+                                </Label>
+                                <Input
+                                    ref={fileInput}
+                                    id="plugin_file"
+                                    type="file"
+                                    className="min-w-0 sm:max-w-sm"
+                                    accept=".zip,application/zip"
+                                    onChange={(event) =>
+                                        uploadForm.setData(
+                                            'file',
+                                            event.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    disabled={uploadForm.processing}
+                                />
+                                <div>
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        disabled={
+                                            !uploadForm.data.file ||
+                                            uploadForm.processing
                                         }
-                                        disabled={uploadForm.processing}
-                                    />
+                                    >
+                                        {uploadForm.processing
+                                            ? t('Installing...')
+                                            : t('Upload and install')}
+                                    </Button>
+                                </div>
+                                <div className="w-full">
                                     <InputError
                                         message={uploadForm.errors.file}
                                     />
@@ -909,22 +985,9 @@ export default function Plugins({
                                             {uploadForm.progress.percentage}%
                                         </p>
                                     )}
-                                    <div>
-                                        <Button
-                                            type="submit"
-                                            disabled={
-                                                !uploadForm.data.file ||
-                                                uploadForm.processing
-                                            }
-                                        >
-                                            {uploadForm.processing
-                                                ? t('Installing...')
-                                                : t('Upload and install')}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </CardContent>
-                        </Card>
+                                </div>
+                            </form>
+                        </div>
 
                         {plugins.length === 0 ? (
                             <Alert>
@@ -940,14 +1003,15 @@ export default function Plugins({
                                 {plugins.map((plugin) => (
                                     <Card
                                         key={`${plugin.source}:${pluginKey(plugin)}`}
+                                        className="min-w-0 gap-3 py-4 shadow-none"
                                     >
-                                        <CardHeader>
+                                        <CardHeader className="px-4">
                                             <div className="flex flex-wrap items-start justify-between gap-3">
-                                                <div>
-                                                    <CardTitle>
+                                                <div className="min-w-0 flex-1">
+                                                    <CardTitle className="leading-snug break-words">
                                                         {plugin.name}
                                                     </CardTitle>
-                                                    <CardDescription className="mt-1 font-mono">
+                                                    <CardDescription className="mt-1 font-mono text-xs break-all">
                                                         {plugin.managed_id ??
                                                             plugin.id}
                                                     </CardDescription>
@@ -963,15 +1027,15 @@ export default function Plugins({
                                                 </Badge>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="space-y-4">
-                                            <p className="text-sm text-muted-foreground">
+                                        <CardContent className="flex flex-1 flex-col gap-3 px-4 [&_button]:h-auto [&_button]:min-h-8 [&_button]:max-w-full [&_button]:whitespace-normal">
+                                            <p className="text-sm break-words text-muted-foreground">
                                                 {plugin.description ||
                                                     t(
                                                         'No description provided.',
                                                     )}
                                             </p>
 
-                                            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-2 [&_dd]:break-words [&>div]:min-w-0">
                                                 <div>
                                                     <dt className="text-muted-foreground">
                                                         {t('Source')}
@@ -1054,7 +1118,7 @@ export default function Plugins({
                                             </dl>
 
                                             {plugin.dependencies.length > 0 && (
-                                                <p className="text-xs text-muted-foreground">
+                                                <p className="text-xs break-words text-muted-foreground">
                                                     {t('Dependencies')}:{' '}
                                                     {plugin.dependencies.join(
                                                         ', ',
@@ -1081,7 +1145,7 @@ export default function Plugins({
                                             )}
 
                                             {plugin.can_cleanup && (
-                                                <div className="flex flex-wrap gap-2">
+                                                <div className="mt-auto flex flex-wrap gap-2 pt-1">
                                                     <Button
                                                         type="button"
                                                         size="sm"
@@ -1105,7 +1169,7 @@ export default function Plugins({
                                                 plugin.can_disable ||
                                                 plugin.can_remove ||
                                                 plugin.can_force_recovery) && (
-                                                <div className="flex flex-wrap gap-2">
+                                                <div className="mt-auto flex flex-wrap gap-2 pt-1">
                                                     {plugin.can_enable && (
                                                         <Button
                                                             type="button"
@@ -1222,9 +1286,81 @@ export default function Plugins({
                                 ))}
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
+
+            <Dialog
+                open={marketplaceConfirmation !== null}
+                onOpenChange={(open) => {
+                    if (!open && !marketplaceActionInFlight.current) {
+                        setMarketplaceConfirmation(null);
+                    }
+                }}
+            >
+                <DialogContent
+                    className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+                    onCloseAutoFocus={(event) => {
+                        event.preventDefault();
+                        const trigger = marketplaceTrigger.current;
+                        (trigger?.isConnected
+                            ? trigger
+                            : installedTab.current
+                        )?.focus();
+                    }}
+                >
+                    <DialogHeader>
+                        <DialogTitle className="pr-6 leading-snug break-words">
+                            {t(
+                                marketplaceConfirmation?.update
+                                    ? 'Update :name?'
+                                    : 'Install :name?',
+                                {
+                                    name: marketplaceConfirmation?.name ?? '',
+                                },
+                            )}
+                        </DialogTitle>
+                        <DialogDescription className="break-words">
+                            {t(
+                                marketplaceConfirmation?.update
+                                    ? 'Version :version will be downloaded and used to update this plugin on this OpenKOS instance.'
+                                    : 'Version :version will be downloaded and installed on this OpenKOS instance.',
+                                {
+                                    version:
+                                        marketplaceConfirmation?.version ?? '',
+                                },
+                            )}
+                        </DialogDescription>
+                        <p className="font-mono text-xs break-all text-muted-foreground">
+                            {marketplaceConfirmation?.pluginId}
+                        </p>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={processingPlugin !== null}
+                            >
+                                {t('Cancel')}
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            onClick={runMarketplaceAction}
+                            disabled={processingPlugin !== null}
+                        >
+                            {processingPlugin !== null
+                                ? marketplaceConfirmation?.update
+                                    ? t('Updating...')
+                                    : t('Installing...')
+                                : marketplaceConfirmation?.update
+                                  ? t('Update plugin')
+                                  : t('Install plugin')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Dialog
                 open={uploadConfirmationOpen}
