@@ -55,7 +55,7 @@ final class MarketplaceClient
     /** @return array<string, mixed>|null */
     public function resolveVersion(
         string $pluginId,
-        string $openkosVersion,
+        string $coreVersion,
         string $platformVersion,
         string $phpVersion,
     ): ?array {
@@ -63,7 +63,7 @@ final class MarketplaceClient
             $data = $this->getJson(
                 'plugins/'.rawurlencode($this->pluginId($pluginId)).'/versions/resolve',
                 [
-                    'openkos_version' => $openkosVersion,
+                    'core_version' => $coreVersion,
                     'platform_version' => $platformVersion,
                     'php_version' => $phpVersion,
                 ],
@@ -350,7 +350,13 @@ final class MarketplaceClient
             throw new MarketplaceException('Marketplace returned malformed plugin version metadata.');
         }
 
-        foreach (['openkos', 'platform', 'php'] as $key) {
+        $coreCompatibility = $data['compatibility']['core'] ?? $data['compatibility']['openkos'] ?? null;
+
+        if (! is_string($coreCompatibility) || trim($coreCompatibility) === '') {
+            throw new MarketplaceException('Marketplace returned malformed compatibility metadata.');
+        }
+
+        foreach (['platform', 'php'] as $key) {
             if (! is_string($data['compatibility'][$key] ?? null) || trim($data['compatibility'][$key]) === '') {
                 throw new MarketplaceException('Marketplace returned malformed compatibility metadata.');
             }
@@ -360,7 +366,7 @@ final class MarketplaceClient
             'version' => $data['version'],
             'entry_class' => $data['entry_class'],
             'compatibility' => [
-                'openkos' => $data['compatibility']['openkos'],
+                'core' => $coreCompatibility,
                 'platform' => $data['compatibility']['platform'],
                 'php' => $data['compatibility']['php'],
             ],
@@ -387,7 +393,7 @@ final class MarketplaceClient
         }
 
         $dependencies = $this->validateDependencies($data['dependencies']);
-        $manifest = $this->validateManifest($data['manifest'], $pluginId, $data['version'], $data['entry_class'], $data['compatibility']);
+        $manifest = $this->validateManifest($data['manifest'], $pluginId, $data['version'], $data['entry_class'], $normalized['compatibility']);
 
         if ($dependencies !== $manifest['dependencies']) {
             throw new MarketplaceException('Marketplace version dependencies do not match its manifest.');
@@ -420,7 +426,7 @@ final class MarketplaceClient
             $manifest['id'] !== $pluginId
             || $manifest['version'] !== $version
             || $manifest['entry_class'] !== $entryClass
-            || $manifest['core_version'] !== $compatibility['openkos']
+            || $manifest['core_version'] !== $compatibility['core']
             || $manifest['php'] !== $compatibility['php']
         ) {
             throw new MarketplaceException('Marketplace version metadata does not match its manifest.');
