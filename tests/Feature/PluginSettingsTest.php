@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\User;
-use App\Services\Platform\BuildInfo;
 use App\Services\Platform\PluginInstaller;
 use App\Services\Platform\RuntimePluginDiscovery;
 use App\Services\Platform\RuntimePluginGraphValidator;
@@ -39,7 +38,6 @@ afterEach(function (): void {
         'app.build.version' => $this->originalBuildVersion,
         'platform.version' => $this->originalPlatformVersion,
     ]);
-    app()->forgetInstance(BuildInfo::class);
 });
 
 it('redirects guests and forbids non-owners from plugin management', function (): void {
@@ -856,6 +854,32 @@ it('lists marketplace plugins with the latest compatible version', function (): 
         ->assertJsonPath('plugins.0.latest_compatible_version.version', '1.0.0')
         ->assertJsonPath('plugins.0.compatible', true);
     Http::assertSentCount(2);
+    Http::assertSent(function (Request $request): bool {
+        if (! str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/versions/resolve')) {
+            return false;
+        }
+
+        parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+        return ($query['core_version'] ?? null) === '0.2.5'
+            && ($query['platform_version'] ?? null) === '0.2.5';
+    });
+});
+
+it('accepts legacy marketplace compatibility metadata', function (): void {
+    configureMarketplaceForTests();
+    $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
+    $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
+    $metadata['compatibility']['openkos'] = $metadata['compatibility']['core'];
+    unset($metadata['compatibility']['core']);
+    fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
+
+    $this->actingAs(User::factory()->owner()->create())
+        ->post(route('settings.plugins.marketplace.install'), [
+            'plugin_id' => $artifact['id'],
+            'version' => '1.0.0',
+        ])
+        ->assertRedirect(route('settings.plugins.index'));
 });
 
 it('installs an exact marketplace artifact with verified provenance', function (): void {
@@ -1274,11 +1298,10 @@ function makePluginSettingsArtifact(array $overrides = []): array
 function configureMarketplaceForTests(): void
 {
     config([
-        'app.build.version' => '0.2.3',
-        'platform.version' => '0.2.3',
+        'app.build.version' => '0.1.0-alpha.6',
+        'platform.version' => '0.2.5',
         'services.marketplace.url' => 'https://marketplace.test',
     ]);
-    app()->forgetInstance(BuildInfo::class);
 }
 
 /** @return array<string, mixed> */
@@ -1303,7 +1326,7 @@ function marketplaceVersionMetadata(array $artifact, string $version): array
         'version' => $version,
         'entry_class' => $artifact['class'],
         'compatibility' => [
-            'openkos' => '^0.2',
+            'core' => '^0.2',
             'platform' => '^0.2',
             'php' => '^8.3',
         ],

@@ -22,7 +22,6 @@ class PluginManagementService
         private PluginInstaller $installer,
         private RuntimePluginGraphValidator $graph,
         private MarketplaceClient $marketplace,
-        private BuildInfo $buildInfo,
     ) {}
 
     /**
@@ -105,7 +104,7 @@ class PluginManagementService
                 'plugins' => [],
                 'updates' => [],
                 'pagination' => $pagination,
-                'error' => __('Marketplace browsing requires a semantic OpenKOS build version.'),
+                'error' => __('Marketplace browsing requires a semantic OpenKOS platform version.'),
             ];
         }
 
@@ -318,13 +317,9 @@ class PluginManagementService
     /** @return array{0: string, 1: string, 2: string}|null */
     private function marketplaceHostVersions(): ?array
     {
-        $versions = [
-            $this->buildInfo->toArray()['version'] ?? null,
-            config('platform.version'),
-            PHP_VERSION,
-        ];
+        $versions = [config('platform.version'), PHP_VERSION];
 
-        if (! is_string($versions[0]) || ! is_string($versions[1]) || ! is_string($versions[2])) {
+        if (! is_string($versions[0]) || ! is_string($versions[1])) {
             return null;
         }
 
@@ -334,7 +329,7 @@ class PluginManagementService
             }
         }
 
-        return [$versions[0], $versions[1], $versions[2]];
+        return [$versions[0], $versions[0], $versions[1]];
     }
 
     /** @param array<string, mixed> $record @param array<string, mixed>|null $compatible @param array<string, mixed>|null $local @return array<string, mixed> */
@@ -384,7 +379,7 @@ class PluginManagementService
             || ! is_string($versionMetadata['entry_class'] ?? null)
             || ! is_array($versionMetadata['dependencies'] ?? null)
             || ! is_array($versionMetadata['manifest'] ?? null)
-            || ! is_string($compatibility['openkos'] ?? null)
+            || ! is_string($compatibility['core'] ?? null)
             || ! is_string($compatibility['platform'] ?? null)
             || ! is_string($compatibility['php'] ?? null)
         ) {
@@ -413,7 +408,7 @@ class PluginManagementService
                 expectedCurrentState: $expectedCurrentState,
                 expectedMetadata: [
                     'entry_class' => $versionMetadata['entry_class'],
-                    'core_version' => $compatibility['openkos'],
+                    'core_version' => $compatibility['core'],
                     'platform_constraint' => $compatibility['platform'],
                     'php' => $compatibility['php'],
                     'dependencies' => $versionMetadata['dependencies'],

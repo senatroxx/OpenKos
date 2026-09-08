@@ -69,7 +69,7 @@ export type MarketplaceVersion = {
     version: string;
     entry_class: string;
     compatibility: {
-        openkos: string;
+        core: string;
         platform: string;
         php: string;
     };
