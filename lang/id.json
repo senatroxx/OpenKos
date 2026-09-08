@@ -1,4 +1,12 @@
 {
+    "Install :name?": "Pasang :name?",
+    "Update :name?": "Perbarui :name?",
+    "Version :version will be downloaded and installed on this OpenKOS instance.": "Versi :version akan diunduh dan dipasang pada instans OpenKOS ini.",
+    "Version :version will be downloaded and used to update this plugin on this OpenKOS instance.": "Versi :version akan diunduh dan digunakan untuk memperbarui plugin ini pada instans OpenKOS ini.",
+    "Install plugin": "Pasang plugin",
+    "Update plugin": "Perbarui plugin",
+    "Installing...": "Memasang...",
+    "Updating...": "Memperbarui...",
     "just now": "baru saja",
     ":count minute ago": ":count menit yang lalu",
     ":count minutes ago": ":count menit yang lalu",
