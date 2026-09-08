@@ -45,11 +45,15 @@ class LeaseFactory extends Factory
 
     public function terminated(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'end_date' => fake()->dateTimeBetween('-1 month', 'now'),
-            'status' => LeaseStatus::Terminated,
-            'termination_date' => fake()->dateTimeBetween('-1 month', 'now'),
-            'termination_reason' => fake()->sentence(),
-        ]);
+        return $this->state(function (array $attributes): array {
+            $endDate = fake()->dateTimeBetween('-1 month', 'now');
+
+            return [
+                'end_date' => $endDate,
+                'status' => LeaseStatus::Terminated,
+                'termination_date' => $endDate,
+                'termination_reason' => fake()->sentence(),
+            ];
+        });
     }
 }

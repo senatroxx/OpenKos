@@ -13,6 +13,7 @@ class SettingSeeder extends Seeder
         Setting::set('country_code', 'ID');
         Setting::set('locale', 'id');
         Setting::set('currency', 'IDR');
+        Setting::set('supported_currencies', ['IDR', 'USD']);
         Setting::set('timezone', 'Asia/Jakarta');
         Setting::set('lease_id_prefix', 'LSX');
         Setting::set('invoice_id_prefix', 'INV');

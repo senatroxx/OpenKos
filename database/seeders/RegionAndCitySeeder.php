@@ -11,9 +11,6 @@ class RegionAndCitySeeder extends Seeder
 {
     public function run(): void
     {
-        City::query()->delete();
-        Region::query()->delete();
-
         $provinces = json_decode(
             File::get(database_path('data/provinces.json')),
             true,
@@ -35,7 +32,7 @@ class RegionAndCitySeeder extends Seeder
         }
 
         foreach ($provinces as $province) {
-            $region = Region::create([
+            $region = Region::firstOrCreate([
                 'country_code' => 'ID',
                 'name' => $province['province'],
             ]);
@@ -43,7 +40,7 @@ class RegionAndCitySeeder extends Seeder
             $cities = $regenciesByProvinceId[$province['id']] ?? [];
 
             foreach ($cities as $city) {
-                City::create([
+                City::firstOrCreate([
                     'region_id' => $region->id,
                     'name' => trim(($city['type'] ?? '').' '.$city['regency']),
                 ]);

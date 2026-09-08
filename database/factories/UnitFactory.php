@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\UnitStatus;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -35,6 +36,7 @@ class UnitFactory extends Factory
                     'billing_interval' => 1,
                     'billing_unit' => 'month',
                     'amount' => fake()->numberBetween(500_000, 3_000_000),
+                    'currency' => app(MoneyConverter::class)->normalizeCurrency(),
                     'is_active' => true,
                 ]);
             }
@@ -44,12 +46,22 @@ class UnitFactory extends Factory
     /**
      * Give the unit a specific monthly rate.
      */
-    public function withRate(int|string $amount): static
+    public function withRate(int|string $amount, ?string $currency = null): static
     {
-        return $this->afterCreating(function (Unit $unit) use ($amount) {
+        return $this->afterCreating(function (Unit $unit) use ($amount, $currency) {
+            $currency = app(MoneyConverter::class)->normalizeCurrency($currency);
+
             $unit->rates()->updateOrCreate(
-                ['billing_interval' => 1, 'billing_unit' => 'month'],
-                ['amount' => $amount, 'is_active' => true],
+                [
+                    'billing_interval' => 1,
+                    'billing_unit' => 'month',
+                    'currency' => $currency,
+                ],
+                [
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'is_active' => true,
+                ],
             );
         });
     }
