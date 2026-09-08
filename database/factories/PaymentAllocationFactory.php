@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PaymentAllocation;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -15,8 +14,20 @@ class PaymentAllocationFactory extends Factory
     {
         return [
             'payment_id' => Payment::factory(),
-            'invoice_id' => Invoice::factory(),
-            'amount' => fake()->numberBetween(100_000, 1_000_000),
+            'invoice_id' => 0,
+            'amount' => '0',
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterMaking(function (PaymentAllocation $allocation): void {
+            $payment = Payment::query()->findOrFail($allocation->payment_id);
+
+            $allocation->forceFill([
+                'invoice_id' => $payment->invoice_id,
+                'amount' => $payment->amount,
+            ]);
+        });
     }
 }
