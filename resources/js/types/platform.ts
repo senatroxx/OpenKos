@@ -36,6 +36,11 @@ export type PlatformPlugin = {
     core_version: string | null;
     php: string | null;
     dependencies: string[];
+    provenance: 'marketplace' | 'manual' | null;
+    marketplace_plugin_id: string | null;
+    marketplace_version: string | null;
+    artifact_sha256: string | null;
+    installed_at: string | null;
     source: 'runtime' | 'composer' | 'explicit';
     status:
         | 'enabled'
@@ -58,6 +63,60 @@ export type PlatformPlugin = {
     can_force_recovery: boolean;
     can_cleanup: boolean;
     cleanup_key: string | null;
+};
+
+export type MarketplaceVersion = {
+    version: string;
+    entry_class: string;
+    compatibility: {
+        openkos: string;
+        platform: string;
+        php: string;
+    };
+    published_at: string;
+    artifact: {
+        size: number;
+        sha256: string;
+    };
+};
+
+export type MarketplacePlugin = {
+    id: string;
+    name: string;
+    summary: string | null;
+    description: string | null;
+    publisher: {
+        name: string;
+        url: string | null;
+    } | null;
+    repository_url: string | null;
+    homepage_url: string | null;
+    latest_version: MarketplaceVersion | null;
+    latest_compatible_version: MarketplaceVersion | null;
+    compatible: boolean;
+    installed_version: string | null;
+    installed_source:
+        | PlatformPlugin['provenance']
+        | PlatformPlugin['source']
+        | null;
+};
+
+export type MarketplaceUpdate = {
+    plugin_id: string;
+    name: string;
+    installed_version: string;
+    available_version: MarketplaceVersion;
+};
+
+export type MarketplaceCatalog = {
+    plugins: MarketplacePlugin[];
+    updates: MarketplaceUpdate[];
+    pagination: {
+        current_page: number;
+        total_page: number;
+        total_records: number;
+    };
+    error: string | null;
 };
 
 export type Platform = {

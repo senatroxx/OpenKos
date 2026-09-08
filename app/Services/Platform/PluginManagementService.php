@@ -2,6 +2,10 @@
 
 namespace App\Services\Platform;
 
+use App\Services\Marketplace\MarketplaceClient;
+use App\Services\Marketplace\MarketplaceException;
+use Composer\Semver\Comparator;
+use Composer\Semver\VersionParser;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -17,6 +21,8 @@ class PluginManagementService
         private RuntimePluginDiscovery $discovery,
         private PluginInstaller $installer,
         private RuntimePluginGraphValidator $graph,
+        private MarketplaceClient $marketplace,
+        private BuildInfo $buildInfo,
     ) {}
 
     /**
@@ -65,10 +71,175 @@ class PluginManagementService
         }
 
         try {
-            return $this->installer->install($disk->path($path));
+            return $this->installer->install(
+                $disk->path($path),
+                provenance: [
+                    'source' => 'manual',
+                    'installed_at' => now()->toIso8601String(),
+                ],
+            );
         } finally {
             $disk->delete($path);
         }
+    }
+
+    /**
+     * @return array{
+     *     plugins: array<int, array<string, mixed>>,
+     *     updates: array<int, array<string, mixed>>,
+     *     pagination: array{current_page: int, total_page: int, total_records: int},
+     *     error: string|null
+     * }
+     */
+    public function marketplaceCatalog(?string $search, int $page, int $limit): array
+    {
+        $pagination = [
+            'current_page' => $page,
+            'total_page' => 0,
+            'total_records' => 0,
+        ];
+        $host = $this->marketplaceHostVersions();
+
+        if ($host === null) {
+            return [
+                'plugins' => [],
+                'updates' => [],
+                'pagination' => $pagination,
+                'error' => __('Marketplace browsing requires a semantic OpenKOS build version.'),
+            ];
+        }
+
+        try {
+            $localPlugins = $this->catalog()['plugins'];
+            $localById = [];
+
+            foreach ($localPlugins as $plugin) {
+                $id = $plugin['id'] ?? null;
+
+                if (! is_string($id)) {
+                    continue;
+                }
+
+                if (! isset($localById[$id]) || ($plugin['source'] ?? null) === 'runtime') {
+                    $localById[$id] = $plugin;
+                }
+            }
+
+            $listing = $this->marketplace->listPlugins($search, $page, $limit);
+            $records = $listing['records'] ?? null;
+
+            if (! is_array($records)) {
+                throw new MarketplaceException('Marketplace returned a malformed plugin listing.');
+            }
+
+            $pagination = [
+                'current_page' => (int) ($listing['current_page'] ?? $page),
+                'total_page' => (int) ($listing['total_page'] ?? 0),
+                'total_records' => (int) ($listing['total_records'] ?? 0),
+            ];
+            $ids = [];
+
+            foreach ($records as $record) {
+                if (! is_array($record) || ! is_string($record['id'] ?? null)) {
+                    throw new MarketplaceException('Marketplace returned an invalid plugin listing.');
+                }
+
+                $ids[] = $record['id'];
+            }
+
+            foreach ($localById as $id => $plugin) {
+                if (($plugin['source'] ?? null) === 'runtime' && ($plugin['provenance'] ?? null) === 'marketplace') {
+                    $marketplaceId = $plugin['marketplace_plugin_id'] ?? $id;
+
+                    if (is_string($marketplaceId)) {
+                        $ids[] = $marketplaceId;
+                    }
+                }
+            }
+
+            $resolved = [];
+
+            foreach (array_values(array_unique($ids)) as $id) {
+                $resolved[$id] = $this->marketplace->resolveVersion($id, ...$host);
+            }
+
+            $plugins = [];
+
+            foreach ($records as $record) {
+                $id = $record['id'];
+                $compatible = $resolved[$id] ?? null;
+                $local = $localById[$id] ?? null;
+                $plugins[] = $this->marketplacePluginRow($record, $compatible, $local);
+            }
+
+            $updates = [];
+
+            foreach ($localById as $id => $plugin) {
+                if (($plugin['source'] ?? null) !== 'runtime' || ($plugin['provenance'] ?? null) !== 'marketplace') {
+                    continue;
+                }
+
+                $marketplaceId = $plugin['marketplace_plugin_id'] ?? $id;
+                $installedVersion = $plugin['version'] ?? null;
+                $available = is_string($marketplaceId) ? ($resolved[$marketplaceId] ?? null) : null;
+
+                if (
+                    ! is_string($marketplaceId)
+                    || ! is_string($installedVersion)
+                    || ! is_array($available)
+                    || ! is_string($available['version'] ?? null)
+                    || ! $this->isNewerVersion($available['version'], $installedVersion)
+                ) {
+                    continue;
+                }
+
+                $updates[] = [
+                    'plugin_id' => $marketplaceId,
+                    'name' => $plugin['name'] ?? $marketplaceId,
+                    'installed_version' => $installedVersion,
+                    'available_version' => $available,
+                ];
+            }
+
+            return [
+                'plugins' => $plugins,
+                'updates' => $updates,
+                'pagination' => $pagination,
+                'error' => null,
+            ];
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return [
+                'plugins' => [],
+                'updates' => [],
+                'pagination' => $pagination,
+                'error' => $this->marketplaceMessage($exception),
+            ];
+        }
+    }
+
+    /** @return array<string, mixed> */
+    public function installFromMarketplace(string $pluginId, string $version): array
+    {
+        return $this->installMarketplaceArtifact($pluginId, $version);
+    }
+
+    /** @return array<string, mixed> */
+    public function updateFromMarketplace(string $pluginId, string $version): array
+    {
+        $state = $this->store->readState();
+        $entry = $state[$pluginId] ?? null;
+
+        if (
+            ! is_array($entry)
+            || ($entry['source'] ?? 'manual') !== 'marketplace'
+            || ($entry['marketplace_plugin_id'] ?? null) !== $pluginId
+        ) {
+            throw new \RuntimeException('Marketplace updates require matching marketplace provenance.');
+        }
+
+        return $this->installMarketplaceArtifact($pluginId, $version, $entry);
     }
 
     /**
@@ -96,7 +267,19 @@ class PluginManagementService
 
     public function userMessage(Throwable $exception): string
     {
+        if ($exception instanceof MarketplaceException) {
+            return $this->marketplaceMessage($exception);
+        }
+
         $message = strtolower($exception->getMessage());
+
+        if (str_contains($message, 'marketplace provenance')) {
+            return __('Marketplace updates require a plugin installed from the marketplace.');
+        }
+
+        if (str_contains($message, 'changed during marketplace update')) {
+            return __('This plugin changed while the update was downloading. Refresh the page and try again.');
+        }
 
         if ($exception instanceof RuntimePluginDependencyException) {
             return __($exception->getMessage());
@@ -130,6 +313,144 @@ class PluginManagementService
         }
 
         return __('The plugin artifact was rejected. Check that it is a valid prepared runtime plugin ZIP.');
+    }
+
+    /** @return array{0: string, 1: string, 2: string}|null */
+    private function marketplaceHostVersions(): ?array
+    {
+        $versions = [
+            $this->buildInfo->toArray()['version'] ?? null,
+            config('platform.version'),
+            PHP_VERSION,
+        ];
+
+        if (! is_string($versions[0]) || ! is_string($versions[1]) || ! is_string($versions[2])) {
+            return null;
+        }
+
+        foreach ($versions as $version) {
+            if (! $this->isSemanticVersion($version)) {
+                return null;
+            }
+        }
+
+        return [$versions[0], $versions[1], $versions[2]];
+    }
+
+    /** @param array<string, mixed> $record @param array<string, mixed>|null $compatible @param array<string, mixed>|null $local @return array<string, mixed> */
+    private function marketplacePluginRow(array $record, ?array $compatible, ?array $local): array
+    {
+        $installedVersion = is_array($local) && is_string($local['version'] ?? null)
+            ? $local['version']
+            : null;
+
+        return [
+            'id' => $record['id'],
+            'name' => $record['name'] ?? $record['id'],
+            'summary' => $record['summary'] ?? null,
+            'description' => $record['description'] ?? null,
+            'publisher' => $record['publisher'] ?? null,
+            'repository_url' => $record['repository_url'] ?? null,
+            'homepage_url' => $record['homepage_url'] ?? null,
+            'latest_version' => $record['latest_version'] ?? null,
+            'latest_compatible_version' => $compatible,
+            'compatible' => $compatible !== null,
+            'installed_version' => $installedVersion,
+            'installed_source' => is_array($local)
+                ? $local['provenance'] ?? $local['source'] ?? null
+                : null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    /** @param array<string, mixed>|null $expectedCurrentState */
+    private function installMarketplaceArtifact(string $pluginId, string $version, ?array $expectedCurrentState = null): array
+    {
+        $versionMetadata = $this->marketplace->getVersion($pluginId, $version);
+        $artifact = $versionMetadata['artifact'] ?? null;
+
+        if (
+            ! is_array($artifact)
+            || ! is_int($artifact['size'] ?? null)
+            || ! is_string($artifact['sha256'] ?? null)
+        ) {
+            throw new MarketplaceException('Marketplace returned invalid artifact metadata.');
+        }
+
+        $compatibility = $versionMetadata['compatibility'] ?? null;
+
+        if (
+            ! is_array($compatibility)
+            || ! is_string($versionMetadata['entry_class'] ?? null)
+            || ! is_array($versionMetadata['dependencies'] ?? null)
+            || ! is_array($versionMetadata['manifest'] ?? null)
+            || ! is_string($compatibility['openkos'] ?? null)
+            || ! is_string($compatibility['platform'] ?? null)
+            || ! is_string($compatibility['php'] ?? null)
+        ) {
+            throw new MarketplaceException('Marketplace returned invalid plugin metadata.');
+        }
+
+        $path = $this->marketplace->downloadArtifact(
+            $pluginId,
+            $version,
+            $artifact['size'],
+            $artifact['sha256'],
+        );
+
+        try {
+            return $this->installer->install(
+                $path,
+                expectedId: $pluginId,
+                expectedVersion: $version,
+                provenance: [
+                    'source' => 'marketplace',
+                    'marketplace_plugin_id' => $pluginId,
+                    'marketplace_version' => $version,
+                    'artifact_sha256' => strtolower($artifact['sha256']),
+                    'installed_at' => now()->toIso8601String(),
+                ],
+                expectedCurrentState: $expectedCurrentState,
+                expectedMetadata: [
+                    'entry_class' => $versionMetadata['entry_class'],
+                    'core_version' => $compatibility['openkos'],
+                    'platform_constraint' => $compatibility['platform'],
+                    'php' => $compatibility['php'],
+                    'dependencies' => $versionMetadata['dependencies'],
+                    'manifest' => $versionMetadata['manifest'],
+                ],
+            );
+        } finally {
+            @unlink($path);
+        }
+    }
+
+    private function isNewerVersion(string $available, string $installed): bool
+    {
+        try {
+            return Comparator::greaterThan($available, $installed);
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function isSemanticVersion(string $version): bool
+    {
+        try {
+            (new VersionParser)->normalize($version);
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function marketplaceMessage(Throwable $exception): string
+    {
+        return $exception instanceof MarketplaceException
+            && ($exception->status === 404 || str_contains(strtolower($exception->getMessage()), 'no longer available'))
+            ? __('The selected marketplace plugin version is no longer available. Refresh the Marketplace tab and try again.')
+            : __('The marketplace is currently unavailable. Installed plugins and manual ZIP management are still available.');
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -253,6 +574,7 @@ class PluginManagementService
             if (isset($entry['cleanup_key'])) {
                 $rows[] = [
                     ...$this->filesystemAnomalyRow($entry['cleanup_key'], $path),
+                    ...$this->runtimeProvenance($state[$id] ?? []),
                     'enabled' => $enabled,
                 ];
 
@@ -265,7 +587,7 @@ class PluginManagementService
 
                 if ($issue !== null) {
                     $rows[] = [
-                        ...$this->runtimeRow($metadata, $enabled),
+                        ...$this->runtimeRow($metadata, $enabled, $state[$id] ?? []),
                         'status' => $issue['status'],
                         'error' => __($issue['error']),
                         'can_enable' => false,
@@ -283,7 +605,7 @@ class PluginManagementService
 
                 if ($lifecycleFailure !== null) {
                     $rows[] = [
-                        ...$this->runtimeRow($metadata, $enabled),
+                        ...$this->runtimeRow($metadata, $enabled, $state[$id] ?? []),
                         'status' => 'load_failed',
                         'error' => __('Runtime plugin failed during :phase and was not loaded. Disable or remove it.', [
                             'phase' => $lifecycleFailure['phase'],
@@ -296,7 +618,7 @@ class PluginManagementService
                     continue;
                 }
 
-                $rows[] = $this->runtimeRow($metadata, $enabled);
+                $rows[] = $this->runtimeRow($metadata, $enabled, $state[$id] ?? []);
 
                 continue;
             }
@@ -305,6 +627,7 @@ class PluginManagementService
             $canRemove = ! is_link($path);
             $rows[] = [
                 ...$this->manifestPreview($path, $id),
+                ...$this->runtimeProvenance($state[$id] ?? []),
                 'source' => 'runtime',
                 'status' => $status,
                 'enabled' => $enabled,
@@ -334,6 +657,7 @@ class PluginManagementService
                 'core_version' => null,
                 'php' => null,
                 'dependencies' => [],
+                ...$this->runtimeProvenance($entry),
                 'source' => 'runtime',
                 'status' => 'missing_package',
                 'enabled' => $entry['enabled'],
@@ -437,6 +761,7 @@ class PluginManagementService
 
             $rows[] = [
                 ...$this->manifestPreview($path, $id),
+                ...$this->runtimeProvenance([]),
                 'source' => 'runtime',
                 'status' => 'broken',
                 'enabled' => false,
@@ -542,6 +867,11 @@ class PluginManagementService
                     'core_version' => $manifest->coreVersion,
                     'php' => null,
                     'dependencies' => $manifest->dependencies,
+                    'provenance' => null,
+                    'marketplace_plugin_id' => null,
+                    'marketplace_version' => null,
+                    'artifact_sha256' => null,
+                    'installed_at' => null,
                     'source' => in_array($class, $configured, true) ? 'explicit' : 'composer',
                     'status' => 'legacy',
                     'enabled' => true,
@@ -561,13 +891,14 @@ class PluginManagementService
         return $rows;
     }
 
-    /** @param array<string, mixed> $metadata */
-    private function runtimeRow(array $metadata, bool $enabled): array
+    /** @param array<string, mixed> $metadata @param array<string, mixed> $stateEntry */
+    private function runtimeRow(array $metadata, bool $enabled, array $stateEntry = []): array
     {
         return [
             ...$metadata,
             'managed_id' => $metadata['id'],
             'declared_id' => $metadata['id'],
+            ...$this->runtimeProvenance($stateEntry),
             'source' => 'runtime',
             'status' => $enabled ? 'enabled' : 'disabled',
             'enabled' => $enabled,
@@ -578,6 +909,18 @@ class PluginManagementService
             'can_force_recovery' => false,
             'can_cleanup' => false,
             'cleanup_key' => null,
+        ];
+    }
+
+    /** @param array<string, mixed> $stateEntry @return array{provenance: string, marketplace_plugin_id: string|null, marketplace_version: string|null, artifact_sha256: string|null, installed_at: string|null} */
+    private function runtimeProvenance(array $stateEntry): array
+    {
+        return [
+            'provenance' => $stateEntry['source'] ?? 'manual',
+            'marketplace_plugin_id' => $stateEntry['marketplace_plugin_id'] ?? null,
+            'marketplace_version' => $stateEntry['marketplace_version'] ?? null,
+            'artifact_sha256' => $stateEntry['artifact_sha256'] ?? null,
+            'installed_at' => $stateEntry['installed_at'] ?? null,
         ];
     }
 
@@ -624,6 +967,11 @@ class PluginManagementService
             'core_version' => null,
             'php' => null,
             'dependencies' => [],
+            'provenance' => null,
+            'marketplace_plugin_id' => null,
+            'marketplace_version' => null,
+            'artifact_sha256' => null,
+            'installed_at' => null,
             'source' => 'runtime',
             'status' => $status,
             'enabled' => false,
@@ -651,6 +999,11 @@ class PluginManagementService
             'core_version' => null,
             'php' => null,
             'dependencies' => [],
+            'provenance' => null,
+            'marketplace_plugin_id' => null,
+            'marketplace_version' => null,
+            'artifact_sha256' => null,
+            'installed_at' => null,
             'source' => 'runtime',
             'status' => $status,
             'enabled' => false,
@@ -687,6 +1040,11 @@ class PluginManagementService
             'core_version' => null,
             'php' => null,
             'dependencies' => [],
+            'provenance' => null,
+            'marketplace_plugin_id' => null,
+            'marketplace_version' => null,
+            'artifact_sha256' => null,
+            'installed_at' => null,
             'source' => 'runtime',
             'status' => 'broken',
             'enabled' => false,

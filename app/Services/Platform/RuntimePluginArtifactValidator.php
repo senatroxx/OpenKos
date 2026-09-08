@@ -121,7 +121,8 @@ final class RuntimePluginArtifactValidator
      *     entry_class: class-string<Plugin>,
      *     core_version: string,
      *     php: string,
-     *     dependencies: array<int, string>
+     *     dependencies: array<int, string>,
+     *     platform_constraint: string|null
      * }
      */
     public function inspectStaticMetadata(string $directory, ?string $expectedId = null): array
@@ -159,7 +160,12 @@ final class RuntimePluginArtifactValidator
             throw new InvalidArgumentException('Runtime plugin artifact must include vendor/autoload.php.');
         }
 
-        return $metadata;
+        $platformConstraint = data_get($composer, 'require.openkos/platform');
+
+        return [
+            ...$metadata,
+            'platform_constraint' => is_string($platformConstraint) ? $platformConstraint : null,
+        ];
     }
 
     /**

@@ -73,6 +73,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('settings/plugins', [PluginController::class, 'index'])->name('settings.plugins.index');
         Route::post('settings/plugins', [PluginController::class, 'install'])->name('settings.plugins.install');
+        Route::get('settings/plugins/marketplace', [PluginController::class, 'marketplace'])->name('settings.plugins.marketplace.index');
+        Route::post('settings/plugins/marketplace/install', [PluginController::class, 'marketplaceInstall'])->name('settings.plugins.marketplace.install');
+        Route::post('settings/plugins/marketplace/update', [PluginController::class, 'marketplaceUpdate'])->name('settings.plugins.marketplace.update');
         Route::delete('settings/plugins/recovery', [PluginController::class, 'cleanup'])->name('settings.plugins.recovery.cleanup');
         Route::post('settings/plugins/{vendor}/{package}/enable', [PluginController::class, 'enable'])
             ->where(['vendor' => '[a-z0-9][a-z0-9._-]*', 'package' => '[a-z0-9][a-z0-9._-]*'])
