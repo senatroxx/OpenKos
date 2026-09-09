@@ -611,7 +611,8 @@ export default function UnitUtilities({
                                                                         )}
                                                                         {reading.billed &&
                                                                             reading.reading_kind ===
-                                                                                'reading' && (
+                                                                                'reading' &&
+                                                                            !reading.correction_exists && (
                                                                                 <DropdownMenuItem
                                                                                     onSelect={() =>
                                                                                         openCorrectionDialog(

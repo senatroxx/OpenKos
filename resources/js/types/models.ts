@@ -142,6 +142,7 @@ export type UtilityReading = {
     invoice_reference: string | null;
     can_edit: boolean;
     can_delete: boolean;
+    correction_exists: boolean;
 };
 
 export type UtilityMeter = {

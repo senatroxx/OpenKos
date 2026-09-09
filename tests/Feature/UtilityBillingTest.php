@@ -183,6 +183,18 @@ it('bills corrections as signed deltas linked to the original bill', function ()
     app(GenerateInvoices::class)->execute($lease);
     $correctionLineItem = $correction->refresh()->invoiceLineItem;
 
+    $user = User::factory()->owner()->create();
+
+    $this->actingAs($user)
+        ->get(route('properties.units.utilities', [$lease->unit->property, $lease->unit]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('meters.0.readings.0.id', $correction->id)
+            ->where('meters.0.readings.0.correction_exists', false)
+            ->where('meters.0.readings.1.id', $reading->id)
+            ->where('meters.0.readings.1.correction_exists', true)
+        );
+
     expect($correction->adjustment_consumption)->toBe('-10.000')
         ->and($correctionLineItem)->not->toBeNull()
         ->and($correctionLineItem->amount)->toBe('-10000.000')

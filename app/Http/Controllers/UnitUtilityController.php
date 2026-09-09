@@ -44,7 +44,7 @@ class UnitUtilityController extends Controller
                 ->with([
                     'readings' => fn ($query) => $query
                         ->with(['invoiceLineItem.invoice', 'correctsReading.invoiceLineItem'])
-                        ->withCount('dependentReadings')
+                        ->withCount(['dependentReadings', 'corrections'])
                         ->latest('period_end')
                         ->latest('id'),
                 ]),
@@ -177,6 +177,7 @@ class UnitUtilityController extends Controller
             'invoice_reference' => $lineItem?->invoice?->reference,
             'can_edit' => $lineItem === null && $reading->dependent_readings_count === 0,
             'can_delete' => $lineItem === null && $reading->dependent_readings_count === 0,
+            'correction_exists' => $reading->corrections_count > 0,
         ];
     }
 
