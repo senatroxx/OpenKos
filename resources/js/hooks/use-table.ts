@@ -143,6 +143,7 @@ export function useTable({ routeFn, params, defaults = {} }: UseTableOptions) {
     }
 
     return {
+        navigate,
         searchValue,
         onSearchChange,
         clearSearch,

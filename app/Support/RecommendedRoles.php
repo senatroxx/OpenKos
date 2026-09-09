@@ -39,6 +39,10 @@ class RecommendedRoles
                     Permission::LeasesMoveOut->value,
                     Permission::FinancialsView->value,
                     Permission::ReportsView->value,
+                    Permission::ExpensesView->value,
+                    Permission::ExpensesCreate->value,
+                    Permission::ExpensesUpdate->value,
+                    Permission::ExpensesDelete->value,
                     Permission::UsersView->value,
                     Permission::UsersUpdate->value,
                 ],
@@ -63,6 +67,7 @@ class RecommendedRoles
                 'permissions' => [
                     Permission::DashboardView->value,
                     Permission::FinancialsView->value,
+                    Permission::ExpensesView->value,
                     Permission::TenantsView->value,
                     Permission::TenantsExport->value,
                 ],

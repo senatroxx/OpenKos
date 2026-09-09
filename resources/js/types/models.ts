@@ -55,6 +55,46 @@ export type PropertyTypeOption = {
     properties_count?: number;
 };
 
+export type ExpenseCategory = {
+    id: number;
+    slug: string;
+    label: string;
+    is_active: boolean;
+    sort_order?: number;
+    expenses_count?: number;
+};
+
+export type ExpenseReceipt = {
+    id: number;
+    original_name: string;
+    mime_type: string;
+    size: number;
+    download_url: string;
+};
+
+export type Expense = {
+    id: number;
+    property_id: number;
+    expense_category_id: number;
+    amount: string;
+    currency: string;
+    expense_date: string;
+    vendor: string | null;
+    description: string | null;
+    notes: string | null;
+    reference: string | null;
+    status: 'active' | 'voided' | string;
+    voided_at: string | null;
+    voided_by: number | null;
+    void_reason: string | null;
+    created_at: string;
+    updated_at: string;
+    property?: { id: number; name: string } | null;
+    category?: ExpenseCategory | null;
+    voided_by_user?: { id: number; name: string } | null;
+    receipt?: ExpenseReceipt | null;
+};
+
 export type Property = {
     id: number;
     name: string;

@@ -199,6 +199,14 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         },
         archived: { label: 'Archived', variant: 'secondary' },
     },
+    expense: {
+        active: {
+            label: 'Active',
+            className:
+                'bg-surface-green/70 text-surface-green-foreground border-surface-green-border/80',
+        },
+        voided: { label: 'Voided', variant: 'secondary' },
+    },
     role: {
         active: {
             label: 'Active',

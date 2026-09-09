@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\Role;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
@@ -10,6 +11,7 @@ use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Policies\ExpensePolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\LeasePolicy;
 use App\Policies\MaintenanceTicketPolicy;
@@ -29,6 +31,7 @@ class AuthServiceProvider extends ServiceProvider
         Lease::class => LeasePolicy::class,
         Invoice::class => InvoicePolicy::class,
         Payment::class => PaymentPolicy::class,
+        Expense::class => ExpensePolicy::class,
         MaintenanceTicket::class => MaintenanceTicketPolicy::class,
     ];
 

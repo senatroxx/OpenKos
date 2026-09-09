@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseInvoiceController;
 use App\Http\Controllers\LeaseRentScheduleController;
@@ -189,6 +190,17 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::put('/', [MaintenanceTicketController::class, 'update'])->name('update')->middleware('permission:maintenance-tickets.update');
             Route::delete('/', [MaintenanceTicketController::class, 'destroy'])->name('destroy')->middleware('permission:maintenance-tickets.delete');
             Route::post('assign', [MaintenanceTicketController::class, 'assign'])->name('assign');
+        });
+    });
+
+    Route::prefix('expenses')->name('expenses.')->group(function () {
+        Route::get('/', [ExpenseController::class, 'index'])->name('index')->middleware('permission:expenses.view');
+        Route::post('/', [ExpenseController::class, 'store'])->name('store')->middleware('permission:expenses.create');
+
+        Route::prefix('{expense}')->whereNumber('expense')->group(function () {
+            Route::put('/', [ExpenseController::class, 'update'])->name('update')->middleware('permission:expenses.update');
+            Route::delete('/', [ExpenseController::class, 'destroy'])->name('destroy')->middleware('permission:expenses.delete');
+            Route::get('receipt', [ExpenseController::class, 'receipt'])->name('receipt')->middleware('permission:expenses.view');
         });
     });
 

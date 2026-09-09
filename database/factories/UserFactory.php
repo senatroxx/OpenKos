@@ -87,6 +87,10 @@ class UserFactory extends Factory
                 Permission::PaymentsCreate->value,
                 Permission::FinancialsView->value,
                 Permission::ReportsView->value,
+                Permission::ExpensesView->value,
+                Permission::ExpensesCreate->value,
+                Permission::ExpensesUpdate->value,
+                Permission::ExpensesDelete->value,
                 Permission::UsersView->value,
                 Permission::UsersUpdate->value,
             ]);
