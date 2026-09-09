@@ -133,31 +133,37 @@ final class UnitsDefinition extends DatasetDefinition
 
     public function exportQuery(User $actor, array $filters): Builder
     {
-        $includeArchived = (bool) ($filters['include_archived'] ?? false);
+        $status = $this->filterValues($filters, 'status');
+        $propertySlugs = $this->filterValues($filters, 'property_slug');
+        $includeArchived = (bool) ($filters['include_archived'] ?? false)
+            || in_array('archived', $status, true);
 
         return Unit::query()
             ->when($includeArchived, fn (Builder $query) => $query->withTrashed())
             ->when(! $includeArchived, fn (Builder $query) => $query->whereNull('units.deleted_at'))
-            ->whereHas('property', function (Builder $property) use ($actor, $filters): void {
+            ->whereHas('property', function (Builder $property) use ($actor, $propertySlugs): void {
                 $property
                     ->when(! $actor->isOwner(), fn (Builder $query) => $query->whereHas(
                         'users',
                         fn (Builder $users) => $users->whereKey($actor->id),
                     ))
-                    ->when($filters['property_slug'] ?? null, fn (Builder $query, string $slug) => $query->where('slug', $slug));
+                    ->when($propertySlugs !== [], fn (Builder $query) => $query->whereIn('slug', $propertySlugs));
             })
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->when(
-                $status === 'archived',
-                fn (Builder $query) => $query->onlyTrashed(),
-                fn (Builder $query) => $query->where('status', $status),
-            ))
-            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                $search = mb_strtolower($search);
-                $query->where(function (Builder $query) use ($search): void {
-                    $query->whereRaw('lower(units.name) like ?', ["%{$search}%"])
-                        ->orWhereRaw('lower(units.slug) like ?', ["%{$search}%"])
-                        ->orWhereRaw('lower(units.floor) like ?', ["%{$search}%"]);
+            ->when($status !== [], function (Builder $query) use ($status): void {
+                if (array_diff($status, [...UnitStatus::values(), 'archived']) !== []) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where(function (Builder $query) use ($status): void {
+                    foreach ($status as $value) {
+                        $query->orWhere(fn (Builder $query) => $query->statusFilter($value));
+                    }
                 });
+            })
+            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
+                $query->listSearch($search);
             })
             ->with('property')
             ->orderBy('units.property_id')

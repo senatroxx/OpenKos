@@ -173,32 +173,41 @@ final class UnitRatesDefinition extends DatasetDefinition
 
     public function exportQuery(User $actor, array $filters): Builder
     {
+        $status = $this->filterValues($filters, 'status');
+        $propertySlugs = $this->filterValues($filters, 'property_slug');
+        $unitNames = $this->filterValues($filters, 'unit_name');
+        $currencies = $this->filterValues($filters, 'currency');
         $includeArchived = (bool) ($filters['include_archived'] ?? false);
 
         return UnitRate::query()
-            ->when(! $includeArchived, fn (Builder $query) => $query->where('unit_rates.is_active', true))
-            ->whereHas('unit.property', function (Builder $property) use ($actor, $filters): void {
+            ->when(! $includeArchived && $status === [], fn (Builder $query) => $query->where('unit_rates.is_active', true))
+            ->whereHas('unit.property', function (Builder $property) use ($actor, $propertySlugs): void {
                 $property
                     ->when(! $actor->isOwner(), fn (Builder $query) => $query->whereHas(
                         'users',
                         fn (Builder $users) => $users->whereKey($actor->id),
                     ))
-                    ->when($filters['property_slug'] ?? null, fn (Builder $query, string $slug) => $query->where('slug', $slug));
+                    ->when($propertySlugs !== [], fn (Builder $query) => $query->whereIn(
+                        'slug',
+                        $propertySlugs,
+                    ));
             })
-            ->when($filters['unit_name'] ?? null, fn (Builder $query, string $name) => $query->whereHas(
+            ->when($unitNames !== [], fn (Builder $query) => $query->whereHas(
                 'unit',
-                fn (Builder $unit) => $unit->where('name', $name),
+                fn (Builder $unit) => $unit->whereIn('name', $unitNames),
             ))
-            ->when($filters['currency'] ?? null, fn (Builder $query, string $currency) => $query->where('unit_rates.currency', $currency))
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->when(
-                in_array($status, ['active', 'inactive'], true),
-                fn (Builder $query) => $query->where('unit_rates.is_active', $status === 'active'),
-            ))
-            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                $search = mb_strtolower($search);
-                $query->where(function (Builder $query) use ($search): void {
-                    $query->whereHas('unit', fn (Builder $unit) => $unit->whereRaw('lower(name) like ?', ["%{$search}%"]))
-                        ->orWhereHas('unit.property', fn (Builder $property) => $property->whereRaw('lower(name) like ?', ["%{$search}%"]));
+            ->when($currencies !== [], fn (Builder $query) => $query->whereIn('unit_rates.currency', $currencies))
+            ->when($status !== [], function (Builder $query) use ($status): void {
+                if (array_diff($status, ['active', 'inactive']) !== []) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where(function (Builder $query) use ($status): void {
+                    foreach ($status as $value) {
+                        $query->orWhere('unit_rates.is_active', $value === 'active');
+                    }
                 });
             })
             ->with('unit.property')

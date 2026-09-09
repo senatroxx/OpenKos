@@ -101,6 +101,31 @@ final class TenantsDefinition extends DatasetDefinition
             }
         }
 
+        if (($values['id_card_number'] ?? null) === null && ($values['phone'] ?? null) === null) {
+            $normalizedName = mb_strtolower((string) $values['name']);
+            $nameKey = 'tenant|name|'.$normalizedName;
+
+            if (isset($context->state[$nameKey])) {
+                $context->error($line, 'name', __('Another row uses the same name without an explicit tenant identifier.'));
+            } else {
+                $context->state[$nameKey] = $line;
+            }
+
+            $matches = Tenant::withTrashed()
+                ->whereRaw('lower(name) = ?', [$normalizedName])
+                ->count();
+
+            if ($matches > 0) {
+                $context->error(
+                    $line,
+                    'name',
+                    $matches > 1
+                        ? __('Multiple existing tenants match this name. Manual resolution is required.')
+                        : __('An existing tenant matches this name without an explicit identifier. Manual resolution is required.'),
+                );
+            }
+        }
+
         $isActive = $this->boolean($values['is_active'] ?? null, $line, 'is_active', $context);
 
         if ($context->errorsSince($rowErrorCount)) {
@@ -125,14 +150,17 @@ final class TenantsDefinition extends DatasetDefinition
 
     public function exportQuery(User $actor, array $filters): Builder
     {
-        $includeArchived = (bool) ($filters['include_archived'] ?? false);
+        $status = $this->filterValues($filters, 'status');
+        $appAccess = $this->filterValues($filters, 'app_access');
+        $includeArchived = (bool) ($filters['include_archived'] ?? false)
+            || in_array('archived', $status, true);
         $assignedPropertyIds = ! $actor->isOwner()
             ? $actor->properties()->pluck('properties.id')
             : null;
 
         return Tenant::query()
             ->when($includeArchived, fn (Builder $query) => $query->withTrashed())
-            ->when(! $includeArchived, fn (Builder $query) => $query
+            ->when(! $includeArchived && $status === [], fn (Builder $query) => $query
                 ->whereNull('tenants.deleted_at')
                 ->where('tenants.is_active', true))
             ->when($assignedPropertyIds !== null, fn (Builder $query) => $query->whereHas(
@@ -142,41 +170,34 @@ final class TenantsDefinition extends DatasetDefinition
                     fn (Builder $units) => $units->whereIn('property_id', $assignedPropertyIds),
                 ),
             ))
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->when(
-                $status === 'archived',
-                fn (Builder $query) => $query->onlyTrashed(),
-                fn (Builder $query) => $query->when(
-                    in_array($status, ['active', 'inactive'], true),
-                    fn (Builder $query) => $query->where('tenants.is_active', $status === 'active'),
-                ),
-            ))
-            ->when($filters['app_access'] ?? null, function (Builder $query, string $status): void {
-                match ($status) {
-                    'none' => $query->whereNull('user_id'),
-                    'active' => $query->whereHas('user', fn (Builder $user) => $user
-                        ->where('is_active', true)
-                        ->whereNotNull('email_verified_at')),
-                    'invited' => $query->whereHas('user', fn (Builder $user) => $user
-                        ->whereNotNull('invited_at')
-                        ->where(fn (Builder $state) => $state
-                            ->where('is_active', false)
-                            ->orWhereNull('email_verified_at'))),
-                    'disabled' => $query->whereHas('user', fn (Builder $user) => $user
-                        ->where('is_active', false)
-                        ->whereNull('invited_at')
-                        ->whereNotNull('email_verified_at')),
-                    'email_only' => $query->whereHas('user', fn (Builder $user) => $user
-                        ->whereNull('invited_at')
-                        ->whereNull('email_verified_at')),
-                    default => null,
-                };
-            })
-            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                $search = mb_strtolower($search);
-                $query->where(function (Builder $query) use ($search): void {
-                    $query->whereRaw('lower(tenants.name) like ?', ["%{$search}%"])
-                        ->orWhereRaw('lower(tenants.phone) like ?', ["%{$search}%"]);
+            ->when($status !== [], function (Builder $query) use ($status): void {
+                if (array_diff($status, ['active', 'inactive', 'archived']) !== []) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where(function (Builder $query) use ($status): void {
+                    foreach ($status as $value) {
+                        $query->orWhere(fn (Builder $query) => $query->statusFilter($value));
+                    }
                 });
+            })
+            ->when($appAccess !== [], function (Builder $query) use ($appAccess): void {
+                if (array_diff($appAccess, ['active', 'invited', 'email_only', 'disabled', 'none']) !== []) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where(function (Builder $query) use ($appAccess): void {
+                    foreach ($appAccess as $value) {
+                        $query->orWhere(fn (Builder $query) => $query->appAccessFilter($value));
+                    }
+                });
+            })
+            ->when($filters['search'] ?? null, function (Builder $query, string $search) use ($filters): void {
+                $query->listSearch($search, (bool) ($filters['sensitive'] ?? false));
             })
             ->with('user:id,email')
             ->orderBy('tenants.name');

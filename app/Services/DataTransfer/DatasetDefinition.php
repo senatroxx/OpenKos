@@ -5,6 +5,7 @@ namespace App\Services\DataTransfer;
 use App\Enums\DataTransferDataset;
 use App\Models\Property;
 use App\Models\User;
+use App\Support\DelimitedValues;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
@@ -86,6 +87,15 @@ abstract class DatasetDefinition
 
             return $value === '' ? null : $value;
         }, $values);
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array<int, string>
+     */
+    protected function filterValues(array $filters, string $key): array
+    {
+        return DelimitedValues::normalize($filters[$key] ?? null);
     }
 
     protected function boolean(

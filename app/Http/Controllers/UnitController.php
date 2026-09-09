@@ -14,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Settings\InstallationCurrencySettings;
+use App\Support\DelimitedValues;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -109,36 +110,35 @@ class UnitController extends Controller
 
         $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
-        $archived = $request->query('status') === 'archived';
+        $statusValues = DelimitedValues::normalize($request->query('status'));
+        $includesArchived = in_array('archived', $statusValues, true);
 
         $table = Table::make()
             ->columns([
-                Column::make('name', 'Name')->sortable()->searchable(),
-                Column::make('floor', 'Floor')->sortable()->searchable(),
+                Column::make('name', 'Name')->sortable()->searchable(
+                    fn (Builder $q, string $search) => $q->listSearch($search),
+                ),
+                Column::make('floor', 'Floor')->sortable(),
                 Column::make('size_sqm', 'Size')->sortable(),
                 Column::make('status', 'Status')->sortable(),
                 Column::make('capacity', 'Capacity')->sortable(),
             ])
             ->filters([
                 Filter::select('status', 'Status', ['available', 'occupied', 'maintenance', 'unavailable', 'archived'])
-                    ->query(fn (Builder $q, string $value) => match ($value) {
-                        'archived' => null,
-                        default => $q->where('status', $value),
-                    }),
+                    ->query(fn (Builder $q, string $value) => $q->statusFilter($value)),
             ])
             ->defaultSort('name');
 
-        $query = $archived
-            ? $property->units()->onlyTrashed()
-            : $property->units()
-                ->withCount([
-                    'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
-                ])
-                ->with([
-                    'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
-                    'activeRates',
-                    'rates',
-                ]);
+        $query = $property->units()
+            ->when($includesArchived, fn (Builder $q) => $q->withTrashed())
+            ->withCount([
+                'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
+            ])
+            ->with([
+                'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+                'activeRates',
+                'rates',
+            ]);
 
         $result = $table->paginate($query, $request, 'units');
 

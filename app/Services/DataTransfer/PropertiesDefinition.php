@@ -179,7 +179,10 @@ final class PropertiesDefinition extends DatasetDefinition
 
     public function exportQuery(User $actor, array $filters): Builder
     {
-        $includeArchived = (bool) ($filters['include_archived'] ?? false);
+        $status = $this->filterValues($filters, 'status');
+        $types = $this->filterValues($filters, 'type');
+        $includeArchived = (bool) ($filters['include_archived'] ?? false)
+            || in_array('archived', $status, true);
 
         return Property::query()
             ->when($includeArchived, fn (Builder $query) => $query->withTrashed())
@@ -190,19 +193,22 @@ final class PropertiesDefinition extends DatasetDefinition
                 'users',
                 fn (Builder $users) => $users->whereKey($actor->id),
             ))
-            ->when($filters['status'] ?? null, fn (Builder $query, string $status) => $query->when(
-                in_array($status, ['active', 'archived'], true),
-                fn (Builder $query) => $query->where('properties.is_active', $status === 'active'),
-            ))
-            ->when($filters['type'] ?? null, fn (Builder $query, string $type) => $query->where('properties.type', $type))
-            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
-                $search = mb_strtolower($search);
-                $query->where(function (Builder $query) use ($search): void {
-                    $query->whereRaw('lower(properties.name) like ?', ["%{$search}%"])
-                        ->orWhereRaw('lower(properties.slug) like ?', ["%{$search}%"])
-                        ->orWhereHas('region', fn (Builder $region) => $region->whereRaw('lower(name) like ?', ["%{$search}%"]))
-                        ->orWhereHas('city', fn (Builder $city) => $city->whereRaw('lower(name) like ?', ["%{$search}%"]));
+            ->when($status !== [], function (Builder $query) use ($status): void {
+                if (array_diff($status, ['active', 'archived']) !== []) {
+                    $query->whereRaw('1 = 0');
+
+                    return;
+                }
+
+                $query->where(function (Builder $query) use ($status): void {
+                    foreach ($status as $value) {
+                        $query->orWhere(fn (Builder $query) => $query->statusFilter($value));
+                    }
                 });
+            })
+            ->when($types !== [], fn (Builder $query) => $query->whereIn('properties.type', $types))
+            ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
+                $query->listSearch($search);
             })
             ->with(['propertyType', 'region', 'city'])
             ->orderBy('properties.name');

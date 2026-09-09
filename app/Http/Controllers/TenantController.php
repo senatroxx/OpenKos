@@ -8,6 +8,7 @@ use App\Actions\Tenants\DisableTenantAccess;
 use App\Actions\Tenants\InviteTenant;
 use App\Data\Lease\CreateLeaseData;
 use App\Enums\LeaseStatus;
+use App\Enums\Permission;
 use App\Enums\TenantDocumentType;
 use App\Http\Requests\Tenant\AssignUnitRequest;
 use App\Http\Requests\Tenant\InviteTenantRequest;
@@ -15,6 +16,7 @@ use App\Http\Requests\Tenant\StoreTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Support\DelimitedValues;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -108,23 +110,20 @@ class TenantController extends Controller
 
     public function index(Request $request): Response
     {
+        $statusValues = DelimitedValues::normalize($request->query('status'));
+        $includeSensitiveSearch = $request->user()->isOwner()
+            || $request->user()->can(Permission::TenantsExportSensitive->value);
+
         $table = Table::make()
             ->columns([
-                Column::make('name', 'Name')->sortable()->searchable(function (Builder $q, string $search): void {
-                    $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%')
-                        ->orWhere(DB::raw('lower(phone)'), 'like', '%'.mb_strtolower($search).'%')
-                        ->orWhere(DB::raw('lower(id_card_number)'), 'like', '%'.mb_strtolower($search).'%');
-                }),
+                Column::make('name', 'Name')->sortable()->searchable(
+                    fn (Builder $q, string $search) => $q->listSearch($search, $includeSensitiveSearch),
+                ),
                 Column::make('phone', 'Phone')->sortable(),
             ])
             ->filters([
                 Filter::select('status', 'Status', ['active', 'inactive', 'archived'])
-                    ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->where('is_active', true),
-                        'inactive' => $q->where('is_active', false),
-                        'archived' => $q->onlyTrashed(),
-                        default => $q,
-                    }),
+                    ->query(fn (Builder $q, string $value) => $q->statusFilter($value)),
                 Filter::select('app_access', 'App Access', [
                     ['value' => 'active', 'label' => 'Has access'],
                     ['value' => 'invited', 'label' => 'Invite pending'],
@@ -133,25 +132,7 @@ class TenantController extends Controller
                     ['value' => 'none', 'label' => 'No access'],
                 ])
                     // Buckets mirror appAccessStatus() on the frontend.
-                    ->query(fn (Builder $q, string $value) => match ($value) {
-                        'none' => $q->whereNull('user_id'),
-                        'active' => $q->whereHas('user', fn (Builder $u) => $u
-                            ->where('is_active', true)
-                            ->whereNotNull('email_verified_at')),
-                        'invited' => $q->whereHas('user', fn (Builder $u) => $u
-                            ->whereNotNull('invited_at')
-                            ->where(fn (Builder $a) => $a
-                                ->where('is_active', false)
-                                ->orWhereNull('email_verified_at'))),
-                        'disabled' => $q->whereHas('user', fn (Builder $u) => $u
-                            ->where('is_active', false)
-                            ->whereNull('invited_at')
-                            ->whereNotNull('email_verified_at')),
-                        'email_only' => $q->whereHas('user', fn (Builder $u) => $u
-                            ->whereNull('invited_at')
-                            ->whereNull('email_verified_at')),
-                        default => $q,
-                    }),
+                    ->query(fn (Builder $q, string $value) => $q->appAccessFilter($value)),
             ])
             ->defaultSort('name');
 
@@ -160,6 +141,7 @@ class TenantController extends Controller
             : null;
 
         $query = Tenant::query()
+            ->when($statusValues !== [] && in_array('archived', $statusValues, true), fn (Builder $q) => $q->withTrashed())
             ->with(['user:id,email,email_verified_at,last_login_at,is_active,invited_at', 'documents.media', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
             ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(

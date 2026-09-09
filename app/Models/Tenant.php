@@ -6,6 +6,7 @@ use App\Concerns\Auditable;
 use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -74,5 +75,52 @@ class Tenant extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(TenantDocument::class);
+    }
+
+    public function scopeStatusFilter(Builder $query, string $status): void
+    {
+        match ($status) {
+            'active' => $query->whereNull('tenants.deleted_at')->where('tenants.is_active', true),
+            'inactive' => $query->whereNull('tenants.deleted_at')->where('tenants.is_active', false),
+            'archived' => $query->whereNotNull('tenants.deleted_at'),
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
+
+    public function scopeAppAccessFilter(Builder $query, string $status): void
+    {
+        match ($status) {
+            'none' => $query->whereNull('user_id'),
+            'active' => $query->whereHas('user', fn (Builder $user) => $user
+                ->where('is_active', true)
+                ->whereNotNull('email_verified_at')),
+            'invited' => $query->whereHas('user', fn (Builder $user) => $user
+                ->whereNotNull('invited_at')
+                ->where(fn (Builder $state) => $state
+                    ->where('is_active', false)
+                    ->orWhereNull('email_verified_at'))),
+            'disabled' => $query->whereHas('user', fn (Builder $user) => $user
+                ->where('is_active', false)
+                ->whereNull('invited_at')
+                ->whereNotNull('email_verified_at')),
+            'email_only' => $query->whereHas('user', fn (Builder $user) => $user
+                ->whereNull('invited_at')
+                ->whereNull('email_verified_at')),
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
+
+    public function scopeListSearch(Builder $query, string $search, bool $includeSensitive = true): void
+    {
+        $search = mb_strtolower($search);
+
+        $query->where(function (Builder $query) use ($search, $includeSensitive): void {
+            $query->whereRaw('lower(tenants.name) like ?', ["%{$search}%"])
+                ->orWhereRaw('lower(tenants.phone) like ?', ["%{$search}%"]);
+
+            if ($includeSensitive) {
+                $query->orWhereRaw('lower(tenants.id_card_number) like ?', ["%{$search}%"]);
+            }
+        });
     }
 }

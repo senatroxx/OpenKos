@@ -2,6 +2,7 @@
 
 namespace App\Tables;
 
+use App\Support\DelimitedValues;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -219,7 +220,7 @@ class Table
                 $callback = $filter->queryCallback;
 
                 $wrapped = function (Builder $query, array|string $value) use ($callback): void {
-                    $values = is_array($value) ? $value : explode(',', $value);
+                    $values = DelimitedValues::normalize($value);
 
                     if (count($values) === 1) {
                         $callback($query, $values[0]);

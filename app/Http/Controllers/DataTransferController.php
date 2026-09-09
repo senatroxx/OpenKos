@@ -7,6 +7,7 @@ use App\Enums\Permission;
 use App\Http\Requests\DataTransfer\ImportDataRequest;
 use App\Models\User;
 use App\Services\DataTransfer\MasterDataTransferService;
+use App\Support\DelimitedValues;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,18 +89,18 @@ class DataTransferController extends Controller
         $dataset = $this->resolveDataset($dataset);
         $sensitive = $request->boolean('include_sensitive');
         $this->authorizeDataset($request->user(), $dataset, 'export', $sensitive);
-        $status = $request->string('status')->trim()->toString() ?: null;
+        $status = DelimitedValues::normalize($request->query('status'));
 
         return $this->transfer->export($dataset, $request->user(), [
             'search' => $request->string('search')->trim()->toString() ?: null,
             'status' => $status,
-            'type' => $request->string('type')->trim()->toString() ?: null,
-            'app_access' => $request->string('app_access')->trim()->toString() ?: null,
-            'property_slug' => $request->string('property_slug')->trim()->toString() ?: null,
-            'unit_name' => $request->string('unit_name')->trim()->toString() ?: null,
-            'currency' => $request->string('currency')->trim()->toString() ?: null,
+            'type' => DelimitedValues::normalize($request->query('type')),
+            'app_access' => DelimitedValues::normalize($request->query('app_access')),
+            'property_slug' => DelimitedValues::normalize($request->query('property_slug')),
+            'unit_name' => DelimitedValues::normalize($request->query('unit_name')),
+            'currency' => DelimitedValues::normalize($request->query('currency')),
             'include_archived' => $request->boolean('include_archived')
-                || in_array($status, ['archived', 'inactive'], true),
+                || in_array('archived', $status, true),
             'sensitive' => $sensitive,
         ]);
     }

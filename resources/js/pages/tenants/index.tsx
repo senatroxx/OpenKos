@@ -403,12 +403,10 @@ export default function Index({
                                             status: currentStatus || undefined,
                                             app_access:
                                                 currentAppAccess || undefined,
-                                            include_archived: [
-                                                'archived',
-                                                'inactive',
-                                            ].includes(currentStatus)
-                                                ? 1
-                                                : undefined,
+                                            include_archived:
+                                                currentStatus === 'archived'
+                                                    ? 1
+                                                    : undefined,
                                         },
                                     })}
                                 >
