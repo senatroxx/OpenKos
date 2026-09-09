@@ -870,8 +870,8 @@ it('accepts legacy marketplace compatibility metadata', function (): void {
     configureMarketplaceForTests();
     $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
     $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
-    $metadata['compatibility']['openkos'] = $metadata['compatibility']['core'];
-    unset($metadata['compatibility']['core']);
+    $metadata['compatibility']['core'] = $metadata['compatibility']['openkos'];
+    unset($metadata['compatibility']['openkos']);
     fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
 
     $this->actingAs(User::factory()->owner()->create())
@@ -1253,7 +1253,7 @@ function makePluginSettingsArtifact(array $overrides = []): array
         'description' => 'Settings runtime fixture.',
         'entry_class' => $entryClass,
         'core_version' => '^0.2',
-        'php' => '^8.3',
+        'php' => '>=8.4 <8.6',
         'dependencies' => [],
         ...$overrides,
     ];
@@ -1272,7 +1272,7 @@ function makePluginSettingsArtifact(array $overrides = []): array
         'composer.json' => json_encode([
             'name' => $id,
             'type' => 'library',
-            'require' => ['php' => '^8.3', 'openkos/platform' => '^0.2'],
+            'require' => ['php' => '>=8.4 <8.6', 'openkos/platform' => '^0.2'],
             'autoload' => ['psr-4' => ['SettingsRuntime\\' => 'src/']],
             'extra' => ['openkos' => ['plugin' => $entryClass]],
         ], JSON_THROW_ON_ERROR),
@@ -1326,9 +1326,9 @@ function marketplaceVersionMetadata(array $artifact, string $version): array
         'version' => $version,
         'entry_class' => $artifact['class'],
         'compatibility' => [
-            'core' => '^0.2',
+            'openkos' => '^0.2',
             'platform' => '^0.2',
-            'php' => '^8.3',
+            'php' => '>=8.4 <8.6',
         ],
         'published_at' => now()->toIso8601String(),
         'dependencies' => $manifest['dependencies'],
