@@ -123,6 +123,38 @@ export type UnitRate = {
     is_active?: boolean;
 };
 
+export type UtilityReading = {
+    id: number;
+    reading_kind: 'reading' | 'correction';
+    reading_date: string;
+    period_start: string;
+    period_end: string;
+    previous_reading: string;
+    current_reading: string;
+    consumption: string;
+    adjustment_consumption: string | null;
+    rate: string;
+    currency: string;
+    reference: string | null;
+    corrects_reading_id: number | null;
+    charge_preview: string;
+    billed: boolean;
+    invoice_reference: string | null;
+    can_edit: boolean;
+    can_delete: boolean;
+};
+
+export type UtilityMeter = {
+    id: number;
+    utility_type: 'electricity' | 'water' | 'custom';
+    identifier: string;
+    measurement_unit: string;
+    rate: string;
+    currency: string;
+    is_active: boolean;
+    readings: UtilityReading[];
+};
+
 export type Unit = {
     id: number;
     name: string;

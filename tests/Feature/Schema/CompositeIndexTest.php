@@ -34,6 +34,12 @@ $expected = [
     'media' => [
         'idx_media_owner_collection_position' => ['mediable_type', 'mediable_id', 'collection', 'position'],
     ],
+    'utility_meters' => [
+        'idx_utility_meters_unit_active' => ['unit_id', 'is_active'],
+    ],
+    'utility_readings' => [
+        'idx_utility_readings_meter_period' => ['utility_meter_id', 'period_start', 'period_end'],
+    ],
 ];
 
 $appTables = array_keys($expected);
