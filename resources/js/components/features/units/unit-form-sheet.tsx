@@ -20,7 +20,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Property, Unit } from '@/types';
+import type { Property, Unit, UnitType } from '@/types';
 
 type UnitFormData = {
     name: string;
@@ -30,17 +30,20 @@ type UnitFormData = {
     status: string;
     description: string;
     notes: string;
+    unit_type_id: string;
     updated_at: string | null;
 };
 
 export default function UnitFormSheet({
     unit,
     property,
+    unitTypes,
     open,
     onOpenChange,
 }: {
     unit?: Unit | null;
     property: Property;
+    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
@@ -54,6 +57,7 @@ export default function UnitFormSheet({
             status: unit?.status ?? 'available',
             description: unit?.description ?? '',
             notes: unit?.notes ?? '',
+            unit_type_id: unit?.unit_type_id ? String(unit.unit_type_id) : '',
             updated_at: unit?.updated_at ?? null,
         });
 
@@ -140,6 +144,50 @@ export default function UnitFormSheet({
                                 />
                                 <InputError message={errors.capacity} />
                             </div>
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="unit-type">{t('UnitType')}</Label>
+                            <Select
+                                value={data.unit_type_id || 'none'}
+                                onValueChange={(value) =>
+                                    setData(
+                                        'unit_type_id',
+                                        value === 'none' ? '' : value,
+                                    )
+                                }
+                            >
+                                <SelectTrigger
+                                    id="unit-type"
+                                    className="w-full"
+                                >
+                                    <SelectValue
+                                        placeholder={t('No UnitType assigned')}
+                                    />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">
+                                        {t('No UnitType assigned')}
+                                    </SelectItem>
+                                    {unitTypes.map((unitType) => (
+                                        <SelectItem
+                                            key={unitType.id}
+                                            value={String(unitType.id)}
+                                            disabled={
+                                                !unitType.is_active &&
+                                                unitType.id !==
+                                                    unit?.unit_type_id
+                                            }
+                                        >
+                                            {unitType.name}
+                                            {!unitType.is_active
+                                                ? ` (${t('inactive')})`
+                                                : ''}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={errors.unit_type_id} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

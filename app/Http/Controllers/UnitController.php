@@ -60,7 +60,7 @@ class UnitController extends Controller
 
     private function loadWorkspaceUnit(Unit $unit): void
     {
-        $unit->load(['property.city', 'activeRates', 'rates'])
+        $unit->load(['property.city', 'unitType', 'activeRates', 'rates'])
             ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
             ->load(['leases' => fn ($q) => $q->where('status', 'active')
                 ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
@@ -137,6 +137,7 @@ class UnitController extends Controller
                     'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
                     'activeRates',
                     'rates',
+                    'unitType',
                 ]);
 
         $result = $table->paginate($query, $request, 'units');
@@ -167,6 +168,9 @@ class UnitController extends Controller
             'property' => $property,
             'tenants' => $tenantsList,
             'availableUnits' => $availableUnits,
+            'unitTypes' => $property->unitTypes()
+                ->orderBy('name')
+                ->get(['id', 'property_id', 'name', 'is_active']),
         ]);
     }
 

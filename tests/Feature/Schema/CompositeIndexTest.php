@@ -34,6 +34,12 @@ $expected = [
     'media' => [
         'idx_media_owner_collection_position' => ['mediable_type', 'mediable_id', 'collection', 'position'],
     ],
+    'unit_types' => [
+        'unit_types_property_id_is_active_name_index' => ['property_id', 'is_active', 'name'],
+    ],
+    'amenities' => [
+        'amenities_owner_property_id_is_active_name_index' => ['owner_property_id', 'is_active', 'name'],
+    ],
 ];
 
 $appTables = array_keys($expected);

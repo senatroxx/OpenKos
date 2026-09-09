@@ -8,6 +8,7 @@ export type Tenant = {
     emergency_contact_phone: string | null;
     notes: string | null;
     is_active: boolean;
+    updated_at?: string | null;
     deleted_at?: string | null;
     active_leases_count?: number;
     documents?: TenantDocument[];
@@ -106,12 +107,48 @@ export type Property = {
     city_id?: number | null;
     postal_code?: string | null;
     phone?: string | null;
+    description?: string | null;
     is_active?: boolean;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
     units_count?: number;
     occupied_units_count?: number;
     tenants_count?: number;
+    facilities?: Amenity[];
+    gallery?: GalleryItem[];
+};
+
+export type Amenity = {
+    id: number;
+    owner_property_id: number | null;
+    name: string;
+    is_active: boolean;
+};
+
+export type GalleryItem = {
+    id: number;
+    url: string;
+    position: number;
+    alt: string | null;
+    caption: string | null;
+    original_name: string;
+    mime_type: string;
+};
+
+export type UnitType = {
+    id: number;
+    property_id: number;
+    name: string;
+    description: string | null;
+    bedrooms: number | null;
+    bathrooms: string | null;
+    size_sqm: string | null;
+    furnishing: string | null;
+    is_active: boolean;
+    updated_at?: string | null;
+    amenities?: Amenity[];
+    gallery?: GalleryItem[];
+    units_count?: number;
 };
 
 export type UnitRate = {
@@ -133,7 +170,9 @@ export type Unit = {
     capacity: number;
     occupied_count?: number;
     property_id?: number;
+    unit_type_id?: number | null;
     property?: Property | null;
+    unit_type?: UnitType | null;
     status: string;
     notes: string | null;
     active_leases?: number;

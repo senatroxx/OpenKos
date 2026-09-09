@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
+import properties from '@/routes/properties';
 import type { Property } from '@/types';
 
 export function PropertyLayout({
@@ -36,6 +37,11 @@ export function PropertyLayout({
                         key: 'units',
                         label: 'Units',
                         href: `/properties/${property.slug}/units`,
+                    },
+                    {
+                        key: 'unit-types',
+                        label: 'UnitTypes',
+                        href: properties.unitTypes.index.url(property),
                     },
                     {
                         key: 'leases',

@@ -129,6 +129,25 @@ class MediaManager
         });
     }
 
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     */
+    public function updateMetadata(Media $media, ?array $metadata): Media
+    {
+        $mediaId = $this->persistedMediaId($media);
+
+        if ($mediaId === null) {
+            throw new InvalidArgumentException('Media must be persisted before its metadata can be updated.');
+        }
+
+        return DB::transaction(function () use ($mediaId, $metadata): Media {
+            $lockedMedia = Media::query()->lockForUpdate()->findOrFail($mediaId);
+            $lockedMedia->forceFill(['metadata' => $metadata])->saveOrFail();
+
+            return $lockedMedia;
+        });
+    }
+
     public function removeForOwner(Model $owner, ?string $collection = null): void
     {
         $ownerId = $this->ownerId($owner);

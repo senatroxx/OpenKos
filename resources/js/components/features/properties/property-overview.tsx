@@ -1,9 +1,18 @@
+import { MediaGalleryManager } from '@/components/shared/media-gallery-manager';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { t } from '@/lib/i18n';
-import type { Property } from '@/types';
+import properties from '@/routes/properties';
+import type { Amenity, Property } from '@/types';
+import PropertyFacilitiesEditor from './property-facilities-editor';
 
-export default function PropertyOverview({ property }: { property: Property }) {
+export default function PropertyOverview({
+    property,
+    amenities,
+}: {
+    property: Property;
+    amenities: Amenity[];
+}) {
     const city =
         property?.city && typeof property.city !== 'string'
             ? property.city
@@ -17,7 +26,7 @@ export default function PropertyOverview({ property }: { property: Property }) {
         .join(', ');
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
                     {t('Status:')}
@@ -65,11 +74,22 @@ export default function PropertyOverview({ property }: { property: Property }) {
                 </div>
             )}
 
+            {property.description && (
+                <div>
+                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {t('Description')}
+                    </p>
+                    <p className="mt-1 max-w-3xl text-sm whitespace-pre-wrap">
+                        {property.description}
+                    </p>
+                </div>
+            )}
+
             <div>
                 <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
                     {t('Statistics')}
                 </p>
-                <div className="mt-2 grid grid-cols-3 gap-4">
+                <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="rounded-lg border bg-muted/30 p-4">
                         <p className="text-2xl font-semibold tabular-nums">
                             {property.units_count ?? 0}
@@ -96,6 +116,42 @@ export default function PropertyOverview({ property }: { property: Property }) {
                     </div>
                 </div>
             </div>
+
+            <PropertyFacilitiesEditor
+                property={property}
+                amenities={amenities}
+            />
+
+            <section className="space-y-4">
+                <div>
+                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {t('Property gallery')}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {t(
+                            'Manage ordered property photos and their metadata.',
+                        )}
+                    </p>
+                </div>
+                <MediaGalleryManager
+                    items={property.gallery ?? []}
+                    idPrefix="property"
+                    uploadUrl={properties.gallery.store.url(property)}
+                    reorderUrl={properties.gallery.reorder.url(property)}
+                    updateUrl={(mediaId) =>
+                        properties.gallery.update.url({
+                            property,
+                            media: mediaId,
+                        })
+                    }
+                    destroyUrl={(mediaId) =>
+                        properties.gallery.destroy.url({
+                            property,
+                            media: mediaId,
+                        })
+                    }
+                />
+            </section>
         </div>
     );
 }

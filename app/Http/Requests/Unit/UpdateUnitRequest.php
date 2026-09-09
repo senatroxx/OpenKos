@@ -5,6 +5,7 @@ namespace App\Http\Requests\Unit;
 use App\Enums\BillingUnit;
 use App\Enums\UnitStatus;
 use App\Models\UnitRate;
+use App\Models\UnitType;
 use App\Rules\MoneyAmount;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Settings\InstallationCurrencySettings;
@@ -29,6 +30,11 @@ class UpdateUnitRequest extends FormRequest
                 Rule::unique('units')
                     ->ignore($this->route('unit')->id)
                     ->where(fn ($q) => $q->where('property_id', $this->route('property')->id)),
+            ],
+            'unit_type_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('unit_types', 'id')->where(fn ($query) => $query->where('property_id', $this->route('property')->id)),
             ],
             'floor' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
@@ -91,6 +97,8 @@ class UpdateUnitRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $this->validateUnitType($validator);
+
             $rates = $this->input('rates', []);
 
             if (! is_array($rates)) {
@@ -195,5 +203,27 @@ class UpdateUnitRequest extends FormRequest
                 }
             }
         }];
+    }
+
+    private function validateUnitType(Validator $validator): void
+    {
+        $unitTypeId = $this->input('unit_type_id');
+
+        if ($unitTypeId === null || $unitTypeId === '') {
+            return;
+        }
+
+        $unitType = UnitType::query()->find($unitTypeId);
+        $currentUnitTypeId = $this->route('unit')->unit_type_id;
+
+        if ($unitType === null || $unitType->property_id !== $this->route('property')->id) {
+            $validator->errors()->add('unit_type_id', __('The selected UnitType does not belong to this property.'));
+
+            return;
+        }
+
+        if (! $unitType->is_active && (int) $currentUnitTypeId !== (int) $unitType->id) {
+            $validator->errors()->add('unit_type_id', __('Inactive UnitTypes cannot be newly assigned.'));
+        }
     }
 }

@@ -33,7 +33,14 @@ $expected = [
         'assigned_to' => 'SET NULL',
         'created_by' => 'SET NULL',
     ],
-    'units' => ['property_id' => 'RESTRICT'],
+    'units' => [
+        'property_id' => 'RESTRICT',
+        'unit_type_id,property_id' => 'RESTRICT',
+    ],
+    'unit_types' => ['property_id' => 'RESTRICT'],
+    'amenities' => ['owner_property_id' => 'RESTRICT'],
+    'amenity_property' => ['amenity_id' => 'CASCADE', 'property_id' => 'CASCADE'],
+    'amenity_unit_type' => ['amenity_id' => 'CASCADE', 'unit_type_id' => 'CASCADE'],
     'cities' => ['region_id' => 'RESTRICT'],
 
     // SET NULL — nullable audit/user references, record survives
@@ -83,8 +90,17 @@ function loadFkSqlite(array $tables): array
     $fk = [];
     foreach ($tables as $table) {
         $rows = DB::select("PRAGMA foreign_key_list({$table})");
+        $groups = [];
         foreach ($rows as $row) {
-            $fk[$table][$row->from] = strtoupper($row->on_delete);
+            $groups[$row->id][] = $row;
+        }
+
+        foreach ($groups as $group) {
+            usort($group, fn ($a, $b): int => $a->seq <=> $b->seq);
+            $key = count($group) === 1
+                ? $group[0]->from
+                : implode(',', array_map(fn ($row): string => $row->from, $group));
+            $fk[$table][$key] = strtoupper($group[0]->on_delete);
         }
     }
 
@@ -100,7 +116,9 @@ function loadFkPgsql(array $tables): array
     $rows = DB::select("
         SELECT
             tc.table_name,
+            tc.constraint_name,
             kcu.column_name,
+            kcu.ordinal_position,
             rc.delete_rule
         FROM information_schema.table_constraints tc
         JOIN information_schema.key_column_usage kcu
@@ -112,12 +130,22 @@ function loadFkPgsql(array $tables): array
         WHERE tc.constraint_type = 'FOREIGN KEY'
             AND tc.table_schema = 'public'
             AND tc.table_name IN ({$placeholders})
-        ORDER BY tc.table_name, kcu.column_name
+        ORDER BY tc.table_name, tc.constraint_name, kcu.ordinal_position
     ", $tables);
 
     $fk = [];
+    $groups = [];
     foreach ($rows as $row) {
-        $fk[$row->table_name][$row->column_name] = $row->delete_rule;
+        $groups[$row->table_name][$row->constraint_name][] = $row;
+    }
+
+    foreach ($groups as $table => $constraints) {
+        foreach ($constraints as $rows) {
+            $key = count($rows) === 1
+                ? $rows[0]->column_name
+                : implode(',', array_map(fn ($row): string => $row->column_name, $rows));
+            $fk[$table][$key] = $rows[0]->delete_rule;
+        }
     }
 
     return $fk;
