@@ -248,3 +248,33 @@ test('financial dashboard enforces financial permission and property scope', fun
         ->get(route('dashboard.financial', ['property_id' => $hiddenProperty->id]))
         ->assertForbidden();
 });
+
+test('financial dashboard omits margin when a currency has expenses but no revenue', function (): void {
+    Carbon::setTestNow(Carbon::parse('2026-09-15'));
+
+    try {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $category = ExpenseCategory::factory()->create();
+
+        Expense::factory()->create([
+            'property_id' => $property->id,
+            'expense_category_id' => $category->id,
+            'amount' => '100.000',
+            'currency' => 'EUR',
+            'expense_date' => '2026-09-10',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard.financial'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('financial.overview.revenue', [])
+                ->where('financial.overview.expenses', [['currency' => 'EUR', 'amount' => '100']])
+                ->where('financial.overview.noi', [['currency' => 'EUR', 'amount' => '-100']])
+                ->where('financial.overview.operating_margin', [])
+            );
+    } finally {
+        Carbon::setTestNow();
+    }
+});
