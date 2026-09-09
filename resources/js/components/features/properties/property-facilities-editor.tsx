@@ -1,4 +1,5 @@
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
+import { RotateCcw, XCircle } from 'lucide-react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -47,6 +48,20 @@ export default function PropertyFacilitiesEditor({
         });
     }
 
+    function toggleAmenityLifecycle(amenity: Amenity) {
+        router.post(
+            amenity.is_active
+                ? properties.amenities.deactivate.url({
+                      property,
+                      amenity: amenity.id,
+                  })
+                : properties.amenities.restore.url({
+                      property,
+                      amenity: amenity.id,
+                  }),
+        );
+    }
+
     return (
         <section className="space-y-4">
             <div>
@@ -61,25 +76,65 @@ export default function PropertyFacilitiesEditor({
             <form onSubmit={saveFacilities} className="space-y-4">
                 <div className="grid gap-3 sm:grid-cols-2">
                     {amenities.map((amenity) => (
-                        <label
+                        <div
                             key={amenity.id}
                             className="flex items-center gap-3 rounded-md border p-3 text-sm"
                         >
-                            <Checkbox
-                                checked={facilityForm.data.amenity_ids.includes(
-                                    amenity.id,
-                                )}
-                                onCheckedChange={(checked) =>
-                                    toggleAmenity(amenity.id, checked)
-                                }
-                            />
-                            <span className="flex-1">{amenity.name}</span>
-                            {!amenity.is_active && (
-                                <span className="text-xs text-muted-foreground">
-                                    {t('Inactive')}
+                            <label
+                                htmlFor={`property-facility-${amenity.id}`}
+                                className="flex min-w-0 flex-1 items-center gap-3"
+                            >
+                                <Checkbox
+                                    id={`property-facility-${amenity.id}`}
+                                    disabled={
+                                        !amenity.is_active &&
+                                        !facilityForm.data.amenity_ids.includes(
+                                            amenity.id,
+                                        )
+                                    }
+                                    checked={facilityForm.data.amenity_ids.includes(
+                                        amenity.id,
+                                    )}
+                                    onCheckedChange={(checked) =>
+                                        toggleAmenity(amenity.id, checked)
+                                    }
+                                />
+                                <span className="min-w-0 flex-1">
+                                    {amenity.name}
                                 </span>
+                                {!amenity.is_active && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {t('Inactive')}
+                                    </span>
+                                )}
+                            </label>
+                            {amenity.owner_property_id !== null && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                        toggleAmenityLifecycle(amenity)
+                                    }
+                                    aria-label={t(
+                                        amenity.is_active
+                                            ? 'Deactivate amenity'
+                                            : 'Reactivate amenity',
+                                    )}
+                                >
+                                    {amenity.is_active ? (
+                                        <XCircle className="size-4" />
+                                    ) : (
+                                        <RotateCcw className="size-4" />
+                                    )}
+                                    {t(
+                                        amenity.is_active
+                                            ? 'Deactivate'
+                                            : 'Reactivate',
+                                    )}
+                                </Button>
                             )}
-                        </label>
+                        </div>
                     ))}
                 </div>
                 <InputError message={facilityForm.errors.amenity_ids} />

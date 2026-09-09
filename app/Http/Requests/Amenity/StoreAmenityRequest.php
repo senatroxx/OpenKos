@@ -2,9 +2,10 @@
 
 namespace App\Http\Requests\Amenity;
 
+use App\Models\Amenity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreAmenityRequest extends FormRequest
 {
@@ -28,8 +29,24 @@ class StoreAmenityRequest extends FormRequest
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('amenities')->where(fn ($query) => $query->where('owner_property_id', $this->route('property')->id)),
             ],
         ];
+    }
+
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $exists = Amenity::query()
+                ->where('owner_property_id', $this->route('property')->id)
+                ->whereRaw('LOWER(name) = LOWER(?)', [$this->input('name')])
+                ->exists();
+
+            if ($exists) {
+                $validator->errors()->add('name', __('The amenity name is already used by this property.'));
+            }
+        }];
     }
 }

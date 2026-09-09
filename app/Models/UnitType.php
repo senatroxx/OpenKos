@@ -50,6 +50,8 @@ class UnitType extends Model
 
     public function amenities(): BelongsToMany
     {
-        return $this->belongsToMany(Amenity::class, 'amenity_unit_type')->withTimestamps();
+        return $this->belongsToMany(Amenity::class, 'amenity_unit_type')
+            ->using(AmenityUnitType::class)
+            ->withTimestamps();
     }
 }

@@ -10,7 +10,6 @@ use App\Models\Property;
 use App\Models\UnitType;
 use App\Services\Media\MediaManager;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -22,15 +21,12 @@ class UnitTypeMediaController extends Controller
     {
         $this->authorizeUnitType($property, $unitType);
 
-        $lastPosition = $mediaManager->forCollection($unitType, 'photos')->max('position');
-        $position = $lastPosition === null ? 0 : ((int) $lastPosition) + 1;
         $validated = $request->validated();
 
-        $mediaManager->store(
+        $mediaManager->storeAtEnd(
             $unitType,
             'photos',
             $validated['file'],
-            position: $position,
             metadata: [
                 'alt' => $validated['alt'] ?? null,
                 'caption' => $validated['caption'] ?? null,
@@ -81,7 +77,7 @@ class UnitTypeMediaController extends Controller
         return back();
     }
 
-    public function show(Request $request, Property $property, UnitType $unitType, Media $media): StreamedResponse
+    public function show(Property $property, UnitType $unitType, Media $media): StreamedResponse
     {
         $this->authorizeUnitType($property, $unitType, false);
         $media = $this->ownedMedia($unitType, $media);

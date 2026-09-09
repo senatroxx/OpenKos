@@ -34,11 +34,15 @@ class Amenity extends Model
 
     public function properties(): BelongsToMany
     {
-        return $this->belongsToMany(Property::class, 'amenity_property')->withTimestamps();
+        return $this->belongsToMany(Property::class, 'amenity_property')
+            ->using(AmenityProperty::class)
+            ->withTimestamps();
     }
 
     public function unitTypes(): BelongsToMany
     {
-        return $this->belongsToMany(UnitType::class, 'amenity_unit_type')->withTimestamps();
+        return $this->belongsToMany(UnitType::class, 'amenity_unit_type')
+            ->using(AmenityUnitType::class)
+            ->withTimestamps();
     }
 }

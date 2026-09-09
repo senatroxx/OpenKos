@@ -61,6 +61,24 @@ it('scopes UnitType names to a property', function () {
     expect(UnitType::query()->where('name', 'Studio')->count())->toBe(2);
 });
 
+it('scopes UnitType names case-insensitively within a property', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    UnitType::factory()->for($property)->create(['name' => 'Studio']);
+
+    $this->actingAs($user)
+        ->post(route('properties.unit-types.store', $property), ['name' => 'studio'])
+        ->assertSessionHasErrors('name');
+});
+
+it('enforces UnitType name uniqueness at the database boundary', function () {
+    $property = Property::factory()->create();
+    UnitType::factory()->for($property)->create(['name' => 'Studio']);
+
+    expect(fn () => UnitType::factory()->for($property)->create(['name' => 'studio']))
+        ->toThrow(QueryException::class);
+});
+
 it('rejects assigning a UnitType from another property', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();

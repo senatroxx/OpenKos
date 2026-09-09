@@ -25,11 +25,10 @@ class UpdateUnitTypeRequest extends FormRequest
      */
     public function rules(): array
     {
-        $propertyId = $this->route('property')->id;
         $unitType = $this->route('unitType');
 
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('unit_types')->ignore($unitType->id)->where(fn ($query) => $query->where('property_id', $propertyId))],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
             'bedrooms' => ['nullable', 'integer', 'min:0', 'max:255'],
             'bathrooms' => ['nullable', 'numeric', 'min:0', 'max:99.9'],
@@ -47,6 +46,7 @@ class UpdateUnitTypeRequest extends FormRequest
     {
         return [function (Validator $validator): void {
             $unitType = $this->route('unitType');
+            $this->validateName($validator, $unitType->id);
             $existingIds = $unitType->amenities()->pluck('amenities.id')->map(fn (mixed $id): int => (int) $id)->all();
             $ids = collect($this->input('amenity_ids', []))
                 ->filter(fn (mixed $id): bool => is_int($id) || (is_string($id) && ctype_digit($id)))
@@ -74,5 +74,17 @@ class UpdateUnitTypeRequest extends FormRequest
                 }
             }
         }];
+    }
+
+    private function validateName(Validator $validator, int $unitTypeId): void
+    {
+        $exists = $this->route('property')->unitTypes()
+            ->whereKeyNot($unitTypeId)
+            ->whereRaw('LOWER(name) = LOWER(?)', [$this->input('name')])
+            ->exists();
+
+        if ($exists) {
+            $validator->errors()->add('name', __('The UnitType name is already used by this property.'));
+        }
     }
 }

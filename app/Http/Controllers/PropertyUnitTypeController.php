@@ -33,10 +33,19 @@ class PropertyUnitTypeController extends Controller
             $unitType->unsetRelation('media');
         });
 
+        $unitTypeAmenityIds = $unitTypes
+            ->flatMap(fn (UnitType $unitType) => $unitType->amenities->modelKeys())
+            ->unique()
+            ->values()
+            ->all();
         $amenities = Amenity::query()
-            ->where('is_active', true)
-            ->where(function ($query) use ($property): void {
-                $query->whereNull('owner_property_id')->orWhere('owner_property_id', $property->id);
+            ->where(function ($query) use ($property, $unitTypeAmenityIds): void {
+                $query->where(function ($query) use ($property): void {
+                    $query->whereNull('owner_property_id')->where('is_active', true)
+                        ->orWhere('owner_property_id', $property->id);
+                })->when($unitTypeAmenityIds !== [], function ($query) use ($unitTypeAmenityIds): void {
+                    $query->orWhereIn('id', $unitTypeAmenityIds);
+                });
             })
             ->orderBy('name')
             ->get(['id', 'owner_property_id', 'name', 'is_active']);

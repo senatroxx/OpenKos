@@ -3,6 +3,7 @@
 namespace App\Http\Requests\UnitType;
 
 use App\Models\Amenity;
+use App\Models\UnitType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -25,10 +26,8 @@ class StoreUnitTypeRequest extends FormRequest
      */
     public function rules(): array
     {
-        $propertyId = $this->route('property')->id;
-
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('unit_types')->where(fn ($query) => $query->where('property_id', $propertyId))],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
             'bedrooms' => ['nullable', 'integer', 'min:0', 'max:255'],
             'bathrooms' => ['nullable', 'numeric', 'min:0', 'max:99.9'],
@@ -45,8 +44,21 @@ class StoreUnitTypeRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $this->validateName($validator);
             $this->validateAmenities($validator, []);
         }];
+    }
+
+    private function validateName(Validator $validator): void
+    {
+        $exists = UnitType::query()
+            ->where('property_id', $this->route('property')->id)
+            ->whereRaw('LOWER(name) = LOWER(?)', [$this->input('name')])
+            ->exists();
+
+        if ($exists) {
+            $validator->errors()->add('name', __('The UnitType name is already used by this property.'));
+        }
     }
 
     /**

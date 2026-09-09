@@ -233,6 +233,12 @@ export default function UnitTypeFormSheet({
                                         className="flex items-center gap-3 rounded-md border p-3 text-sm"
                                     >
                                         <Checkbox
+                                            disabled={
+                                                !amenity.is_active &&
+                                                !data.amenity_ids.includes(
+                                                    amenity.id,
+                                                )
+                                            }
                                             checked={data.amenity_ids.includes(
                                                 amenity.id,
                                             )}

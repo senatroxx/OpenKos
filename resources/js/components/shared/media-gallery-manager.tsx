@@ -1,6 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import { ArrowDown, ArrowUp, ImagePlus, Star, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,8 @@ export function MediaGalleryManager({
     destroyUrl,
 }: GalleryManagerProps) {
     const fileInputId = `${idPrefix}-gallery-file`;
+    const uploadAltId = `${idPrefix}-gallery-alt`;
+    const uploadCaptionId = `${idPrefix}-gallery-caption`;
     const [metadata, setMetadata] = useState<
         Record<number, { alt: string; caption: string }>
     >({});
@@ -35,20 +37,34 @@ export function MediaGalleryManager({
         alt: string;
         caption: string;
     }>({ file: null, alt: '', caption: '' });
+    const fileInput = useRef<HTMLInputElement>(null);
+
+    function itemMetadata(item: GalleryItem) {
+        return (
+            metadata[item.id] ?? {
+                alt: item.alt ?? '',
+                caption: item.caption ?? '',
+            }
+        );
+    }
 
     function uploadFile(event: React.FormEvent) {
         event.preventDefault();
 
         upload.post(uploadUrl, {
             forceFormData: true,
-            onSuccess: () => upload.reset(),
+            onSuccess: () => {
+                upload.reset();
+
+                if (fileInput.current) {
+                    fileInput.current.value = '';
+                }
+            },
         });
     }
 
     function saveMetadata(item: GalleryItem) {
-        const values = metadata[item.id] ?? { alt: '', caption: '' };
-
-        router.patch(updateUrl(item.id), values);
+        router.patch(updateUrl(item.id), itemMetadata(item));
     }
 
     function move(item: GalleryItem, direction: -1 | 1) {
@@ -92,6 +108,7 @@ export function MediaGalleryManager({
                         <Label htmlFor={fileInputId}>{t('Photo')}</Label>
                         <Input
                             id={fileInputId}
+                            ref={fileInput}
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             onChange={(event) =>
@@ -104,9 +121,9 @@ export function MediaGalleryManager({
                         <InputError message={upload.errors.file} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="gallery-alt">{t('Alt text')}</Label>
+                        <Label htmlFor={uploadAltId}>{t('Alt text')}</Label>
                         <Input
-                            id="gallery-alt"
+                            id={uploadAltId}
                             value={upload.data.alt}
                             onChange={(event) =>
                                 upload.setData('alt', event.target.value)
@@ -116,9 +133,9 @@ export function MediaGalleryManager({
                         <InputError message={upload.errors.alt} />
                     </div>
                     <div className="grid gap-2 sm:col-span-2">
-                        <Label htmlFor="gallery-caption">{t('Caption')}</Label>
+                        <Label htmlFor={uploadCaptionId}>{t('Caption')}</Label>
                         <Textarea
-                            id="gallery-caption"
+                            id={uploadCaptionId}
                             value={upload.data.caption}
                             onChange={(event) =>
                                 upload.setData('caption', event.target.value)
@@ -142,10 +159,9 @@ export function MediaGalleryManager({
             ) : (
                 <div className="grid gap-4 md:grid-cols-2">
                     {items.map((item, index) => {
-                        const values = metadata[item.id] ?? {
-                            alt: item.alt ?? '',
-                            caption: item.caption ?? '',
-                        };
+                        const values = itemMetadata(item);
+                        const altId = `${idPrefix}-media-${item.id}-alt`;
+                        const captionId = `${idPrefix}-media-${item.id}-caption`;
 
                         return (
                             <div
@@ -167,8 +183,11 @@ export function MediaGalleryManager({
                                 </div>
                                 <div className="space-y-3 p-3">
                                     <div className="grid gap-2">
-                                        <Label>{t('Alt text')}</Label>
+                                        <Label htmlFor={altId}>
+                                            {t('Alt text')}
+                                        </Label>
                                         <Input
+                                            id={altId}
                                             value={values.alt}
                                             onChange={(event) =>
                                                 setMetadata((current) => ({
@@ -182,8 +201,11 @@ export function MediaGalleryManager({
                                         />
                                     </div>
                                     <div className="grid gap-2">
-                                        <Label>{t('Caption')}</Label>
+                                        <Label htmlFor={captionId}>
+                                            {t('Caption')}
+                                        </Label>
                                         <Textarea
+                                            id={captionId}
                                             value={values.caption}
                                             onChange={(event) =>
                                                 setMetadata((current) => ({

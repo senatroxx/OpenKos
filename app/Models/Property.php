@@ -103,7 +103,9 @@ class Property extends Model
 
     public function facilities(): BelongsToMany
     {
-        return $this->belongsToMany(Amenity::class, 'amenity_property')->withTimestamps();
+        return $this->belongsToMany(Amenity::class, 'amenity_property')
+            ->using(AmenityProperty::class)
+            ->withTimestamps();
     }
 
     public function users(): BelongsToMany

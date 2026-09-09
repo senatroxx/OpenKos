@@ -51,10 +51,9 @@ class PropertyController extends Controller
         $amenities = Amenity::query()
             ->where(function (Builder $query) use ($property, $facilityIds): void {
                 $query->where(function (Builder $query) use ($property): void {
-                    $query->where('is_active', true)
-                        ->where(function (Builder $query) use ($property): void {
-                            $query->whereNull('owner_property_id')->orWhere('owner_property_id', $property->id);
-                        });
+                    $query->where(function (Builder $query): void {
+                        $query->whereNull('owner_property_id')->where('is_active', true);
+                    })->orWhere('owner_property_id', $property->id);
                 })->orWhereIn('id', $facilityIds);
             })
             ->orderBy('name')

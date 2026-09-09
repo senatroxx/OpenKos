@@ -113,7 +113,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                         Route::prefix('gallery')->name('gallery.')->group(function () {
                             Route::post('/', [UnitTypeMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');
                             Route::post('reorder', [UnitTypeMediaController::class, 'reorder'])->name('reorder')->middleware('permission:properties.update');
-                            Route::get('{media}', [UnitTypeMediaController::class, 'show'])->name('show')->whereNumber('media');
+                            Route::get('{media}', [UnitTypeMediaController::class, 'show'])->name('show')->whereNumber('media')->middleware('permission:properties.view');
                             Route::patch('{media}', [UnitTypeMediaController::class, 'update'])->name('update')->whereNumber('media')->middleware('permission:properties.update');
                             Route::delete('{media}', [UnitTypeMediaController::class, 'destroy'])->name('destroy')->whereNumber('media')->middleware('permission:properties.update');
                         });
@@ -130,7 +130,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::prefix('gallery')->name('gallery.')->group(function () {
                     Route::post('/', [PropertyMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');
                     Route::post('reorder', [PropertyMediaController::class, 'reorder'])->name('reorder')->middleware('permission:properties.update');
-                    Route::get('{media}', [PropertyMediaController::class, 'show'])->name('show')->whereNumber('media');
+                    Route::get('{media}', [PropertyMediaController::class, 'show'])->name('show')->whereNumber('media')->middleware('permission:properties.view');
                     Route::patch('{media}', [PropertyMediaController::class, 'update'])->name('update')->whereNumber('media')->middleware('permission:properties.update');
                     Route::delete('{media}', [PropertyMediaController::class, 'destroy'])->name('destroy')->whereNumber('media')->middleware('permission:properties.update');
                 });
