@@ -1,6 +1,7 @@
 import { useForm, usePage } from '@inertiajs/react';
-import { Ellipsis, Pencil, Plus, RotateCcw, X } from 'lucide-react';
+import { Download, Ellipsis, Pencil, Plus, RotateCcw, X } from 'lucide-react';
 import { Fragment, useState } from 'react';
+import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { InputError } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,7 @@ import { BILLING_UNITS } from '@/lib/constants';
 import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Property, Unit, UnitRate } from '@/types';
+import type { Auth, Property, Unit, UnitRate } from '@/types';
 import { UnitLayout } from './layout';
 
 type UnitFormData = {
@@ -80,8 +81,9 @@ export default function UnitRates({
     property: Property;
     unit: Unit;
 }) {
-    const { setting } = usePage<{
+    const { setting, auth } = usePage<{
         setting: { currency: string; supported_currencies: string[] };
+        auth: Auth;
     }>().props;
     const defaultCurrency = setting.currency.toUpperCase();
     const supportedCurrencies = setting.supported_currencies.includes(
@@ -377,13 +379,43 @@ export default function UnitRates({
                             )}
                         </p>
                     </div>
-                    <Button
-                        type="button"
-                        onClick={() => setAddDialogOpen(true)}
-                    >
-                        <Plus />
-                        {t('Add Rate')}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        {(auth.role === 'owner' ||
+                            auth.permissions.includes('unit-rates.export')) && (
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={exportMethod.url('unit-rates', {
+                                        query: {
+                                            property_slug: property.slug,
+                                            unit_name: unit.name,
+                                            currency:
+                                                currencyFilter === 'all'
+                                                    ? undefined
+                                                    : currencyFilter,
+                                            status:
+                                                statusFilter === 'all'
+                                                    ? undefined
+                                                    : statusFilter,
+                                            include_archived:
+                                                statusFilter === 'all'
+                                                    ? 1
+                                                    : undefined,
+                                        },
+                                    })}
+                                >
+                                    <Download />
+                                    {t('Export CSV')}
+                                </a>
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            onClick={() => setAddDialogOpen(true)}
+                        >
+                            <Plus />
+                            {t('Add Rate')}
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">

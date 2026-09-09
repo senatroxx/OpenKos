@@ -1,5 +1,6 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
+    Download,
     EllipsisVertical,
     ExternalLink,
     Eye,
@@ -8,6 +9,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -34,13 +36,14 @@ import {
 import { useTable } from '@/hooks/use-table';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { ManagedProperty, PaginatedData, TableMeta } from '@/types';
+import type { Auth, ManagedProperty, PaginatedData, TableMeta } from '@/types';
 
 type PageProps = {
     properties: PaginatedData<ManagedProperty>;
     sort?: string;
     search?: string;
     status?: string;
+    type?: string;
     per_page?: number;
     table: TableMeta;
     regions: {
@@ -55,9 +58,11 @@ export default function Index({
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
+    type: currentType = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingProperty, setEditingProperty] =
         useState<ManagedProperty | null>(null);
@@ -74,6 +79,7 @@ export default function Index({
             search: currentSearch,
             per_page: String(currentPerPage),
             status: currentStatus,
+            type: currentType,
         },
         defaults: {
             sort: 'name',
@@ -235,7 +241,32 @@ export default function Index({
                         description={t('Manage your properties')}
                     />
 
-                    <Button onClick={openCreate}>{t('New Property')}</Button>
+                    <div className="flex items-center gap-2">
+                        {(auth.role === 'owner' ||
+                            auth.permissions.includes('properties.export')) && (
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={exportMethod.url('properties', {
+                                        query: {
+                                            search: currentSearch || undefined,
+                                            status: currentStatus || undefined,
+                                            type: currentType || undefined,
+                                            include_archived:
+                                                currentStatus === 'archived'
+                                                    ? 1
+                                                    : undefined,
+                                        },
+                                    })}
+                                >
+                                    <Download />
+                                    {t('Export CSV')}
+                                </a>
+                            </Button>
+                        )}
+                        <Button onClick={openCreate}>
+                            {t('New Property')}
+                        </Button>
+                    </div>
                 </div>
 
                 <FilterBar

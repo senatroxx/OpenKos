@@ -1,5 +1,6 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
+    Download,
     DoorOpen,
     EllipsisVertical,
     ExternalLink,
@@ -10,6 +11,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -44,6 +46,7 @@ import { t } from '@/lib/i18n';
 import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
 import type {
+    Auth,
     LeaseInfo,
     PaginatedData,
     Property,
@@ -84,6 +87,7 @@ export default function Index({
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
@@ -455,7 +459,28 @@ export default function Index({
             <Head title={`${t('Units')} - ${property.name}`} />
 
             <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-2">
+                    {(auth.role === 'owner' ||
+                        auth.permissions.includes('units.export')) && (
+                        <Button variant="outline" asChild>
+                            <a
+                                href={exportMethod.url('units', {
+                                    query: {
+                                        search: currentSearch || undefined,
+                                        status: currentStatus || undefined,
+                                        property_slug: property.slug,
+                                        include_archived:
+                                            currentStatus === 'archived'
+                                                ? 1
+                                                : undefined,
+                                    },
+                                })}
+                            >
+                                <Download />
+                                {t('Export CSV')}
+                            </a>
+                        </Button>
+                    )}
                     <Button onClick={openCreate}>{t('New Unit')}</Button>
                 </div>
 

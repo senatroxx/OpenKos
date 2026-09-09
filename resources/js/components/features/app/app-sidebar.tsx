@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    ArrowLeftRight,
     Building2,
     DollarSign,
     FileText,
@@ -14,6 +15,7 @@ import {
     WalletCards,
     Wrench,
 } from 'lucide-react';
+import { index as dataTransferIndex } from '@/actions/App/Http/Controllers/DataTransferController';
 import AppLogo from '@/components/features/app/app-logo';
 import { NavFooter } from '@/components/features/app/nav-footer';
 import { NavMain } from '@/components/features/app/nav-main';
@@ -50,6 +52,18 @@ export function AppSidebar() {
         .props;
     const permissions = auth.permissions;
     const isOwner = auth.role === 'owner';
+    const canTransfer =
+        isOwner ||
+        [
+            'properties.import',
+            'properties.export',
+            'units.import',
+            'units.export',
+            'tenants.import',
+            'tenants.export',
+            'unit-rates.import',
+            'unit-rates.export',
+        ].some((permission) => permissions.includes(permission));
     const home = auth.tenant ? portalDashboard() : dashboard();
     const settingsNavItems = [
         ...platformPageNavItems(
@@ -243,11 +257,20 @@ export function AppSidebar() {
                         },
                     ]
                   : []),
-              ...(isOwner || permissions.includes('users.view')
+              ...(isOwner || permissions.includes('users.view') || canTransfer
                   ? [
                         {
                             title: 'ADMINISTRATION',
                             items: [
+                                ...(canTransfer
+                                    ? [
+                                          {
+                                              title: 'Data Transfer',
+                                              href: dataTransferIndex(),
+                                              icon: ArrowLeftRight,
+                                          },
+                                      ]
+                                    : []),
                                 ...(isOwner ||
                                 permissions.includes('users.view')
                                     ? [

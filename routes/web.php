@@ -3,6 +3,7 @@
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\DataTransferController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseInvoiceController;
 use App\Http\Controllers\LeaseRentScheduleController;
@@ -83,6 +84,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('dashboard')->group(function () {
         Route::get('/', OverviewController::class)->name('dashboard');
         Route::get('rent', RentController::class)->name('dashboard.rent');
+    });
+
+    Route::prefix('data-transfer')->name('data-transfer.')->group(function () {
+        Route::get('/', [DataTransferController::class, 'index'])->name('index');
+        Route::post('preview', [DataTransferController::class, 'preview'])->name('preview');
+        Route::post('commit', [DataTransferController::class, 'commit'])->name('commit');
+        Route::get('{dataset}/template', [DataTransferController::class, 'template'])->name('template');
+        Route::get('{dataset}/export', [DataTransferController::class, 'export'])->name('export');
     });
 
     Route::prefix('properties')->name('properties.')->group(function () {

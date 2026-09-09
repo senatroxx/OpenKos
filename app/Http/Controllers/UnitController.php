@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Units\CreateUnit;
 use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\StoreUnitRequest;
@@ -170,7 +171,7 @@ class UnitController extends Controller
         ]);
     }
 
-    public function store(StoreUnitRequest $request, Property $property): RedirectResponse
+    public function store(StoreUnitRequest $request, Property $property, CreateUnit $createUnit): RedirectResponse
     {
         $this->authorize('create', [Unit::class, $property]);
 
@@ -178,10 +179,10 @@ class UnitController extends Controller
         $rates = $validated['rates'] ?? [];
         unset($validated['rates']);
 
-        DB::transaction(function () use ($property, $validated, $rates): void {
+        DB::transaction(function () use ($property, $validated, $rates, $createUnit): void {
             $this->assertNewRateCurrenciesSupported($rates);
 
-            $unit = $property->units()->create($validated);
+            $unit = $createUnit->execute($property, $validated);
 
             foreach ($rates as $rate) {
                 $unit->rates()->create([

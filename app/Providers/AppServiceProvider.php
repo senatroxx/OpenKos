@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Contracts\DataTransfer\TabularReader;
+use App\Contracts\DataTransfer\TabularWriter;
 use App\Models\Setting;
+use App\Services\DataTransfer\CsvReader;
+use App\Services\DataTransfer\CsvWriter;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
 use Illuminate\Auth\Events\Login;
@@ -15,6 +19,12 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->app->bind(TabularReader::class, CsvReader::class);
+        $this->app->bind(TabularWriter::class, CsvWriter::class);
+    }
+
     public function boot(): void
     {
         $this->configureDefaults();

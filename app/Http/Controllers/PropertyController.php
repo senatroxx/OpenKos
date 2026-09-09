@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Properties\CreateProperty;
 use App\Enums\LeaseStatus;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
@@ -94,12 +95,9 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function store(StorePropertyRequest $request): RedirectResponse
+    public function store(StorePropertyRequest $request, CreateProperty $createProperty): RedirectResponse
     {
-        DB::transaction(function () use ($request): void {
-            $property = Property::create($request->validated());
-            $property->users()->attach($request->user());
-        });
+        DB::transaction(fn (): Property => $createProperty->execute($request->user(), $request->validated()));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property created.')]);
 

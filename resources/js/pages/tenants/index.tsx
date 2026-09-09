@@ -1,5 +1,6 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
+    Download,
     DoorOpen,
     EllipsisVertical,
     ExternalLink,
@@ -12,6 +13,7 @@ import {
     UserX,
 } from 'lucide-react';
 import { useState } from 'react';
+import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -62,6 +64,7 @@ type PageProps = {
     sort?: string;
     search?: string;
     status?: string;
+    app_access?: string;
     per_page?: number;
     table: TableMeta;
 };
@@ -72,6 +75,7 @@ export default function Index({
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
+    app_access: currentAppAccess = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
@@ -118,6 +122,7 @@ export default function Index({
             search: currentSearch,
             per_page: String(currentPerPage),
             status: currentStatus,
+            app_access: currentAppAccess,
         },
         defaults: {
             sort: 'name',
@@ -387,7 +392,33 @@ export default function Index({
                         description={t('Manage your tenants')}
                     />
 
-                    <Button onClick={openCreate}>{t('New Tenant')}</Button>
+                    <div className="flex items-center gap-2">
+                        {(auth.role === 'owner' ||
+                            auth.permissions.includes('tenants.export')) && (
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={exportMethod.url('tenants', {
+                                        query: {
+                                            search: currentSearch || undefined,
+                                            status: currentStatus || undefined,
+                                            app_access:
+                                                currentAppAccess || undefined,
+                                            include_archived: [
+                                                'archived',
+                                                'inactive',
+                                            ].includes(currentStatus)
+                                                ? 1
+                                                : undefined,
+                                        },
+                                    })}
+                                >
+                                    <Download />
+                                    {t('Export CSV')}
+                                </a>
+                            </Button>
+                        )}
+                        <Button onClick={openCreate}>{t('New Tenant')}</Button>
+                    </div>
                 </div>
 
                 <FilterBar

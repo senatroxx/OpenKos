@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Leases\CreateLease;
+use App\Actions\Tenants\CreateTenant;
 use App\Actions\Tenants\DisableTenantAccess;
 use App\Actions\Tenants\InviteTenant;
 use App\Data\Lease\CreateLeaseData;
@@ -223,10 +224,10 @@ class TenantController extends Controller
         return back();
     }
 
-    public function store(StoreTenantRequest $request, InviteTenant $invite): RedirectResponse
+    public function store(StoreTenantRequest $request, InviteTenant $invite, CreateTenant $createTenant): RedirectResponse
     {
-        $tenant = DB::transaction(function () use ($request, $invite) {
-            $tenant = Tenant::create($request->safe()->except(['email', 'send_invite']));
+        $tenant = DB::transaction(function () use ($request, $invite, $createTenant) {
+            $tenant = $createTenant->execute($request->safe()->except(['email', 'send_invite']));
 
             if ($email = $request->validated('email')) {
                 $invite->execute($tenant, $email, $request->boolean('send_invite'));
