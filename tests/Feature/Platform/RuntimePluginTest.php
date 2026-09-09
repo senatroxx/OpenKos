@@ -697,7 +697,7 @@ function makeRuntimePluginArtifact(
         'description' => 'Runtime fixture plugin.',
         'entry_class' => $entryClass,
         'core_version' => '^0.2',
-        'php' => '^8.3',
+        'php' => '>=8.4 <8.6',
         'dependencies' => [],
         ...$overrides,
     ];
@@ -705,7 +705,7 @@ function makeRuntimePluginArtifact(
         'name' => $manifest['id'],
         'type' => 'library',
         'require' => [
-            'php' => '^8.3',
+            'php' => '>=8.4 <8.6',
             'openkos/platform' => '^0.2',
             ...$additionalRequirements,
         ],
