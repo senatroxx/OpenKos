@@ -206,9 +206,13 @@ class FinancialDashboardCalculator
 
     private function monthExpression(string $column): string
     {
-        return DB::connection()->getDriverName() === 'sqlite'
-            ? "strftime('%Y-%m-01', {$column})"
-            : "DATE_TRUNC('month', {$column})::date";
+        return match (DB::connection()->getDriverName()) {
+            'sqlite' => "strftime('%Y-%m-01', {$column})",
+            'mysql', 'mariadb' => "DATE_FORMAT({$column}, '%Y-%m-01')",
+            'pgsql' => "DATE_TRUNC('month', {$column})::date",
+            'sqlsrv' => "DATEFROMPARTS(YEAR({$column}), MONTH({$column}), 1)",
+            default => throw new \RuntimeException('Unsupported database driver for financial month grouping.'),
+        };
     }
 
     /**
