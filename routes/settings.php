@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\Settings\AboutController;
+use App\Http\Controllers\Settings\ExpenseCategoryController;
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\MailController;
 use App\Http\Controllers\Settings\PaymentGatewayController;
@@ -70,6 +71,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/property-types', [PropertyTypeController::class, 'store'])->name('settings.property-types.store');
         Route::patch('settings/property-types/{propertyType}', [PropertyTypeController::class, 'update'])->name('settings.property-types.update');
         Route::delete('settings/property-types/{propertyType}', [PropertyTypeController::class, 'destroy'])->name('settings.property-types.destroy');
+
+        Route::get('settings/expense-categories', [ExpenseCategoryController::class, 'index'])->name('settings.expense-categories.index');
+        Route::post('settings/expense-categories', [ExpenseCategoryController::class, 'store'])->name('settings.expense-categories.store');
+        Route::patch('settings/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->name('settings.expense-categories.update');
+        Route::delete('settings/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'destroy'])->name('settings.expense-categories.destroy');
 
         Route::get('settings/plugins', [PluginController::class, 'index'])->name('settings.plugins.index');
         Route::post('settings/plugins', [PluginController::class, 'install'])->name('settings.plugins.install');

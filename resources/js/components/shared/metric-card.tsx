@@ -19,6 +19,7 @@ export interface MetricCardProps {
     variant?: MetricVariant;
     emphasis?: MetricEmphasis;
     icon?: React.ComponentType<{ className?: string }>;
+    subtextFullWidth?: boolean;
     progress?: number;
     onClick?: () => void;
     className?: string;
@@ -217,6 +218,7 @@ export function MetricCard({
     variant = 'neutral',
     emphasis = 'subtle',
     icon: Icon,
+    subtextFullWidth = false,
     progress,
     onClick,
     className,
@@ -252,7 +254,7 @@ export function MetricCard({
                     >
                         {value}
                     </p>
-                    {subtext && (
+                    {subtext && !subtextFullWidth && (
                         <div className="mt-1 text-xs font-medium text-muted-foreground">
                             {subtext}
                         </div>
@@ -270,6 +272,12 @@ export function MetricCard({
                     </div>
                 )}
             </div>
+
+            {subtext && subtextFullWidth && (
+                <div className="mt-3 border-t border-border pt-3 text-xs font-medium text-muted-foreground">
+                    {subtext}
+                </div>
+            )}
 
             {progress !== undefined && (
                 <div className="mt-3">

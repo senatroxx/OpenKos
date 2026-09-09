@@ -52,6 +52,11 @@ enum Permission: string
     case FinancialsView = 'financials.view';
     case ReportsView = 'reports.view';
 
+    case ExpensesView = 'expenses.view';
+    case ExpensesCreate = 'expenses.create';
+    case ExpensesUpdate = 'expenses.update';
+    case ExpensesDelete = 'expenses.delete';
+
     case MaintenanceTicketsView = 'maintenance-tickets.view';
     case MaintenanceTicketsCreate = 'maintenance-tickets.create';
     case MaintenanceTicketsUpdate = 'maintenance-tickets.update';
@@ -130,6 +135,11 @@ enum Permission: string
             self::RemindersSend => 'Send rent reminders to tenants.',
             self::FinancialsView => 'View financial reports and payment data.',
             self::ReportsView => 'Access generated reports.',
+
+            self::ExpensesView => 'View operating expenses.',
+            self::ExpensesCreate => 'Record operating expenses.',
+            self::ExpensesUpdate => 'Edit operating expenses.',
+            self::ExpensesDelete => 'Void operating expenses.',
 
             self::MaintenanceTicketsView => 'View the maintenance ticket list.',
             self::MaintenanceTicketsCreate => 'Report new maintenance issues.',

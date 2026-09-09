@@ -17,6 +17,11 @@ export type Finance = {
     monthly_potential: MoneyAggregate[];
     outstanding: MoneyAggregate[];
     collection_rate: Array<{ currency: string; rate: number }>;
+    expenses: {
+        this_month: MoneyAggregate[];
+        last_month: MoneyAggregate[];
+        change_vs_last_month: MoneyAggregate[];
+    };
 };
 
 export type MoneyAggregate = {

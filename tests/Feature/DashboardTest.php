@@ -5,6 +5,7 @@ use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentStatus;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
@@ -294,6 +295,61 @@ test('dashboard keeps every finance metric aligned to the same currencies', func
         );
 
     Carbon::setTestNow();
+});
+
+test('dashboard includes active expense summaries by currency', function () {
+    Carbon::setTestNow(Carbon::parse('2026-07-10'));
+
+    try {
+        $user = User::factory()->owner()->create();
+        Expense::factory()->create([
+            'amount' => '100000',
+            'currency' => 'IDR',
+            'expense_date' => '2026-07-05',
+        ]);
+        Expense::factory()->create([
+            'amount' => '70000',
+            'currency' => 'IDR',
+            'expense_date' => '2026-06-05',
+        ]);
+        Expense::factory()->create([
+            'amount' => '500',
+            'currency' => 'USD',
+            'expense_date' => '2026-06-05',
+        ]);
+        Expense::factory()->create([
+            'amount' => '2',
+            'currency' => 'EUR',
+            'expense_date' => '2026-07-05',
+        ]);
+        Expense::factory()->voided()->create([
+            'amount' => '900',
+            'currency' => 'USD',
+            'expense_date' => '2026-07-06',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('finance.expenses.this_month', [
+                    ['currency' => 'EUR', 'amount' => '2.000'],
+                    ['currency' => 'IDR', 'amount' => '100000.000'],
+                    ['currency' => 'USD', 'amount' => '0'],
+                ])
+                ->where('finance.expenses.last_month', [
+                    ['currency' => 'EUR', 'amount' => '0'],
+                    ['currency' => 'IDR', 'amount' => '70000.000'],
+                    ['currency' => 'USD', 'amount' => '500.000'],
+                ])
+                ->where('finance.expenses.change_vs_last_month', [
+                    ['currency' => 'EUR', 'amount' => '2.000'],
+                    ['currency' => 'IDR', 'amount' => '30000.000'],
+                    ['currency' => 'USD', 'amount' => '-500.000'],
+                ]));
+    } finally {
+        Carbon::setTestNow();
+    }
 });
 
 test('dashboard preserves historical financial activity after lease termination', function () {

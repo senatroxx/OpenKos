@@ -16,6 +16,7 @@ import {
     ActivityFeedItem,
     BusinessHealthPanel,
     CurrencyAmountList,
+    ExpensesSummaryPanel,
     getActivitySummaryChips,
     OperationalBriefingCard,
     PropertyFormSheet,
@@ -156,6 +157,7 @@ export default function Overview({
                                         groups={
                                             attention.overdue_invoices.amounts
                                         }
+                                        compact
                                         amountClassName="text-surface-red-foreground"
                                     />
                                 ) : undefined
@@ -163,6 +165,7 @@ export default function Overview({
                             variant="red"
                             emphasis="attention"
                             icon={AlertTriangle}
+                            subtextFullWidth
                         />
                         <MetricCard
                             label={t('Due Today')}
@@ -195,10 +198,12 @@ export default function Overview({
                     </div>
                 </section>
 
-                {/* 4. Business Health Neutral Panel */}
+                {/* 4. Revenue & Collections Panel */}
                 <BusinessHealthPanel finance={finance} />
 
-                {/* 5. Lower Dashboard: Operational Workspace (Two-Column Layout) */}
+                <ExpensesSummaryPanel expenses={finance.expenses} />
+
+                {/* 6. Lower Dashboard: Operational Workspace (Two-Column Layout) */}
                 <div className="grid min-w-0 gap-8 lg:grid-cols-12">
                     {/* Left Column: Property Overview (~65% / lg:col-span-7) */}
                     <section className="flex min-w-0 flex-col gap-3 lg:col-span-7">

@@ -6,10 +6,12 @@ import {
     Landmark,
     LayoutGrid,
     Receipt,
+    ReceiptText,
     Shield,
     Tags,
     UserCog,
     Users,
+    WalletCards,
     Wrench,
 } from 'lucide-react';
 import AppLogo from '@/components/features/app/app-logo';
@@ -28,6 +30,7 @@ import {
 import { platformNavItems, platformPageNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
 import { rent as dashboardRent } from '@/routes/dashboard';
+import expenses from '@/routes/expenses';
 import leases from '@/routes/leases';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import { dashboard as portalDashboard } from '@/routes/portal';
@@ -35,6 +38,7 @@ import { index as portalBilling } from '@/routes/portal/billing';
 import { index as portalLease } from '@/routes/portal/lease';
 import properties from '@/routes/properties';
 import roles from '@/routes/roles';
+import expenseCategories from '@/routes/settings/expense-categories';
 import propertyTypes from '@/routes/settings/property-types';
 import tenants from '@/routes/tenants';
 import userRoutes from '@/routes/users';
@@ -126,7 +130,8 @@ export function AppSidebar() {
                   : []),
               ...(isOwner ||
               permissions.includes('dashboard.view') ||
-              permissions.includes('maintenance-tickets.view')
+              permissions.includes('maintenance-tickets.view') ||
+              permissions.includes('expenses.view')
                   ? [
                         {
                             title: 'DAILY OPERATIONS',
@@ -148,6 +153,31 @@ export function AppSidebar() {
                                               title: 'Maintenance',
                                               href: maintenanceTickets.index(),
                                               icon: Wrench,
+                                          },
+                                      ]
+                                    : []),
+                                ...(isOwner ||
+                                permissions.includes('expenses.view')
+                                    ? [
+                                          {
+                                              title: 'Expenses',
+                                              icon: WalletCards,
+                                              children: [
+                                                  {
+                                                      title: 'All Expenses',
+                                                      href: expenses.index(),
+                                                      icon: ReceiptText,
+                                                  },
+                                                  ...(isOwner
+                                                      ? [
+                                                            {
+                                                                title: 'Expense Categories',
+                                                                href: expenseCategories.index(),
+                                                                icon: Tags,
+                                                            },
+                                                        ]
+                                                      : []),
+                                              ],
                                           },
                                       ]
                                     : []),

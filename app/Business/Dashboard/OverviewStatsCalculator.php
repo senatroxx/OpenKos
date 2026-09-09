@@ -4,6 +4,7 @@ namespace App\Business\Dashboard;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
+use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
 use Brick\Math\BigDecimal;
@@ -80,6 +81,57 @@ class OverviewStatsCalculator
             'monthly_potential' => $monthlyPotential,
             'outstanding' => $outstanding,
             'collection_rate' => $collectionRate,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, int>  $accessiblePropertyIds
+     * @return array{this_month: array<int, array{currency: string, amount: string}>, last_month: array<int, array{currency: string, amount: string}>, change_vs_last_month: array<int, array{currency: string, amount: string}>}
+     */
+    public function computeExpenses(Collection $accessiblePropertyIds): array
+    {
+        $thisMonthStart = now()->startOfMonth();
+        $lastMonthStart = $thisMonthStart->copy()->subMonthNoOverflow();
+        $expenses = Expense::query()
+            ->active()
+            ->whereIn('property_id', $accessiblePropertyIds)
+            ->whereBetween('expense_date', [
+                $lastMonthStart->toDateString(),
+                $thisMonthStart->copy()->endOfMonth()->toDateString(),
+            ])
+            ->get(['amount', 'currency', 'expense_date']);
+
+        $thisMonth = $this->aggregate(
+            $expenses->filter(fn (Expense $expense): bool => $expense->expense_date->betweenIncluded($thisMonthStart, $thisMonthStart->copy()->endOfMonth())
+            ),
+            fn (Expense $expense): string => (string) $expense->amount,
+        );
+        $lastMonth = $this->aggregate(
+            $expenses->filter(fn (Expense $expense): bool => $expense->expense_date->betweenIncluded($lastMonthStart, $thisMonthStart->copy()->subDay())
+            ),
+            fn (Expense $expense): string => (string) $expense->amount,
+        );
+
+        $currencies = collect([...$thisMonth, ...$lastMonth])
+            ->pluck('currency')
+            ->unique()
+            ->sort()
+            ->values();
+        $thisMonth = $this->completeAmountGroups($thisMonth, $currencies);
+        $lastMonth = $this->completeAmountGroups($lastMonth, $currencies);
+        $thisMonthByCurrency = collect($thisMonth)->keyBy('currency');
+        $lastMonthByCurrency = collect($lastMonth)->keyBy('currency');
+        $change = $currencies->map(fn (string $currency): array => [
+            'currency' => $currency,
+            'amount' => BigDecimal::of($thisMonthByCurrency->get($currency)['amount'])
+                ->minus($lastMonthByCurrency->get($currency)['amount'])
+                ->toString(),
+        ])->all();
+
+        return [
+            'this_month' => $thisMonth,
+            'last_month' => $lastMonth,
+            'change_vs_last_month' => $change,
         ];
     }
 

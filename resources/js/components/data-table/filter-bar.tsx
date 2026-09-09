@@ -26,6 +26,12 @@ type FilterBarProps = {
     onToggleOption: (key: string, value: string) => void;
     onClearAll: () => void;
     searchInput: ReactNode;
+    additionalFilters?: ReactNode;
+    additionalFilterChips?: Array<{
+        key: string;
+        display: string;
+        onRemove: () => void;
+    }>;
 };
 
 function optLabel(filter: TableFilterMeta, value: string): string | undefined {
@@ -127,6 +133,8 @@ export function FilterBar({
     onToggleOption,
     onClearAll,
     searchInput,
+    additionalFilters,
+    additionalFilterChips = [],
 }: FilterBarProps) {
     const [open, setOpen] = useState(false);
 
@@ -138,14 +146,14 @@ export function FilterBar({
 
             return values.map((v) => ({
                 key: `${key}-${v}`,
-                filterKey: key,
-                value: v,
                 display: filter
                     ? `${t(label)}: ${t(optLabel(filter, v) ?? v)}`
                     : `${label}: ${v}`,
+                onRemove: () => onToggleOption(key, v),
             }));
         },
     );
+    filterChips.push(...additionalFilterChips);
 
     const selectedValues = (key: string): string[] =>
         activeFilters[key] ? activeFilters[key].split(',') : [];
@@ -243,6 +251,7 @@ export function FilterBar({
 
                             return null;
                         })}
+                        {additionalFilters}
                     </div>
                 </div>
             )}
@@ -260,12 +269,7 @@ export function FilterBar({
                                 <button
                                     type="button"
                                     aria-label={`${t('Remove')} ${chip.display} ${t('filter')}`}
-                                    onClick={() =>
-                                        onToggleOption(
-                                            chip.filterKey,
-                                            chip.value,
-                                        )
-                                    }
+                                    onClick={chip.onRemove}
                                     className="ml-0.5 hover:text-foreground"
                                 >
                                     <X className="size-3" />
