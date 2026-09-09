@@ -455,17 +455,20 @@ export default function CollectionQueue({
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <MetricCard
                         label={t('Outstanding Balance')}
-                        value={
-                            <CurrencyAmountList
-                                groups={outstanding.amounts}
-                                compact
-                                amountClassName="text-surface-amber-foreground"
-                            />
+                        value={outstanding.count}
+                        subtext={
+                            outstanding.amounts.length > 0 ? (
+                                <CurrencyAmountList
+                                    groups={outstanding.amounts}
+                                    compact
+                                    amountClassName="text-surface-amber-foreground"
+                                />
+                            ) : undefined
                         }
-                        subtext={`${outstanding.count} ${t(outstanding.count === 1 ? 'invoice unpaid' : 'invoices unpaid')}`}
                         variant="amber"
                         emphasis="subtle"
                         icon={Banknote}
+                        subtextFullWidth
                     />
                     <MetricCard
                         label={t('Last Payment Recorded')}
