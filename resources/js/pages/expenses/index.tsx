@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Ban, EllipsisVertical, Eye, Pencil } from 'lucide-react';
+import { Ban, EllipsisVertical, Eye, FileText, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -23,6 +23,7 @@ import expenses from '@/routes/expenses';
 import type {
     Expense,
     ExpenseCategory,
+    MoneyAggregate,
     PaginatedData,
     TableMeta,
 } from '@/types';
@@ -43,7 +44,21 @@ type PageProps = {
     status?: string;
     date_from?: string;
     date_to?: string;
+    summary?: {
+        has_data: boolean;
+        this_month: MoneyAggregate[];
+        last_month: MoneyAggregate[];
+        this_month_count: number;
+    };
 };
+
+function formatMoneyGroups(groups: MoneyAggregate[]): string {
+    return (
+        groups
+            .map((group) => formatPrice(group.amount, group.currency))
+            .join(' · ') || '—'
+    );
+}
 
 export default function Index({
     expenses: data,
@@ -61,6 +76,7 @@ export default function Index({
     status: currentStatus = 'active',
     date_from: currentDateFrom = '',
     date_to: currentDateTo = '',
+    summary,
 }: PageProps) {
     const [formOpen, setFormOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -130,7 +146,7 @@ export default function Index({
         },
         {
             key: 'vendor',
-            label: t('Vendor / Payee'),
+            label: t('Vendor'),
             render: (expense) => expense.vendor ?? '—',
         },
         {
@@ -146,6 +162,27 @@ export default function Index({
             render: (expense) => (
                 <StatusBadge domain="expense" value={expense.status} />
             ),
+        },
+        {
+            key: 'receipt',
+            label: t('Receipt'),
+            className: 'text-center',
+            render: (expense) =>
+                expense.receipt ? (
+                    <a
+                        href={expense.receipt.download_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                        className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                        aria-label={t('View receipt')}
+                    >
+                        <FileText className="size-4" />
+                        <span className="sr-only">{t('View receipt')}</span>
+                    </a>
+                ) : (
+                    <span className="text-muted-foreground">—</span>
+                ),
         },
         {
             key: '_actions',
@@ -189,6 +226,78 @@ export default function Index({
         },
     ];
 
+    const dateFilters = (
+        <>
+            <div className="grid gap-1.5">
+                <label
+                    htmlFor="date_from"
+                    className="text-xs font-medium text-muted-foreground"
+                >
+                    {t('From')}
+                </label>
+                <Input
+                    id="date_from"
+                    type="date"
+                    className="w-36"
+                    value={currentDateFrom}
+                    onChange={(event) =>
+                        table.navigate({
+                            date_from: event.target.value,
+                            page: '',
+                        })
+                    }
+                />
+            </div>
+            <div className="grid gap-1.5">
+                <label
+                    htmlFor="date_to"
+                    className="text-xs font-medium text-muted-foreground"
+                >
+                    {t('To')}
+                </label>
+                <Input
+                    id="date_to"
+                    type="date"
+                    className="w-36"
+                    value={currentDateTo}
+                    onChange={(event) =>
+                        table.navigate({
+                            date_to: event.target.value,
+                            page: '',
+                        })
+                    }
+                />
+            </div>
+        </>
+    );
+
+    const dateFilterChips = [
+        ...(currentDateFrom
+            ? [
+                  {
+                      key: 'date_from',
+                      display: `${t('From')}: ${currentDateFrom}`,
+                      onRemove: () =>
+                          table.navigate({ date_from: '', page: '' }),
+                  },
+              ]
+            : []),
+        ...(currentDateTo
+            ? [
+                  {
+                      key: 'date_to',
+                      display: `${t('To')}: ${currentDateTo}`,
+                      onRemove: () => table.navigate({ date_to: '', page: '' }),
+                  },
+              ]
+            : []),
+    ];
+    const activeFilters = Object.fromEntries(
+        Object.entries(table.activeFilters).filter(
+            ([key]) => key !== 'date_from' && key !== 'date_to',
+        ),
+    );
+
     return (
         <>
             <Head title={t('Expenses')} />
@@ -206,12 +315,43 @@ export default function Index({
                     )}
                 </div>
 
+                {summary?.has_data && (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="min-w-0 rounded-lg border bg-card px-4 py-3">
+                            <p className="text-xs font-medium text-muted-foreground">
+                                {t('Expenses this month')}
+                            </p>
+                            <p className="mt-1 truncate text-lg font-semibold tabular-nums">
+                                {formatMoneyGroups(summary.this_month)}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-lg border bg-card px-4 py-3">
+                            <p className="text-xs font-medium text-muted-foreground">
+                                {t('Expenses last month')}
+                            </p>
+                            <p className="mt-1 truncate text-lg font-semibold tabular-nums">
+                                {formatMoneyGroups(summary.last_month)}
+                            </p>
+                        </div>
+                        <div className="min-w-0 rounded-lg border bg-card px-4 py-3">
+                            <p className="text-xs font-medium text-muted-foreground">
+                                {t('Expense count this month')}
+                            </p>
+                            <p className="mt-1 text-lg font-semibold tabular-nums">
+                                {summary.this_month_count}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 <FilterBar
                     filters={tableMeta.filters}
-                    activeFilters={table.activeFilters}
+                    activeFilters={activeFilters}
                     activeFilterCount={table.activeFilterCount}
                     onToggleOption={table.toggleFilterOption}
                     onClearAll={table.clearAllFilters}
+                    additionalFilters={dateFilters}
+                    additionalFilterChips={dateFilterChips}
                     searchInput={
                         <SearchInput
                             value={table.searchValue}
@@ -223,47 +363,6 @@ export default function Index({
                         />
                     }
                 />
-
-                <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-card p-3">
-                    <div className="grid gap-1.5">
-                        <label
-                            htmlFor="date_from"
-                            className="text-xs font-medium text-muted-foreground"
-                        >
-                            {t('From')}
-                        </label>
-                        <Input
-                            id="date_from"
-                            type="date"
-                            value={currentDateFrom}
-                            onChange={(event) =>
-                                table.navigate({
-                                    date_from: event.target.value,
-                                    page: '',
-                                })
-                            }
-                        />
-                    </div>
-                    <div className="grid gap-1.5">
-                        <label
-                            htmlFor="date_to"
-                            className="text-xs font-medium text-muted-foreground"
-                        >
-                            {t('To')}
-                        </label>
-                        <Input
-                            id="date_to"
-                            type="date"
-                            value={currentDateTo}
-                            onChange={(event) =>
-                                table.navigate({
-                                    date_to: event.target.value,
-                                    page: '',
-                                })
-                            }
-                        />
-                    </div>
-                </div>
 
                 <DataTable
                     columns={columns}

@@ -1,5 +1,6 @@
 export * from './activity-feed-item';
 export * from './business-health-panel';
 export * from './currency-amount-list';
+export * from './expenses-summary-panel';
 export * from './operational-briefing-card';
 export * from './property-overview-card';

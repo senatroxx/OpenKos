@@ -16,8 +16,10 @@ use App\Services\Payments\MoneyConverter;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
+use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -62,6 +64,8 @@ class ExpenseController extends Controller
                 ),
                 Column::make('amount', 'Amount')->sortable(),
                 Column::make('status', 'Status')->sortable(),
+                Column::make('receipt', 'Receipt'),
+                Column::make('_actions', 'Actions'),
             ])
             ->filters([
                 Filter::select('property_id', 'Property', function () use ($request): array {
@@ -146,6 +150,7 @@ class ExpenseController extends Controller
 
         return Inertia::render('expenses/index', [
             ...$result,
+            'summary' => $this->expenseSummary($request),
             'properties' => $properties,
             'categories' => ExpenseCategory::ordered()->get(['id', 'slug', 'label', 'is_active']),
             'currencies' => array_keys($moneyConverter->scales()),
@@ -158,6 +163,67 @@ class ExpenseController extends Controller
                 'delete' => $request->user()->can('expenses.delete'),
             ],
         ]);
+    }
+
+    /**
+     * @return array{has_data: bool, this_month: array<int, array{currency: string, amount: string}>, last_month: array<int, array{currency: string, amount: string}>, this_month_count: int}
+     */
+    private function expenseSummary(IndexExpenseRequest $request): array
+    {
+        $scope = Expense::query()
+            ->where('status', ExpenseStatus::Active->value)
+            ->when(! $request->user()->isOwner(), fn (Builder $query) => $query->whereHas(
+                'property.users',
+                fn (Builder $userQuery) => $userQuery->whereKey($request->user()->id),
+            ));
+
+        if (! (clone $scope)->exists()) {
+            return [
+                'has_data' => false,
+                'this_month' => [],
+                'last_month' => [],
+                'this_month_count' => 0,
+            ];
+        }
+
+        $thisMonthStart = now()->startOfMonth();
+        $lastMonthStart = $thisMonthStart->copy()->subMonthNoOverflow();
+        $expenses = (clone $scope)
+            ->whereBetween('expense_date', [$lastMonthStart, $thisMonthStart->copy()->endOfMonth()])
+            ->get(['amount', 'currency', 'expense_date']);
+
+        $thisMonth = $expenses->filter(fn (Expense $expense): bool => $expense->expense_date->betweenIncluded($thisMonthStart, $thisMonthStart->copy()->endOfMonth())
+        );
+        $lastMonth = $expenses->filter(fn (Expense $expense): bool => $expense->expense_date->betweenIncluded($lastMonthStart, $thisMonthStart->copy()->subDay())
+        );
+
+        return [
+            'has_data' => true,
+            'this_month' => $this->aggregateExpenseAmounts($thisMonth),
+            'last_month' => $this->aggregateExpenseAmounts($lastMonth),
+            'this_month_count' => $thisMonth->count(),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Expense>  $expenses
+     * @return array<int, array{currency: string, amount: string}>
+     */
+    private function aggregateExpenseAmounts(Collection $expenses): array
+    {
+        return $expenses
+            ->groupBy('currency')
+            ->sortKeys()
+            ->map(function (Collection $currencyExpenses, string $currency): array {
+                $amount = $currencyExpenses->reduce(
+                    fn (BigDecimal $total, Expense $expense): BigDecimal => $total->plus((string) $expense->amount),
+                    BigDecimal::zero(),
+                );
+
+                return ['currency' => $currency, 'amount' => $amount->toString()];
+            })
+            ->values()
+            ->all();
     }
 
     public function store(StoreExpenseRequest $request, MediaManager $mediaManager): RedirectResponse

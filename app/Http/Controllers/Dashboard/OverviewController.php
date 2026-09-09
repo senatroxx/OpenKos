@@ -180,7 +180,10 @@ class OverviewController extends Controller
 
         $propertyTypes = PropertyType::active()->ordered()->get(['slug', 'label']);
 
-        $financeResult = $finance->computeFinance($accessibleLeases);
+        $financeResult = [
+            ...$finance->computeFinance($accessibleLeases),
+            'expenses' => $finance->computeExpenses($accessibleProperties),
+        ];
 
         return Inertia::render('dashboard/overview', [
             'attention' => $attention,

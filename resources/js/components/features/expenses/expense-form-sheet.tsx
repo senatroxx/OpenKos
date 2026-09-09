@@ -1,6 +1,6 @@
-import { useForm } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
-import { InputError } from '@/components/shared';
+import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,8 @@ import { todayISO } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import expenses from '@/routes/expenses';
 import type { Expense, ExpenseCategory } from '@/types';
+
+const OTHER_CURRENCY = '__other__';
 
 type ExpenseFormData = {
     property_id: string;
@@ -53,7 +55,52 @@ export default function ExpenseFormSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
+    const { setting } = usePage<{
+        setting: { currency: string; supported_currencies: string[] };
+    }>().props;
     const isEdit = Boolean(expense);
+    const currentExpenseCurrency = expense?.currency?.toUpperCase();
+    const defaultCurrency = setting.currency.toUpperCase();
+    const allCurrencies = Array.from(
+        new Set(
+            [
+                ...currencies,
+                defaultCurrency,
+                ...(currentExpenseCurrency ? [currentExpenseCurrency] : []),
+            ].map((currency) => currency.toUpperCase()),
+        ),
+    );
+    const supportedCurrencies = Array.from(
+        new Set([
+            defaultCurrency,
+            ...setting.supported_currencies.map((currency) =>
+                currency.toUpperCase(),
+            ),
+        ]),
+    ).filter((currency) => allCurrencies.includes(currency));
+    const otherCurrencies = allCurrencies
+        .filter((currency) => !supportedCurrencies.includes(currency))
+        .sort();
+    const supportedCurrencyOptions = supportedCurrencies.map((currency) => ({
+        value: currency,
+        label: currency,
+    }));
+    const otherCurrencyOptions = otherCurrencies.map((currency) => ({
+        value: currency,
+        label: currency,
+    }));
+    const currencyOptions = [
+        ...supportedCurrencyOptions,
+        ...(otherCurrencyOptions.length > 0
+            ? [{ value: OTHER_CURRENCY, label: t('Other currency') }]
+            : []),
+    ];
+    const initialOtherCurrency = Boolean(
+        currentExpenseCurrency &&
+        !supportedCurrencies.includes(currentExpenseCurrency),
+    );
+    const [isOtherCurrency, setIsOtherCurrency] =
+        useState(initialOtherCurrency);
     const [receiptName, setReceiptName] = useState<string | null>(null);
     const { data, setData, submit, reset, processing, errors } =
         useForm<ExpenseFormData>({
@@ -68,7 +115,7 @@ export default function ExpenseFormSheet({
                       .find((category) => category.is_active)
                       ?.id.toString() ?? ''),
             amount: expense?.amount ?? '',
-            currency: expense?.currency ?? currencies[0] ?? '',
+            currency: currentExpenseCurrency ?? defaultCurrency,
             expense_date: expense?.expense_date ?? todayISO(),
             vendor: expense?.vendor ?? '',
             description: expense?.description ?? '',
@@ -83,6 +130,7 @@ export default function ExpenseFormSheet({
 
         if (!next) {
             reset();
+            setIsOtherCurrency(initialOtherCurrency);
             setReceiptName(null);
         }
     }
@@ -100,6 +148,10 @@ export default function ExpenseFormSheet({
         (category) =>
             category.is_active || category.id === expense?.expense_category_id,
     );
+    const propertyOptions = properties.map((property) => ({
+        value: String(property.id),
+        label: property.name,
+    }));
 
     return (
         <Sheet
@@ -123,37 +175,28 @@ export default function ExpenseFormSheet({
 
                 <form
                     onSubmit={handleSubmit}
-                    className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
+                    className="flex flex-1 flex-col justify-between gap-6 overflow-x-hidden overflow-y-auto px-4 pt-4 pb-6"
                 >
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="property_id">{t('Property')}</Label>
-                            <Select
-                                value={data.property_id}
-                                onValueChange={(value) =>
-                                    setData('property_id', value)
+                            <Label>{t('Property')}</Label>
+                            <SearchableSelect
+                                options={propertyOptions}
+                                value={data.property_id || null}
+                                onChange={(value) =>
+                                    setData(
+                                        'property_id',
+                                        value === null ? '' : String(value),
+                                    )
                                 }
-                            >
-                                <SelectTrigger id="property_id">
-                                    <SelectValue
-                                        placeholder={t('Select property')}
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {properties.map((property) => (
-                                        <SelectItem
-                                            key={property.id}
-                                            value={String(property.id)}
-                                        >
-                                            {property.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                placeholder={t('Select property...')}
+                                searchPlaceholder={t('Search property...')}
+                                emptyText={t('No properties found.')}
+                            />
                             <InputError message={errors.property_id} />
                         </div>
 
-                        <div className="grid gap-2">
+                        <div className="grid w-full gap-2">
                             <Label htmlFor="expense_category_id">
                                 {t('Category')}
                             </Label>
@@ -163,7 +206,10 @@ export default function ExpenseFormSheet({
                                     setData('expense_category_id', value)
                                 }
                             >
-                                <SelectTrigger id="expense_category_id">
+                                <SelectTrigger
+                                    id="expense_category_id"
+                                    className="w-full"
+                                >
                                     <SelectValue
                                         placeholder={t('Select category')}
                                     />
@@ -184,8 +230,8 @@ export default function ExpenseFormSheet({
                             <InputError message={errors.expense_category_id} />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
+                        <div className="grid w-full grid-cols-1 items-start gap-4 sm:grid-cols-[2fr_1fr]">
+                            <div className="grid min-w-0 gap-2">
                                 <Label htmlFor="amount">{t('Amount')}</Label>
                                 <Input
                                     id="amount"
@@ -202,31 +248,56 @@ export default function ExpenseFormSheet({
                                 <InputError message={errors.amount} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="currency">
-                                    {t('Currency')}
-                                </Label>
-                                <Select
-                                    value={data.currency}
-                                    onValueChange={(value) =>
-                                        setData('currency', value)
+                            <div className="grid min-w-0 gap-2 overflow-hidden">
+                                <Label>{t('Currency')}</Label>
+                                <SearchableSelect
+                                    options={currencyOptions}
+                                    value={
+                                        isOtherCurrency
+                                            ? OTHER_CURRENCY
+                                            : data.currency || null
                                     }
+                                    onChange={(value) => {
+                                        if (value === OTHER_CURRENCY) {
+                                            setIsOtherCurrency(true);
+                                            setData('currency', '');
+
+                                            return;
+                                        }
+
+                                        setIsOtherCurrency(false);
+                                        setData(
+                                            'currency',
+                                            value === null ? '' : String(value),
+                                        );
+                                    }}
+                                    placeholder={t('Select currency...')}
+                                    searchPlaceholder={t('Search currency...')}
+                                    emptyText={t('No currencies found.')}
                                     disabled={isEdit}
-                                >
-                                    <SelectTrigger id="currency">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {currencies.map((currency) => (
-                                            <SelectItem
-                                                key={currency}
-                                                value={currency}
-                                            >
-                                                {currency}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                />
+                                {isOtherCurrency && (
+                                    <SearchableSelect
+                                        options={otherCurrencyOptions}
+                                        value={data.currency || null}
+                                        onChange={(value) =>
+                                            setData(
+                                                'currency',
+                                                value === null
+                                                    ? ''
+                                                    : String(value),
+                                            )
+                                        }
+                                        placeholder={t(
+                                            'Select other currency...',
+                                        )}
+                                        searchPlaceholder={t(
+                                            'Search other currencies...',
+                                        )}
+                                        emptyText={t('No currencies found.')}
+                                        disabled={isEdit}
+                                    />
+                                )}
                                 {isEdit && (
                                     <p className="text-xs text-muted-foreground">
                                         {t(
@@ -238,33 +309,40 @@ export default function ExpenseFormSheet({
                             </div>
                         </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="expense_date">{t('Date')}</Label>
-                            <Input
-                                id="expense_date"
-                                type="date"
-                                required
-                                value={data.expense_date}
-                                onChange={(event) =>
-                                    setData('expense_date', event.target.value)
-                                }
-                            />
-                            <InputError message={errors.expense_date} />
-                        </div>
+                        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div className="grid min-w-0 gap-2">
+                                <Label htmlFor="expense_date">
+                                    {t('Date')}
+                                </Label>
+                                <Input
+                                    id="expense_date"
+                                    type="date"
+                                    required
+                                    value={data.expense_date}
+                                    onChange={(event) =>
+                                        setData(
+                                            'expense_date',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                <InputError message={errors.expense_date} />
+                            </div>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="vendor">
-                                {t('Vendor / Payee')}
-                            </Label>
-                            <Input
-                                id="vendor"
-                                value={data.vendor}
-                                onChange={(event) =>
-                                    setData('vendor', event.target.value)
-                                }
-                                placeholder={t('Optional')}
-                            />
-                            <InputError message={errors.vendor} />
+                            <div className="grid min-w-0 gap-2">
+                                <Label htmlFor="vendor">
+                                    {t('Vendor / Payee')}
+                                </Label>
+                                <Input
+                                    id="vendor"
+                                    value={data.vendor}
+                                    onChange={(event) =>
+                                        setData('vendor', event.target.value)
+                                    }
+                                    placeholder={t('Optional')}
+                                />
+                                <InputError message={errors.vendor} />
+                            </div>
                         </div>
 
                         <div className="grid gap-2">

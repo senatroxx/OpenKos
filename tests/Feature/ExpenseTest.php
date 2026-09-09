@@ -8,6 +8,7 @@ use App\Models\Property;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 uses()->beforeEach(function (): void {
@@ -33,6 +34,7 @@ it('lists expenses for the owner with the configured table metadata', function (
             ->component('expenses/index')
             ->has('expenses.data', 1)
             ->where('expenses.data.0.id', $expense->id)
+            ->has('table.columns', 8)
             ->has('table.filters', 4)
             ->has('categories'));
 
@@ -41,6 +43,40 @@ it('lists expenses for the owner with the configured table metadata', function (
         ->assertInertia(fn ($page) => $page
             ->has('expenses.data', 1)
             ->where('expenses.data.0.id', $expense->id));
+});
+
+it('includes active expense summaries for the current and previous month', function (): void {
+    Carbon::setTestNow('2026-09-15');
+
+    try {
+        $owner = User::factory()->owner()->create();
+        Expense::factory()->create([
+            'amount' => '125.00',
+            'currency' => 'USD',
+            'expense_date' => '2026-09-05',
+        ]);
+        Expense::factory()->create([
+            'amount' => '75.00',
+            'currency' => 'USD',
+            'expense_date' => '2026-08-05',
+        ]);
+        Expense::factory()->voided()->create([
+            'amount' => '100.00',
+            'currency' => 'USD',
+            'expense_date' => '2026-09-06',
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('expenses.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('summary.has_data', true)
+                ->where('summary.this_month_count', 1)
+                ->where('summary.this_month.0.currency', 'USD')
+                ->where('summary.this_month.0.amount', '125.000')
+                ->where('summary.last_month.0.amount', '75.000'));
+    } finally {
+        Carbon::setTestNow();
+    }
 });
 
 it('creates an expense with a currency snapshot', function (): void {

@@ -90,7 +90,7 @@ export function BusinessHealthPanel({ finance }: { finance: Finance }) {
     return (
         <section className="mb-10 flex flex-col gap-3">
             <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                {t('Business Health')}
+                {t('Revenue & Collections')}
             </h2>
             <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
                 <div className="grid gap-3 divide-y divide-border sm:grid-cols-2 sm:gap-4 sm:divide-x sm:divide-y-0 xl:grid-cols-4">

@@ -11,6 +11,7 @@ import {
     Tags,
     UserCog,
     Users,
+    WalletCards,
     Wrench,
 } from 'lucide-react';
 import AppLogo from '@/components/features/app/app-logo';
@@ -160,7 +161,7 @@ export function AppSidebar() {
                                     ? [
                                           {
                                               title: 'Expenses',
-                                              icon: ReceiptText,
+                                              icon: WalletCards,
                                               children: [
                                                   {
                                                       title: 'All Expenses',

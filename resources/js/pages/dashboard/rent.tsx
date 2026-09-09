@@ -458,6 +458,7 @@ export default function CollectionQueue({
                         value={
                             <CurrencyAmountList
                                 groups={outstanding.amounts}
+                                compact
                                 amountClassName="text-surface-amber-foreground"
                             />
                         }
