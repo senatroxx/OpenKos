@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Dashboard\FinancialController;
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
 use App\Http\Controllers\ExpenseController;
@@ -82,6 +83,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('dashboard')->group(function () {
         Route::get('/', OverviewController::class)->name('dashboard');
         Route::get('rent', RentController::class)->name('dashboard.rent');
+        Route::get('financial', FinancialController::class)
+            ->name('dashboard.financial')
+            ->middleware('permission:financials.view');
     });
 
     Route::prefix('properties')->name('properties.')->group(function () {

@@ -29,7 +29,10 @@ import {
 } from '@/components/ui/sidebar';
 import { platformNavItems, platformPageNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
-import { rent as dashboardRent } from '@/routes/dashboard';
+import {
+    financial as dashboardFinancial,
+    rent as dashboardRent,
+} from '@/routes/dashboard';
 import expenses from '@/routes/expenses';
 import leases from '@/routes/leases';
 import maintenanceTickets from '@/routes/maintenance-tickets';
@@ -181,6 +184,20 @@ export function AppSidebar() {
                                           },
                                       ]
                                     : []),
+                            ],
+                        },
+                    ]
+                  : []),
+              ...(isOwner || permissions.includes('financials.view')
+                  ? [
+                        {
+                            title: 'FINANCIAL INSIGHTS',
+                            items: [
+                                {
+                                    title: 'Financial Dashboard',
+                                    icon: Landmark,
+                                    href: dashboardFinancial(),
+                                },
                             ],
                         },
                     ]
