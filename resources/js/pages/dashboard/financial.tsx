@@ -4,13 +4,14 @@ import {
     BarChart3,
     Building2,
     CalendarRange,
+    ChevronDown,
     CircleDollarSign,
     Receipt,
     TrendingDown,
     TrendingUp,
 } from 'lucide-react';
-import { useState } from 'react';
-import type { ComponentType } from 'react';
+import { Fragment, useState } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { CurrencyAmountList } from '@/components/features/dashboard/currency-amount-list';
 import {
     ExpenseBreakdownChart,
@@ -197,11 +198,218 @@ function amountForCurrency(groups: MoneyAggregate[], currency: string): string {
     return groups.find((group) => group.currency === currency)?.amount ?? '0';
 }
 
+function compactPerformanceAmount(group: MoneyAggregate): string {
+    const match = group.amount.match(/^(-?)(\d+)(?:\.(\d+))?$/);
+
+    if (!match) {
+        return formatPrice(group.amount, group.currency);
+    }
+
+    const [, sign, whole, fraction = ''] = match;
+    const absoluteAmount = BigInt(`${whole}${fraction}` || '0');
+    const denominator = 10n ** BigInt(fraction.length);
+    const units = [
+        { value: 1_000_000_000n, suffix: 'B' },
+        { value: 1_000_000n, suffix: 'M' },
+        { value: 1_000n, suffix: 'K' },
+    ];
+    let unitIndex = units.findIndex(({ value }) => BigInt(whole) >= value);
+
+    if (unitIndex === -1) {
+        return formatPrice(group.amount, group.currency).replace(
+            new RegExp(`^${group.currency}\\s*`),
+            '',
+        );
+    }
+
+    const compactValue = (value: bigint) => {
+        const scaled = absoluteAmount * 10n;
+        const divisor = value * denominator;
+        let tenths = scaled / divisor;
+
+        if ((scaled % divisor) * 2n >= divisor) {
+            tenths += 1n;
+        }
+
+        return tenths;
+    };
+
+    let tenths = compactValue(units[unitIndex].value);
+
+    if (tenths >= 1000n && unitIndex > 0) {
+        unitIndex -= 1;
+        tenths = compactValue(units[unitIndex].value);
+    }
+
+    const wholePart = tenths / 10n;
+    const decimalPart = tenths % 10n;
+
+    return `${sign}${wholePart}${decimalPart > 0n ? `.${decimalPart}` : ''}${units[unitIndex].suffix}`;
+}
+
+function ExactPerformanceAmounts({
+    groups,
+}: {
+    groups: MoneyAggregate[];
+}): ReactNode {
+    if (groups.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    return (
+        <div className="flex flex-col gap-1 tabular-nums">
+            {groups.map((group) => (
+                <span key={group.currency}>
+                    {formatPrice(group.amount, group.currency)}
+                </span>
+            ))}
+        </div>
+    );
+}
+
 function PerformanceValue({ groups }: { groups: MoneyAggregate[] }) {
-    return <CurrencyAmountList groups={groups} compact />;
+    if (groups.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    const exactValues = groups
+        .map((group) => formatPrice(group.amount, group.currency))
+        .join(' · ');
+
+    return (
+        <div
+            className="flex flex-col items-end gap-1 text-xs tabular-nums sm:text-sm"
+            title={exactValues}
+            aria-label={exactValues}
+        >
+            {groups.map((group) => (
+                <span
+                    key={group.currency}
+                    className="inline-flex items-baseline gap-2 whitespace-nowrap"
+                >
+                    <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                        {group.currency}
+                    </span>
+                    <span className="font-semibold">
+                        {compactPerformanceAmount(group)}
+                    </span>
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function PerformanceRate({ rates }: { rates: RateAggregate[] }) {
+    if (rates.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    return (
+        <div className="flex flex-col items-end gap-1 text-xs tabular-nums sm:text-sm">
+            {rates.map((rate) => (
+                <span key={rate.currency} className="whitespace-nowrap">
+                    <span className="mr-2 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+                        {rate.currency}
+                    </span>
+                    <span className="font-semibold">{rate.rate}%</span>
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function PerformanceDetailMetric({
+    label,
+    children,
+}: {
+    label: string;
+    children: ReactNode;
+}) {
+    return (
+        <div className="flex items-start justify-between gap-4">
+            <dt className="text-sm text-muted-foreground">{label}</dt>
+            <dd className="text-right text-sm font-medium">{children}</dd>
+        </div>
+    );
+}
+
+function PropertyPerformanceDetails({
+    row,
+}: {
+    row: FinancialPropertyPerformance;
+}) {
+    return (
+        <div className="rounded-md bg-muted/30 p-4">
+            <p className="mb-4 text-sm font-semibold">{row.name}</p>
+            <div className="grid gap-6 sm:grid-cols-3">
+                <section>
+                    <h4 className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        {t('Financial')}
+                    </h4>
+                    <dl className="space-y-2.5">
+                        <PerformanceDetailMetric label={t('Revenue')}>
+                            <ExactPerformanceAmounts groups={row.revenue} />
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('Expenses')}>
+                            <ExactPerformanceAmounts groups={row.expenses} />
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('NOI')}>
+                            <ExactPerformanceAmounts groups={row.noi} />
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('Operating margin')}>
+                            <PerformanceRate rates={row.operating_margin} />
+                        </PerformanceDetailMetric>
+                    </dl>
+                </section>
+
+                <section>
+                    <h4 className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        {t('Collections')}
+                    </h4>
+                    <dl className="space-y-2.5">
+                        <PerformanceDetailMetric label={t('Billed')}>
+                            <ExactPerformanceAmounts groups={row.billed} />
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('Applied')}>
+                            <ExactPerformanceAmounts groups={row.collected} />
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('Outstanding')}>
+                            <ExactPerformanceAmounts groups={row.outstanding} />
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('Collection rate')}>
+                            <PerformanceRate rates={row.collection_rate} />
+                        </PerformanceDetailMetric>
+                    </dl>
+                </section>
+
+                <section>
+                    <h4 className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                        {t('Occupancy')}
+                    </h4>
+                    <dl className="space-y-2.5">
+                        <PerformanceDetailMetric label={t('Occupied')}>
+                            <span className="tabular-nums">
+                                {row.occupancy.occupied_units} /{' '}
+                                {row.occupancy.total_units}
+                            </span>
+                        </PerformanceDetailMetric>
+                        <PerformanceDetailMetric label={t('Occupancy rate')}>
+                            <span className="tabular-nums">
+                                {row.occupancy.occupancy_percentage}%
+                            </span>
+                        </PerformanceDetailMetric>
+                    </dl>
+                </section>
+            </div>
+        </div>
+    );
 }
 
 function PerformanceTable({ rows }: { rows: FinancialPropertyPerformance[] }) {
+    const [expandedPropertyId, setExpandedPropertyId] = useState<number | null>(
+        null,
+    );
+
     if (rows.length === 0) {
         return (
             <p className="py-8 text-center text-sm text-muted-foreground">
@@ -212,73 +420,97 @@ function PerformanceTable({ rows }: { rows: FinancialPropertyPerformance[] }) {
 
     return (
         <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
+            <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-border text-left text-xs tracking-wide text-muted-foreground uppercase">
-                        <th className="px-2 py-3 font-medium">Property</th>
-                        <th className="px-2 py-3 text-right font-medium">
-                            Revenue
+                        <th className="px-2 py-3 font-medium">
+                            {t('Property')}
                         </th>
                         <th className="px-2 py-3 text-right font-medium">
-                            Expenses
+                            {t('Revenue')}
                         </th>
                         <th className="px-2 py-3 text-right font-medium">
-                            NOI
+                            {t('Expenses')}
                         </th>
                         <th className="px-2 py-3 text-right font-medium">
-                            Margin
+                            {t('NOI')}
                         </th>
                         <th className="px-2 py-3 text-right font-medium">
-                            Applied
-                        </th>
-                        <th className="px-2 py-3 text-right font-medium">
-                            Outstanding
-                        </th>
-                        <th className="px-2 py-3 text-right font-medium">
-                            Rate
-                        </th>
-                        <th className="px-2 py-3 text-right font-medium">
-                            Occupancy
+                            {t('Margin')}
                         </th>
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row) => (
-                        <tr
-                            key={row.id}
-                            className="border-b border-border/60 last:border-0"
-                        >
-                            <td className="px-2 py-3 font-medium">
-                                {row.name}
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <PerformanceValue groups={row.revenue} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <PerformanceValue groups={row.expenses} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <PerformanceValue groups={row.noi} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <RateList rates={row.operating_margin} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <PerformanceValue groups={row.collected} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <PerformanceValue groups={row.outstanding} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                <RateList rates={row.collection_rate} />
-                            </td>
-                            <td className="px-2 py-3 text-right">
-                                {row.occupancy.occupancy_percentage}% ·{' '}
-                                {row.occupancy.occupied_units}/
-                                {row.occupancy.total_units}
-                            </td>
-                        </tr>
-                    ))}
+                    {rows.map((row) => {
+                        const isExpanded = expandedPropertyId === row.id;
+                        const detailId = `property-performance-details-${row.id}`;
+
+                        return (
+                            <Fragment key={row.id}>
+                                <tr
+                                    className={`border-b border-border/60 hover:bg-muted/30 ${isExpanded ? 'bg-muted/20' : ''}`}
+                                >
+                                    <td className="px-2 py-3">
+                                        <button
+                                            type="button"
+                                            className="group flex w-full min-w-0 items-center gap-2 rounded-md py-1 text-left font-medium transition-colors outline-none hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            aria-expanded={isExpanded}
+                                            aria-controls={detailId}
+                                            onClick={() =>
+                                                setExpandedPropertyId(
+                                                    isExpanded ? null : row.id,
+                                                )
+                                            }
+                                        >
+                                            <span className="truncate">
+                                                {row.name}
+                                            </span>
+                                            <ChevronDown
+                                                className={`size-4 shrink-0 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                aria-hidden="true"
+                                            />
+                                            <span className="sr-only">
+                                                {isExpanded
+                                                    ? t('Hide details')
+                                                    : t('View details')}
+                                            </span>
+                                        </button>
+                                    </td>
+                                    <td className="px-2 py-3 text-right">
+                                        <PerformanceValue
+                                            groups={row.revenue}
+                                        />
+                                    </td>
+                                    <td className="px-2 py-3 text-right">
+                                        <PerformanceValue
+                                            groups={row.expenses}
+                                        />
+                                    </td>
+                                    <td className="px-2 py-3 text-right">
+                                        <PerformanceValue groups={row.noi} />
+                                    </td>
+                                    <td className="px-2 py-3 text-right">
+                                        <PerformanceRate
+                                            rates={row.operating_margin}
+                                        />
+                                    </td>
+                                </tr>
+                                {isExpanded && (
+                                    <tr className="border-b border-border/60">
+                                        <td
+                                            id={detailId}
+                                            colSpan={5}
+                                            className="px-2 pb-4"
+                                        >
+                                            <PropertyPerformanceDetails
+                                                row={row}
+                                            />
+                                        </td>
+                                    </tr>
+                                )}
+                            </Fragment>
+                        );
+                    })}
                 </tbody>
             </table>
         </div>
@@ -699,7 +931,7 @@ export default function Financial({
                             <CardTitle>{t('Property Performance')}</CardTitle>
                             <p className="text-sm text-muted-foreground">
                                 {t(
-                                    'Selected-period financial performance by accessible property',
+                                    'Selected-period financial performance by accessible property. Select a property to view full detail.',
                                 )}
                             </p>
                         </CardHeader>
