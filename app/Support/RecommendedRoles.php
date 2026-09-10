@@ -45,6 +45,8 @@ class RecommendedRoles
                     Permission::LeasesMoveOut->value,
                     Permission::FinancialsView->value,
                     Permission::ReportsView->value,
+                    Permission::UnitRatesImport->value,
+                    Permission::UnitRatesExport->value,
                     Permission::ExpensesView->value,
                     Permission::ExpensesCreate->value,
                     Permission::ExpensesUpdate->value,
