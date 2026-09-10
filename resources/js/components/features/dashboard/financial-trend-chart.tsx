@@ -43,6 +43,7 @@ type ExpenseBreakdownCategory = {
 };
 
 type PlotPoint = {
+    bucket: number;
     month: string;
     label: string;
     raw: Partial<Record<SeriesKey, string>>;
@@ -55,7 +56,7 @@ type PlotPoint = {
 const MONEY_SCALE = 3;
 const PLOT_SCALE = 1_000_000;
 const SERIES_COLORS: Record<SeriesKey, string> = {
-    revenue: 'var(--surface-green-foreground)',
+    revenue: 'var(--chart-2)',
     expenses: 'var(--surface-amber-foreground)',
     noi: 'var(--surface-blue-foreground)',
     collected: 'var(--surface-green-foreground)',
@@ -226,7 +227,7 @@ export function FinancialTrendChart({
         );
     }
 
-    const data = points.map<PlotPoint>((point) => {
+    const data = points.map<PlotPoint>((point, bucket) => {
         const raw: Partial<Record<SeriesKey, string>> = {};
         const values = {
             revenue: 0,
@@ -242,7 +243,13 @@ export function FinancialTrendChart({
             values[item.key] = toPlotValue(amount, maximum);
         });
 
-        return { month: point.month, label: point.label, raw, ...values };
+        return {
+            bucket,
+            month: point.month,
+            label: point.label,
+            raw,
+            ...values,
+        };
     });
     const hasNegative = data.some((point) =>
         series.some((item) => point[item.key] < 0),
@@ -267,7 +274,11 @@ export function FinancialTrendChart({
                             vertical={false}
                         />
                         <XAxis
-                            dataKey="label"
+                            dataKey="bucket"
+                            type="number"
+                            domain={[-0.5, Math.max(data.length - 0.5, 0.5)]}
+                            ticks={data.map((point) => point.bucket)}
+                            allowDecimals={false}
                             axisLine={false}
                             tickLine={false}
                             tick={{
@@ -275,7 +286,11 @@ export function FinancialTrendChart({
                                 fontSize: 11,
                             }}
                             interval={0}
-                            tickFormatter={monthTick}
+                            tickFormatter={(value) =>
+                                monthTick(
+                                    data[Number(value)]?.label ?? String(value),
+                                )
+                            }
                             tickMargin={8}
                         />
                         <YAxis domain={chartDomain(hasNegative)} hide />
@@ -287,6 +302,9 @@ export function FinancialTrendChart({
                                 fontWeight: 600,
                                 marginBottom: 4,
                             }}
+                            labelFormatter={(value) =>
+                                data[Number(value)]?.label ?? String(value)
+                            }
                             formatter={(value, name, item) =>
                                 tooltipFormatter(
                                     value,

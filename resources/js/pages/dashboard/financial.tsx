@@ -834,8 +834,7 @@ export default function Financial({
                                                     financial.overview.revenue,
                                                     selectedTrendCurrency,
                                                 ),
-                                                className:
-                                                    'text-surface-green-foreground',
+                                                className: 'text-chart-2',
                                             },
                                             {
                                                 label: t('Expenses'),
