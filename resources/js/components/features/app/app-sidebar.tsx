@@ -99,34 +99,51 @@ export function AppSidebar() {
               },
           ]
         : [
-              ...(isOwner || permissions.includes('dashboard.view')
+              ...(isOwner ||
+              permissions.includes('dashboard.view') ||
+              permissions.includes('financials.view')
                   ? [
                         {
                             title: 'OVERVIEW',
                             items: [
-                                {
-                                    title: 'Dashboard',
-                                    icon: LayoutGrid,
-                                    href: dashboard(),
-                                    ...(platformPageNavItems(
-                                        platform.dashboard,
-                                        auth,
-                                    ).length > 0
-                                        ? {
-                                              children: [
-                                                  {
-                                                      title: 'Overview',
-                                                      icon: LayoutGrid,
-                                                      href: dashboard(),
-                                                  },
-                                                  ...platformPageNavItems(
-                                                      platform.dashboard,
-                                                      auth,
-                                                  ),
-                                              ],
-                                          }
-                                        : {}),
-                                },
+                                ...(isOwner ||
+                                permissions.includes('dashboard.view')
+                                    ? [
+                                          {
+                                              title: 'Dashboard',
+                                              icon: LayoutGrid,
+                                              href: dashboard(),
+                                              ...(platformPageNavItems(
+                                                  platform.dashboard,
+                                                  auth,
+                                              ).length > 0
+                                                  ? {
+                                                        children: [
+                                                            {
+                                                                title: 'Overview',
+                                                                icon: LayoutGrid,
+                                                                href: dashboard(),
+                                                            },
+                                                            ...platformPageNavItems(
+                                                                platform.dashboard,
+                                                                auth,
+                                                            ),
+                                                        ],
+                                                    }
+                                                  : {}),
+                                          },
+                                      ]
+                                    : []),
+                                ...(isOwner ||
+                                permissions.includes('financials.view')
+                                    ? [
+                                          {
+                                              title: 'Financial Dashboard',
+                                              icon: Landmark,
+                                              href: dashboardFinancial(),
+                                          },
+                                      ]
+                                    : []),
                             ],
                         },
                     ]
@@ -184,20 +201,6 @@ export function AppSidebar() {
                                           },
                                       ]
                                     : []),
-                            ],
-                        },
-                    ]
-                  : []),
-              ...(isOwner || permissions.includes('financials.view')
-                  ? [
-                        {
-                            title: 'FINANCIAL INSIGHTS',
-                            items: [
-                                {
-                                    title: 'Financial Dashboard',
-                                    icon: Landmark,
-                                    href: dashboardFinancial(),
-                                },
                             ],
                         },
                     ]
