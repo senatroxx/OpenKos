@@ -20,6 +20,7 @@ export interface MetricCardProps {
     variant?: MetricVariant;
     emphasis?: MetricEmphasis;
     icon?: React.ComponentType<{ className?: string }>;
+    valueFullWidth?: boolean;
     subtextFullWidth?: boolean;
     progress?: number;
     onClick?: () => void;
@@ -220,6 +221,7 @@ export function MetricCard({
     variant = 'neutral',
     emphasis = 'subtle',
     icon: Icon,
+    valueFullWidth = false,
     subtextFullWidth = false,
     progress,
     onClick,
@@ -253,14 +255,16 @@ export function MetricCard({
                             {subParams}
                         </div>
                     )}
-                    <div
-                        className={cn(
-                            'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
-                            styles.value,
-                        )}
-                    >
-                        {value}
-                    </div>
+                    {!valueFullWidth && (
+                        <div
+                            className={cn(
+                                'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
+                                styles.value,
+                            )}
+                        >
+                            {value}
+                        </div>
+                    )}
                     {subtext && !subtextFullWidth && (
                         <div className="mt-1 text-xs font-medium text-muted-foreground">
                             {subtext}
@@ -279,6 +283,17 @@ export function MetricCard({
                     </div>
                 )}
             </div>
+
+            {valueFullWidth && (
+                <div
+                    className={cn(
+                        'mt-3 border-t border-border pt-3 text-xs font-medium',
+                        styles.value,
+                    )}
+                >
+                    {value}
+                </div>
+            )}
 
             {subtext && subtextFullWidth && (
                 <div className="mt-3 border-t border-border pt-3 text-xs font-medium text-muted-foreground">

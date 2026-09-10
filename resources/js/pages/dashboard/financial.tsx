@@ -113,7 +113,8 @@ function FinancialCard({
         <MetricCard
             label={label}
             subParams={subtext}
-            value={<CurrencyAmountList groups={groups} />}
+            value={<CurrencyAmountList groups={groups} compact />}
+            valueFullWidth
             icon={Icon}
             variant={variant}
             emphasis="subtle"
