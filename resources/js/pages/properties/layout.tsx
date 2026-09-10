@@ -40,7 +40,7 @@ export function PropertyLayout({
                     },
                     {
                         key: 'unit-types',
-                        label: 'UnitTypes',
+                        label: 'Unit Types',
                         href: properties.unitTypes.index.url(property),
                     },
                     {

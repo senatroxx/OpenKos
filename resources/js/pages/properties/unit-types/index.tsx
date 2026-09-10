@@ -49,23 +49,23 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
 
     return (
         <PropertyLayout property={property} activeTab="unit-types">
-            <Head title={`${t('UnitTypes')} - ${property.name}`} />
+            <Head title={`${t('Unit Types')} - ${property.name}`} />
 
             <div className="space-y-6">
                 <div className="flex items-center justify-end">
-                    <Button onClick={openCreate}>{t('New UnitType')}</Button>
+                    <Button onClick={openCreate}>{t('New Unit Type')}</Button>
                 </div>
 
                 {unitTypes.length === 0 ? (
                     <div className="rounded-lg border border-dashed p-8 text-center">
-                        <p className="font-medium">{t('No UnitTypes yet.')}</p>
+                        <p className="font-medium">{t('No Unit Types yet.')}</p>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {t(
                                 'Create a reusable type before assigning it to units.',
                             )}
                         </p>
                         <Button className="mt-4" onClick={openCreate}>
-                            {t('Create your first UnitType')}
+                            {t('Create your first Unit Type')}
                         </Button>
                     </div>
                 ) : (

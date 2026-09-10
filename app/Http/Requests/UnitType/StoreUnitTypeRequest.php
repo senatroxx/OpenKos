@@ -57,7 +57,7 @@ class StoreUnitTypeRequest extends FormRequest
             ->exists();
 
         if ($exists) {
-            $validator->errors()->add('name', __('The UnitType name is already used by this property.'));
+            $validator->errors()->add('name', __('The Unit Type name is already used by this property.'));
         }
     }
 

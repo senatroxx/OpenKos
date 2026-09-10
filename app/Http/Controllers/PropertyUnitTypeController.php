@@ -70,7 +70,7 @@ class PropertyUnitTypeController extends Controller
             $unitType->amenities()->sync($amenityIds);
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('UnitType created.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type created.')]);
 
         return back();
     }
@@ -93,7 +93,7 @@ class PropertyUnitTypeController extends Controller
             }
         });
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('UnitType updated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type updated.')]);
 
         return back();
     }
@@ -105,7 +105,7 @@ class PropertyUnitTypeController extends Controller
 
         $unitType->update(['is_active' => false]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('UnitType deactivated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type deactivated.')]);
 
         return back();
     }
@@ -117,7 +117,7 @@ class PropertyUnitTypeController extends Controller
 
         $unitType->update(['is_active' => true]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('UnitType activated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type activated.')]);
 
         return back();
     }

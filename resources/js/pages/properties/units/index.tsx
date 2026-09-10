@@ -275,7 +275,7 @@ export default function Index({
         },
         {
             key: 'unit_type',
-            label: 'UnitType',
+            label: 'Unit Type',
             render: (r) => r.unit_type?.name ?? '—',
         },
         {

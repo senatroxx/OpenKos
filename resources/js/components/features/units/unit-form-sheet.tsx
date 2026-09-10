@@ -147,7 +147,7 @@ export default function UnitFormSheet({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="unit-type">{t('UnitType')}</Label>
+                            <Label htmlFor="unit-type">{t('Unit Type')}</Label>
                             <Select
                                 value={data.unit_type_id || 'none'}
                                 onValueChange={(value) =>
@@ -162,12 +162,12 @@ export default function UnitFormSheet({
                                     className="w-full"
                                 >
                                     <SelectValue
-                                        placeholder={t('No UnitType assigned')}
+                                        placeholder={t('No Unit Type assigned')}
                                     />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">
-                                        {t('No UnitType assigned')}
+                                        {t('No Unit Type assigned')}
                                     </SelectItem>
                                     {unitTypes.map((unitType) => (
                                         <SelectItem

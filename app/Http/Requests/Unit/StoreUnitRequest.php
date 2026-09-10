@@ -139,7 +139,7 @@ class StoreUnitRequest extends FormRequest
         $unitType = UnitType::query()->find($unitTypeId);
 
         if ($unitType === null || $unitType->property_id !== $this->route('property')->id) {
-            $validator->errors()->add('unit_type_id', __('The selected UnitType does not belong to this property.'));
+            $validator->errors()->add('unit_type_id', __('The selected Unit Type does not belong to this property.'));
         }
     }
 }

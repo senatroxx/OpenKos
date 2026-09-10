@@ -102,7 +102,7 @@ export default function UnitTypeFormSheet({
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        {t(isEdit ? 'Edit UnitType' : 'New UnitType')}
+                        {t(isEdit ? 'Edit Unit Type' : 'New Unit Type')}
                     </SheetTitle>
                     <SheetDescription>
                         {isEdit

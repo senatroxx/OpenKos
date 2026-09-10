@@ -217,13 +217,13 @@ class UpdateUnitRequest extends FormRequest
         $currentUnitTypeId = $this->route('unit')->unit_type_id;
 
         if ($unitType === null || $unitType->property_id !== $this->route('property')->id) {
-            $validator->errors()->add('unit_type_id', __('The selected UnitType does not belong to this property.'));
+            $validator->errors()->add('unit_type_id', __('The selected Unit Type does not belong to this property.'));
 
             return;
         }
 
         if (! $unitType->is_active && (int) $currentUnitTypeId !== (int) $unitType->id) {
-            $validator->errors()->add('unit_type_id', __('Inactive UnitTypes cannot be newly assigned.'));
+            $validator->errors()->add('unit_type_id', __('Inactive Unit Types cannot be newly assigned.'));
         }
     }
 }

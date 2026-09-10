@@ -24,7 +24,7 @@ class AmenityUnitType extends Pivot
                 ->value('property_id');
 
             if ($ownerPropertyId !== null && (int) $ownerPropertyId !== (int) $unitTypePropertyId) {
-                throw new InvalidArgumentException('Property-owned amenities may only be attached to UnitTypes from their owner property.');
+                throw new InvalidArgumentException('Property-owned amenities may only be attached to Unit Types from their owner property.');
             }
         });
     }
