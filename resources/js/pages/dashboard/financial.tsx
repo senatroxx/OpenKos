@@ -416,7 +416,7 @@ function PropertyPerformanceDetails({
                         {t('Occupancy')}
                     </h4>
                     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                        <span className="text-base font-semibold tabular-nums">
+                        <span className="text-sm font-semibold tabular-nums">
                             {row.occupancy.occupied_units} /{' '}
                             {row.occupancy.total_units} {t('units')}
                         </span>
