@@ -1,8 +1,10 @@
+import type { ReactElement } from 'react';
 import {
     Bar,
     BarChart,
     CartesianGrid,
     ComposedChart,
+    Rectangle,
     Line,
     ReferenceLine,
     ResponsiveContainer,
@@ -10,6 +12,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import type { BarShapeProps } from 'recharts';
 import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import type { MoneyAggregate } from '@/types';
@@ -54,6 +57,7 @@ type PlotPoint = {
 
 const MONEY_SCALE = 3;
 const PLOT_SCALE = 1_000_000;
+const BAR_GAP = 4;
 const SERIES_COLORS: Record<SeriesKey, string> = {
     revenue: 'var(--chart-2)',
     expenses: 'var(--surface-amber-foreground)',
@@ -206,6 +210,32 @@ function monthTick(label: string): string {
     return label.split(' ')[0] ?? label;
 }
 
+function centeredBarShape(
+    barKey: SeriesKey,
+    barKeys: SeriesKey[],
+): (props: BarShapeProps) => ReactElement {
+    return (props) => {
+        const point = props.payload as PlotPoint | undefined;
+        const visibleBarKeys = barKeys.filter(
+            (key) => (point?.[key] ?? 0) !== 0,
+        );
+
+        if (visibleBarKeys.length !== 1 || visibleBarKeys[0] !== barKey) {
+            return <Rectangle {...props} />;
+        }
+
+        const barIndex = barKeys.indexOf(barKey);
+        const shift = (props.width + BAR_GAP) / 2;
+
+        return (
+            <Rectangle
+                {...props}
+                x={props.x + (barIndex === 0 ? shift : -shift)}
+            />
+        );
+    };
+}
+
 export function FinancialTrendChart({
     points,
     currency,
@@ -252,6 +282,9 @@ export function FinancialTrendChart({
     const hasNegative = data.some((point) =>
         series.some((item) => point[item.key] < 0),
     );
+    const barKeys = series
+        .filter((item) => item.key !== 'noi')
+        .map((item) => item.key);
 
     return (
         <div
@@ -265,7 +298,7 @@ export function FinancialTrendChart({
                     <ComposedChart
                         data={data}
                         barCategoryGap={0}
-                        barGap={4}
+                        barGap={BAR_GAP}
                         margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
                     >
                         <CartesianGrid
@@ -350,6 +383,14 @@ export function FinancialTrendChart({
                                     name={item.label}
                                     fill={SERIES_COLORS[item.key]}
                                     radius={[3, 3, 0, 0]}
+                                    shape={
+                                        barKeys.length === 2
+                                            ? centeredBarShape(
+                                                  item.key,
+                                                  barKeys,
+                                              )
+                                            : undefined
+                                    }
                                     isAnimationActive={false}
                                 />
                             ),
