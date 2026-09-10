@@ -1,5 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { InputError } from '@/components/shared';
+import { MediaGalleryManager } from '@/components/shared/media-gallery-manager';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -99,7 +100,7 @@ export default function UnitTypeFormSheet({
 
     return (
         <Sheet open={open} onOpenChange={handleOpenChange}>
-            <SheetContent className="sm:max-w-lg">
+            <SheetContent className="sm:max-w-2xl">
                 <SheetHeader>
                     <SheetTitle>
                         {t(isEdit ? 'Edit Unit Type' : 'New Unit Type')}
@@ -111,173 +112,224 @@ export default function UnitTypeFormSheet({
                     </SheetDescription>
                 </SheetHeader>
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
-                >
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="unit-type-name">{t('Name')}</Label>
-                            <Input
-                                id="unit-type-name"
-                                required
-                                value={data.name}
-                                onChange={(event) =>
-                                    setData('name', event.target.value)
-                                }
-                                placeholder={t('e.g. Studio')}
-                            />
-                            <InputError message={errors.name} />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="unit-type-description">
-                                {t('Description')}
-                            </Label>
-                            <Textarea
-                                id="unit-type-description"
-                                value={data.description}
-                                onChange={(event) =>
-                                    setData('description', event.target.value)
-                                }
-                                placeholder={t(
-                                    'Describe this accommodation type',
-                                )}
-                            />
-                            <InputError message={errors.description} />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-1 flex-col overflow-y-auto">
+                    <form
+                        onSubmit={handleSubmit}
+                        className="flex flex-1 flex-col justify-between gap-6 px-4 pt-4 pb-6"
+                    >
+                        <div className="space-y-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="unit-type-bedrooms">
-                                    {t('Bedrooms')}
+                                <Label htmlFor="unit-type-name">
+                                    {t('Name')}
                                 </Label>
                                 <Input
-                                    id="unit-type-bedrooms"
-                                    type="number"
-                                    min={0}
-                                    value={data.bedrooms}
+                                    id="unit-type-name"
+                                    required
+                                    value={data.name}
                                     onChange={(event) =>
-                                        setData('bedrooms', event.target.value)
+                                        setData('name', event.target.value)
                                     }
+                                    placeholder={t('e.g. Studio')}
                                 />
-                                <InputError message={errors.bedrooms} />
+                                <InputError message={errors.name} />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="unit-type-bathrooms">
-                                    {t('Bathrooms')}
-                                </Label>
-                                <Input
-                                    id="unit-type-bathrooms"
-                                    type="number"
-                                    min={0}
-                                    step="0.1"
-                                    value={data.bathrooms}
-                                    onChange={(event) =>
-                                        setData('bathrooms', event.target.value)
-                                    }
-                                />
-                                <InputError message={errors.bathrooms} />
-                            </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="unit-type-size">
-                                    {t('Size (m²)')}
+                                <Label htmlFor="unit-type-description">
+                                    {t('Description')}
                                 </Label>
-                                <Input
-                                    id="unit-type-size"
-                                    type="number"
-                                    min={0}
-                                    step="0.01"
-                                    value={data.size_sqm}
-                                    onChange={(event) =>
-                                        setData('size_sqm', event.target.value)
-                                    }
-                                />
-                                <InputError message={errors.size_sqm} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="unit-type-furnishing">
-                                    {t('Furnishing')}
-                                </Label>
-                                <Input
-                                    id="unit-type-furnishing"
-                                    value={data.furnishing}
+                                <Textarea
+                                    id="unit-type-description"
+                                    value={data.description}
                                     onChange={(event) =>
                                         setData(
-                                            'furnishing',
+                                            'description',
                                             event.target.value,
                                         )
                                     }
-                                    placeholder={t('e.g. Furnished')}
-                                />
-                                <InputError message={errors.furnishing} />
-                            </div>
-                        </div>
-
-                        <div className="grid gap-3">
-                            <div>
-                                <Label>{t('Amenities')}</Label>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {t(
-                                        'Inactive associations stay visible until removed.',
+                                    placeholder={t(
+                                        'Describe this accommodation type',
                                     )}
-                                </p>
+                                />
+                                <InputError message={errors.description} />
                             </div>
-                            <div className="grid gap-2 sm:grid-cols-2">
-                                {availableAmenities.map((amenity) => (
-                                    <label
-                                        key={amenity.id}
-                                        className="flex items-center gap-3 rounded-md border p-3 text-sm"
-                                    >
-                                        <Checkbox
-                                            disabled={
-                                                !amenity.is_active &&
-                                                !data.amenity_ids.includes(
-                                                    amenity.id,
-                                                )
-                                            }
-                                            checked={data.amenity_ids.includes(
-                                                amenity.id,
-                                            )}
-                                            onCheckedChange={(checked) =>
-                                                toggleAmenity(
-                                                    amenity.id,
-                                                    checked,
-                                                )
-                                            }
-                                        />
-                                        <span className="flex-1">
-                                            {amenity.name}
-                                        </span>
-                                        {!amenity.is_active && (
-                                            <span className="text-xs text-muted-foreground">
-                                                {t('Inactive')}
-                                            </span>
-                                        )}
-                                    </label>
-                                ))}
-                            </div>
-                            <InputError message={errors.amenity_ids} />
-                        </div>
-                    </div>
 
-                    <div className="flex flex-wrap items-center justify-end gap-4">
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => handleOpenChange(false)}
-                            disabled={processing}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <Button disabled={processing}>
-                            {t(isEdit ? 'Save' : 'Create')}
-                        </Button>
-                    </div>
-                </form>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="unit-type-bedrooms">
+                                        {t('Bedrooms')}
+                                    </Label>
+                                    <Input
+                                        id="unit-type-bedrooms"
+                                        type="number"
+                                        min={0}
+                                        value={data.bedrooms}
+                                        onChange={(event) =>
+                                            setData(
+                                                'bedrooms',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={errors.bedrooms} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="unit-type-bathrooms">
+                                        {t('Bathrooms')}
+                                    </Label>
+                                    <Input
+                                        id="unit-type-bathrooms"
+                                        type="number"
+                                        min={0}
+                                        step="0.1"
+                                        value={data.bathrooms}
+                                        onChange={(event) =>
+                                            setData(
+                                                'bathrooms',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={errors.bathrooms} />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="unit-type-size">
+                                        {t('Size (m²)')}
+                                    </Label>
+                                    <Input
+                                        id="unit-type-size"
+                                        type="number"
+                                        min={0}
+                                        step="0.01"
+                                        value={data.size_sqm}
+                                        onChange={(event) =>
+                                            setData(
+                                                'size_sqm',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    <InputError message={errors.size_sqm} />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="unit-type-furnishing">
+                                        {t('Furnishing')}
+                                    </Label>
+                                    <Input
+                                        id="unit-type-furnishing"
+                                        value={data.furnishing}
+                                        onChange={(event) =>
+                                            setData(
+                                                'furnishing',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder={t('e.g. Furnished')}
+                                    />
+                                    <InputError message={errors.furnishing} />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3">
+                                <div>
+                                    <Label>{t('Amenities')}</Label>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        {t(
+                                            'Inactive associations stay visible until removed.',
+                                        )}
+                                    </p>
+                                </div>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                    {availableAmenities.map((amenity) => (
+                                        <label
+                                            key={amenity.id}
+                                            className="flex items-center gap-3 rounded-md border p-3 text-sm"
+                                        >
+                                            <Checkbox
+                                                disabled={
+                                                    !amenity.is_active &&
+                                                    !data.amenity_ids.includes(
+                                                        amenity.id,
+                                                    )
+                                                }
+                                                checked={data.amenity_ids.includes(
+                                                    amenity.id,
+                                                )}
+                                                onCheckedChange={(checked) =>
+                                                    toggleAmenity(
+                                                        amenity.id,
+                                                        checked,
+                                                    )
+                                                }
+                                            />
+                                            <span className="flex-1">
+                                                {amenity.name}
+                                            </span>
+                                            {!amenity.is_active && (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {t('Inactive')}
+                                                </span>
+                                            )}
+                                        </label>
+                                    ))}
+                                </div>
+                                <InputError message={errors.amenity_ids} />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-end gap-4">
+                            <Button
+                                variant="outline"
+                                type="button"
+                                onClick={() => handleOpenChange(false)}
+                                disabled={processing}
+                            >
+                                {t('Cancel')}
+                            </Button>
+                            <Button disabled={processing}>
+                                {t(isEdit ? 'Save' : 'Create')}
+                            </Button>
+                        </div>
+                    </form>
+
+                    {isEdit && unitType && (
+                        <div className="border-t px-4 pt-6 pb-6">
+                            <MediaGalleryManager
+                                items={unitType.gallery ?? []}
+                                idPrefix={`unit-type-${unitType.id}-edit`}
+                                uploadUrl={properties.unitTypes.gallery.store.url(
+                                    {
+                                        property: property.slug,
+                                        unitType: unitType.id,
+                                    },
+                                )}
+                                reorderUrl={properties.unitTypes.gallery.reorder.url(
+                                    {
+                                        property: property.slug,
+                                        unitType: unitType.id,
+                                    },
+                                )}
+                                updateUrl={(mediaId) =>
+                                    properties.unitTypes.gallery.update.url({
+                                        property: property.slug,
+                                        unitType: unitType.id,
+                                        media: mediaId,
+                                    })
+                                }
+                                destroyUrl={(mediaId) =>
+                                    properties.unitTypes.gallery.destroy.url({
+                                        property: property.slug,
+                                        unitType: unitType.id,
+                                        media: mediaId,
+                                    })
+                                }
+                            />
+                        </div>
+                    )}
+                </div>
             </SheetContent>
         </Sheet>
     );

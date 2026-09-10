@@ -1,11 +1,23 @@
 import { Head, router } from '@inertiajs/react';
-import { Pencil, RotateCcw, Trash2 } from 'lucide-react';
+import {
+    EllipsisVertical,
+    ImageOff,
+    ImageIcon,
+    Pencil,
+    RotateCcw,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import UnitTypeFormSheet from '@/components/features/properties/unit-type-form-sheet';
-import { MediaGalleryManager } from '@/components/shared/media-gallery-manager';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Amenity, Property, UnitType } from '@/types';
@@ -17,11 +29,58 @@ type PageProps = {
     amenities: Amenity[];
 };
 
+function furnishingLabel(value: string | number | null): string {
+    if (value === null) {
+        return '—';
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+
+    if (normalized === '' || normalized === '0') {
+        return '—';
+    }
+
+    const labels: Record<string, string> = {
+        furnished: 'Furnished',
+        'semi-furnished': 'Semi-furnished',
+        unfurnished: 'Unfurnished',
+    };
+
+    if (labels[normalized]) {
+        return t(labels[normalized]);
+    }
+
+    return String(value)
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function metricLabel(
+    value: number | string | null,
+    singular: string,
+    plural: string,
+): string {
+    if (value === null || value === '') {
+        return `— ${t(plural)}`;
+    }
+
+    return `${value} ${t(Number(value) === 1 ? singular : plural)}`;
+}
+
+function photoCountLabel(count: number): string {
+    return `${count} ${t(count === 1 ? 'photo' : 'photos')}`;
+}
+
 export default function Index({ property, unitTypes, amenities }: PageProps) {
     const [formOpen, setFormOpen] = useState(false);
     const [editingUnitType, setEditingUnitType] = useState<UnitType | null>(
         null,
     );
+    const currentEditingUnitType = editingUnitType
+        ? (unitTypes.find((unitType) => unitType.id === editingUnitType.id) ??
+          editingUnitType)
+        : null;
 
     function openCreate() {
         setEditingUnitType(null);
@@ -69,168 +128,217 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                         </Button>
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        {unitTypes.map((unitType) => (
-                            <section
-                                key={unitType.id}
-                                className="space-y-4 rounded-lg border bg-card p-6 shadow-xs"
-                            >
-                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h2 className="font-semibold">
-                                                {unitType.name}
-                                            </h2>
-                                            <StatusBadge
-                                                domain="property"
-                                                value={
-                                                    unitType.is_active
-                                                        ? 'active'
-                                                        : 'archived'
-                                                }
+                    <div className="space-y-3">
+                        {unitTypes.map((unitType) => {
+                            const gallery = unitType.gallery ?? [];
+                            const cover =
+                                gallery.find((item) => item.position === 0) ??
+                                gallery[0];
+                            const visibleAmenities = (
+                                unitType.amenities ?? []
+                            ).slice(0, 3);
+                            const additionalAmenities = Math.max(
+                                (unitType.amenities?.length ?? 0) -
+                                    visibleAmenities.length,
+                                0,
+                            );
+
+                            return (
+                                <article
+                                    key={unitType.id}
+                                    className="flex gap-3 rounded-lg border bg-card p-3 shadow-xs sm:gap-4 sm:p-4"
+                                >
+                                    <div className="h-24 w-28 shrink-0 overflow-hidden rounded-md bg-muted sm:h-28 sm:w-40">
+                                        {cover ? (
+                                            <img
+                                                src={cover.url}
+                                                alt={cover.alt ?? unitType.name}
+                                                loading="lazy"
+                                                className="size-full object-cover"
                                             />
-                                            <Badge variant="outline">
-                                                {unitType.units_count ?? 0}{' '}
-                                                {t('units')}
-                                            </Badge>
-                                        </div>
-                                        {unitType.description && (
-                                            <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                                                {unitType.description}
-                                            </p>
+                                        ) : (
+                                            <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                                                <ImageOff
+                                                    className="size-5"
+                                                    aria-hidden="true"
+                                                />
+                                                <span className="text-xs">
+                                                    {t('No photos')}
+                                                </span>
+                                            </div>
                                         )}
-                                        <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
-                                            <div>
-                                                <dt className="text-muted-foreground">
-                                                    {t('Bedrooms')}
-                                                </dt>
-                                                <dd className="font-medium">
-                                                    {unitType.bedrooms ?? '—'}
-                                                </dd>
-                                            </div>
-                                            <div>
-                                                <dt className="text-muted-foreground">
-                                                    {t('Bathrooms')}
-                                                </dt>
-                                                <dd className="font-medium">
-                                                    {unitType.bathrooms ?? '—'}
-                                                </dd>
-                                            </div>
-                                            <div>
-                                                <dt className="text-muted-foreground">
-                                                    {t('Size')}
-                                                </dt>
-                                                <dd className="font-medium">
-                                                    {unitType.size_sqm
-                                                        ? `${unitType.size_sqm} m²`
-                                                        : '—'}
-                                                </dd>
-                                            </div>
-                                            <div>
-                                                <dt className="text-muted-foreground">
-                                                    {t('Furnishing')}
-                                                </dt>
-                                                <dd className="font-medium">
-                                                    {unitType.furnishing ?? '—'}
-                                                </dd>
-                                            </div>
-                                        </dl>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => openEdit(unitType)}
-                                        >
-                                            <Pencil className="size-4" />
-                                            {t('Edit')}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() =>
-                                                toggleActive(unitType)
-                                            }
-                                        >
-                                            {unitType.is_active ? (
-                                                <Trash2 className="size-4" />
-                                            ) : (
-                                                <RotateCcw className="size-4" />
-                                            )}
-                                            {t(
-                                                unitType.is_active
-                                                    ? 'Deactivate'
-                                                    : 'Activate',
-                                            )}
-                                        </Button>
-                                    </div>
-                                </div>
 
-                                {unitType.amenities &&
-                                    unitType.amenities.length > 0 && (
-                                        <div className="flex flex-wrap gap-2">
-                                            {unitType.amenities.map(
-                                                (amenity) => (
-                                                    <Badge
-                                                        key={amenity.id}
-                                                        variant={
-                                                            amenity.is_active
-                                                                ? 'secondary'
-                                                                : 'outline'
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h2 className="truncate font-semibold">
+                                                        {unitType.name}
+                                                    </h2>
+                                                    <StatusBadge
+                                                        domain="property"
+                                                        value={
+                                                            unitType.is_active
+                                                                ? 'active'
+                                                                : 'archived'
                                                         }
-                                                    >
-                                                        {amenity.name}
-                                                        {!amenity.is_active
-                                                            ? ` (${t('inactive')})`
-                                                            : ''}
+                                                    />
+                                                    <Badge variant="outline">
+                                                        {unitType.units_count ??
+                                                            0}{' '}
+                                                        {t('units')}
                                                     </Badge>
-                                                ),
+                                                </div>
+                                                {unitType.description && (
+                                                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                                                        {unitType.description}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="flex shrink-0 items-center gap-1">
+                                                <Button
+                                                    onClick={() =>
+                                                        openEdit(unitType)
+                                                    }
+                                                >
+                                                    <Pencil className="size-4" />
+                                                    {t('Edit')}
+                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                        >
+                                                            <span className="sr-only">
+                                                                {t('Actions')}
+                                                            </span>
+                                                            <EllipsisVertical
+                                                                className="size-4"
+                                                                aria-hidden="true"
+                                                            />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onSelect={() =>
+                                                                toggleActive(
+                                                                    unitType,
+                                                                )
+                                                            }
+                                                        >
+                                                            {unitType.is_active ? (
+                                                                <Trash2 className="size-4" />
+                                                            ) : (
+                                                                <RotateCcw className="size-4" />
+                                                            )}
+                                                            {t(
+                                                                unitType.is_active
+                                                                    ? 'Deactivate'
+                                                                    : 'Activate',
+                                                            )}
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                                            <span>
+                                                {metricLabel(
+                                                    unitType.bedrooms,
+                                                    'Bedroom',
+                                                    'Bedrooms',
+                                                )}
+                                            </span>
+                                            <span aria-hidden="true">·</span>
+                                            <span>
+                                                {metricLabel(
+                                                    unitType.bathrooms,
+                                                    'Bathroom',
+                                                    'Bathrooms',
+                                                )}
+                                            </span>
+                                            <span aria-hidden="true">·</span>
+                                            <span>
+                                                {unitType.size_sqm === null ||
+                                                unitType.size_sqm === ''
+                                                    ? `— ${t('m²')}`
+                                                    : `${unitType.size_sqm} ${t('m²')}`}
+                                            </span>
+                                            <span aria-hidden="true">·</span>
+                                            <span>
+                                                {furnishingLabel(
+                                                    unitType.furnishing,
+                                                )}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                                            {visibleAmenities.length > 0 ? (
+                                                visibleAmenities.map(
+                                                    (amenity, index) => (
+                                                        <span
+                                                            key={amenity.id}
+                                                            className={
+                                                                amenity.is_active
+                                                                    ? undefined
+                                                                    : 'italic'
+                                                            }
+                                                        >
+                                                            {index > 0 && (
+                                                                <span
+                                                                    className="mr-2"
+                                                                    aria-hidden="true"
+                                                                >
+                                                                    ·
+                                                                </span>
+                                                            )}
+                                                            {amenity.name}
+                                                            {!amenity.is_active &&
+                                                                ` (${t('inactive')})`}
+                                                        </span>
+                                                    ),
+                                                )
+                                            ) : (
+                                                <span>{t('No amenities')}</span>
+                                            )}
+                                            {additionalAmenities > 0 && (
+                                                <span>
+                                                    <span
+                                                        className="mr-2"
+                                                        aria-hidden="true"
+                                                    >
+                                                        ·
+                                                    </span>
+                                                    +{additionalAmenities}
+                                                </span>
                                             )}
                                         </div>
-                                    )}
 
-                                <MediaGalleryManager
-                                    items={unitType.gallery ?? []}
-                                    idPrefix={`unit-type-${unitType.id}`}
-                                    uploadUrl={properties.unitTypes.gallery.store.url(
-                                        {
-                                            property: property.slug,
-                                            unitType: unitType.id,
-                                        },
-                                    )}
-                                    reorderUrl={properties.unitTypes.gallery.reorder.url(
-                                        {
-                                            property: property.slug,
-                                            unitType: unitType.id,
-                                        },
-                                    )}
-                                    updateUrl={(mediaId) =>
-                                        properties.unitTypes.gallery.update.url(
-                                            {
-                                                property: property.slug,
-                                                unitType: unitType.id,
-                                                media: mediaId,
-                                            },
-                                        )
-                                    }
-                                    destroyUrl={(mediaId) =>
-                                        properties.unitTypes.gallery.destroy.url(
-                                            {
-                                                property: property.slug,
-                                                unitType: unitType.id,
-                                                media: mediaId,
-                                            },
-                                        )
-                                    }
-                                />
-                            </section>
-                        ))}
+                                        <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
+                                            <ImageIcon
+                                                className="size-3.5"
+                                                aria-hidden="true"
+                                            />
+                                            {photoCountLabel(gallery.length)}
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </div>
 
             <UnitTypeFormSheet
-                key={`${editingUnitType?.id ?? 'new'}-${editingUnitType?.updated_at ?? ''}`}
+                key={`${currentEditingUnitType?.id ?? 'new'}-${currentEditingUnitType?.updated_at ?? ''}`}
                 property={property}
-                unitType={editingUnitType}
+                unitType={currentEditingUnitType}
                 amenities={amenities}
                 open={formOpen}
                 onOpenChange={setFormOpen}
