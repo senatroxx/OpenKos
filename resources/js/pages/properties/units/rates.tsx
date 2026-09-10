@@ -1,7 +1,7 @@
 import { useForm, usePage } from '@inertiajs/react';
-import { Download, Ellipsis, Pencil, Plus, RotateCcw, X } from 'lucide-react';
+import { Ellipsis, Pencil, Plus, RotateCcw, X } from 'lucide-react';
 import { Fragment, useState } from 'react';
-import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { InputError } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -380,34 +380,6 @@ export default function UnitRates({
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {(auth.role === 'owner' ||
-                            auth.permissions.includes('unit-rates.export')) && (
-                            <Button variant="outline" asChild>
-                                <a
-                                    href={exportMethod.url('unit-rates', {
-                                        query: {
-                                            property_slug: property.slug,
-                                            unit_name: unit.name,
-                                            currency:
-                                                currencyFilter === 'all'
-                                                    ? undefined
-                                                    : currencyFilter,
-                                            status:
-                                                statusFilter === 'all'
-                                                    ? undefined
-                                                    : statusFilter,
-                                            include_archived:
-                                                statusFilter === 'all'
-                                                    ? 1
-                                                    : undefined,
-                                        },
-                                    })}
-                                >
-                                    <Download />
-                                    {t('Export CSV')}
-                                </a>
-                            </Button>
-                        )}
                         <Button
                             type="button"
                             onClick={() => setAddDialogOpen(true)}
@@ -415,6 +387,31 @@ export default function UnitRates({
                             <Plus />
                             {t('Add Rate')}
                         </Button>
+                        <EntityTransferMenu
+                            dataset="unit-rates"
+                            datasetLabel={t('Unit rates')}
+                            canImport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('unit-rates.import')
+                            }
+                            canExport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('unit-rates.export')
+                            }
+                            exportQuery={{
+                                property_slug: property.slug,
+                                unit_name: unit.name,
+                                currency:
+                                    currencyFilter === 'all'
+                                        ? undefined
+                                        : currencyFilter,
+                                status:
+                                    statusFilter === 'all'
+                                        ? undefined
+                                        : statusFilter,
+                            }}
+                            includeArchivedDefault={statusFilter === 'all'}
+                        />
                     </div>
                 </div>
 

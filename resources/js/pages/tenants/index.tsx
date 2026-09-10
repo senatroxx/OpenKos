@@ -1,6 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    Download,
     DoorOpen,
     EllipsisVertical,
     ExternalLink,
@@ -13,7 +12,6 @@ import {
     UserX,
 } from 'lucide-react';
 import { useState } from 'react';
-import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -25,6 +23,7 @@ import {
     TenantDocumentsSheet,
     TenantFormSheet,
 } from '@/components/features';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import InviteToAppSheet from '@/components/features/tenants/invite-to-app-sheet';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -393,29 +392,30 @@ export default function Index({
                     />
 
                     <div className="flex items-center gap-2">
-                        {(auth.role === 'owner' ||
-                            auth.permissions.includes('tenants.export')) && (
-                            <Button variant="outline" asChild>
-                                <a
-                                    href={exportMethod.url('tenants', {
-                                        query: {
-                                            search: currentSearch || undefined,
-                                            status: currentStatus || undefined,
-                                            app_access:
-                                                currentAppAccess || undefined,
-                                            include_archived:
-                                                currentStatus === 'archived'
-                                                    ? 1
-                                                    : undefined,
-                                        },
-                                    })}
-                                >
-                                    <Download />
-                                    {t('Export CSV')}
-                                </a>
-                            </Button>
-                        )}
                         <Button onClick={openCreate}>{t('New Tenant')}</Button>
+                        <EntityTransferMenu
+                            dataset="tenants"
+                            datasetLabel={t('Tenants')}
+                            canImport={auth.role === 'owner'}
+                            canExport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('tenants.export')
+                            }
+                            canExportSensitive={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes(
+                                    'tenants.export_sensitive',
+                                )
+                            }
+                            exportQuery={{
+                                search: currentSearch || undefined,
+                                status: currentStatus || undefined,
+                                app_access: currentAppAccess || undefined,
+                            }}
+                            includeArchivedDefault={
+                                currentStatus === 'archived'
+                            }
+                        />
                     </div>
                 </div>
 

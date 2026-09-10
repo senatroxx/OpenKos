@@ -1,6 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    Download,
     EllipsisVertical,
     ExternalLink,
     Eye,
@@ -9,12 +8,12 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { PropertyDetailSheet, PropertyFormSheet } from '@/components/features';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
@@ -242,30 +241,29 @@ export default function Index({
                     />
 
                     <div className="flex items-center gap-2">
-                        {(auth.role === 'owner' ||
-                            auth.permissions.includes('properties.export')) && (
-                            <Button variant="outline" asChild>
-                                <a
-                                    href={exportMethod.url('properties', {
-                                        query: {
-                                            search: currentSearch || undefined,
-                                            status: currentStatus || undefined,
-                                            type: currentType || undefined,
-                                            include_archived:
-                                                currentStatus === 'archived'
-                                                    ? 1
-                                                    : undefined,
-                                        },
-                                    })}
-                                >
-                                    <Download />
-                                    {t('Export CSV')}
-                                </a>
-                            </Button>
-                        )}
                         <Button onClick={openCreate}>
                             {t('New Property')}
                         </Button>
+                        <EntityTransferMenu
+                            dataset="properties"
+                            datasetLabel={t('Properties')}
+                            canImport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('properties.import')
+                            }
+                            canExport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('properties.export')
+                            }
+                            exportQuery={{
+                                search: currentSearch || undefined,
+                                status: currentStatus || undefined,
+                                type: currentType || undefined,
+                            }}
+                            includeArchivedDefault={
+                                currentStatus === 'archived'
+                            }
+                        />
                     </div>
                 </div>
 

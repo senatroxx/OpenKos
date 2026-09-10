@@ -1,6 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import {
-    Download,
     DoorOpen,
     EllipsisVertical,
     ExternalLink,
@@ -11,7 +10,6 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import { exportMethod } from '@/actions/App/Http/Controllers/DataTransferController';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
@@ -23,6 +21,7 @@ import {
     UnitDetailSheet,
     UnitFormSheet,
 } from '@/components/features';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -460,28 +459,25 @@ export default function Index({
 
             <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-end gap-2">
-                    {(auth.role === 'owner' ||
-                        auth.permissions.includes('units.export')) && (
-                        <Button variant="outline" asChild>
-                            <a
-                                href={exportMethod.url('units', {
-                                    query: {
-                                        search: currentSearch || undefined,
-                                        status: currentStatus || undefined,
-                                        property_slug: property.slug,
-                                        include_archived:
-                                            currentStatus === 'archived'
-                                                ? 1
-                                                : undefined,
-                                    },
-                                })}
-                            >
-                                <Download />
-                                {t('Export CSV')}
-                            </a>
-                        </Button>
-                    )}
                     <Button onClick={openCreate}>{t('New Unit')}</Button>
+                    <EntityTransferMenu
+                        dataset="units"
+                        datasetLabel={t('Units')}
+                        canImport={
+                            auth.role === 'owner' ||
+                            auth.permissions.includes('units.import')
+                        }
+                        canExport={
+                            auth.role === 'owner' ||
+                            auth.permissions.includes('units.export')
+                        }
+                        exportQuery={{
+                            search: currentSearch || undefined,
+                            status: currentStatus || undefined,
+                            property_slug: property.slug,
+                        }}
+                        includeArchivedDefault={currentStatus === 'archived'}
+                    />
                 </div>
 
                 <FilterBar
