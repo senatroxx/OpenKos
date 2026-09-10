@@ -1,7 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { FilterBar } from '@/components/data-table/filter-bar';
-import { SearchInput } from '@/components/data-table/search-input';
 import { TransferExportForm } from '@/components/features/data-transfer/transfer-actions';
 import { Heading } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,6 @@ type PageProps = {
     initialQuery: Record<string, string>;
     includeArchivedDefault: boolean;
     canExportSensitive: boolean;
-    searchSupported: boolean;
 };
 
 export default function Export({
@@ -34,15 +32,11 @@ export default function Export({
     initialQuery,
     includeArchivedDefault,
     canExportSensitive,
-    searchSupported,
 }: PageProps) {
     const params: Record<string, string> = Object.fromEntries(
         filters.map((filter) => [filter.key, initialQuery[filter.key] ?? '']),
     );
-
-    if (searchSupported) {
-        params.search = initialQuery.search ?? '';
-    }
+    params.search = initialQuery.search ?? '';
 
     const table = useTable({
         routeFn: () => ({ url: pageUrl }),
@@ -51,9 +45,7 @@ export default function Export({
 
     const exportQuery = {
         ...context,
-        ...(searchSupported && table.searchValue
-            ? { search: table.searchValue }
-            : {}),
+        ...(params.search ? { search: params.search } : {}),
         ...table.activeFilters,
     } satisfies QueryParams;
 
@@ -78,7 +70,7 @@ export default function Export({
 
                 <Card>
                     <CardContent className="grid gap-6 pt-6">
-                        {(filters.length > 0 || searchSupported) && (
+                        {filters.length > 0 && (
                             <FilterBar
                                 filters={filters}
                                 activeFilters={table.activeFilters}
@@ -86,20 +78,6 @@ export default function Export({
                                 onToggleOption={table.toggleFilterOption}
                                 onClearAll={table.clearAllFilters}
                                 alwaysOpen
-                                searchInput={
-                                    searchSupported ? (
-                                        <SearchInput
-                                            value={table.searchValue}
-                                            onChange={table.onSearchChange}
-                                            onClear={table.clearSearch}
-                                            placeholder={t('Search :dataset', {
-                                                dataset: datasetLabel,
-                                            })}
-                                        />
-                                    ) : (
-                                        <div className="h-9" />
-                                    )
-                                }
                             />
                         )}
 

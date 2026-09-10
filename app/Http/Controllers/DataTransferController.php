@@ -99,11 +99,6 @@ class DataTransferController extends Controller
             'canExportSensitive' => $dataset === DataTransferDataset::Tenants
                 && ($request->user()->isOwner()
                     || $request->user()->can(Permission::TenantsExportSensitive->value)),
-            'searchSupported' => in_array($dataset, [
-                DataTransferDataset::Properties,
-                DataTransferDataset::Units,
-                DataTransferDataset::Tenants,
-            ], true),
         ]);
     }
 
