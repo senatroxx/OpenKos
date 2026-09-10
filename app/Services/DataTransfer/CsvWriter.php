@@ -20,13 +20,13 @@ final class CsvWriter implements TabularWriter
                 return;
             }
 
-            fputcsv($output, $headers, ',', '"', '\\');
+            fputcsv($output, $headers, ',', '"', '');
 
             foreach ($rows as $row) {
                 fputcsv($output, array_map(
                     static fn (mixed $value): string => $value === null ? '' : (string) $value,
                     $row,
-                ), ',', '"', '\\');
+                ), ',', '"', '');
             }
 
             fclose($output);

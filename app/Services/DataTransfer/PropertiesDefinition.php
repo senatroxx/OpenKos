@@ -82,7 +82,10 @@ final class PropertiesDefinition extends DatasetDefinition
             __('Another row uses the same property slug.'),
         );
 
-        if (! $slugConflict && Property::withTrashed()->where('slug', $values['slug'])->exists()) {
+        if (! $slugConflict && Property::withTrashed()
+            ->whereRaw('lower(slug) = ?', [mb_strtolower((string) $values['slug'])])
+            ->exists()
+        ) {
             $context->error($line, 'slug', __('A property with this slug already exists. Imports create new records only.'));
         }
 

@@ -5,6 +5,11 @@ namespace App\Services\DataTransfer;
 final class ImportValidationContext
 {
     /**
+     * @param  array<string, mixed>  $constraints
+     */
+    public function __construct(public array $constraints = []) {}
+
+    /**
      * @var array<int, array{line: int|null, field: string, message: string}>
      */
     public array $errors = [];

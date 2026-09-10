@@ -5,7 +5,6 @@ namespace App\Services\DataTransfer;
 use App\Actions\Units\CreateUnit;
 use App\Enums\DataTransferDataset;
 use App\Enums\UnitStatus;
-use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -70,8 +69,18 @@ final class UnitsDefinition extends DatasetDefinition
         }
 
         $rowErrorCount = count($context->errors);
+        $contextPropertySlug = $context->constraints['property_slug'] ?? null;
+        $contextPropertyId = $context->constraints['property_id'] ?? null;
 
-        $property = $this->accessibleProperty($actor, (string) $values['property_slug']);
+        if ($contextPropertySlug !== null && $values['property_slug'] !== $contextPropertySlug) {
+            $context->error($line, 'property_slug', __('This import must target the selected property.'));
+
+            return null;
+        }
+
+        $property = $contextPropertyId !== null
+            ? $this->accessiblePropertyById($actor, (int) $contextPropertyId)
+            : $this->accessibleProperty($actor, (string) $values['property_slug']);
 
         if ($property === null) {
             $context->error($line, 'property_slug', __('The referenced property could not be resolved or is not accessible.'));
@@ -125,7 +134,14 @@ final class UnitsDefinition extends DatasetDefinition
 
     public function persist(array $row, User $actor): Model
     {
-        $property = Property::findOrFail($row['property_id']);
+        $property = $this->accessiblePropertyById($actor, (int) $row['property_id']);
+
+        if ($property === null) {
+            throw new ImportCommitException(
+                __('The referenced property was deleted, deactivated, or is no longer accessible. No records were imported. Preview the file again and retry.'),
+            );
+        }
+
         unset($row['property_id']);
 
         return $this->createUnit->execute($property, $row);

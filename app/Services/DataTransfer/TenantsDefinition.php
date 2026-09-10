@@ -71,6 +71,7 @@ final class TenantsDefinition extends DatasetDefinition
         }
 
         $rowErrorCount = count($context->errors);
+        $existingTenants = $this->existingTenantCounts($context);
 
         foreach ([
             'id_card_number' => __('Another row uses the same tenant identifier.'),
@@ -89,7 +90,7 @@ final class TenantsDefinition extends DatasetDefinition
                 $context->state[$key] = $line;
             }
 
-            $matches = Tenant::withTrashed()->where($field, $value)->count();
+            $matches = $existingTenants[$field][$value] ?? 0;
             if ($matches > 0) {
                 $context->error(
                     $line,
@@ -111,9 +112,7 @@ final class TenantsDefinition extends DatasetDefinition
                 $context->state[$nameKey] = $line;
             }
 
-            $matches = Tenant::withTrashed()
-                ->whereRaw('lower(name) = ?', [$normalizedName])
-                ->count();
+            $matches = $existingTenants['name'][$normalizedName] ?? 0;
 
             if ($matches > 0) {
                 $context->error(
@@ -221,5 +220,36 @@ final class TenantsDefinition extends DatasetDefinition
         }
 
         return $row;
+    }
+
+    /**
+     * @return array<string, array<string, int>>
+     */
+    private function existingTenantCounts(ImportValidationContext $context): array
+    {
+        if (isset($context->state['tenant_existing_counts'])) {
+            return $context->state['tenant_existing_counts'];
+        }
+
+        $counts = [
+            'phone' => [],
+            'id_card_number' => [],
+            'name' => [],
+        ];
+
+        foreach (Tenant::withTrashed()->cursor() as $tenant) {
+            foreach (['phone', 'id_card_number'] as $field) {
+                $value = $tenant->{$field};
+
+                if ($value !== null && $value !== '') {
+                    $counts[$field][$value] = ($counts[$field][$value] ?? 0) + 1;
+                }
+            }
+
+            $name = mb_strtolower((string) $tenant->name);
+            $counts['name'][$name] = ($counts['name'][$name] ?? 0) + 1;
+        }
+
+        return $context->state['tenant_existing_counts'] = $counts;
     }
 }

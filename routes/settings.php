@@ -69,7 +69,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('settings/whatsapp/status', [WhatsAppController::class, 'status'])->name('settings.whatsapp.status');
 
         Route::get('settings/property-types', [PropertyTypeController::class, 'index'])->name('settings.property-types.index');
-        Route::get('settings/property-types/export', [DataTransferController::class, 'exportPage'])
+        Route::get('settings/property-types/transfer/export', [DataTransferController::class, 'exportPage'])
             ->defaults('dataset', 'property-types')
             ->name('settings.property-types.transfer.export')
             ->middleware('permission:properties.export');

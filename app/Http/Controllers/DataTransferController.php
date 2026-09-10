@@ -10,10 +10,10 @@ use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Unit;
 use App\Models\User;
+use App\Services\DataTransfer\ImportCommitException;
 use App\Services\DataTransfer\MasterDataTransferService;
 use App\Services\Settings\InstallationCurrencySettings;
 use App\Support\DelimitedValues;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -66,6 +66,8 @@ class DataTransferController extends Controller
             'maxRows' => MasterDataTransferService::MAX_ROWS,
             'maxFileSizeMb' => MasterDataTransferService::MAX_FILE_BYTES / 1_048_576,
             'backUrl' => $this->backUrl($dataset, $property, $unit),
+            'previewUrl' => $this->importEndpoint($dataset, $property, $unit, 'preview'),
+            'commitUrl' => $this->importEndpoint($dataset, $property, $unit, 'commit'),
         ]);
     }
 
@@ -102,21 +104,39 @@ class DataTransferController extends Controller
         ]);
     }
 
-    public function preview(ImportDataRequest $request): JsonResponse
-    {
-        $dataset = $request->dataset();
+    public function preview(
+        ImportDataRequest $request,
+        ?Property $property = null,
+        ?Unit $unit = null,
+    ): JsonResponse {
+        $dataset = $this->importDataset($request);
         $this->authorizeDataset($request->user(), $dataset, 'import');
+        $this->authorizeContext($dataset, $property, $unit);
 
-        $result = $this->transfer->validate($dataset, $request->file('file'), $request->user());
+        $result = $this->transfer->validate(
+            $dataset,
+            $request->file('file'),
+            $request->user(),
+            $this->importContext($dataset, $property, $unit),
+        );
 
         return response()->json($result->toArray(), $result->isValid() ? 200 : 422);
     }
 
-    public function commit(ImportDataRequest $request): JsonResponse
-    {
-        $dataset = $request->dataset();
+    public function commit(
+        ImportDataRequest $request,
+        ?Property $property = null,
+        ?Unit $unit = null,
+    ): JsonResponse {
+        $dataset = $this->importDataset($request);
         $this->authorizeDataset($request->user(), $dataset, 'import');
-        $result = $this->transfer->validate($dataset, $request->file('file'), $request->user());
+        $this->authorizeContext($dataset, $property, $unit);
+        $result = $this->transfer->validate(
+            $dataset,
+            $request->file('file'),
+            $request->user(),
+            $this->importContext($dataset, $property, $unit),
+        );
 
         if (! $result->isValid()) {
             return response()->json($result->toArray(), 422);
@@ -124,7 +144,7 @@ class DataTransferController extends Controller
 
         try {
             $count = $this->transfer->commit($dataset, $result, $request->user());
-        } catch (QueryException) {
+        } catch (ImportCommitException $exception) {
             return response()->json([
                 'valid' => false,
                 'row_count' => $result->rowCount,
@@ -132,7 +152,7 @@ class DataTransferController extends Controller
                 'errors' => [[
                     'line' => null,
                     'field' => 'file',
-                    'message' => __('The import conflicted with data created by another request. No records were imported.'),
+                    'message' => $exception->getMessage(),
                 ]],
             ], 422);
         }
@@ -178,6 +198,15 @@ class DataTransferController extends Controller
         return $this->resolveDataset((string) $request->route('dataset'));
     }
 
+    private function importDataset(ImportDataRequest $request): DataTransferDataset
+    {
+        $routeDataset = $request->route('dataset');
+
+        return $routeDataset === null
+            ? $request->dataset()
+            : $this->resolveDataset((string) $routeDataset);
+    }
+
     private function authorizeContext(
         DataTransferDataset $dataset,
         ?Property $property,
@@ -190,6 +219,53 @@ class DataTransferController extends Controller
         if ($dataset === DataTransferDataset::UnitRates && $unit !== null) {
             $this->authorize('view', $unit);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function importContext(
+        DataTransferDataset $dataset,
+        ?Property $property,
+        ?Unit $unit,
+    ): array {
+        return match ($dataset) {
+            DataTransferDataset::Units => $property === null
+                ? []
+                : [
+                    'property_id' => $property->id,
+                    'property_slug' => $property->slug,
+                ],
+            DataTransferDataset::UnitRates => $property === null || $unit === null
+                ? []
+                : [
+                    'property_id' => $property->id,
+                    'property_slug' => $property->slug,
+                    'unit_id' => $unit->id,
+                    'unit_name' => $unit->name,
+                ],
+            default => [],
+        };
+    }
+
+    private function importEndpoint(
+        DataTransferDataset $dataset,
+        ?Property $property,
+        ?Unit $unit,
+        string $action,
+    ): string {
+        return match ($dataset) {
+            DataTransferDataset::Units => $property === null
+                ? route('data-transfer.'.$action)
+                : route('properties.units.transfer.'.$action, ['property' => $property]),
+            DataTransferDataset::UnitRates => $property === null || $unit === null
+                ? route('data-transfer.'.$action)
+                : route('properties.units.rates.transfer.'.$action, [
+                    'property' => $property,
+                    'unit' => $unit,
+                ]),
+            default => route('data-transfer.'.$action),
+        };
     }
 
     /**

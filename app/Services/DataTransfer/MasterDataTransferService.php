@@ -7,8 +7,11 @@ use App\Contracts\DataTransfer\TabularWriter;
 use App\Data\DataTransfer\ImportValidationResult;
 use App\Enums\DataTransferDataset;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class MasterDataTransferService
@@ -49,16 +52,29 @@ final class MasterDataTransferService
         DataTransferDataset $dataset,
         UploadedFile $file,
         User $actor,
+        array $constraints = [],
     ): ImportValidationResult {
         $definition = $this->definition($dataset);
-        $context = new ImportValidationContext;
+        $context = new ImportValidationContext($constraints);
         $rows = [];
         $rowCount = 0;
         $header = null;
         $headersValid = false;
         $limitErrorAdded = false;
+        $syntaxError = false;
 
         foreach ($this->reader->rows($file) as $record) {
+            if (isset($record['error'])) {
+                $context->error(
+                    $record['line'],
+                    'file',
+                    __('The CSV file contains malformed syntax, such as an unterminated quoted field.'),
+                );
+                $syntaxError = true;
+
+                continue;
+            }
+
             $values = $record['values'];
 
             if ($header === null) {
@@ -107,7 +123,7 @@ final class MasterDataTransferService
             }
         }
 
-        if ($header === null) {
+        if ($header === null && ! $syntaxError) {
             $context->error(null, 'file', __('The CSV file must contain a header row.'));
         }
 
@@ -129,11 +145,25 @@ final class MasterDataTransferService
 
         $definition = $this->definition($dataset);
 
-        DB::transaction(function () use ($definition, $result, $actor): void {
-            foreach ($result->rows as $row) {
-                $definition->persist($row, $actor);
-            }
-        });
+        try {
+            DB::transaction(function () use ($definition, $result, $actor): void {
+                foreach ($result->rows as $row) {
+                    $definition->persist($row, $actor);
+                }
+            });
+        } catch (ImportCommitException $exception) {
+            throw $exception;
+        } catch (QueryException $exception) {
+            throw new ImportCommitException(
+                __('The import conflicted with data changed by another request. No records were imported. Preview the file again and retry.'),
+                previous: $exception,
+            );
+        } catch (ModelNotFoundException|InvalidArgumentException $exception) {
+            throw new ImportCommitException(
+                __('Referenced data or import configuration changed after validation. No records were imported. Preview the file again and retry.'),
+                previous: $exception,
+            );
+        }
 
         return count($result->rows);
     }

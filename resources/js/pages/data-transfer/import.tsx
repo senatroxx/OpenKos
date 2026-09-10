@@ -12,6 +12,8 @@ type PageProps = {
     maxRows: number;
     maxFileSizeMb: number;
     backUrl: string;
+    previewUrl: string;
+    commitUrl: string;
 };
 
 export default function Import({
@@ -20,6 +22,8 @@ export default function Import({
     maxRows,
     maxFileSizeMb,
     backUrl,
+    previewUrl,
+    commitUrl,
 }: PageProps) {
     return (
         <>
@@ -47,6 +51,8 @@ export default function Import({
                             datasetLabel={datasetLabel}
                             maxRows={maxRows}
                             maxFileSizeMb={maxFileSizeMb}
+                            previewUrl={previewUrl}
+                            commitUrl={commitUrl}
                         />
                     </CardContent>
                 </Card>

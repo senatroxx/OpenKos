@@ -76,6 +76,22 @@ final class UnitRatesDefinition extends DatasetDefinition
         }
 
         $rowErrorCount = count($context->errors);
+        $contextPropertySlug = $context->constraints['property_slug'] ?? null;
+        $contextUnitName = $context->constraints['unit_name'] ?? null;
+        $contextUnitId = $context->constraints['unit_id'] ?? null;
+
+        if ($contextPropertySlug !== null && $values['property_slug'] !== $contextPropertySlug) {
+            $context->error($line, 'property_slug', __('This import must target the selected property.'));
+
+            return null;
+        }
+
+        if ($contextUnitName !== null && $values['unit_name'] !== $contextUnitName) {
+            $context->error($line, 'unit_name', __('This import must target the selected unit.'));
+
+            return null;
+        }
+
         $property = $this->accessibleProperty($actor, (string) $values['property_slug']);
 
         if ($property === null) {
@@ -85,7 +101,9 @@ final class UnitRatesDefinition extends DatasetDefinition
         }
 
         $unitKey = mb_strtolower($property->id.'|'.(string) $values['unit_name']);
-        $unit = $context->state['unit_cache'][$unitKey] ?? null;
+        $unit = $contextUnitId !== null
+            ? $this->accessibleUnitById($actor, (int) $contextUnitId)
+            : $context->state['unit_cache'][$unitKey] ?? null;
 
         if (! $unit instanceof Unit) {
             $units = Unit::query()
@@ -165,7 +183,14 @@ final class UnitRatesDefinition extends DatasetDefinition
 
     public function persist(array $row, User $actor): Model
     {
-        $unit = Unit::findOrFail($row['unit_id']);
+        $unit = $this->accessibleUnitById($actor, (int) $row['unit_id']);
+
+        if (! $unit instanceof Unit) {
+            throw new ImportCommitException(
+                __('The referenced unit was deleted, deactivated, or is no longer accessible. No records were imported. Preview the file again and retry.'),
+            );
+        }
+
         unset($row['unit_id']);
 
         return $this->createUnitRate->execute($unit, $row);

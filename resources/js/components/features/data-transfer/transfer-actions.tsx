@@ -8,9 +8,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import {
-    commit,
     exportMethod,
-    preview,
     template,
 } from '@/actions/App/Http/Controllers/DataTransferController';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -33,6 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { t } from '@/lib/i18n';
+import { commit as commitRoute, preview as previewRoute } from '@/routes/data-transfer';
 import type { QueryParams } from '@/wayfinder';
 
 export const TRANSFER_MAX_ROWS = 10_000;
@@ -66,7 +65,8 @@ function normalizeErrors(value: unknown): TransferError[] {
                 typeof error === 'object' &&
                 error !== null &&
                 typeof error.field === 'string' &&
-                typeof error.message === 'string',
+                typeof error.message === 'string' &&
+                (typeof error.line === 'number' || error.line === null),
         );
     }
 
@@ -92,11 +92,15 @@ export function TransferImportForm({
     datasetLabel,
     maxRows = TRANSFER_MAX_ROWS,
     maxFileSizeMb = TRANSFER_MAX_FILE_SIZE_MB,
+    previewUrl,
+    commitUrl,
 }: {
     dataset: string;
     datasetLabel: string;
     maxRows?: number;
     maxFileSizeMb?: number;
+    previewUrl?: string;
+    commitUrl?: string;
 }) {
     const [previewResult, setPreviewResult] = useState<TransferResponse | null>(
         null,
@@ -120,7 +124,7 @@ export function TransferImportForm({
         setPreviewResult(null);
         setCommittedCount(null);
 
-        request.withAllErrors().post(preview().url, {
+        request.withAllErrors().post(previewUrl ?? previewRoute.url(), {
             onSuccess: (response) => {
                 setPreviewResult(response);
                 setErrors(response.errors ?? []);
@@ -145,7 +149,7 @@ export function TransferImportForm({
         setErrors([]);
         setCommittedCount(null);
 
-        request.withAllErrors().post(commit().url, {
+        request.withAllErrors().post(commitUrl ?? commitRoute.url(), {
             onSuccess: (response) => {
                 setCommittedCount(response.count ?? 0);
                 setPreviewResult(null);

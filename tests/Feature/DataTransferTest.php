@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DataTransferDataset;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
@@ -8,6 +9,8 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitRate;
 use App\Models\User;
+use App\Services\DataTransfer\ImportCommitException;
+use App\Services\DataTransfer\MasterDataTransferService;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Http\UploadedFile;
@@ -59,7 +62,8 @@ it('renders dedicated contextual transfer pages with export filters', function (
         ->get(route('properties.transfer.import'))
         ->assertInertia(fn ($page) => $page
             ->component('data-transfer/import')
-            ->where('dataset', 'properties'));
+            ->where('dataset', 'properties')
+            ->where('previewUrl', route('data-transfer.preview')));
 
     $this->actingAs($user)
         ->get(route('properties.transfer.export', [
@@ -85,6 +89,129 @@ it('renders dedicated contextual transfer pages with export filters', function (
             ->where('dataset', 'unit-rates')
             ->where('context.property_slug', $property->slug)
             ->where('context.unit_name', $unit->name));
+});
+
+it('uses namespaced transfer routes that do not collide with entity slugs', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'import']);
+    $unit = Unit::factory()->for($property)->create(['slug' => 'import']);
+
+    expect(route('properties.transfer.import'))->toEndWith('/properties/transfer/import')
+        ->and(route('properties.units.transfer.import', ['property' => $property]))
+        ->toEndWith('/properties/import/units/transfer/import')
+        ->and(route('properties.units.rates.transfer.import', [
+            'property' => $property,
+            'unit' => $unit,
+        ]))->toEndWith('/properties/import/units/import/rates/transfer/import');
+
+    $this->actingAs($user)
+        ->get(route('properties.show', ['property' => $property]))
+        ->assertSuccessful();
+
+    $this->actingAs($user)
+        ->get(route('properties.units.show', ['property' => $property, 'unit' => $unit]))
+        ->assertSuccessful();
+});
+
+it('rejects malformed CSV syntax before accepting rows', function () {
+    $user = User::factory()->owner()->create();
+
+    $response = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'properties',
+        'file' => csvFile('properties.csv', "slug,name\nvalid,Valid\nbroken,\"Unterminated"),
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('valid', false)
+        ->assertJsonPath('row_count', 1)
+        ->assertJsonPath('errors.0.field', 'file');
+
+    expect($response->json('errors.0.message'))->toContain('malformed syntax')
+        ->and(Property::query()->where('slug', 'valid')->exists())->toBeFalse();
+});
+
+it('accepts RFC-compatible escaped quotes in CSV values', function () {
+    $user = User::factory()->owner()->create();
+
+    $response = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'properties',
+        'file' => csvFile('properties.csv', "slug,name\nquoted,\"House, \"\"A\"\"\""),
+    ]);
+
+    $response->assertSuccessful()
+        ->assertJsonPath('valid', true)
+        ->assertJsonPath('row_count', 1);
+});
+
+it('keeps contextual unit imports inside the selected property', function () {
+    $user = User::factory()->owner()->create();
+    $selectedProperty = Property::factory()->create(['slug' => 'selected-property']);
+    $otherProperty = Property::factory()->create(['slug' => 'other-property']);
+
+    $response = $this->actingAs($user)->post(
+        route('properties.units.transfer.preview', ['property' => $selectedProperty]),
+        [
+            'dataset' => 'units',
+            'file' => csvFile('units.csv', implode("\n", [
+                'property_slug,name,capacity',
+                "{$otherProperty->slug},Escaped Unit,1",
+            ])),
+        ],
+    );
+
+    $response->assertStatus(422)
+        ->assertJsonPath('valid', false)
+        ->assertJsonPath('errors.0.field', 'property_slug');
+
+    expect(Unit::query()->where('name', 'Escaped Unit')->exists())->toBeFalse();
+});
+
+it('returns a clear commit error when a referenced property becomes inaccessible', function () {
+    $user = User::factory()->owner()->create();
+    $firstProperty = Property::factory()->create(['slug' => 'first-property']);
+    $staleProperty = Property::factory()->create(['slug' => 'stale-property']);
+    $file = csvFile('units.csv', implode("\n", [
+        'property_slug,name,capacity',
+        "{$firstProperty->slug},First Unit,1",
+        "{$staleProperty->slug},Stale Unit,1",
+    ]));
+    $transfer = app(MasterDataTransferService::class);
+    $result = $transfer->validate(
+        DataTransferDataset::Units,
+        $file,
+        $user,
+    );
+
+    expect($result->isValid())->toBeTrue();
+
+    $staleProperty->delete();
+
+    expect(fn () => $transfer->commit(DataTransferDataset::Units, $result, $user))
+        ->toThrow(ImportCommitException::class, 'deleted, deactivated, or is no longer accessible');
+
+    expect(Unit::query()->whereIn('name', ['First Unit', 'Stale Unit'])->exists())->toBeFalse();
+});
+
+it('returns a clear commit error when rate currency settings change', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'rate-property']);
+    $unit = Unit::factory()->for($property)->create(['name' => 'Rate Unit']);
+    $file = csvFile(
+        'unit-rates.csv',
+        "property_slug,unit_name,billing_interval,billing_unit,amount,currency\n{$property->slug},{$unit->name},1,month,100,USD",
+    );
+    $existingRateCount = UnitRate::query()->where('unit_id', $unit->id)->count();
+    $transfer = app(MasterDataTransferService::class);
+    $result = $transfer->validate(DataTransferDataset::UnitRates, $file, $user);
+
+    expect($result->isValid())->toBeTrue();
+
+    Setting::set('supported_currencies', ['IDR']);
+
+    expect(fn () => $transfer->commit(DataTransferDataset::UnitRates, $result, $user))
+        ->toThrow(ImportCommitException::class, 'configuration changed after validation');
+
+    expect(UnitRate::query()->where('unit_id', $unit->id)->count())->toBe($existingRateCount);
 });
 
 it('rejects unknown headers and reports the file-level header error', function () {
@@ -117,6 +244,20 @@ it('rejects duplicate CSV headers', function () {
 
     $response->assertStatus(422)->assertJsonPath('valid', false);
     expect($response->json('errors.0.field'))->toBe('name');
+});
+
+it('rejects property slugs that differ only by case from existing records', function () {
+    $user = User::factory()->owner()->create();
+    Property::factory()->create(['slug' => 'case-sensitive-slug']);
+
+    $response = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'properties',
+        'file' => csvFile('properties.csv', "slug,name\nCASE-SENSITIVE-SLUG,Duplicate"),
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonPath('valid', false)
+        ->assertJsonPath('errors.0.field', 'slug');
 });
 
 it('rejects CSV rows whose width does not match the header', function () {

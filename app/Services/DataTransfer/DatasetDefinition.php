@@ -4,6 +4,7 @@ namespace App\Services\DataTransfer;
 
 use App\Enums\DataTransferDataset;
 use App\Models\Property;
+use App\Models\Unit;
 use App\Models\User;
 use App\Support\DelimitedValues;
 use Illuminate\Database\Eloquent\Builder;
@@ -136,6 +137,34 @@ abstract class DatasetDefinition
                 'users',
                 fn (Builder $users) => $users->whereKey($actor->id),
             ))
+            ->first();
+    }
+
+    protected function accessiblePropertyById(User $actor, int $propertyId): ?Property
+    {
+        return Property::query()
+            ->whereKey($propertyId)
+            ->where('is_active', true)
+            ->when(! $actor->isOwner(), fn (Builder $query) => $query->whereHas(
+                'users',
+                fn (Builder $users) => $users->whereKey($actor->id),
+            ))
+            ->first();
+    }
+
+    protected function accessibleUnitById(User $actor, int $unitId): ?Unit
+    {
+        return Unit::query()
+            ->whereKey($unitId)
+            ->whereNull('units.deleted_at')
+            ->whereHas('property', function (Builder $property) use ($actor): void {
+                $property
+                    ->where('is_active', true)
+                    ->when(! $actor->isOwner(), fn (Builder $query) => $query->whereHas(
+                        'users',
+                        fn (Builder $users) => $users->whereKey($actor->id),
+                    ));
+            })
             ->first();
     }
 
