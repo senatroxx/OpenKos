@@ -274,7 +274,7 @@ export function FinancialTrendChart({
                             vertical={false}
                         />
                         <XAxis
-                            dataKey="label"
+                            dataKey="month"
                             type="category"
                             allowDuplicatedCategory={false}
                             axisLine={false}
@@ -284,7 +284,12 @@ export function FinancialTrendChart({
                                 fontSize: 11,
                             }}
                             interval={0}
-                            tickFormatter={monthTick}
+                            tickFormatter={(value) =>
+                                monthTick(
+                                    data.find((point) => point.month === value)
+                                        ?.label ?? String(value),
+                                )
+                            }
                             tickMargin={8}
                         />
                         <YAxis domain={chartDomain(hasNegative)} hide />
@@ -296,6 +301,10 @@ export function FinancialTrendChart({
                                 fontWeight: 600,
                                 marginBottom: 4,
                             }}
+                            labelFormatter={(value) =>
+                                data.find((point) => point.month === value)
+                                    ?.label ?? String(value)
+                            }
                             formatter={(value, name, item) =>
                                 tooltipFormatter(
                                     value,
