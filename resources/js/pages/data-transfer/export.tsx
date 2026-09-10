@@ -85,6 +85,7 @@ export default function Export({
                                 activeFilterCount={table.activeFilterCount}
                                 onToggleOption={table.toggleFilterOption}
                                 onClearAll={table.clearAllFilters}
+                                alwaysOpen
                                 searchInput={
                                     searchSupported ? (
                                         <SearchInput
