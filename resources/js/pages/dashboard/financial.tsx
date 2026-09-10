@@ -247,26 +247,6 @@ function compactPerformanceAmount(group: MoneyAggregate): string {
     return `${sign}${wholePart}${decimalPart > 0n ? `.${decimalPart}` : ''}${units[unitIndex].suffix}`;
 }
 
-function ExactPerformanceAmounts({
-    groups,
-}: {
-    groups: MoneyAggregate[];
-}): ReactNode {
-    if (groups.length === 0) {
-        return <span className="text-muted-foreground">—</span>;
-    }
-
-    return (
-        <div className="flex flex-col gap-1 tabular-nums">
-            {groups.map((group) => (
-                <span key={group.currency}>
-                    {formatPrice(group.amount, group.currency)}
-                </span>
-            ))}
-        </div>
-    );
-}
-
 function PerformanceValue({ groups }: { groups: MoneyAggregate[] }) {
     if (groups.length === 0) {
         return <span className="text-muted-foreground">—</span>;
@@ -318,7 +298,47 @@ function PerformanceRate({ rates }: { rates: RateAggregate[] }) {
     );
 }
 
-function PerformanceDetailMetric({
+function CompactPerformanceAmounts({ groups }: { groups: MoneyAggregate[] }) {
+    if (groups.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    const exactValues = groups
+        .map((group) => formatPrice(group.amount, group.currency))
+        .join(' · ');
+
+    return (
+        <div
+            className="flex flex-col gap-1 text-sm font-semibold tabular-nums"
+            title={exactValues}
+            aria-label={exactValues}
+        >
+            {groups.map((group) => (
+                <span key={group.currency} className="whitespace-nowrap">
+                    {group.currency} {compactPerformanceAmount(group)}
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function CompactPerformanceRates({ rates }: { rates: RateAggregate[] }) {
+    if (rates.length === 0) {
+        return <span className="text-muted-foreground">—</span>;
+    }
+
+    return (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm font-semibold tabular-nums">
+            {rates.map((rate) => (
+                <span key={rate.currency} className="whitespace-nowrap">
+                    {rate.currency} {rate.rate}%
+                </span>
+            ))}
+        </div>
+    );
+}
+
+function PerformanceDetailBlock({
     label,
     children,
 }: {
@@ -326,9 +346,9 @@ function PerformanceDetailMetric({
     children: ReactNode;
 }) {
     return (
-        <div className="flex items-start justify-between gap-4">
-            <dt className="text-sm text-muted-foreground">{label}</dt>
-            <dd className="text-right text-sm font-medium">{children}</dd>
+        <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">{label}</p>
+            <div className="mt-1.5">{children}</div>
         </div>
     );
 }
@@ -339,66 +359,72 @@ function PropertyPerformanceDetails({
     row: FinancialPropertyPerformance;
 }) {
     return (
-        <div className="rounded-md bg-muted/30 p-4">
-            <p className="mb-4 text-sm font-semibold">{row.name}</p>
-            <div className="grid gap-6 sm:grid-cols-3">
+        <div className="bg-muted/30 p-4">
+            <div className="space-y-5">
                 <section>
                     <h4 className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         {t('Financial')}
                     </h4>
-                    <dl className="space-y-2.5">
-                        <PerformanceDetailMetric label={t('Revenue')}>
-                            <ExactPerformanceAmounts groups={row.revenue} />
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('Expenses')}>
-                            <ExactPerformanceAmounts groups={row.expenses} />
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('NOI')}>
-                            <ExactPerformanceAmounts groups={row.noi} />
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('Operating margin')}>
-                            <PerformanceRate rates={row.operating_margin} />
-                        </PerformanceDetailMetric>
-                    </dl>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <PerformanceDetailBlock label={t('Revenue')}>
+                            <CompactPerformanceAmounts groups={row.revenue} />
+                        </PerformanceDetailBlock>
+                        <PerformanceDetailBlock label={t('Expenses')}>
+                            <CompactPerformanceAmounts groups={row.expenses} />
+                        </PerformanceDetailBlock>
+                        <PerformanceDetailBlock label={t('NOI')}>
+                            <CompactPerformanceAmounts groups={row.noi} />
+                        </PerformanceDetailBlock>
+                    </div>
+                    <div className="mt-4 border-t border-border/60 pt-3">
+                        <PerformanceDetailBlock label={t('Operating margin')}>
+                            <CompactPerformanceRates
+                                rates={row.operating_margin}
+                            />
+                        </PerformanceDetailBlock>
+                    </div>
                 </section>
 
-                <section>
+                <section className="border-t border-border/60 pt-5">
                     <h4 className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         {t('Collections')}
                     </h4>
-                    <dl className="space-y-2.5">
-                        <PerformanceDetailMetric label={t('Billed')}>
-                            <ExactPerformanceAmounts groups={row.billed} />
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('Applied')}>
-                            <ExactPerformanceAmounts groups={row.collected} />
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('Outstanding')}>
-                            <ExactPerformanceAmounts groups={row.outstanding} />
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('Collection rate')}>
-                            <PerformanceRate rates={row.collection_rate} />
-                        </PerformanceDetailMetric>
-                    </dl>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <PerformanceDetailBlock label={t('Billed')}>
+                            <CompactPerformanceAmounts groups={row.billed} />
+                        </PerformanceDetailBlock>
+                        <PerformanceDetailBlock label={t('Collected')}>
+                            <CompactPerformanceAmounts groups={row.collected} />
+                        </PerformanceDetailBlock>
+                        <PerformanceDetailBlock label={t('Outstanding')}>
+                            <CompactPerformanceAmounts
+                                groups={row.outstanding}
+                            />
+                        </PerformanceDetailBlock>
+                    </div>
+                    <div className="mt-4 border-t border-border/60 pt-3">
+                        <PerformanceDetailBlock label={t('Collection rate')}>
+                            <CompactPerformanceRates
+                                rates={row.collection_rate}
+                            />
+                        </PerformanceDetailBlock>
+                    </div>
                 </section>
 
-                <section>
+                <section className="border-t border-border/60 pt-5">
                     <h4 className="mb-3 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                         {t('Occupancy')}
                     </h4>
-                    <dl className="space-y-2.5">
-                        <PerformanceDetailMetric label={t('Occupied')}>
-                            <span className="tabular-nums">
-                                {row.occupancy.occupied_units} /{' '}
-                                {row.occupancy.total_units}
-                            </span>
-                        </PerformanceDetailMetric>
-                        <PerformanceDetailMetric label={t('Occupancy rate')}>
-                            <span className="tabular-nums">
-                                {row.occupancy.occupancy_percentage}%
-                            </span>
-                        </PerformanceDetailMetric>
-                    </dl>
+                    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                        <span className="text-base font-semibold tabular-nums">
+                            {row.occupancy.occupied_units} /{' '}
+                            {row.occupancy.total_units} {t('units')}
+                        </span>
+                        <span className="text-sm font-medium text-muted-foreground tabular-nums">
+                            {row.occupancy.occupancy_percentage}%{' '}
+                            {t('occupied')}
+                        </span>
+                    </div>
                 </section>
             </div>
         </div>
