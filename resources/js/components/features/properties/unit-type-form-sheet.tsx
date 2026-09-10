@@ -75,6 +75,18 @@ function normalizeFurnishing(value: string | null | undefined): string {
     );
 }
 
+function normalizeNumericInput(
+    value: number | string | null | undefined,
+): string {
+    if (value === null || value === undefined || value === '') {
+        return '';
+    }
+
+    const numericValue = Number(value);
+
+    return Number.isFinite(numericValue) ? String(numericValue) : String(value);
+}
+
 export default function UnitTypeFormSheet({
     property,
     unitType,
@@ -94,12 +106,9 @@ export default function UnitTypeFormSheet({
         useForm<UnitTypeFormData>({
             name: unitType?.name ?? '',
             description: unitType?.description ?? '',
-            bedrooms:
-                unitType?.bedrooms === null || unitType?.bedrooms === undefined
-                    ? ''
-                    : String(unitType.bedrooms),
-            bathrooms: unitType?.bathrooms ?? '',
-            size_sqm: unitType?.size_sqm ?? '',
+            bedrooms: normalizeNumericInput(unitType?.bedrooms),
+            bathrooms: normalizeNumericInput(unitType?.bathrooms),
+            size_sqm: normalizeNumericInput(unitType?.size_sqm),
             furnishing: normalizeFurnishing(unitType?.furnishing),
             amenity_ids:
                 unitType?.amenities?.map((amenity) => amenity.id) ?? [],
