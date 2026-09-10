@@ -114,7 +114,13 @@ function FinancialCard({
         <MetricCard
             label={label}
             subParams={subtext}
-            value={<CurrencyAmountList groups={groups} compact />}
+            value={
+                <CurrencyAmountList
+                    groups={groups}
+                    compact
+                    className={variant === 'green' ? 'text-chart-2' : undefined}
+                />
+            }
             valueFullWidth
             icon={Icon}
             variant={variant}
@@ -784,11 +790,14 @@ export default function Financial({
                         <MetricCard
                             label={t('Collection Rate')}
                             value={
-                                <RateList
-                                    rates={
-                                        financial.collections.collection_rate
-                                    }
-                                />
+                                <div className="text-chart-2">
+                                    <RateList
+                                        rates={
+                                            financial.collections
+                                                .collection_rate
+                                        }
+                                    />
+                                </div>
                             }
                             subtext={t(
                                 'Confirmed applied ÷ selected billed invoices',
@@ -909,8 +918,7 @@ export default function Financial({
                                             {
                                                 label: t('Cash Collected'),
                                                 amount: cashFlowCollected,
-                                                className:
-                                                    'text-surface-green-foreground',
+                                                className: 'text-chart-2',
                                             },
                                             {
                                                 label: t('Expenses'),

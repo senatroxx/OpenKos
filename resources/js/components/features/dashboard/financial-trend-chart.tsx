@@ -43,7 +43,6 @@ type ExpenseBreakdownCategory = {
 };
 
 type PlotPoint = {
-    bucket: number;
     month: string;
     label: string;
     raw: Partial<Record<SeriesKey, string>>;
@@ -59,7 +58,7 @@ const SERIES_COLORS: Record<SeriesKey, string> = {
     revenue: 'var(--chart-2)',
     expenses: 'var(--surface-amber-foreground)',
     noi: 'var(--surface-blue-foreground)',
-    collected: 'var(--surface-green-foreground)',
+    collected: 'var(--chart-2)',
 };
 
 const TOOLTIP_CONTENT_STYLE = {
@@ -227,7 +226,7 @@ export function FinancialTrendChart({
         );
     }
 
-    const data = points.map<PlotPoint>((point, bucket) => {
+    const data = points.map<PlotPoint>((point) => {
         const raw: Partial<Record<SeriesKey, string>> = {};
         const values = {
             revenue: 0,
@@ -244,7 +243,6 @@ export function FinancialTrendChart({
         });
 
         return {
-            bucket,
             month: point.month,
             label: point.label,
             raw,
@@ -266,6 +264,8 @@ export function FinancialTrendChart({
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart
                         data={data}
+                        barCategoryGap={0}
+                        barGap={4}
                         margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
                     >
                         <CartesianGrid
@@ -274,11 +274,9 @@ export function FinancialTrendChart({
                             vertical={false}
                         />
                         <XAxis
-                            dataKey="bucket"
-                            type="number"
-                            domain={[-0.5, Math.max(data.length - 0.5, 0.5)]}
-                            ticks={data.map((point) => point.bucket)}
-                            allowDecimals={false}
+                            dataKey="label"
+                            type="category"
+                            allowDuplicatedCategory={false}
                             axisLine={false}
                             tickLine={false}
                             tick={{
@@ -286,11 +284,7 @@ export function FinancialTrendChart({
                                 fontSize: 11,
                             }}
                             interval={0}
-                            tickFormatter={(value) =>
-                                monthTick(
-                                    data[Number(value)]?.label ?? String(value),
-                                )
-                            }
+                            tickFormatter={monthTick}
                             tickMargin={8}
                         />
                         <YAxis domain={chartDomain(hasNegative)} hide />
@@ -302,9 +296,6 @@ export function FinancialTrendChart({
                                 fontWeight: 600,
                                 marginBottom: 4,
                             }}
-                            labelFormatter={(value) =>
-                                data[Number(value)]?.label ?? String(value)
-                            }
                             formatter={(value, name, item) =>
                                 tooltipFormatter(
                                     value,
@@ -350,7 +341,6 @@ export function FinancialTrendChart({
                                     name={item.label}
                                     fill={SERIES_COLORS[item.key]}
                                     radius={[3, 3, 0, 0]}
-                                    maxBarSize={18}
                                     isAnimationActive={false}
                                 />
                             ),
