@@ -246,14 +246,14 @@ export function MetricCard({
                     <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                         {label}
                     </p>
-                    <p
+                    <div
                         className={cn(
                             'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
                             styles.value,
                         )}
                     >
                         {value}
-                    </p>
+                    </div>
                     {subtext && !subtextFullWidth && (
                         <div className="mt-1 text-xs font-medium text-muted-foreground">
                             {subtext}
