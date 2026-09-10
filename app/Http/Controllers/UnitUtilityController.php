@@ -56,6 +56,7 @@ class UnitUtilityController extends Controller
             'meters' => $unit->utilityMeters->map(fn (UtilityMeter $meter): array => [
                 'id' => $meter->id,
                 'utility_type' => $meter->utility_type->value,
+                'utility_name' => $meter->utility_name,
                 'identifier' => $meter->identifier,
                 'measurement_unit' => $meter->measurement_unit,
                 'rate' => (string) $meter->rate,

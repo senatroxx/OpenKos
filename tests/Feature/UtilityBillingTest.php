@@ -117,6 +117,9 @@ it('bills only eligible unit readings within partial lease boundaries', function
 it('uses the reading rate snapshot, copies metadata, and is idempotent', function () {
     $lease = makeUtilityLease();
     $meter = UtilityMeter::factory()->for($lease->unit)->create([
+        'utility_type' => 'custom',
+        'utility_name' => 'Gas',
+        'measurement_unit' => 'kg',
         'rate' => '1000',
         'currency' => 'IDR',
     ]);
@@ -131,6 +134,7 @@ it('uses the reading rate snapshot, copies metadata, and is idempotent', functio
 
     $meter->update([
         'utility_type' => $meter->utility_type->value,
+        'utility_name' => $meter->utility_name,
         'identifier' => $meter->identifier,
         'measurement_unit' => $meter->measurement_unit,
         'rate' => '2000',
@@ -147,6 +151,7 @@ it('uses the reading rate snapshot, copies metadata, and is idempotent', functio
         ->and($lineItem->amount)->toBe('100000.000')
         ->and($lineItem->metadata['rate'])->toBe('1000.000')
         ->and($lineItem->metadata['currency'])->toBe('IDR')
+        ->and($lineItem->metadata['utility_name'])->toBe('Gas')
         ->and($lineItem->metadata['reading_reference'])->toBe('manual-reading-001');
 
     expect(app(GenerateInvoices::class)->execute($lease))->toBe(0)

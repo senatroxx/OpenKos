@@ -36,6 +36,7 @@ import { UnitLayout } from './layout';
 
 type MeterFormData = {
     utility_type: UtilityMeter['utility_type'];
+    utility_name: string;
     identifier: string;
     measurement_unit: string;
     rate: string;
@@ -78,6 +79,16 @@ function periodEnd(periodStart: string): string {
     date.setMonth(date.getMonth() + 1, 0);
 
     return date.toISOString().slice(0, 10);
+}
+
+function defaultMeasurementUnit(
+    utilityType: UtilityMeter['utility_type'],
+): string {
+    return utilityType === 'electricity'
+        ? 'kWh'
+        : utilityType === 'water'
+          ? 'm³'
+          : '';
 }
 
 function previewCharge(
@@ -125,8 +136,9 @@ export default function UnitUtilities({
         useState<UtilityReading | null>(null);
     const meterForm = useForm<MeterFormData>({
         utility_type: 'electricity',
+        utility_name: '',
         identifier: '',
-        measurement_unit: 'kWh',
+        measurement_unit: defaultMeasurementUnit('electricity'),
         rate: '',
         currency: defaultCurrency,
         is_active: true,
@@ -150,6 +162,7 @@ export default function UnitUtilities({
             meter
                 ? {
                       utility_type: meter.utility_type,
+                      utility_name: meter.utility_name ?? '',
                       identifier: meter.identifier,
                       measurement_unit: meter.measurement_unit,
                       rate: meter.rate,
@@ -158,14 +171,29 @@ export default function UnitUtilities({
                   }
                 : {
                       utility_type: 'electricity',
+                      utility_name: '',
                       identifier: '',
-                      measurement_unit: 'kWh',
+                      measurement_unit: defaultMeasurementUnit('electricity'),
                       rate: '',
                       currency: defaultCurrency,
                       is_active: true,
                   },
         );
         setMeterDialogOpen(true);
+    }
+
+    function handleUtilityTypeChange(value: string) {
+        const utilityType = value as UtilityMeter['utility_type'];
+
+        meterForm.setData('utility_type', utilityType);
+        meterForm.setData(
+            'measurement_unit',
+            defaultMeasurementUnit(utilityType),
+        );
+
+        if (utilityType !== 'custom') {
+            meterForm.setData('utility_name', '');
+        }
     }
 
     function closeMeterDialog(open: boolean) {
@@ -360,11 +388,15 @@ export default function UnitUtilities({
                                                 {meter.identifier}
                                             </h3>
                                             <Badge variant="outline">
-                                                {t(
-                                                    utilityLabels[
-                                                        meter.utility_type
-                                                    ],
-                                                )}
+                                                {meter.utility_type ===
+                                                    'custom' &&
+                                                meter.utility_name
+                                                    ? meter.utility_name
+                                                    : t(
+                                                          utilityLabels[
+                                                              meter.utility_type
+                                                          ],
+                                                      )}
                                             </Badge>
                                             <Badge
                                                 variant="outline"
@@ -387,7 +419,7 @@ export default function UnitUtilities({
                                                 meter.rate,
                                                 meter.currency,
                                             )}{' '}
-                                            {t('per unit')}
+                                            / {meter.measurement_unit}
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -677,12 +709,7 @@ export default function UnitUtilities({
                             </Label>
                             <Select
                                 value={meterForm.data.utility_type}
-                                onValueChange={(value) =>
-                                    meterForm.setData(
-                                        'utility_type',
-                                        value as UtilityMeter['utility_type'],
-                                    )
-                                }
+                                onValueChange={handleUtilityTypeChange}
                             >
                                 <SelectTrigger id="utility-type">
                                     <SelectValue />
@@ -704,6 +731,28 @@ export default function UnitUtilities({
                                 message={meterForm.errors.utility_type}
                             />
                         </div>
+                        {meterForm.data.utility_type === 'custom' && (
+                            <div className="grid gap-2">
+                                <Label htmlFor="utility-name">
+                                    {t('Utility name')}
+                                </Label>
+                                <Input
+                                    id="utility-name"
+                                    required
+                                    value={meterForm.data.utility_name}
+                                    onChange={(event) =>
+                                        meterForm.setData(
+                                            'utility_name',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder={t('e.g. Gas')}
+                                />
+                                <InputError
+                                    message={meterForm.errors.utility_name}
+                                />
+                            </div>
+                        )}
                         <div className="grid gap-2">
                             <Label htmlFor="meter-identifier">
                                 {t('Meter identifier')}
@@ -735,7 +784,13 @@ export default function UnitUtilities({
                                         event.target.value,
                                     )
                                 }
-                                placeholder="kWh"
+                                placeholder={
+                                    meterForm.data.utility_type === 'custom'
+                                        ? t('e.g. kg')
+                                        : defaultMeasurementUnit(
+                                              meterForm.data.utility_type,
+                                          )
+                                }
                             />
                             <InputError
                                 message={meterForm.errors.measurement_unit}
@@ -743,7 +798,13 @@ export default function UnitUtilities({
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="grid gap-2">
-                                <Label htmlFor="meter-rate">{t('Rate')}</Label>
+                                <Label htmlFor="meter-rate">
+                                    {t('Rate per :unit', {
+                                        unit:
+                                            meterForm.data.measurement_unit.trim() ||
+                                            'unit',
+                                    })}
+                                </Label>
                                 <Input
                                     id="meter-rate"
                                     type="number"
@@ -836,7 +897,7 @@ export default function UnitUtilities({
                         </DialogTitle>
                         <DialogDescription>
                             {selectedMeter &&
-                                `${selectedMeter.identifier} · ${selectedMeter.measurement_unit} · ${formatPrice(selectedMeter.rate, selectedMeter.currency)} ${t('per unit')}`}
+                                `${selectedMeter.identifier} · ${selectedMeter.measurement_unit} · ${formatPrice(selectedMeter.rate, selectedMeter.currency)} / ${selectedMeter.measurement_unit}`}
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={submitReading} className="grid gap-4">

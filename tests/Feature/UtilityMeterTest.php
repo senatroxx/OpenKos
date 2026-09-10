@@ -99,3 +99,41 @@ it('snapshots meter rate and currency on each reading', function () {
         ->and($second->currency)->toBe('IDR')
         ->and(UtilityReading::query()->count())->toBe(2);
 });
+
+it('stores custom utility names and clears them for standard meters', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $unit = Unit::factory()->for($property)->create();
+
+    $this->actingAs($user)
+        ->post(route('properties.units.utilities.meters.store', [$property, $unit]), [
+            'utility_type' => 'custom',
+            'utility_name' => 'Gas',
+            'identifier' => 'GAS-001',
+            'measurement_unit' => 'kg',
+            'rate' => '20000',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    $meter = UtilityMeter::query()->where('identifier', 'GAS-001')->firstOrFail();
+
+    expect($meter->utility_name)->toBe('Gas');
+
+    $this->actingAs($user)
+        ->put(route('properties.units.utilities.meters.update', [$property, $unit, $meter]), [
+            'utility_type' => 'water',
+            'utility_name' => 'Gas',
+            'identifier' => 'GAS-001',
+            'measurement_unit' => 'm³',
+            'rate' => '7500',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect($meter->refresh()->utility_name)->toBeNull();
+});

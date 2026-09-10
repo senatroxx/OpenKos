@@ -30,6 +30,7 @@ class UpdateUtilityMeterRequest extends FormRequest
 
         return [
             'utility_type' => ['required', new Enum(UtilityMeterType::class)],
+            'utility_name' => ['nullable', 'string', 'max:255', 'required_if:utility_type,custom'],
             'identifier' => [
                 'required',
                 'string',

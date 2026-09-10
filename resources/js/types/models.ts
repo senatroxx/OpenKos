@@ -148,6 +148,7 @@ export type UtilityReading = {
 export type UtilityMeter = {
     id: number;
     utility_type: 'electricity' | 'water' | 'custom';
+    utility_name: string | null;
     identifier: string;
     measurement_unit: string;
     rate: string;

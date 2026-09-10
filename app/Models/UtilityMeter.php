@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'unit_id',
     'utility_type',
+    'utility_name',
     'identifier',
     'measurement_unit',
     'rate',
@@ -32,6 +33,12 @@ class UtilityMeter extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (UtilityMeter $meter): void {
+            if ($meter->utility_type !== UtilityMeterType::Custom) {
+                $meter->utility_name = null;
+            }
+        });
+
         static::creating(function (UtilityMeter $meter): void {
             $meter->currency = app(MoneyConverter::class)->normalizeCurrency(
                 $meter->getAttributeFromArray('currency'),

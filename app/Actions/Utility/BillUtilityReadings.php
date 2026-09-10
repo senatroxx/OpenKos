@@ -53,7 +53,7 @@ class BillUtilityReadings
                     $amount = $this->correctionAmount($reading);
                     $metadata = $this->correctionMetadata($reading);
                     $type = 'utility_adjustment';
-                    $description = 'Utility correction · '.$reading->meter->identifier.' · '.$reading->period_start->format('F Y');
+                    $description = 'Utility correction · '.$this->utilityLabel($reading).' · '.$reading->period_start->format('F Y');
                 } else {
                     if (! $this->eligibleForInvoice($reading, $lockedInvoice)) {
                         continue;
@@ -66,7 +66,7 @@ class BillUtilityReadings
                     $amount = $this->chargeAmount((string) $reading->consumption, (string) $reading->rate, $reading->currency);
                     $metadata = $this->readingMetadata($reading);
                     $type = 'utility';
-                    $description = $reading->meter->utility_type->value.' · '.$reading->consumption.' '.$reading->meter->measurement_unit.' · '.$reading->period_start->format('F Y');
+                    $description = $this->utilityLabel($reading).' · '.$reading->consumption.' '.$reading->meter->measurement_unit.' · '.$reading->period_start->format('F Y');
                 }
 
                 $this->appendLineItem($lockedInvoice, $reading, $type, $description, $amount, $metadata);
@@ -171,6 +171,7 @@ class BillUtilityReadings
             'meter_id' => $reading->meter->id,
             'meter_identifier' => $reading->meter->identifier,
             'utility_type' => $reading->meter->utility_type->value,
+            'utility_name' => $reading->meter->utility_name,
             'measurement_unit' => $reading->meter->measurement_unit,
             'reading_id' => $reading->id,
             'reading_kind' => $reading->reading_kind->value,
@@ -201,5 +202,10 @@ class BillUtilityReadings
             'original_consumption' => (string) $original->consumption,
             'original_amount' => (string) $original->invoiceLineItem?->amount,
         ];
+    }
+
+    private function utilityLabel(UtilityReading $reading): string
+    {
+        return $reading->meter->utility_name ?? $reading->meter->utility_type->value;
     }
 }

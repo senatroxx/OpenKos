@@ -22,6 +22,7 @@ class UtilityMeterFactory extends Factory
         return [
             'unit_id' => Unit::factory(),
             'utility_type' => UtilityMeterType::Electricity,
+            'utility_name' => null,
             'identifier' => fake()->unique()->bothify('MTR-####'),
             'measurement_unit' => 'kWh',
             'rate' => '1000',
