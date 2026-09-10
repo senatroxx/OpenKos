@@ -69,8 +69,7 @@ class StoreUnitTypeRequest extends FormRequest
     {
         $ids = collect($this->input('amenity_ids', []))
             ->filter(fn (mixed $id): bool => is_int($id) || (is_string($id) && ctype_digit($id)))
-            ->map(fn (mixed $id): int => (int) $id)
-            ->values();
+            ->map(fn (mixed $id): int => (int) $id);
 
         if ($ids->isEmpty()) {
             return;
@@ -79,17 +78,17 @@ class StoreUnitTypeRequest extends FormRequest
         $propertyId = $this->route('property')->id;
         $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'owner_property_id', 'scope', 'is_active']);
 
-        foreach ($ids as $id) {
+        foreach ($ids as $index => $id) {
             $amenity = $amenities->firstWhere('id', $id);
 
             if (! $amenity || ! $amenity->scope->allowsUnitType() || ($amenity->owner_property_id !== null && $amenity->owner_property_id !== $propertyId)) {
-                $validator->errors()->add("amenity_ids.{$ids->search($id)}", __('The selected amenity is not available for this property.'));
+                $validator->errors()->add("amenity_ids.{$index}", __('The selected amenity is not available for this property.'));
 
                 continue;
             }
 
             if (! $amenity->is_active && ! in_array($id, $existingIds, true)) {
-                $validator->errors()->add("amenity_ids.{$ids->search($id)}", __('Inactive amenities cannot be newly assigned.'));
+                $validator->errors()->add("amenity_ids.{$index}", __('Inactive amenities cannot be newly assigned.'));
             }
         }
     }

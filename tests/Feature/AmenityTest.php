@@ -83,6 +83,42 @@ it('rejects another property custom amenity', function () {
         ->assertSessionHasErrors('amenity_ids.0');
 });
 
+it('preserves submitted indexes when validating Unit Type amenities', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $otherProperty = Property::factory()->create();
+    $foreignAmenity = Amenity::factory()->customFor($otherProperty)->create();
+    $inactiveAmenity = Amenity::factory()->create([
+        'scope' => AmenityScope::UnitType,
+        'is_active' => false,
+    ]);
+    $amenityIds = ['not-an-id', $foreignAmenity->id, $inactiveAmenity->id];
+
+    $this->actingAs($user)
+        ->post(route('properties.unit-types.store', $property), [
+            'name' => 'Studio',
+            'amenity_ids' => $amenityIds,
+        ])
+        ->assertSessionHasErrors([
+            'amenity_ids.0',
+            'amenity_ids.1',
+            'amenity_ids.2',
+        ]);
+
+    $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
+
+    $this->actingAs($user)
+        ->put(route('properties.unit-types.update', [$property, $unitType]), [
+            'name' => 'Updated Studio',
+            'amenity_ids' => $amenityIds,
+        ])
+        ->assertSessionHasErrors([
+            'amenity_ids.0',
+            'amenity_ids.1',
+            'amenity_ids.2',
+        ]);
+});
+
 it('scopes custom amenity names case-insensitively within a property', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();

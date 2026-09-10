@@ -35,7 +35,7 @@ return new class extends Migration
         match (DB::getDriverName()) {
             'pgsql', 'sqlite' => $this->dropExpressionIndexes(),
             'mysql', 'mariadb' => $this->dropGeneratedColumnIndexes(),
-            default => null,
+            default => $this->dropPortableFallbackIndexes(),
         };
 
         Schema::table('amenities', function (Blueprint $table): void {
@@ -110,6 +110,17 @@ return new class extends Migration
 
         Schema::table('unit_types', function (Blueprint $table): void {
             $table->unique(['property_id', 'name']);
+        });
+    }
+
+    private function dropPortableFallbackIndexes(): void
+    {
+        Schema::table('amenities', function (Blueprint $table): void {
+            $table->dropUnique('amenities_owner_property_id_name_unique');
+        });
+
+        Schema::table('unit_types', function (Blueprint $table): void {
+            $table->dropUnique('unit_types_property_id_name_unique');
         });
     }
 };

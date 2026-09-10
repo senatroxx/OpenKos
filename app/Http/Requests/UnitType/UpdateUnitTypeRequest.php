@@ -51,8 +51,7 @@ class UpdateUnitTypeRequest extends FormRequest
             $existingIds = $unitType->amenities()->pluck('amenities.id')->map(fn (mixed $id): int => (int) $id)->all();
             $ids = collect($this->input('amenity_ids', []))
                 ->filter(fn (mixed $id): bool => is_int($id) || (is_string($id) && ctype_digit($id)))
-                ->map(fn (mixed $id): int => (int) $id)
-                ->values();
+                ->map(fn (mixed $id): int => (int) $id);
 
             if ($ids->isEmpty()) {
                 return;
