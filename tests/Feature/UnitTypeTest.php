@@ -43,6 +43,27 @@ it('creates a UnitType with nullable structured fields', function () {
         ->and($unitType->furnishing)->toBeNull();
 });
 
+it('stores furnishing as a stable enum value', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('properties.unit-types.store', $property), [
+            'name' => 'Furnished Studio',
+            'furnishing' => 'furnished',
+        ])
+        ->assertRedirect();
+
+    expect(UnitType::query()->sole()->furnishing)->toBe('furnished');
+
+    $this->actingAs($user)
+        ->post(route('properties.unit-types.store', $property), [
+            'name' => 'Invalid Studio',
+            'furnishing' => '0',
+        ])
+        ->assertSessionHasErrors('furnishing');
+});
+
 it('scopes UnitType names to a property', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();

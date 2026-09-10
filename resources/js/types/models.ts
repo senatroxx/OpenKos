@@ -122,6 +122,7 @@ export type Amenity = {
     id: number;
     owner_property_id: number | null;
     name: string;
+    scope: 'property' | 'unit_type' | 'both';
     is_active: boolean;
 };
 

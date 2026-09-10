@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AmenityScope;
 use App\Models\Amenity;
 use App\Models\Property;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -21,6 +22,7 @@ class AmenityFactory extends Factory
         return [
             'owner_property_id' => null,
             'name' => fake()->unique()->words(2, true),
+            'scope' => AmenityScope::Both,
             'is_active' => true,
         ];
     }

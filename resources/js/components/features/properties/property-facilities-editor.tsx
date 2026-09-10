@@ -19,7 +19,10 @@ export default function PropertyFacilitiesEditor({
     const facilityForm = useForm<{ amenity_ids: number[] }>({
         amenity_ids: property.facilities?.map((amenity) => amenity.id) ?? [],
     });
-    const customForm = useForm<{ name: string }>({ name: '' });
+    const customForm = useForm<{ name: string; scope: 'property' }>({
+        name: '',
+        scope: 'property',
+    });
 
     function toggleAmenity(id: number, checked: boolean | 'indeterminate') {
         if (checked === 'indeterminate') {
@@ -87,10 +90,11 @@ export default function PropertyFacilitiesEditor({
                                 <Checkbox
                                     id={`property-facility-${amenity.id}`}
                                     disabled={
-                                        !amenity.is_active &&
-                                        !facilityForm.data.amenity_ids.includes(
-                                            amenity.id,
-                                        )
+                                        amenity.scope === 'unit_type' ||
+                                        (!amenity.is_active &&
+                                            !facilityForm.data.amenity_ids.includes(
+                                                amenity.id,
+                                            ))
                                     }
                                     checked={facilityForm.data.amenity_ids.includes(
                                         amenity.id,
@@ -102,6 +106,11 @@ export default function PropertyFacilitiesEditor({
                                 <span className="min-w-0 flex-1">
                                     {amenity.name}
                                 </span>
+                                {amenity.scope === 'unit_type' && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {t('Unit Type only')}
+                                    </span>
+                                )}
                                 {!amenity.is_active && (
                                     <span className="text-xs text-muted-foreground">
                                         {t('Inactive')}

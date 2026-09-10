@@ -29,15 +29,15 @@ type PageProps = {
     amenities: Amenity[];
 };
 
-function furnishingLabel(value: string | number | null): string {
+function furnishingLabel(value: string | number | null): string | null {
     if (value === null) {
-        return '—';
+        return null;
     }
 
     const normalized = String(value).trim().toLowerCase();
 
     if (normalized === '' || normalized === '0') {
-        return '—';
+        return null;
     }
 
     const labels: Record<string, string> = {
@@ -56,16 +56,34 @@ function furnishingLabel(value: string | number | null): string {
         .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
+function formattedNumber(value: number | string): string {
+    const numericValue = Number(value);
+
+    return Number.isFinite(numericValue) ? String(numericValue) : String(value);
+}
+
 function metricLabel(
     value: number | string | null,
     singular: string,
     plural: string,
-): string {
+): string | null {
     if (value === null || value === '') {
-        return `— ${t(plural)}`;
+        return null;
     }
 
-    return `${value} ${t(Number(value) === 1 ? singular : plural)}`;
+    return `${formattedNumber(value)} ${t(Number(value) === 1 ? singular : plural)}`;
+}
+
+function sizeLabel(value: string | null): string | null {
+    if (value === null || value === '') {
+        return null;
+    }
+
+    return `${formattedNumber(value)} ${t('m²')}`;
+}
+
+function unitCountLabel(count: number): string {
+    return `${count} ${t(count === 1 ? 'unit' : 'units')}`;
 }
 
 function photoCountLabel(count: number): string {
@@ -142,6 +160,22 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                     visibleAmenities.length,
                                 0,
                             );
+                            const details = [
+                                metricLabel(
+                                    unitType.bedrooms,
+                                    'bedroom',
+                                    'bedrooms',
+                                ),
+                                metricLabel(
+                                    unitType.bathrooms,
+                                    'bathroom',
+                                    'bathrooms',
+                                ),
+                                sizeLabel(unitType.size_sqm),
+                                furnishingLabel(unitType.furnishing),
+                            ].filter(
+                                (value): value is string => value !== null,
+                            );
 
                             return (
                                 <article
@@ -181,13 +215,14 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                         value={
                                                             unitType.is_active
                                                                 ? 'active'
-                                                                : 'archived'
+                                                                : 'inactive'
                                                         }
                                                     />
                                                     <Badge variant="outline">
-                                                        {unitType.units_count ??
-                                                            0}{' '}
-                                                        {t('units')}
+                                                        {unitCountLabel(
+                                                            unitType.units_count ??
+                                                                0,
+                                                        )}
                                                     </Badge>
                                                 </div>
                                                 {unitType.description && (
@@ -248,75 +283,54 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                         </div>
 
                                         <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                            <span>
-                                                {metricLabel(
-                                                    unitType.bedrooms,
-                                                    'Bedroom',
-                                                    'Bedrooms',
-                                                )}
-                                            </span>
-                                            <span aria-hidden="true">·</span>
-                                            <span>
-                                                {metricLabel(
-                                                    unitType.bathrooms,
-                                                    'Bathroom',
-                                                    'Bathrooms',
-                                                )}
-                                            </span>
-                                            <span aria-hidden="true">·</span>
-                                            <span>
-                                                {unitType.size_sqm === null ||
-                                                unitType.size_sqm === ''
-                                                    ? `— ${t('m²')}`
-                                                    : `${unitType.size_sqm} ${t('m²')}`}
-                                            </span>
-                                            <span aria-hidden="true">·</span>
-                                            <span>
-                                                {furnishingLabel(
-                                                    unitType.furnishing,
-                                                )}
-                                            </span>
+                                            {details.length > 0 ? (
+                                                details.map((detail, index) => (
+                                                    <span key={detail}>
+                                                        {index > 0 && (
+                                                            <span
+                                                                className="mr-2"
+                                                                aria-hidden="true"
+                                                            >
+                                                                ·
+                                                            </span>
+                                                        )}
+                                                        {detail}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    {t('No unit details')}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                                             {visibleAmenities.length > 0 ? (
                                                 visibleAmenities.map(
-                                                    (amenity, index) => (
-                                                        <span
+                                                    (amenity) => (
+                                                        <Badge
                                                             key={amenity.id}
-                                                            className={
+                                                            variant={
                                                                 amenity.is_active
-                                                                    ? undefined
-                                                                    : 'italic'
+                                                                    ? 'secondary'
+                                                                    : 'outline'
                                                             }
                                                         >
-                                                            {index > 0 && (
-                                                                <span
-                                                                    className="mr-2"
-                                                                    aria-hidden="true"
-                                                                >
-                                                                    ·
-                                                                </span>
-                                                            )}
                                                             {amenity.name}
                                                             {!amenity.is_active &&
                                                                 ` (${t('inactive')})`}
-                                                        </span>
+                                                        </Badge>
                                                     ),
                                                 )
                                             ) : (
-                                                <span>{t('No amenities')}</span>
+                                                <span className="text-xs">
+                                                    {t('No amenities')}
+                                                </span>
                                             )}
                                             {additionalAmenities > 0 && (
-                                                <span>
-                                                    <span
-                                                        className="mr-2"
-                                                        aria-hidden="true"
-                                                    >
-                                                        ·
-                                                    </span>
+                                                <Badge variant="outline">
                                                     +{additionalAmenities}
-                                                </span>
+                                                </Badge>
                                             )}
                                         </div>
 

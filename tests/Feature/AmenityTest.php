@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AmenityScope;
 use App\Models\Amenity;
 use App\Models\Property;
 use App\Models\UnitType;
@@ -32,6 +33,34 @@ it('allows global and property-owned amenities in separate relationships', funct
     expect($property->fresh()->facilities->modelKeys())->toEqualCanonicalizing([$global->id, $custom->id])
         ->and($otherProperty->fresh()->facilities->modelKeys())->toBe([$global->id])
         ->and($unitType->fresh()->amenities->modelKeys())->toEqualCanonicalizing([$global->id, $custom->id]);
+});
+
+it('offers amenities only in their declared workspace scope', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    UnitType::factory()->for($property)->create(['name' => 'Studio']);
+    Amenity::factory()->create([
+        'name' => 'Parking',
+        'scope' => AmenityScope::Property,
+    ]);
+    Amenity::factory()->create([
+        'name' => 'Wi-Fi',
+        'scope' => AmenityScope::UnitType,
+    ]);
+    Amenity::factory()->create([
+        'name' => 'Laundry',
+        'scope' => AmenityScope::Both,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('properties.show', $property))
+        ->assertInertia(fn ($page) => $page
+            ->where('amenities', fn ($amenities): bool => $amenities->pluck('name')->sort()->values()->all() === ['Laundry', 'Parking']));
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.index', $property))
+        ->assertInertia(fn ($page) => $page
+            ->where('amenities', fn ($amenities): bool => $amenities->pluck('name')->sort()->values()->all() === ['Laundry', 'Wi-Fi']));
 });
 
 it('rejects another property custom amenity', function () {
@@ -98,6 +127,25 @@ it('rejects cross-property custom amenities through direct pivot operations', fu
         ->toThrow(InvalidArgumentException::class);
 });
 
+it('rejects amenities through direct pivots when their scope does not match', function () {
+    $property = Property::factory()->create();
+    $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
+    $propertyOnly = Amenity::factory()->create([
+        'name' => 'Parking',
+        'scope' => AmenityScope::Property,
+    ]);
+    $unitTypeOnly = Amenity::factory()->create([
+        'name' => 'Wi-Fi',
+        'scope' => AmenityScope::UnitType,
+    ]);
+
+    expect(fn () => $unitType->amenities()->attach($propertyOnly))
+        ->toThrow(InvalidArgumentException::class);
+
+    expect(fn () => $property->facilities()->attach($unitTypeOnly))
+        ->toThrow(InvalidArgumentException::class);
+});
+
 it('allows global amenities through direct pivot operations across properties', function () {
     $property = Property::factory()->create();
     $otherProperty = Property::factory()->create();
@@ -120,6 +168,20 @@ it('creates custom amenities for the current property', function () {
         ->assertRedirect();
 
     expect(Amenity::query()->sole()->owner_property_id)->toBe($property->id);
+});
+
+it('creates custom amenities with the requested applicability scope', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('properties.amenities.store', $property), [
+            'name' => 'Reading light',
+            'scope' => AmenityScope::UnitType->value,
+        ])
+        ->assertRedirect();
+
+    expect(Amenity::query()->sole()->scope)->toBe(AmenityScope::UnitType);
 });
 
 it('deactivates custom amenities without detaching existing associations', function () {

@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Amenity;
 
+use App\Enums\AmenityScope;
 use App\Models\Amenity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreAmenityRequest extends FormRequest
@@ -30,7 +32,15 @@ class StoreAmenityRequest extends FormRequest
                 'string',
                 'max:255',
             ],
+            'scope' => ['nullable', Rule::enum(AmenityScope::class)],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'scope' => $this->input('scope', AmenityScope::Property->value),
+        ]);
     }
 
     /**

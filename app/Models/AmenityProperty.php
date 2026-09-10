@@ -16,11 +16,15 @@ class AmenityProperty extends Pivot
     protected static function booted(): void
     {
         static::saving(function (AmenityProperty $pivot): void {
-            $ownerPropertyId = Amenity::query()
+            $amenity = Amenity::query()
                 ->whereKey($pivot->amenity_id)
-                ->value('owner_property_id');
+                ->first(['owner_property_id', 'scope']);
 
-            if ($ownerPropertyId !== null && (int) $ownerPropertyId !== (int) $pivot->property_id) {
+            if (! $amenity || ! $amenity->scope->allowsProperty()) {
+                throw new InvalidArgumentException('This amenity is not available as a property facility.');
+            }
+
+            if ($amenity->owner_property_id !== null && (int) $amenity->owner_property_id !== (int) $pivot->property_id) {
                 throw new InvalidArgumentException('Property-owned amenities may only be attached to their owner property.');
             }
         });

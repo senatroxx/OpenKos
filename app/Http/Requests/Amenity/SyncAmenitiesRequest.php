@@ -39,12 +39,12 @@ class SyncAmenitiesRequest extends FormRequest
         return [function (Validator $validator): void {
             $propertyId = $this->route('property')->id;
             $ids = collect($this->input('amenity_ids', []))->map(fn (mixed $id): int => (int) $id);
-            $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'owner_property_id']);
+            $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'owner_property_id', 'scope']);
 
             foreach ($ids as $index => $id) {
                 $amenity = $amenities->firstWhere('id', $id);
 
-                if ($amenity?->owner_property_id !== null && $amenity->owner_property_id !== $propertyId) {
+                if (! $amenity || ! $amenity->scope->allowsProperty() || ($amenity->owner_property_id !== null && $amenity->owner_property_id !== $propertyId)) {
                     $validator->errors()->add("amenity_ids.{$index}", __('The selected amenity is not available for this property.'));
                 }
             }

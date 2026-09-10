@@ -19,6 +19,7 @@ class PropertyAmenityController extends Controller
         Amenity::create([
             'owner_property_id' => $property->id,
             'name' => $request->validated('name'),
+            'scope' => $request->validated('scope'),
             'is_active' => true,
         ]);
 

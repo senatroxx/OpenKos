@@ -16,14 +16,18 @@ class AmenityUnitType extends Pivot
     protected static function booted(): void
     {
         static::saving(function (AmenityUnitType $pivot): void {
-            $ownerPropertyId = Amenity::query()
+            $amenity = Amenity::query()
                 ->whereKey($pivot->amenity_id)
-                ->value('owner_property_id');
+                ->first(['owner_property_id', 'scope']);
             $unitTypePropertyId = UnitType::query()
                 ->whereKey($pivot->unit_type_id)
                 ->value('property_id');
 
-            if ($ownerPropertyId !== null && (int) $ownerPropertyId !== (int) $unitTypePropertyId) {
+            if (! $amenity || ! $amenity->scope->allowsUnitType()) {
+                throw new InvalidArgumentException('This amenity is not available for a Unit Type.');
+            }
+
+            if ($amenity->owner_property_id !== null && (int) $amenity->owner_property_id !== (int) $unitTypePropertyId) {
                 throw new InvalidArgumentException('Property-owned amenities may only be attached to Unit Types from their owner property.');
             }
         });

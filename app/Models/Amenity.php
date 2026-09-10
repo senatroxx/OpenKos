@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AmenityScope;
 use Database\Factories\AmenityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 #[Fillable([
     'owner_property_id',
     'name',
+    'scope',
     'is_active',
 ])]
 class Amenity extends Model
@@ -23,6 +25,7 @@ class Amenity extends Model
     {
         return [
             'owner_property_id' => 'integer',
+            'scope' => AmenityScope::class,
             'is_active' => 'boolean',
         ];
     }

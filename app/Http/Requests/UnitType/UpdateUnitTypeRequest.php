@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\UnitType;
 
+use App\Enums\UnitTypeFurnishing;
 use App\Models\Amenity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -33,7 +34,7 @@ class UpdateUnitTypeRequest extends FormRequest
             'bedrooms' => ['nullable', 'integer', 'min:0', 'max:255'],
             'bathrooms' => ['nullable', 'numeric', 'min:0', 'max:99.9'],
             'size_sqm' => ['nullable', 'numeric', 'min:0'],
-            'furnishing' => ['nullable', 'string', 'max:255'],
+            'furnishing' => ['nullable', Rule::enum(UnitTypeFurnishing::class)],
             'amenity_ids' => ['sometimes', 'array'],
             'amenity_ids.*' => ['integer', 'distinct', Rule::exists('amenities', 'id')],
         ];
@@ -58,12 +59,12 @@ class UpdateUnitTypeRequest extends FormRequest
             }
 
             $propertyId = $this->route('property')->id;
-            $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'owner_property_id', 'is_active']);
+            $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'owner_property_id', 'scope', 'is_active']);
 
             foreach ($ids as $index => $id) {
                 $amenity = $amenities->firstWhere('id', $id);
 
-                if (! $amenity || ($amenity->owner_property_id !== null && $amenity->owner_property_id !== $propertyId)) {
+                if (! $amenity || ! $amenity->scope->allowsUnitType() || ($amenity->owner_property_id !== null && $amenity->owner_property_id !== $propertyId)) {
                     $validator->errors()->add("amenity_ids.{$index}", __('The selected amenity is not available for this property.'));
 
                     continue;

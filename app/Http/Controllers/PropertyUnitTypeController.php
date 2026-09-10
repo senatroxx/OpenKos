@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AmenityScope;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
 use App\Http\Requests\UnitType\UpdateUnitTypeRequest;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,14 +43,19 @@ class PropertyUnitTypeController extends Controller
         $amenities = Amenity::query()
             ->where(function ($query) use ($property, $unitTypeAmenityIds): void {
                 $query->where(function ($query) use ($property): void {
-                    $query->whereNull('owner_property_id')->where('is_active', true)
-                        ->orWhere('owner_property_id', $property->id);
+                    $query->whereIn('scope', [AmenityScope::UnitType->value, AmenityScope::Both->value])
+                        ->whereNull('owner_property_id')
+                        ->where('is_active', true)
+                        ->orWhere(function (Builder $query) use ($property): void {
+                            $query->whereIn('scope', [AmenityScope::UnitType->value, AmenityScope::Both->value])
+                                ->where('owner_property_id', $property->id);
+                        });
                 })->when($unitTypeAmenityIds !== [], function ($query) use ($unitTypeAmenityIds): void {
                     $query->orWhereIn('id', $unitTypeAmenityIds);
                 });
             })
             ->orderBy('name')
-            ->get(['id', 'owner_property_id', 'name', 'is_active']);
+            ->get(['id', 'owner_property_id', 'name', 'scope', 'is_active']);
 
         return Inertia::render('properties/unit-types/index', [
             'property' => $property,
