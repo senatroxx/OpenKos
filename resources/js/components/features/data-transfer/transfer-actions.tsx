@@ -1,4 +1,4 @@
-import { useHttp } from '@inertiajs/react';
+import { Link, useHttp } from '@inertiajs/react';
 import {
     CheckCircle2,
     Download,
@@ -87,22 +87,17 @@ function transferError(message: string): TransferError[] {
     return [{ line: null, field: 'file', message }];
 }
 
-export function TransferImportDialog({
+export function TransferImportForm({
     dataset,
     datasetLabel,
-    open,
-    onOpenChange,
     maxRows = TRANSFER_MAX_ROWS,
     maxFileSizeMb = TRANSFER_MAX_FILE_SIZE_MB,
 }: {
     dataset: string;
     datasetLabel: string;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
     maxRows?: number;
     maxFileSizeMb?: number;
 }) {
-    const [fileInputKey, setFileInputKey] = useState(0);
     const [previewResult, setPreviewResult] = useState<TransferResponse | null>(
         null,
     );
@@ -112,22 +107,6 @@ export function TransferImportDialog({
         dataset,
         file: null,
     });
-
-    function reset() {
-        request.setData('file', null);
-        setPreviewResult(null);
-        setErrors([]);
-        setCommittedCount(null);
-        setFileInputKey((key) => key + 1);
-    }
-
-    function handleOpenChange(nextOpen: boolean) {
-        if (!nextOpen) {
-            reset();
-        }
-
-        onOpenChange(nextOpen);
-    }
 
     function selectFile(file: File | null) {
         request.setData('file', file);
@@ -189,7 +168,149 @@ export function TransferImportDialog({
     }
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <div className="grid gap-6">
+            <div className="grid gap-2">
+                <Label htmlFor={`${dataset}-csv-file`}>{t('CSV file')}</Label>
+                <Input
+                    id={`${dataset}-csv-file`}
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(event) =>
+                        selectFile(event.target.files?.[0] ?? null)
+                    }
+                />
+                <p className="text-sm text-muted-foreground">
+                    {t('CSV only, up to :size MB and :rows rows.', {
+                        size: maxFileSizeMb,
+                        rows: maxRows,
+                    })}
+                </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+                <Button
+                    type="button"
+                    onClick={previewFile}
+                    disabled={!request.data.file || request.processing}
+                >
+                    <Upload />
+                    {request.processing
+                        ? t('Checking...')
+                        : t('Preview and validate')}
+                </Button>
+                <Button type="button" variant="outline" asChild>
+                    <a href={template(dataset).url}>
+                        <FileDown />
+                        {t('Download :dataset template', {
+                            dataset: datasetLabel,
+                        })}
+                    </a>
+                </Button>
+            </div>
+
+            {(previewResult || errors.length > 0) && (
+                <div className="grid gap-4 border-t pt-6">
+                    <div className="grid gap-1.5">
+                        <h3 className="leading-none font-semibold">
+                            {t('Validation result')}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                            {previewResult
+                                ? t(
+                                      ':rows data rows checked, :errors errors found.',
+                                      {
+                                          rows: previewResult.row_count ?? 0,
+                                          errors:
+                                              previewResult.error_count ?? 0,
+                                      },
+                                  )
+                                : t('The file could not be validated.')}
+                        </p>
+                    </div>
+
+                    {errors.length > 0 && (
+                        <div className="overflow-x-auto rounded-md border">
+                            <table className="w-full text-left text-sm">
+                                <thead className="bg-muted/50 text-muted-foreground">
+                                    <tr>
+                                        <th className="px-3 py-2 font-medium">
+                                            {t('Line')}
+                                        </th>
+                                        <th className="px-3 py-2 font-medium">
+                                            {t('Field')}
+                                        </th>
+                                        <th className="px-3 py-2 font-medium">
+                                            {t('Error')}
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {errors.map((error, index) => (
+                                        <tr
+                                            key={`${error.line ?? 'file'}-${error.field}-${index}`}
+                                            className="border-t"
+                                        >
+                                            <td className="px-3 py-2 tabular-nums">
+                                                {error.line ?? '—'}
+                                            </td>
+                                            <td className="px-3 py-2 font-medium">
+                                                {error.field}
+                                            </td>
+                                            <td className="px-3 py-2 text-muted-foreground">
+                                                {error.message}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {committedCount !== null && (
+                <Alert>
+                    <CheckCircle2 />
+                    <AlertTitle>{t('Import committed')}</AlertTitle>
+                    <AlertDescription>
+                        {t(':count new records were created.', {
+                            count: committedCount,
+                        })}
+                    </AlertDescription>
+                </Alert>
+            )}
+            <DialogFooter>
+                <Button
+                    type="button"
+                    onClick={commitFile}
+                    disabled={
+                        previewResult?.valid !== true || request.processing
+                    }
+                >
+                    {t('Import :dataset', { dataset: datasetLabel })}
+                </Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
+export function TransferImportDialog({
+    dataset,
+    datasetLabel,
+    open,
+    onOpenChange,
+    maxRows = TRANSFER_MAX_ROWS,
+    maxFileSizeMb = TRANSFER_MAX_FILE_SIZE_MB,
+}: {
+    dataset: string;
+    datasetLabel: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    maxRows?: number;
+    maxFileSizeMb?: number;
+}) {
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>
@@ -201,158 +322,32 @@ export function TransferImportDialog({
                         )}
                     </DialogDescription>
                 </DialogHeader>
-
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor={`${dataset}-csv-file`}>
-                            {t('CSV file')}
-                        </Label>
-                        <Input
-                            key={fileInputKey}
-                            id={`${dataset}-csv-file`}
-                            type="file"
-                            accept=".csv,text/csv"
-                            onChange={(event) =>
-                                selectFile(event.target.files?.[0] ?? null)
-                            }
-                        />
-                        <p className="text-sm text-muted-foreground">
-                            {t('CSV only, up to :size MB and :rows rows.', {
-                                size: maxFileSizeMb,
-                                rows: maxRows,
-                            })}
-                        </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                        <Button
-                            type="button"
-                            onClick={previewFile}
-                            disabled={!request.data.file || request.processing}
-                        >
-                            <Upload />
-                            {request.processing
-                                ? t('Checking...')
-                                : t('Preview and validate')}
-                        </Button>
-                        <Button type="button" variant="outline" asChild>
-                            <a href={template(dataset).url}>
-                                <FileDown />
-                                {t('Download :dataset template', {
-                                    dataset: datasetLabel,
-                                })}
-                            </a>
-                        </Button>
-                    </div>
-
-                    {(previewResult || errors.length > 0) && (
-                        <div className="grid gap-4 border-t pt-6">
-                            <div className="grid gap-1.5">
-                                <h3 className="leading-none font-semibold">
-                                    {t('Validation result')}
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    {previewResult
-                                        ? t(
-                                              ':rows data rows checked, :errors errors found.',
-                                              {
-                                                  rows:
-                                                      previewResult.row_count ??
-                                                      0,
-                                                  errors:
-                                                      previewResult.error_count ??
-                                                      0,
-                                              },
-                                          )
-                                        : t('The file could not be validated.')}
-                                </p>
-                            </div>
-
-                            {errors.length > 0 && (
-                                <div className="overflow-x-auto rounded-md border">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-muted/50 text-muted-foreground">
-                                            <tr>
-                                                <th className="px-3 py-2 font-medium">
-                                                    {t('Line')}
-                                                </th>
-                                                <th className="px-3 py-2 font-medium">
-                                                    {t('Field')}
-                                                </th>
-                                                <th className="px-3 py-2 font-medium">
-                                                    {t('Error')}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {errors.map((error, index) => (
-                                                <tr
-                                                    key={`${error.line ?? 'file'}-${error.field}-${index}`}
-                                                    className="border-t"
-                                                >
-                                                    <td className="px-3 py-2 tabular-nums">
-                                                        {error.line ?? '—'}
-                                                    </td>
-                                                    <td className="px-3 py-2 font-medium">
-                                                        {error.field}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-muted-foreground">
-                                                        {error.message}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {committedCount !== null && (
-                        <Alert>
-                            <CheckCircle2 />
-                            <AlertTitle>{t('Import committed')}</AlertTitle>
-                            <AlertDescription>
-                                {t(':count new records were created.', {
-                                    count: committedCount,
-                                })}
-                            </AlertDescription>
-                        </Alert>
-                    )}
-                </div>
-
-                <DialogFooter>
-                    <Button
-                        type="button"
-                        onClick={commitFile}
-                        disabled={
-                            previewResult?.valid !== true || request.processing
-                        }
-                    >
-                        {t('Import :dataset', { dataset: datasetLabel })}
-                    </Button>
-                </DialogFooter>
+                <TransferImportForm
+                    key={open ? 'open' : 'closed'}
+                    dataset={dataset}
+                    datasetLabel={datasetLabel}
+                    maxRows={maxRows}
+                    maxFileSizeMb={maxFileSizeMb}
+                />
             </DialogContent>
         </Dialog>
     );
 }
 
-export function TransferExportDialog({
+export function TransferExportForm({
     dataset,
     datasetLabel,
-    open,
-    onOpenChange,
     query = {},
     includeArchivedDefault = false,
     canExportSensitive = false,
+    onCancel,
 }: {
     dataset: string;
     datasetLabel: string;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
     query?: TransferActionQuery;
     includeArchivedDefault?: boolean;
     canExportSensitive?: boolean;
+    onCancel?: () => void;
 }) {
     const [includeArchived, setIncludeArchived] = useState(
         includeArchivedDefault,
@@ -373,6 +368,64 @@ export function TransferExportDialog({
     }
 
     return (
+        <div className="grid gap-6">
+            <label className="flex items-center gap-2 text-sm">
+                <input
+                    type="checkbox"
+                    checked={includeArchived}
+                    onChange={(event) =>
+                        setIncludeArchived(event.target.checked)
+                    }
+                    className="size-4 rounded border-input"
+                />
+                {t('Include archived/inactive')}
+            </label>
+
+            <DialogFooter>
+                {onCancel && (
+                    <Button type="button" variant="outline" onClick={onCancel}>
+                        {t('Cancel')}
+                    </Button>
+                )}
+                {canExportSensitive && (
+                    <Button variant="outline" asChild>
+                        <a href={exportUrl(true)}>
+                            <Download />
+                            {t('Export :dataset with sensitive fields', {
+                                dataset: datasetLabel,
+                            })}
+                        </a>
+                    </Button>
+                )}
+                <Button asChild>
+                    <a href={exportUrl()}>
+                        <Download />
+                        {t('Export :dataset', { dataset: datasetLabel })}
+                    </a>
+                </Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
+export function TransferExportDialog({
+    dataset,
+    datasetLabel,
+    open,
+    onOpenChange,
+    query = {},
+    includeArchivedDefault = false,
+    canExportSensitive = false,
+}: {
+    dataset: string;
+    datasetLabel: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    query?: TransferActionQuery;
+    includeArchivedDefault?: boolean;
+    canExportSensitive?: boolean;
+}) {
+    return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -385,130 +438,82 @@ export function TransferExportDialog({
                         )}
                     </DialogDescription>
                 </DialogHeader>
-
-                <label className="flex items-center gap-2 text-sm">
-                    <input
-                        type="checkbox"
-                        checked={includeArchived}
-                        onChange={(event) =>
-                            setIncludeArchived(event.target.checked)
-                        }
-                        className="size-4 rounded border-input"
-                    />
-                    {t('Include archived/inactive')}
-                </label>
-
-                <DialogFooter>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                    >
-                        {t('Cancel')}
-                    </Button>
-                    {canExportSensitive && (
-                        <Button variant="outline" asChild>
-                            <a href={exportUrl(true)}>
-                                <Download />
-                                {t('Export :dataset with sensitive fields', {
-                                    dataset: datasetLabel,
-                                })}
-                            </a>
-                        </Button>
-                    )}
-                    <Button asChild>
-                        <a href={exportUrl()}>
-                            <Download />
-                            {t('Export :dataset', { dataset: datasetLabel })}
-                        </a>
-                    </Button>
-                </DialogFooter>
+                <TransferExportForm
+                    key={open ? 'open' : 'closed'}
+                    dataset={dataset}
+                    datasetLabel={datasetLabel}
+                    query={query}
+                    includeArchivedDefault={includeArchivedDefault}
+                    canExportSensitive={canExportSensitive}
+                    onCancel={() => onOpenChange(false)}
+                />
             </DialogContent>
         </Dialog>
     );
 }
 
 export function EntityTransferMenu({
-    dataset,
     datasetLabel,
     canImport = false,
     canExport = false,
-    exportQuery,
-    includeArchivedDefault = false,
-    canExportSensitive = false,
+    importHref,
+    exportHref,
 }: {
-    dataset: string;
     datasetLabel: string;
     canImport?: boolean;
     canExport?: boolean;
-    exportQuery?: TransferActionQuery;
-    includeArchivedDefault?: boolean;
-    canExportSensitive?: boolean;
+    importHref?: string;
+    exportHref?: string;
 }) {
-    const [importOpen, setImportOpen] = useState(false);
-    const [exportOpen, setExportOpen] = useState(false);
+    const showImport = Boolean(canImport && importHref);
+    const showExport = Boolean(canExport && exportHref);
 
-    if (!canImport && !canExport) {
+    if (!showImport && !showExport) {
         return null;
     }
 
     return (
-        <>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        aria-label={t('Import or export :dataset', {
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label={t('Import or export :dataset', {
+                        dataset: datasetLabel,
+                    })}
+                >
+                    <EllipsisVertical />
+                    <span className="sr-only">
+                        {t('Import or export :dataset', {
                             dataset: datasetLabel,
                         })}
-                    >
-                        <EllipsisVertical />
-                        <span className="sr-only">
-                            {t('Import or export :dataset', {
+                    </span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                {showImport && importHref && (
+                    <DropdownMenuItem asChild>
+                        <Link href={importHref} prefetch>
+                            <Upload />
+                            {t('Import :dataset', {
                                 dataset: datasetLabel,
                             })}
-                        </span>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                    {canImport && (
-                        <DropdownMenuItem onSelect={() => setImportOpen(true)}>
-                            <Upload />
-                            {t('Import :dataset', { dataset: datasetLabel })}
-                        </DropdownMenuItem>
-                    )}
-                    {canImport && canExport && <DropdownMenuSeparator />}
-                    {canExport && (
-                        <DropdownMenuItem onSelect={() => setExportOpen(true)}>
+                        </Link>
+                    </DropdownMenuItem>
+                )}
+                {showImport && showExport && <DropdownMenuSeparator />}
+                {showExport && exportHref && (
+                    <DropdownMenuItem asChild>
+                        <Link href={exportHref} prefetch>
                             <Download />
-                            {t('Export :dataset', { dataset: datasetLabel })}
-                        </DropdownMenuItem>
-                    )}
-                </DropdownMenuContent>
-            </DropdownMenu>
-
-            {canImport && (
-                <TransferImportDialog
-                    dataset={dataset}
-                    datasetLabel={datasetLabel}
-                    open={importOpen}
-                    onOpenChange={setImportOpen}
-                />
-            )}
-            {canExport && (
-                <TransferExportDialog
-                    key={`${dataset}-${includeArchivedDefault ? 'archived' : 'active'}`}
-                    dataset={dataset}
-                    datasetLabel={datasetLabel}
-                    open={exportOpen}
-                    onOpenChange={setExportOpen}
-                    query={exportQuery}
-                    includeArchivedDefault={includeArchivedDefault}
-                    canExportSensitive={canExportSensitive}
-                />
-            )}
-        </>
+                            {t('Export :dataset', {
+                                dataset: datasetLabel,
+                            })}
+                        </Link>
+                    </DropdownMenuItem>
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }

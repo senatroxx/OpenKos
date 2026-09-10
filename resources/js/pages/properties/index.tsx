@@ -245,7 +245,6 @@ export default function Index({
                             {t('New Property')}
                         </Button>
                         <EntityTransferMenu
-                            dataset="properties"
                             datasetLabel={t('Properties')}
                             canImport={
                                 auth.role === 'owner' ||
@@ -255,14 +254,14 @@ export default function Index({
                                 auth.role === 'owner' ||
                                 auth.permissions.includes('properties.export')
                             }
-                            exportQuery={{
-                                search: currentSearch || undefined,
-                                status: currentStatus || undefined,
-                                type: currentType || undefined,
-                            }}
-                            includeArchivedDefault={
-                                currentStatus === 'archived'
-                            }
+                            importHref={properties.transfer.import.url()}
+                            exportHref={properties.transfer.export.url({
+                                query: {
+                                    search: currentSearch || undefined,
+                                    status: currentStatus || undefined,
+                                    type: currentType || undefined,
+                                },
+                            })}
                         />
                     </div>
                 </div>

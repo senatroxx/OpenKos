@@ -461,7 +461,6 @@ export default function Index({
                 <div className="flex items-center justify-end gap-2">
                     <Button onClick={openCreate}>{t('New Unit')}</Button>
                     <EntityTransferMenu
-                        dataset="units"
                         datasetLabel={t('Units')}
                         canImport={
                             auth.role === 'owner' ||
@@ -471,12 +470,18 @@ export default function Index({
                             auth.role === 'owner' ||
                             auth.permissions.includes('units.export')
                         }
-                        exportQuery={{
-                            search: currentSearch || undefined,
-                            status: currentStatus || undefined,
-                            property_slug: property.slug,
-                        }}
-                        includeArchivedDefault={currentStatus === 'archived'}
+                        importHref={properties.units.transfer.import.url(
+                            property,
+                        )}
+                        exportHref={properties.units.transfer.export.url(
+                            property,
+                            {
+                                query: {
+                                    search: currentSearch || undefined,
+                                    status: currentStatus || undefined,
+                                },
+                            },
+                        )}
                     />
                 </div>
 

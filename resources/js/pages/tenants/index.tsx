@@ -394,27 +394,20 @@ export default function Index({
                     <div className="flex items-center gap-2">
                         <Button onClick={openCreate}>{t('New Tenant')}</Button>
                         <EntityTransferMenu
-                            dataset="tenants"
                             datasetLabel={t('Tenants')}
                             canImport={auth.role === 'owner'}
                             canExport={
                                 auth.role === 'owner' ||
                                 auth.permissions.includes('tenants.export')
                             }
-                            canExportSensitive={
-                                auth.role === 'owner' ||
-                                auth.permissions.includes(
-                                    'tenants.export_sensitive',
-                                )
-                            }
-                            exportQuery={{
-                                search: currentSearch || undefined,
-                                status: currentStatus || undefined,
-                                app_access: currentAppAccess || undefined,
-                            }}
-                            includeArchivedDefault={
-                                currentStatus === 'archived'
-                            }
+                            importHref={tenants.transfer.import.url()}
+                            exportHref={tenants.transfer.export.url({
+                                query: {
+                                    search: currentSearch || undefined,
+                                    status: currentStatus || undefined,
+                                    app_access: currentAppAccess || undefined,
+                                },
+                            })}
                         />
                     </div>
                 </div>

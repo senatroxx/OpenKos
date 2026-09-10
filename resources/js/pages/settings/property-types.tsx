@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { t } from '@/lib/i18n';
+import propertyTypesRoutes from '@/routes/settings/property-types';
 import type { Auth, PropertyTypeOption } from '@/types';
 
 const BASE = '/settings/property-types';
@@ -176,12 +177,12 @@ export default function PropertyTypes({
                 <div className="flex items-center gap-2">
                     <Button onClick={openNew}>{t('Add type')}</Button>
                     <EntityTransferMenu
-                        dataset="property-types"
                         datasetLabel={t('Property types')}
                         canExport={
                             auth.role === 'owner' ||
                             auth.permissions.includes('properties.export')
                         }
+                        exportHref={propertyTypesRoutes.transfer.export.url()}
                     />
                 </div>
             </div>

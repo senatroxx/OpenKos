@@ -50,6 +50,43 @@ it('previews the complete properties file without persisting anything', function
     $this->assertDatabaseMissing('properties', ['slug' => 'sunrise-house']);
 });
 
+it('renders dedicated contextual transfer pages with export filters', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $unit = Unit::factory()->for($property)->create();
+
+    $this->actingAs($user)
+        ->get(route('properties.transfer.import'))
+        ->assertInertia(fn ($page) => $page
+            ->component('data-transfer/import')
+            ->where('dataset', 'properties'));
+
+    $this->actingAs($user)
+        ->get(route('properties.transfer.export', [
+            'search' => 'Sunrise',
+            'status' => 'active,archived',
+            'type' => 'boarding_house,apartment',
+        ]))
+        ->assertInertia(fn ($page) => $page
+            ->component('data-transfer/export')
+            ->where('dataset', 'properties')
+            ->where('initialQuery.search', 'Sunrise')
+            ->where('initialQuery.status', 'active,archived')
+            ->where('initialQuery.type', 'boarding_house,apartment')
+            ->where('includeArchivedDefault', true));
+
+    $this->actingAs($user)
+        ->get(route('properties.units.rates.transfer.export', [
+            'property' => $property,
+            'unit' => $unit,
+        ]))
+        ->assertInertia(fn ($page) => $page
+            ->component('data-transfer/export')
+            ->where('dataset', 'unit-rates')
+            ->where('context.property_slug', $property->slug)
+            ->where('context.unit_name', $unit->name));
+});
+
 it('rejects unknown headers and reports the file-level header error', function () {
     $user = User::factory()->owner()->create();
     $csv = implode("\n", [

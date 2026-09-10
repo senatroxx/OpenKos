@@ -97,6 +97,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('properties')->name('properties.')->group(function () {
         Route::get('/', [PropertyController::class, 'index'])->name('index')->middleware('permission:properties.view');
         Route::post('/', [PropertyController::class, 'store'])->name('store')->middleware('permission:properties.create');
+        Route::get('import', [DataTransferController::class, 'importPage'])
+            ->defaults('dataset', 'properties')
+            ->name('transfer.import')
+            ->middleware('permission:properties.import');
+        Route::get('export', [DataTransferController::class, 'exportPage'])
+            ->defaults('dataset', 'properties')
+            ->name('transfer.export')
+            ->middleware('permission:properties.export');
 
         Route::scopeBindings()->group(function () {
             Route::prefix('{property}')->group(function () {
@@ -110,12 +118,28 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::prefix('units')->name('units.')->group(function () {
                     Route::get('/', [UnitController::class, 'index'])->name('index')->middleware('permission:units.view');
                     Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('permission:units.create');
+                    Route::get('import', [DataTransferController::class, 'importPage'])
+                        ->defaults('dataset', 'units')
+                        ->name('transfer.import')
+                        ->middleware('permission:units.import');
+                    Route::get('export', [DataTransferController::class, 'exportPage'])
+                        ->defaults('dataset', 'units')
+                        ->name('transfer.export')
+                        ->middleware('permission:units.export');
 
                     Route::prefix('{unit}')->group(function () {
                         Route::get('/', [UnitController::class, 'show'])->name('show')->middleware('permission:units.view');
                         Route::put('/', [UnitController::class, 'update'])->name('update')->middleware('permission:units.update');
                         Route::delete('/', [UnitController::class, 'destroy'])->name('destroy')->middleware('permission:units.delete');
                         Route::post('restore', [UnitController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:units.update');
+                        Route::get('rates/import', [DataTransferController::class, 'importPage'])
+                            ->defaults('dataset', 'unit-rates')
+                            ->name('rates.transfer.import')
+                            ->middleware('permission:unit-rates.import');
+                        Route::get('rates/export', [DataTransferController::class, 'exportPage'])
+                            ->defaults('dataset', 'unit-rates')
+                            ->name('rates.transfer.export')
+                            ->middleware('permission:unit-rates.export');
                         Route::get('rates', [UnitController::class, 'rates'])->name('rates')->middleware('permission:units.view');
                         Route::get('utilities', [UnitUtilityController::class, 'index'])->name('utilities')->middleware('permission:units.view');
                         Route::post('utilities/meters', [UnitUtilityController::class, 'storeMeter'])
@@ -159,6 +183,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('tenants')->name('tenants.')->group(function () {
         Route::get('/', [TenantController::class, 'index'])->name('index')->middleware('permission:tenants.view');
         Route::post('/', [TenantController::class, 'store'])->name('store')->middleware('permission:tenants.create');
+        Route::get('import', [DataTransferController::class, 'importPage'])
+            ->defaults('dataset', 'tenants')
+            ->name('transfer.import')
+            ->middleware('permission:tenants.import');
+        Route::get('export', [DataTransferController::class, 'exportPage'])
+            ->defaults('dataset', 'tenants')
+            ->name('transfer.export')
+            ->middleware('permission:tenants.export');
 
         Route::prefix('{tenant}')->whereNumber('tenant')->group(function () {
             Route::get('/', [TenantController::class, 'show'])->name('show')->middleware('permission:tenants.view');
