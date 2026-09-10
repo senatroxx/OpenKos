@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'type',
     'description',
     'amount',
+    'utility_reading_id',
+    'metadata',
 ])]
 class InvoiceLineItem extends Model
 {
@@ -22,11 +24,17 @@ class InvoiceLineItem extends Model
     {
         return [
             'amount' => 'decimal:3',
+            'metadata' => 'array',
         ];
     }
 
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function utilityReading(): BelongsTo
+    {
+        return $this->belongsTo(UtilityReading::class);
     }
 }

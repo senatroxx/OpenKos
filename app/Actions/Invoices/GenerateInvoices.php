@@ -2,6 +2,7 @@
 
 namespace App\Actions\Invoices;
 
+use App\Actions\Utility\BillUtilityReadings;
 use App\Enums\InvoiceStatus;
 use App\Events\Invoice\InvoiceGenerated;
 use App\Models\Invoice;
@@ -17,7 +18,10 @@ class GenerateInvoices
 {
     private const MAX_UNIQUE_RETRIES = 3;
 
-    public function __construct(private MoneyConverter $money) {}
+    public function __construct(
+        private MoneyConverter $money,
+        private BillUtilityReadings $billUtilityReadings,
+    ) {}
 
     /**
      * Materialize invoices for upcoming billing periods.
@@ -85,10 +89,8 @@ class GenerateInvoices
         $existingKeys = Invoice::query()
             ->whereIn('lease_id', $leaseIds)
             ->whereBetween('period_start', [$minimumPeriod, $horizon])
-            ->get(['lease_id', 'period_start'])
-            ->mapWithKeys(fn (Invoice $invoice): array => [
-                $this->periodKey($invoice->lease_id, $invoice->period_start) => true,
-            ]);
+            ->get(['id', 'lease_id', 'period_start'])
+            ->keyBy(fn (Invoice $invoice): string => $this->periodKey($invoice->lease_id, $invoice->period_start));
 
         $newCandidates = collect($candidates)
             ->reject(fn (array $candidate): bool => $existingKeys->has(
@@ -96,62 +98,75 @@ class GenerateInvoices
             ))
             ->values();
 
-        if ($newCandidates->isEmpty()) {
-            return 0;
-        }
+        $createdInvoices = collect();
 
-        $references = Invoice::nextReferences($newCandidates->count());
-        $timestamp = now();
-        $invoiceRows = $newCandidates->map(fn (array $candidate, int $index): array => [
-            'lease_id' => $candidate['lease_id'],
-            'reference' => $references[$index],
-            'period_start' => $candidate['period_start']->toDateString(),
-            'period_end' => $candidate['period_end']->toDateString(),
-            'due_date' => $candidate['due_date']->toDateString(),
-            'status' => InvoiceStatus::Pending->value,
-            'total' => $candidate['amount'],
-            'amount_paid' => 0,
-            'currency' => $candidate['currency'],
-            'created_at' => $timestamp,
-            'updated_at' => $timestamp,
-        ])->all();
-
-        Invoice::query()->insert($invoiceRows);
-
-        $candidateKeys = $newCandidates->mapWithKeys(fn (array $candidate): array => [
-            $this->periodKey($candidate['lease_id'], $candidate['period_start']) => $candidate,
-        ]);
-        $persistedInvoices = Invoice::query()
-            ->whereIn('lease_id', $newCandidates->pluck('lease_id')->unique()->values())
-            ->whereBetween('period_start', [$minimumPeriod, $horizon])
-            ->get()
-            ->keyBy(fn (Invoice $invoice): string => $this->periodKey($invoice->lease_id, $invoice->period_start));
-
-        $createdInvoices = $newCandidates
-            ->map(fn (array $candidate): ?Invoice => $persistedInvoices->get(
-                $this->periodKey($candidate['lease_id'], $candidate['period_start'])
-            ))
-            ->filter()
-            ->values();
-
-        if ($createdInvoices->count() !== $newCandidates->count()) {
-            throw new \LogicException('Invoice batch did not persist all generated periods.');
-        }
-
-        $lineItemRows = $createdInvoices->map(function (Invoice $invoice) use ($candidateKeys, $timestamp): array {
-            $candidate = $candidateKeys->get($this->periodKey($invoice->lease_id, $invoice->period_start));
-
-            return [
-                'invoice_id' => $invoice->getKey(),
-                'type' => 'rent',
-                'description' => 'Rent '.$invoice->period_start->format('F Y'),
-                'amount' => $candidate['amount'],
+        if ($newCandidates->isNotEmpty()) {
+            $references = Invoice::nextReferences($newCandidates->count());
+            $timestamp = now();
+            $invoiceRows = $newCandidates->map(fn (array $candidate, int $index): array => [
+                'lease_id' => $candidate['lease_id'],
+                'reference' => $references[$index],
+                'period_start' => $candidate['period_start']->toDateString(),
+                'period_end' => $candidate['period_end']->toDateString(),
+                'due_date' => $candidate['due_date']->toDateString(),
+                'status' => InvoiceStatus::Pending->value,
+                'total' => $candidate['amount'],
+                'amount_paid' => 0,
+                'currency' => $candidate['currency'],
                 'created_at' => $timestamp,
                 'updated_at' => $timestamp,
-            ];
-        })->all();
+            ])->all();
 
-        InvoiceLineItem::query()->insert($lineItemRows);
+            Invoice::query()->insert($invoiceRows);
+
+            $candidateKeys = $newCandidates->mapWithKeys(fn (array $candidate): array => [
+                $this->periodKey($candidate['lease_id'], $candidate['period_start']) => $candidate,
+            ]);
+            $persistedInvoices = Invoice::query()
+                ->whereIn('lease_id', $newCandidates->pluck('lease_id')->unique()->values())
+                ->whereBetween('period_start', [$minimumPeriod, $horizon])
+                ->get()
+                ->keyBy(fn (Invoice $invoice): string => $this->periodKey($invoice->lease_id, $invoice->period_start));
+
+            $createdInvoices = $newCandidates
+                ->map(fn (array $candidate): ?Invoice => $persistedInvoices->get(
+                    $this->periodKey($candidate['lease_id'], $candidate['period_start'])
+                ))
+                ->filter()
+                ->values();
+
+            if ($createdInvoices->count() !== $newCandidates->count()) {
+                throw new \LogicException('Invoice batch did not persist all generated periods.');
+            }
+
+            InvoiceLineItem::query()->insert($createdInvoices->map(function (Invoice $invoice) use ($candidateKeys, $timestamp): array {
+                $candidate = $candidateKeys->get($this->periodKey($invoice->lease_id, $invoice->period_start));
+
+                return [
+                    'invoice_id' => $invoice->getKey(),
+                    'type' => 'rent',
+                    'description' => 'Rent '.$invoice->period_start->format('F Y'),
+                    'amount' => $candidate['amount'],
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ];
+            })->all());
+        }
+
+        $invoicesToBill = $existingKeys->values()
+            ->merge($createdInvoices)
+            ->unique('id')
+            ->values();
+
+        foreach ($invoicesToBill as $invoice) {
+            $this->billUtilityReadings->execute($invoice);
+        }
+
+        $createdInvoices->each->refresh();
+
+        if ($createdInvoices->isEmpty()) {
+            return 0;
+        }
 
         foreach ($createdInvoices as $invoice) {
             $invoice->recordAudit('create');
@@ -190,6 +205,7 @@ class GenerateInvoices
         return str_contains($message, 'invoices_lease_id_period_start_unique')
             || str_contains($message, 'invoices.lease_id, invoices.period_start')
             || str_contains($message, 'invoices_reference_unique')
-            || str_contains($message, 'invoices.reference');
+            || str_contains($message, 'invoices.reference')
+            || str_contains($message, 'invoice_line_items_utility_reading_id_unique');
     }
 }

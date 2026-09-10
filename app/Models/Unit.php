@@ -79,6 +79,16 @@ class Unit extends Model
         return $this->hasMany(UnitRate::class);
     }
 
+    public function utilityMeters(): HasMany
+    {
+        return $this->hasMany(UtilityMeter::class);
+    }
+
+    public function meters(): HasMany
+    {
+        return $this->utilityMeters();
+    }
+
     public function activeRates(): HasMany
     {
         // Deterministic, meaningful order: shortest billing period first
