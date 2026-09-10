@@ -9,11 +9,14 @@ import {
     TrendingDown,
     TrendingUp,
 } from 'lucide-react';
+import { useState } from 'react';
 import type { ComponentType } from 'react';
 import { CurrencyAmountList } from '@/components/features/dashboard/currency-amount-list';
 import {
     ExpenseBreakdownChart,
     FinancialTrendChart,
+    subtractCurrencyAmounts,
+    sumCurrencyAmounts,
 } from '@/components/features/dashboard/financial-trend-chart';
 import { MetricCard } from '@/components/shared/metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { formatDate } from '@/lib/formatters';
+import { formatDate, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import { financial as dashboardFinancial } from '@/routes/dashboard';
 import type {
@@ -122,6 +125,81 @@ function FinancialCard({
             subtextFullWidth
         />
     );
+}
+
+function ChartCurrencySelector({
+    currencies,
+    value,
+    onValueChange,
+}: {
+    currencies: string[];
+    value: string;
+    onValueChange: (value: string) => void;
+}) {
+    if (currencies.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">
+                {t('Currency')}
+            </span>
+            <Select value={value} onValueChange={onValueChange}>
+                <SelectTrigger
+                    className="w-[104px] bg-card"
+                    aria-label={t('Chart currency')}
+                >
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    {currencies.map((currency) => (
+                        <SelectItem key={currency} value={currency}>
+                            {currency}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+}
+
+function ChartSummary({
+    currency,
+    metrics,
+}: {
+    currency: string;
+    metrics: Array<{
+        label: string;
+        amount: string;
+        className: string;
+    }>;
+}) {
+    return (
+        <div className="space-y-3 border-y border-border/60 py-3">
+            <p className="text-xs font-medium text-muted-foreground">
+                {t('Selected period')} · {currency}
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                {metrics.map((metric) => (
+                    <div key={metric.label} className="min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground">
+                            {metric.label}
+                        </p>
+                        <p
+                            className={`mt-1 overflow-hidden text-sm font-semibold whitespace-nowrap tabular-nums sm:text-base ${metric.className}`}
+                        >
+                            {formatPrice(metric.amount, currency)}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function amountForCurrency(groups: MoneyAggregate[], currency: string): string {
+    return groups.find((group) => group.currency === currency)?.amount ?? '0';
 }
 
 function PerformanceValue({ groups }: { groups: MoneyAggregate[] }) {
@@ -233,6 +311,38 @@ export default function Financial({
             ),
         ),
     ].sort();
+    const [trendCurrency, setTrendCurrency] = useState(
+        () => trendCurrencies[0] ?? '',
+    );
+    const [cashFlowCurrency, setCashFlowCurrency] = useState(
+        () => cashFlowCurrencies[0] ?? '',
+    );
+    const [expenseCurrency, setExpenseCurrency] = useState(
+        () => expenseCurrencies[0] ?? '',
+    );
+    const selectedTrendCurrency = trendCurrencies.includes(trendCurrency)
+        ? trendCurrency
+        : (trendCurrencies[0] ?? '');
+    const selectedCashFlowCurrency = cashFlowCurrencies.includes(
+        cashFlowCurrency,
+    )
+        ? cashFlowCurrency
+        : (cashFlowCurrencies[0] ?? '');
+    const selectedExpenseCurrency = expenseCurrencies.includes(expenseCurrency)
+        ? expenseCurrency
+        : (expenseCurrencies[0] ?? '');
+    const cashFlowCollected = sumCurrencyAmounts(
+        financial.cash_flow.flatMap((point) => point.collected),
+        selectedCashFlowCurrency,
+    );
+    const cashFlowExpenses = sumCurrencyAmounts(
+        financial.cash_flow.flatMap((point) => point.expenses),
+        selectedCashFlowCurrency,
+    );
+    const netCashFlow = subtractCurrencyAmounts(
+        cashFlowCollected,
+        cashFlowExpenses,
+    );
 
     function updateFilters(changes: {
         period?: Period;
@@ -441,42 +551,78 @@ export default function Financial({
                 <section className="mb-8 grid gap-6 xl:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>
-                                {t('Revenue, Expenses & NOI')}
-                            </CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {t(
-                                    'Last 12 complete/current calendar-month buckets',
-                                )}
-                            </p>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="space-y-1.5">
+                                    <CardTitle>
+                                        {t('Revenue, Expenses & NOI')}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t(
+                                            'Last 12 calendar-month buckets, independent of the selected period',
+                                        )}
+                                    </p>
+                                </div>
+                                <ChartCurrencySelector
+                                    currencies={trendCurrencies}
+                                    value={selectedTrendCurrency}
+                                    onValueChange={setTrendCurrency}
+                                />
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-5">
-                            {trendCurrencies.length > 0 ? (
-                                trendCurrencies.map((currency) => (
-                                    <div key={currency}>
-                                        <h3 className="mb-4 text-sm font-semibold">
-                                            {currency}
-                                        </h3>
-                                        <FinancialTrendChart
-                                            points={financial.trends}
-                                            currency={currency}
-                                            series={[
-                                                {
-                                                    key: 'revenue',
-                                                    label: t('Revenue'),
-                                                },
-                                                {
-                                                    key: 'expenses',
-                                                    label: t('Expenses'),
-                                                },
-                                                {
-                                                    key: 'noi',
-                                                    label: t('NOI'),
-                                                },
-                                            ]}
-                                        />
-                                    </div>
-                                ))
+                        <CardContent className="space-y-4">
+                            {selectedTrendCurrency ? (
+                                <>
+                                    <ChartSummary
+                                        currency={selectedTrendCurrency}
+                                        metrics={[
+                                            {
+                                                label: t('Revenue'),
+                                                amount: amountForCurrency(
+                                                    financial.overview.revenue,
+                                                    selectedTrendCurrency,
+                                                ),
+                                                className:
+                                                    'text-surface-green-foreground',
+                                            },
+                                            {
+                                                label: t('Expenses'),
+                                                amount: amountForCurrency(
+                                                    financial.overview.expenses,
+                                                    selectedTrendCurrency,
+                                                ),
+                                                className:
+                                                    'text-surface-amber-foreground',
+                                            },
+                                            {
+                                                label: t('NOI'),
+                                                amount: amountForCurrency(
+                                                    financial.overview.noi,
+                                                    selectedTrendCurrency,
+                                                ),
+                                                className:
+                                                    'text-surface-blue-foreground',
+                                            },
+                                        ]}
+                                    />
+                                    <FinancialTrendChart
+                                        points={financial.trends}
+                                        currency={selectedTrendCurrency}
+                                        series={[
+                                            {
+                                                key: 'revenue',
+                                                label: t('Revenue'),
+                                            },
+                                            {
+                                                key: 'expenses',
+                                                label: t('Expenses'),
+                                            },
+                                            {
+                                                key: 'noi',
+                                                label: t('NOI'),
+                                            },
+                                        ]}
+                                    />
+                                </>
                             ) : (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     {t('No financial activity recorded.')}
@@ -486,36 +632,63 @@ export default function Financial({
                     </Card>
                     <Card>
                         <CardHeader>
-                            <CardTitle>{t('Cash Flow')}</CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {t(
-                                    'Confirmed payments and expenses by payment/expense date',
-                                )}
-                            </p>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="space-y-1.5">
+                                    <CardTitle>{t('Cash Flow')}</CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t(
+                                            'Selected-period cash movement by payment and expense date',
+                                        )}
+                                    </p>
+                                </div>
+                                <ChartCurrencySelector
+                                    currencies={cashFlowCurrencies}
+                                    value={selectedCashFlowCurrency}
+                                    onValueChange={setCashFlowCurrency}
+                                />
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-5">
-                            {cashFlowCurrencies.length > 0 ? (
-                                cashFlowCurrencies.map((currency) => (
-                                    <div key={currency}>
-                                        <h3 className="mb-4 text-sm font-semibold">
-                                            {currency}
-                                        </h3>
-                                        <FinancialTrendChart
-                                            points={financial.cash_flow}
-                                            currency={currency}
-                                            series={[
-                                                {
-                                                    key: 'collected',
-                                                    label: t('Cash Collected'),
-                                                },
-                                                {
-                                                    key: 'expenses',
-                                                    label: t('Expenses'),
-                                                },
-                                            ]}
-                                        />
-                                    </div>
-                                ))
+                        <CardContent className="space-y-4">
+                            {selectedCashFlowCurrency ? (
+                                <>
+                                    <ChartSummary
+                                        currency={selectedCashFlowCurrency}
+                                        metrics={[
+                                            {
+                                                label: t('Cash Collected'),
+                                                amount: cashFlowCollected,
+                                                className:
+                                                    'text-surface-green-foreground',
+                                            },
+                                            {
+                                                label: t('Expenses'),
+                                                amount: cashFlowExpenses,
+                                                className:
+                                                    'text-surface-amber-foreground',
+                                            },
+                                            {
+                                                label: t('Net Cash Flow'),
+                                                amount: netCashFlow,
+                                                className:
+                                                    'text-surface-blue-foreground',
+                                            },
+                                        ]}
+                                    />
+                                    <FinancialTrendChart
+                                        points={financial.cash_flow}
+                                        currency={selectedCashFlowCurrency}
+                                        series={[
+                                            {
+                                                key: 'collected',
+                                                label: t('Cash Collected'),
+                                            },
+                                            {
+                                                key: 'expenses',
+                                                label: t('Expenses'),
+                                            },
+                                        ]}
+                                    />
+                                </>
                             ) : (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     {t('No cash movement recorded.')}
@@ -592,28 +765,30 @@ export default function Financial({
                 <section className="mb-8 grid gap-6 xl:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>{t('Expense Breakdown')}</CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                                {t(
-                                    'Active operating expenses by category for the selected period',
-                                )}
-                            </p>
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="space-y-1.5">
+                                    <CardTitle>
+                                        {t('Expense Breakdown')}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">
+                                        {t(
+                                            'Active operating expenses by category for the selected period',
+                                        )}
+                                    </p>
+                                </div>
+                                <ChartCurrencySelector
+                                    currencies={expenseCurrencies}
+                                    value={selectedExpenseCurrency}
+                                    onValueChange={setExpenseCurrency}
+                                />
+                            </div>
                         </CardHeader>
-                        <CardContent className="space-y-5">
-                            {expenseCurrencies.length > 0 ? (
-                                expenseCurrencies.map((currency) => (
-                                    <div key={currency} className="space-y-2">
-                                        <h3 className="text-sm font-semibold">
-                                            {currency}
-                                        </h3>
-                                        <ExpenseBreakdownChart
-                                            categories={
-                                                financial.expense_breakdown
-                                            }
-                                            currency={currency}
-                                        />
-                                    </div>
-                                ))
+                        <CardContent>
+                            {selectedExpenseCurrency ? (
+                                <ExpenseBreakdownChart
+                                    categories={financial.expense_breakdown}
+                                    currency={selectedExpenseCurrency}
+                                />
                             ) : (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     {t('No operating expenses recorded.')}

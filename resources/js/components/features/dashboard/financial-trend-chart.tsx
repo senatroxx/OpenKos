@@ -87,6 +87,39 @@ function toMinorUnits(amount: string): bigint {
     return negative ? -value : value;
 }
 
+function fromMinorUnits(amount: bigint): string {
+    if (amount === 0n) {
+        return '0';
+    }
+
+    const negative = amount < 0n;
+    const absolute = negative ? -amount : amount;
+    const factor = 10n ** BigInt(MONEY_SCALE);
+    const whole = absolute / factor;
+    const fraction = (absolute % factor).toString().padStart(MONEY_SCALE, '0');
+
+    return `${negative ? '-' : ''}${whole}.${fraction}`;
+}
+
+export function sumCurrencyAmounts(
+    groups: MoneyAggregate[],
+    currency: string,
+): string {
+    return fromMinorUnits(
+        groups.reduce(
+            (total, group) =>
+                group.currency === currency
+                    ? total + toMinorUnits(group.amount)
+                    : total,
+            0n,
+        ),
+    );
+}
+
+export function subtractCurrencyAmounts(left: string, right: string): string {
+    return fromMinorUnits(toMinorUnits(left) - toMinorUnits(right));
+}
+
 function amountFor(
     point: FinancialChartPoint,
     key: SeriesKey,
@@ -169,6 +202,10 @@ function chartDomain(hasNegative: boolean): [number, number] {
     return hasNegative ? [-PLOT_SCALE, PLOT_SCALE] : [0, PLOT_SCALE];
 }
 
+function monthTick(label: string): string {
+    return label.split(' ')[0] ?? label;
+}
+
 export function FinancialTrendChart({
     points,
     currency,
@@ -237,8 +274,9 @@ export function FinancialTrendChart({
                                 fill: 'var(--muted-foreground)',
                                 fontSize: 11,
                             }}
+                            interval={0}
+                            tickFormatter={monthTick}
                             tickMargin={8}
-                            minTickGap={14}
                         />
                         <YAxis domain={chartDomain(hasNegative)} hide />
                         <Tooltip
@@ -408,7 +446,7 @@ export function ExpenseBreakdownChart({
                     />
                     <Bar
                         dataKey="value"
-                        name="Expenses"
+                        name={series[0].label}
                         fill={SERIES_COLORS.expenses}
                         radius={[0, 3, 3, 0]}
                         maxBarSize={24}
