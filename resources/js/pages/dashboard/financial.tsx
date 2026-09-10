@@ -11,7 +11,10 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { CurrencyAmountList } from '@/components/features/dashboard/currency-amount-list';
-import { FinancialTrendChart } from '@/components/features/dashboard/financial-trend-chart';
+import {
+    ExpenseBreakdownChart,
+    FinancialTrendChart,
+} from '@/components/features/dashboard/financial-trend-chart';
 import { MetricCard } from '@/components/shared/metric-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -42,28 +45,17 @@ type PageProps = {
     properties: Array<{ id: number; name: string }>;
 };
 
-function currenciesFromGroups(groups: MoneyAggregate[]): string[] {
-    return groups.map((group) => group.currency);
-}
+type FinancialSeriesKey = 'revenue' | 'expenses' | 'noi' | 'collected';
 
-function currenciesFromFinancial(financial: FinancialDashboardData): string[] {
-    const groups = [
-        ...financial.overview.revenue,
-        ...financial.overview.expenses,
-        ...financial.overview.noi,
-        ...financial.collections.collected,
-        ...financial.trends.flatMap((point) => [
-            ...point.revenue,
-            ...point.expenses,
-            ...point.noi,
-        ]),
-        ...financial.cash_flow.flatMap((point) => [
-            ...point.collected,
-            ...point.expenses,
-        ]),
-    ];
+function currenciesFromPoints(
+    points: Array<Partial<Record<FinancialSeriesKey, MoneyAggregate[]>>>,
+    keys: FinancialSeriesKey[],
+): string[] {
+    const groups = points.flatMap((point) =>
+        keys.flatMap((key) => point[key] ?? []),
+    );
 
-    return [...new Set(currenciesFromGroups(groups))].sort();
+    return [...new Set(groups.map((group) => group.currency))].sort();
 }
 
 function RateList({ rates }: { rates: RateAggregate[] }) {
@@ -225,7 +217,22 @@ export default function Financial({
     filters,
     properties,
 }: PageProps) {
-    const trendCurrencies = currenciesFromFinancial(financial);
+    const trendCurrencies = currenciesFromPoints(financial.trends, [
+        'revenue',
+        'expenses',
+        'noi',
+    ]);
+    const cashFlowCurrencies = currenciesFromPoints(financial.cash_flow, [
+        'collected',
+        'expenses',
+    ]);
+    const expenseCurrencies = [
+        ...new Set(
+            financial.expense_breakdown.flatMap((category) =>
+                category.amounts.map((group) => group.currency),
+            ),
+        ),
+    ].sort();
 
     function updateFilters(changes: {
         period?: Period;
@@ -339,7 +346,7 @@ export default function Financial({
                     </p>
                 </div>
 
-                <section className="mb-10 flex flex-col gap-3">
+                <section className="mb-8 flex flex-col gap-3">
                     <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                         {t('Financial Overview')}
                     </h2>
@@ -381,7 +388,7 @@ export default function Financial({
                     </div>
                 </section>
 
-                <section className="mb-10 flex flex-col gap-3">
+                <section className="mb-8 flex flex-col gap-3">
                     <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                         {t('Collections')}
                     </h2>
@@ -431,7 +438,7 @@ export default function Financial({
                     </div>
                 </section>
 
-                <section className="mb-10 grid gap-6 xl:grid-cols-2">
+                <section className="mb-8 grid gap-6 xl:grid-cols-2">
                     <Card>
                         <CardHeader>
                             <CardTitle>
@@ -443,7 +450,7 @@ export default function Financial({
                                 )}
                             </p>
                         </CardHeader>
-                        <CardContent className="space-y-8">
+                        <CardContent className="space-y-5">
                             {trendCurrencies.length > 0 ? (
                                 trendCurrencies.map((currency) => (
                                     <div key={currency}>
@@ -457,20 +464,14 @@ export default function Financial({
                                                 {
                                                     key: 'revenue',
                                                     label: t('Revenue'),
-                                                    className:
-                                                        'bg-surface-green-foreground',
                                                 },
                                                 {
                                                     key: 'expenses',
                                                     label: t('Expenses'),
-                                                    className:
-                                                        'bg-surface-amber-foreground',
                                                 },
                                                 {
                                                     key: 'noi',
                                                     label: t('NOI'),
-                                                    className:
-                                                        'bg-surface-blue-foreground',
                                                 },
                                             ]}
                                         />
@@ -492,9 +493,9 @@ export default function Financial({
                                 )}
                             </p>
                         </CardHeader>
-                        <CardContent className="space-y-8">
-                            {trendCurrencies.length > 0 ? (
-                                trendCurrencies.map((currency) => (
+                        <CardContent className="space-y-5">
+                            {cashFlowCurrencies.length > 0 ? (
+                                cashFlowCurrencies.map((currency) => (
                                     <div key={currency}>
                                         <h3 className="mb-4 text-sm font-semibold">
                                             {currency}
@@ -506,14 +507,10 @@ export default function Financial({
                                                 {
                                                     key: 'collected',
                                                     label: t('Cash Collected'),
-                                                    className:
-                                                        'bg-surface-green-foreground',
                                                 },
                                                 {
                                                     key: 'expenses',
                                                     label: t('Expenses'),
-                                                    className:
-                                                        'bg-surface-amber-foreground',
                                                 },
                                             ]}
                                         />
@@ -528,7 +525,7 @@ export default function Financial({
                     </Card>
                 </section>
 
-                <section className="mb-10 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+                <section className="mb-8 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
                     <Card>
                         <CardHeader>
                             <CardTitle>{t('Property Performance')}</CardTitle>
@@ -592,7 +589,7 @@ export default function Financial({
                     </Card>
                 </section>
 
-                <section className="mb-10 grid gap-6 xl:grid-cols-2">
+                <section className="mb-8 grid gap-6 xl:grid-cols-2">
                     <Card>
                         <CardHeader>
                             <CardTitle>{t('Expense Breakdown')}</CardTitle>
@@ -602,26 +599,21 @@ export default function Financial({
                                 )}
                             </p>
                         </CardHeader>
-                        <CardContent>
-                            {financial.expense_breakdown.length > 0 ? (
-                                <div className="space-y-4">
-                                    {financial.expense_breakdown.map(
-                                        (category) => (
-                                            <div
-                                                key={category.category_id}
-                                                className="flex items-center justify-between gap-4 border-b border-border/60 pb-3 last:border-0 last:pb-0"
-                                            >
-                                                <span className="font-medium">
-                                                    {category.category_label}
-                                                </span>
-                                                <CurrencyAmountList
-                                                    groups={category.amounts}
-                                                    compact
-                                                />
-                                            </div>
-                                        ),
-                                    )}
-                                </div>
+                        <CardContent className="space-y-5">
+                            {expenseCurrencies.length > 0 ? (
+                                expenseCurrencies.map((currency) => (
+                                    <div key={currency} className="space-y-2">
+                                        <h3 className="text-sm font-semibold">
+                                            {currency}
+                                        </h3>
+                                        <ExpenseBreakdownChart
+                                            categories={
+                                                financial.expense_breakdown
+                                            }
+                                            currency={currency}
+                                        />
+                                    </div>
+                                ))
                             ) : (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     {t('No operating expenses recorded.')}
