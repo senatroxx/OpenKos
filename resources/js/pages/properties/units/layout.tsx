@@ -39,6 +39,11 @@ export function UnitLayout({
                         href: `${base}/rates`,
                     },
                     {
+                        key: 'utilities',
+                        label: 'Utilities',
+                        href: `${base}/utilities`,
+                    },
+                    {
                         key: 'maintenance',
                         label: 'Maintenance',
                         href: `${base}/maintenance-history`,

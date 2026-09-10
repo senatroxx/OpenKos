@@ -26,6 +26,7 @@ use App\Http\Controllers\TenantPortal\NotificationController as TenantPortalNoti
 use App\Http\Controllers\TenantPortal\PaymentController as TenantPortalPaymentController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitTypeMediaController;
+use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -145,6 +146,25 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                         Route::delete('/', [UnitController::class, 'destroy'])->name('destroy')->middleware('permission:units.delete');
                         Route::post('restore', [UnitController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:units.update');
                         Route::get('rates', [UnitController::class, 'rates'])->name('rates')->middleware('permission:units.view');
+                        Route::get('utilities', [UnitUtilityController::class, 'index'])->name('utilities')->middleware('permission:units.view');
+                        Route::post('utilities/meters', [UnitUtilityController::class, 'storeMeter'])
+                            ->name('utilities.meters.store')
+                            ->middleware('permission:units.update');
+                        Route::put('utilities/meters/{meter}', [UnitUtilityController::class, 'updateMeter'])
+                            ->name('utilities.meters.update')
+                            ->middleware('permission:units.update');
+                        Route::post('utilities/meters/{meter}/readings', [UnitUtilityController::class, 'storeReading'])
+                            ->name('utilities.readings.store')
+                            ->middleware('permission:units.update');
+                        Route::put('utilities/meters/{meter}/readings/{reading}', [UnitUtilityController::class, 'updateReading'])
+                            ->name('utilities.readings.update')
+                            ->middleware('permission:units.update');
+                        Route::delete('utilities/meters/{meter}/readings/{reading}', [UnitUtilityController::class, 'destroyReading'])
+                            ->name('utilities.readings.destroy')
+                            ->middleware('permission:units.update');
+                        Route::post('utilities/meters/{meter}/readings/{reading}/correction', [UnitUtilityController::class, 'storeCorrection'])
+                            ->name('utilities.readings.corrections.store')
+                            ->middleware('permission:units.update');
                         Route::get('maintenance-history', [UnitController::class, 'maintenanceHistory'])
                             ->name('maintenance-history')
                             ->middleware('permission:maintenance-tickets.view');

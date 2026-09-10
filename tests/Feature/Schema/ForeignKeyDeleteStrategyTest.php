@@ -47,7 +47,7 @@ $expected = [
     'payments' => ['invoice_id' => 'CASCADE', 'confirmed_by' => 'SET NULL', 'recorded_by' => 'SET NULL', 'verified_by' => 'SET NULL'],
     'payment_attempts' => ['invoice_id' => 'CASCADE', 'payment_id' => 'SET NULL'],
     'invoices' => ['lease_id' => 'CASCADE'],
-    'invoice_line_items' => ['invoice_id' => 'CASCADE'],
+    'invoice_line_items' => ['invoice_id' => 'CASCADE', 'utility_reading_id' => 'RESTRICT'],
     'properties' => ['region_id' => 'SET NULL', 'city_id' => 'SET NULL'],
     'tenants' => ['user_id' => 'SET NULL'],
 
@@ -58,6 +58,12 @@ $expected = [
     'role_has_permissions' => ['permission_id' => 'CASCADE', 'role_id' => 'CASCADE'],
     'property_user' => ['user_id' => 'CASCADE', 'property_id' => 'CASCADE'],
     'payment_proofs' => ['payment_id' => 'CASCADE', 'media_id' => 'RESTRICT'],
+    'utility_meters' => ['unit_id' => 'RESTRICT'],
+    'utility_readings' => [
+        'utility_meter_id' => 'RESTRICT',
+        'previous_reading_id' => 'RESTRICT',
+        'corrects_reading_id' => 'RESTRICT',
+    ],
 ];
 
 $appTables = array_keys($expected);

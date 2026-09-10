@@ -40,6 +40,12 @@ $expected = [
     'amenities' => [
         'amenities_owner_property_id_is_active_name_index' => ['owner_property_id', 'is_active', 'name'],
     ],
+    'utility_meters' => [
+        'idx_utility_meters_unit_active' => ['unit_id', 'is_active'],
+    ],
+    'utility_readings' => [
+        'idx_utility_readings_meter_period' => ['utility_meter_id', 'period_start', 'period_end'],
+    ],
 ];
 
 $appTables = array_keys($expected);
