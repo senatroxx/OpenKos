@@ -103,8 +103,8 @@ export function MediaGalleryManager({
                     <ImagePlus className="size-4" />
                     <p className="text-sm font-medium">{t('Add photo')}</p>
                 </div>
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                    <div className="grid gap-2 sm:col-span-3">
+                <div className="mt-4 flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
                         <Label htmlFor={fileInputId}>{t('Photo')}</Label>
                         <Input
                             id={fileInputId}
@@ -120,29 +120,36 @@ export function MediaGalleryManager({
                         />
                         <InputError message={upload.errors.file} />
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor={uploadAltId}>{t('Alt text')}</Label>
-                        <Input
-                            id={uploadAltId}
-                            value={upload.data.alt}
-                            onChange={(event) =>
-                                upload.setData('alt', event.target.value)
-                            }
-                            placeholder={t('Describe the image')}
-                        />
-                        <InputError message={upload.errors.alt} />
-                    </div>
-                    <div className="grid gap-2 sm:col-span-2">
-                        <Label htmlFor={uploadCaptionId}>{t('Caption')}</Label>
-                        <Textarea
-                            id={uploadCaptionId}
-                            value={upload.data.caption}
-                            onChange={(event) =>
-                                upload.setData('caption', event.target.value)
-                            }
-                            placeholder={t('Visible description')}
-                        />
-                        <InputError message={upload.errors.caption} />
+                    <div className="flex flex-col gap-4 sm:flex-row">
+                        <div className="flex flex-1 flex-col gap-2">
+                            <Label htmlFor={uploadAltId}>{t('Alt text')}</Label>
+                            <Input
+                                id={uploadAltId}
+                                value={upload.data.alt}
+                                onChange={(event) =>
+                                    upload.setData('alt', event.target.value)
+                                }
+                                placeholder={t('Describe the image')}
+                            />
+                            <InputError message={upload.errors.alt} />
+                        </div>
+                        <div className="flex flex-[2] flex-col gap-2">
+                            <Label htmlFor={uploadCaptionId}>
+                                {t('Caption')}
+                            </Label>
+                            <Textarea
+                                id={uploadCaptionId}
+                                value={upload.data.caption}
+                                onChange={(event) =>
+                                    upload.setData(
+                                        'caption',
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder={t('Visible description')}
+                            />
+                            <InputError message={upload.errors.caption} />
+                        </div>
                     </div>
                 </div>
                 <div className="mt-4 flex justify-end">
