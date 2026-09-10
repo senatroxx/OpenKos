@@ -112,16 +112,11 @@ function FinancialCard({
     return (
         <MetricCard
             label={label}
-            value={
-                <span className="text-sm font-medium text-muted-foreground">
-                    {subtext}
-                </span>
-            }
-            subtext={<CurrencyAmountList groups={groups} compact />}
+            subParams={subtext}
+            value={<CurrencyAmountList groups={groups} />}
             icon={Icon}
             variant={variant}
             emphasis="subtle"
-            subtextFullWidth
         />
     );
 }

@@ -14,6 +14,7 @@ export type MetricEmphasis = 'neutral' | 'subtle' | 'attention';
 
 export interface MetricCardProps {
     label: string;
+    subParams?: React.ReactNode;
     value: React.ReactNode;
     subtext?: React.ReactNode;
     variant?: MetricVariant;
@@ -213,6 +214,7 @@ const VARIANT_STYLES: Record<
 
 export function MetricCard({
     label,
+    subParams,
     value,
     subtext,
     variant = 'neutral',
@@ -246,6 +248,11 @@ export function MetricCard({
                     <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                         {label}
                     </p>
+                    {subParams && (
+                        <div className="mt-1 text-xs font-medium text-muted-foreground">
+                            {subParams}
+                        </div>
+                    )}
                     <div
                         className={cn(
                             'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
