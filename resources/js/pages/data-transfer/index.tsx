@@ -101,6 +101,7 @@ export default function Index({ datasets, maxRows, maxFileSizeMb }: PageProps) {
         () => datasets.find((dataset) => dataset.value === selectedDataset),
         [datasets, selectedDataset],
     );
+    const selectedDatasetLabel = selected?.label ?? t('Dataset');
     const canExportSensitiveTenants =
         selectedDataset === 'tenants' &&
         (auth.role === 'owner' ||
@@ -206,256 +207,271 @@ export default function Index({ datasets, maxRows, maxFileSizeMb }: PageProps) {
                     )}
                 />
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{t('Import CSV')}</CardTitle>
-                        <CardDescription>
-                            {t(
-                                'Preview validates the entire file without saving. Commit creates all rows atomically.',
-                            )}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="dataset">{t('Dataset')}</Label>
-                            <select
-                                id="dataset"
-                                value={selectedDataset}
-                                onChange={(event) =>
-                                    selectDataset(event.target.value)
-                                }
-                                className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            >
-                                {datasets.map((dataset) => (
-                                    <option
-                                        key={dataset.value}
-                                        value={dataset.value}
-                                    >
-                                        {dataset.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                <div className="grid gap-2 sm:max-w-sm">
+                    <Label htmlFor="dataset">{t('Dataset')}</Label>
+                    <select
+                        id="dataset"
+                        value={selectedDataset}
+                        onChange={(event) => selectDataset(event.target.value)}
+                        className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
+                        {datasets.map((dataset) => (
+                            <option key={dataset.value} value={dataset.value}>
+                                {dataset.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
-                        {selected?.importable ? (
-                            <>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="csv-file">
-                                        {t('CSV file')}
-                                    </Label>
-                                    <Input
-                                        id="csv-file"
-                                        type="file"
-                                        accept=".csv,text/csv"
-                                        onChange={(event) =>
-                                            selectFile(
-                                                event.target.files?.[0] ?? null,
-                                            )
-                                        }
-                                    />
-                                    <p className="text-sm text-muted-foreground">
-                                        {t(
-                                            'CSV only, up to :size MB and :rows rows.',
-                                            {
-                                                size: maxFileSizeMb,
-                                                rows: maxRows,
-                                            },
-                                        )}
-                                    </p>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <Button
-                                        type="button"
-                                        onClick={previewFile}
-                                        disabled={
-                                            !request.data.file ||
-                                            request.processing
-                                        }
-                                    >
-                                        <Upload />
-                                        {request.processing
-                                            ? t('Checking...')
-                                            : t('Preview and validate')}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        asChild
-                                    >
-                                        <a href={template(selectedDataset).url}>
-                                            <FileDown />
-                                            {t('Download template')}
-                                        </a>
-                                    </Button>
-                                </div>
-                            </>
-                        ) : (
-                            <Alert>
-                                <AlertTitle>
-                                    {t('Export-only dataset')}
-                                </AlertTitle>
-                                <AlertDescription>
-                                    {t(
-                                        'This dataset can be exported for reference but is not an import domain in v1.',
-                                    )}
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {(previewResult || errors.length > 0) && (
+                <div className="grid gap-6 lg:grid-cols-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>{t('Validation result')}</CardTitle>
-                            <CardDescription>
-                                {previewResult
-                                    ? t(
-                                          ':rows data rows checked, :errors errors found.',
-                                          {
-                                              rows:
-                                                  previewResult.row_count ?? 0,
-                                              errors:
-                                                  previewResult.error_count ??
-                                                  0,
-                                          },
-                                      )
-                                    : t('The file could not be validated.')}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4">
-                            {previewResult?.valid ? (
-                                <Alert>
-                                    <CheckCircle2 />
-                                    <AlertTitle>
-                                        {t('Ready to import')}
-                                    </AlertTitle>
-                                    <AlertDescription>
-                                        {t(
-                                            'No conflicts or validation errors were found.',
-                                        )}
-                                    </AlertDescription>
-                                </Alert>
-                            ) : null}
-
-                            {errors.length > 0 && (
-                                <div className="overflow-x-auto rounded-md border">
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-muted/50 text-muted-foreground">
-                                            <tr>
-                                                <th className="px-3 py-2 font-medium">
-                                                    {t('Line')}
-                                                </th>
-                                                <th className="px-3 py-2 font-medium">
-                                                    {t('Field')}
-                                                </th>
-                                                <th className="px-3 py-2 font-medium">
-                                                    {t('Error')}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {errors.map((error, index) => (
-                                                <tr
-                                                    key={`${error.line ?? 'file'}-${error.field}-${index}`}
-                                                    className="border-t"
-                                                >
-                                                    <td className="px-3 py-2 tabular-nums">
-                                                        {error.line ?? '—'}
-                                                    </td>
-                                                    <td className="px-3 py-2 font-medium">
-                                                        {error.field}
-                                                    </td>
-                                                    <td className="px-3 py-2 text-muted-foreground">
-                                                        {error.message}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            <Button
-                                type="button"
-                                onClick={commitFile}
-                                disabled={
-                                    previewResult?.valid !== true ||
-                                    request.processing
-                                }
-                            >
-                                {t('Commit import')}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {committedCount !== null && (
-                    <Alert>
-                        <CheckCircle2 />
-                        <AlertTitle>{t('Import committed')}</AlertTitle>
-                        <AlertDescription>
-                            {t(':count new records were created.', {
-                                count: committedCount,
-                            })}
-                        </AlertDescription>
-                    </Alert>
-                )}
-
-                {selected?.exportable && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>{t('Export CSV')}</CardTitle>
+                            <CardTitle>{t('Import CSV')}</CardTitle>
                             <CardDescription>
                                 {t(
-                                    'Exports use the stable v1 column format. Archived and inactive records are excluded by default.',
+                                    'Preview validates the entire file without saving. Commit creates all rows atomically.',
                                 )}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="flex flex-wrap items-center gap-3">
-                            <label className="flex items-center gap-2 text-sm">
-                                <input
-                                    type="checkbox"
-                                    checked={includeArchived}
-                                    onChange={(event) =>
-                                        setIncludeArchived(event.target.checked)
-                                    }
-                                    className="size-4 rounded border-input"
-                                />
-                                {t('Include archived/inactive')}
-                            </label>
-                            <Button variant="outline" asChild>
-                                <a
-                                    href={exportMethod.url(selectedDataset, {
-                                        query: exportQuery,
-                                    })}
-                                >
-                                    <Download />
-                                    {t('Export all')}
-                                </a>
-                            </Button>
-                            {canExportSensitiveTenants && (
-                                <Button variant="destructive" asChild>
+                        <CardContent className="grid gap-6">
+                            {selected?.importable ? (
+                                <>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="csv-file">
+                                            {t('CSV file')}
+                                        </Label>
+                                        <Input
+                                            id="csv-file"
+                                            type="file"
+                                            accept=".csv,text/csv"
+                                            onChange={(event) =>
+                                                selectFile(
+                                                    event.target.files?.[0] ??
+                                                        null,
+                                                )
+                                            }
+                                        />
+                                        <p className="text-sm text-muted-foreground">
+                                            {t(
+                                                'CSV only, up to :size MB and :rows rows.',
+                                                {
+                                                    size: maxFileSizeMb,
+                                                    rows: maxRows,
+                                                },
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button
+                                            type="button"
+                                            onClick={previewFile}
+                                            disabled={
+                                                !request.data.file ||
+                                                request.processing
+                                            }
+                                        >
+                                            <Upload />
+                                            {request.processing
+                                                ? t('Checking...')
+                                                : t('Preview and validate')}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            asChild
+                                        >
+                                            <a
+                                                href={
+                                                    template(selectedDataset)
+                                                        .url
+                                                }
+                                            >
+                                                <FileDown />
+                                                {t(
+                                                    'Download :dataset template',
+                                                    {
+                                                        dataset:
+                                                            selectedDatasetLabel,
+                                                    },
+                                                )}
+                                            </a>
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <Alert>
+                                    <AlertTitle>
+                                        {t('Export-only dataset')}
+                                    </AlertTitle>
+                                    <AlertDescription>
+                                        {t(
+                                            'This dataset can be exported for reference but is not an import domain in v1.',
+                                        )}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+
+                            {(previewResult || errors.length > 0) && (
+                                <div className="grid gap-4 border-t pt-6">
+                                    <div className="grid gap-1.5">
+                                        <h3 className="leading-none font-semibold">
+                                            {t('Validation result')}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {previewResult
+                                                ? t(
+                                                      ':rows data rows checked, :errors errors found.',
+                                                      {
+                                                          rows:
+                                                              previewResult.row_count ??
+                                                              0,
+                                                          errors:
+                                                              previewResult.error_count ??
+                                                              0,
+                                                      },
+                                                  )
+                                                : t(
+                                                      'The file could not be validated.',
+                                                  )}
+                                        </p>
+                                    </div>
+
+                                    {errors.length > 0 && (
+                                        <div className="overflow-x-auto rounded-md border">
+                                            <table className="w-full text-left text-sm">
+                                                <thead className="bg-muted/50 text-muted-foreground">
+                                                    <tr>
+                                                        <th className="px-3 py-2 font-medium">
+                                                            {t('Line')}
+                                                        </th>
+                                                        <th className="px-3 py-2 font-medium">
+                                                            {t('Field')}
+                                                        </th>
+                                                        <th className="px-3 py-2 font-medium">
+                                                            {t('Error')}
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {errors.map(
+                                                        (error, index) => (
+                                                            <tr
+                                                                key={`${error.line ?? 'file'}-${error.field}-${index}`}
+                                                                className="border-t"
+                                                            >
+                                                                <td className="px-3 py-2 tabular-nums">
+                                                                    {error.line ??
+                                                                        '—'}
+                                                                </td>
+                                                                <td className="px-3 py-2 font-medium">
+                                                                    {
+                                                                        error.field
+                                                                    }
+                                                                </td>
+                                                                <td className="px-3 py-2 text-muted-foreground">
+                                                                    {
+                                                                        error.message
+                                                                    }
+                                                                </td>
+                                                            </tr>
+                                                        ),
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        type="button"
+                                        onClick={commitFile}
+                                        disabled={
+                                            previewResult?.valid !== true ||
+                                            request.processing
+                                        }
+                                    >
+                                        {t('Commit import')}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {committedCount !== null && (
+                                <Alert>
+                                    <CheckCircle2 />
+                                    <AlertTitle>
+                                        {t('Import committed')}
+                                    </AlertTitle>
+                                    <AlertDescription>
+                                        {t(':count new records were created.', {
+                                            count: committedCount,
+                                        })}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {selected?.exportable && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('Export CSV')}</CardTitle>
+                                <CardDescription>
+                                    {t(
+                                        'Exports use the stable v1 column format. Archived and inactive records are excluded by default.',
+                                    )}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-wrap items-center gap-3">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={includeArchived}
+                                        onChange={(event) =>
+                                            setIncludeArchived(
+                                                event.target.checked,
+                                            )
+                                        }
+                                        className="size-4 rounded border-input"
+                                    />
+                                    {t('Include archived/inactive')}
+                                </label>
+                                <Button variant="outline" asChild>
                                     <a
                                         href={exportMethod.url(
                                             selectedDataset,
                                             {
-                                                query: {
-                                                    ...exportQuery,
-                                                    include_sensitive: 1,
-                                                },
+                                                query: exportQuery,
                                             },
                                         )}
                                     >
                                         <Download />
-                                        {t('Export sensitive fields')}
+                                        {t('Export :dataset', {
+                                            dataset: selectedDatasetLabel,
+                                        })}
                                     </a>
                                 </Button>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
+                                {canExportSensitiveTenants && (
+                                    <Button variant="destructive" asChild>
+                                        <a
+                                            href={exportMethod.url(
+                                                selectedDataset,
+                                                {
+                                                    query: {
+                                                        ...exportQuery,
+                                                        include_sensitive: 1,
+                                                    },
+                                                },
+                                            )}
+                                        >
+                                            <Download />
+                                            {t('Export sensitive fields')}
+                                        </a>
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
             </div>
         </>
     );
