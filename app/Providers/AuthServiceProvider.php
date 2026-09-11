@@ -9,6 +9,7 @@ use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Payment;
 use App\Models\Property;
+use App\Models\RecurringExpense;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitType;
@@ -18,6 +19,7 @@ use App\Policies\LeasePolicy;
 use App\Policies\MaintenanceTicketPolicy;
 use App\Policies\PaymentPolicy;
 use App\Policies\PropertyPolicy;
+use App\Policies\RecurringExpensePolicy;
 use App\Policies\TenantPolicy;
 use App\Policies\UnitPolicy;
 use App\Policies\UnitTypePolicy;
@@ -35,6 +37,7 @@ class AuthServiceProvider extends ServiceProvider
         Invoice::class => InvoicePolicy::class,
         Payment::class => PaymentPolicy::class,
         Expense::class => ExpensePolicy::class,
+        RecurringExpense::class => RecurringExpensePolicy::class,
         MaintenanceTicket::class => MaintenanceTicketPolicy::class,
     ];
 

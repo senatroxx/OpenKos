@@ -18,6 +18,7 @@ use LogicException;
 #[Fillable([
     'property_id',
     'expense_category_id',
+    'recurring_expense_id',
     'amount',
     'currency',
     'expense_date',
@@ -66,6 +67,10 @@ class Expense extends Model
                 throw new LogicException('Expense currency snapshots are immutable.');
             }
 
+            if ($expense->isDirty('recurring_expense_id')) {
+                throw new LogicException('Expense recurring source is immutable.');
+            }
+
             if ($expense->isDirty('amount')) {
                 $expense->amount = app(MoneyConverter::class)->normalizeAmount(
                     (string) $expense->amount,
@@ -83,6 +88,11 @@ class Expense extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    public function recurringExpense(): BelongsTo
+    {
+        return $this->belongsTo(RecurringExpense::class);
     }
 
     public function voidedByUser(): BelongsTo

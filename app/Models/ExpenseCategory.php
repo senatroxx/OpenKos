@@ -39,6 +39,11 @@ class ExpenseCategory extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function recurringExpenses(): HasMany
+    {
+        return $this->hasMany(RecurringExpense::class);
+    }
+
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
