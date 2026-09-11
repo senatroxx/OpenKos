@@ -67,6 +67,20 @@ it('catches up active schedules after scheduler downtime', function (): void {
         ->and($recurringExpense->refresh()->next_due_on->toDateString())->toBe('2026-10-01');
 });
 
+it('does not generate occurrences while paused', function (): void {
+    $this->travelTo('2026-09-20');
+    $recurringExpense = makeRecurringExpense([
+        'start_date' => '2026-09-01',
+        'next_due_on' => '2026-09-01',
+        'is_active' => false,
+        'paused_at' => now(),
+    ]);
+
+    expect(app(GenerateRecurringExpenses::class)->execute())->toBe(0)
+        ->and($recurringExpense->expenses()->count())->toBe(0)
+        ->and($recurringExpense->refresh()->next_due_on->toDateString())->toBe('2026-09-01');
+});
+
 it('limits a large catch-up batch while continuing to advance the cursor', function (): void {
     $this->travelTo('2029-01-01');
     $recurringExpense = makeRecurringExpense([
