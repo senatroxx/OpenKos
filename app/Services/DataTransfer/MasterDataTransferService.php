@@ -33,6 +33,7 @@ final class MasterDataTransferService
         TenantsDefinition $tenants,
         UnitRatesDefinition $unitRates,
         PropertyTypesDefinition $propertyTypes,
+        ExpensesDefinition $expenses,
     ) {
         $this->definitions = [
             $properties->dataset()->value => $properties,
@@ -40,6 +41,7 @@ final class MasterDataTransferService
             $tenants->dataset()->value => $tenants,
             $unitRates->dataset()->value => $unitRates,
             $propertyTypes->dataset()->value => $propertyTypes,
+            $expenses->dataset()->value => $expenses,
         ];
     }
 
@@ -147,6 +149,8 @@ final class MasterDataTransferService
 
         try {
             DB::transaction(function () use ($definition, $result, $actor): void {
+                $definition->prepareCommit($result->rows, $actor);
+
                 foreach ($result->rows as $row) {
                     $definition->persist($row, $actor);
                 }

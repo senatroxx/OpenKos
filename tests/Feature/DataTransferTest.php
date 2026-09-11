@@ -1,6 +1,9 @@
 <?php
 
 use App\Enums\DataTransferDataset;
+use App\Enums\ExpenseStatus;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
@@ -53,6 +56,189 @@ it('previews the complete properties file without persisting anything', function
     $this->assertDatabaseMissing('properties', ['slug' => 'sunrise-house']);
 });
 
+it('imports expenses without requiring status and keeps optional business fields', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'expense-house']);
+    $category = ExpenseCategory::factory()->create(['slug' => 'expense-supplies']);
+    $csv = implode("\n", [
+        'property_slug,category_slug,reference,amount,currency,expense_date,vendor,description,notes',
+        "{$property->slug},{$category->slug},EXP-001,125000,IDR,2026-09-01,Vendor One,Replacement supplies,Imported from ledger",
+    ]);
+
+    $preview = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', $csv),
+    ]);
+
+    $preview->assertSuccessful()
+        ->assertJsonPath('valid', true)
+        ->assertJsonPath('row_count', 1)
+        ->assertJsonPath('error_count', 0);
+
+    $commit = $this->actingAs($user)->post(route('data-transfer.commit'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', $csv),
+    ]);
+
+    $commit->assertSuccessful()->assertJsonPath('committed', true)->assertJsonPath('count', 1);
+
+    $expense = Expense::query()->firstOrFail();
+
+    expect($expense->property_id)->toBe($property->id)
+        ->and($expense->expense_category_id)->toBe($category->id)
+        ->and($expense->reference)->toBe('EXP-001')
+        ->and($expense->amount)->toBe('125000.000')
+        ->and($expense->currency)->toBe('IDR')
+        ->and($expense->expense_date->format('Y-m-d'))->toBe('2026-09-01')
+        ->and($expense->vendor)->toBe('Vendor One')
+        ->and($expense->description)->toBe('Replacement supplies')
+        ->and($expense->notes)->toBe('Imported from ledger')
+        ->and($expense->status)->toBe(ExpenseStatus::Active);
+});
+
+it('rejects blank and duplicate expense references including voided records', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'duplicate-house']);
+    $category = ExpenseCategory::factory()->create(['slug' => 'duplicate-supplies']);
+    Expense::factory()->for($property)->for($category, 'category')->voided()->create([
+        'reference' => 'EXP-VOIDED',
+    ]);
+
+    $existing = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', implode("\n", [
+            'property_slug,category_slug,reference,amount,currency,expense_date',
+            "{$property->slug},{$category->slug},EXP-VOIDED,100,IDR,2026-09-01",
+        ])),
+    ]);
+
+    $existing->assertUnprocessable();
+    expect(collect($existing->json('errors'))->contains(
+        fn (array $error): bool => $error['field'] === 'reference',
+    ))->toBeTrue();
+
+    $duplicate = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', implode("\n", [
+            'property_slug,category_slug,reference,amount,currency,expense_date',
+            "{$property->slug},{$category->slug},EXP-IN-FILE,100,IDR,2026-09-01",
+            "{$property->slug},{$category->slug},exp-in-file,200,IDR,2026-09-02",
+        ])),
+    ]);
+
+    $duplicate->assertUnprocessable();
+    expect(collect($duplicate->json('errors'))->contains(
+        fn (array $error): bool => $error['field'] === 'reference',
+    ))->toBeTrue();
+
+    $blank = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', implode("\n", [
+            'property_slug,category_slug,reference,amount,currency,expense_date',
+            "{$property->slug},{$category->slug},,100,IDR,2026-09-01",
+        ])),
+    ]);
+
+    $blank->assertUnprocessable();
+    expect(collect($blank->json('errors'))->contains(
+        fn (array $error): bool => $error['field'] === 'reference',
+    ))->toBeTrue();
+
+    $voided = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', implode("\n", [
+            'property_slug,category_slug,reference,amount,currency,expense_date,status,voided_at,voided_by,void_reason',
+            "{$property->slug},{$category->slug},EXP-VOIDED-IMPORT,100,IDR,2026-09-01,voided,2026-09-02T10:00:00+00:00,{$user->id},Already voided",
+        ])),
+    ]);
+
+    $voided->assertUnprocessable();
+    $voidedFields = collect($voided->json('errors'))->pluck('field');
+
+    expect($voidedFields)->toContain('status')->toContain('voided_at')->toContain('voided_by')->toContain('void_reason');
+});
+
+it('rechecks expense references at commit and rolls back the whole import on conflict', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'atomic-house']);
+    $category = ExpenseCategory::factory()->create(['slug' => 'atomic-supplies']);
+    $file = csvFile('expenses.csv', implode("\n", [
+        'property_slug,category_slug,reference,amount,currency,expense_date',
+        "{$property->slug},{$category->slug},EXP-FIRST,100,IDR,2026-09-01",
+        "{$property->slug},{$category->slug},EXP-SECOND,200,IDR,2026-09-02",
+    ]));
+    $transfer = app(MasterDataTransferService::class);
+    $result = $transfer->validate(DataTransferDataset::Expenses, $file, $user);
+
+    expect($result->isValid())->toBeTrue();
+
+    Expense::factory()->for($property)->for($category, 'category')->voided()->create([
+        'reference' => 'EXP-SECOND',
+    ]);
+
+    expect(fn () => $transfer->commit(DataTransferDataset::Expenses, $result, $user))
+        ->toThrow(ImportCommitException::class, 'already exists');
+
+    expect(Expense::query()->whereIn('reference', ['EXP-FIRST', 'EXP-SECOND'])->count())->toBe(1);
+});
+
+it('preserves strict expense money and date validation', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'strict-house']);
+    $category = ExpenseCategory::factory()->create(['slug' => 'strict-supplies']);
+
+    $response = $this->actingAs($user)->post(route('data-transfer.preview'), [
+        'dataset' => 'expenses',
+        'file' => csvFile('expenses.csv', implode("\n", [
+            'property_slug,category_slug,reference,amount,currency,expense_date',
+            "{$property->slug},{$category->slug},EXP-STRICT,100.50,IDR,09/01/2026",
+        ])),
+    ]);
+
+    $response->assertUnprocessable();
+    $fields = collect($response->json('errors'))->pluck('field');
+
+    expect($fields)->toContain('amount')->toContain('expense_date');
+});
+
+it('exports active and voided expenses with stable business and void metadata', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['slug' => 'export-house']);
+    $category = ExpenseCategory::factory()->create(['slug' => 'export-supplies']);
+    Expense::factory()->for($property)->for($category, 'category')->create([
+        'reference' => 'EXP-ACTIVE',
+        'vendor' => 'Active Vendor',
+        'description' => 'Active description',
+        'notes' => 'Active notes',
+    ]);
+    Expense::factory()->for($property)->for($category, 'category')->voided()->create([
+        'reference' => 'EXP-VOIDED',
+        'voided_by' => $user->id,
+    ]);
+
+    $active = $this->actingAs($user)->get(route('data-transfer.export', [
+        'dataset' => 'expenses',
+    ]));
+
+    $active->assertDownload('expenses-v1.csv');
+    expect($active->streamedContent())
+        ->toContain('property_slug,category_slug,reference,amount,currency,expense_date,vendor,description,notes,status,voided_at,voided_by,void_reason')
+        ->toContain('EXP-ACTIVE')
+        ->toContain('Active Vendor')
+        ->not->toContain('EXP-VOIDED');
+
+    $all = $this->actingAs($user)->get(route('data-transfer.export', [
+        'dataset' => 'expenses',
+        'include_archived' => 1,
+    ]));
+
+    expect($all->streamedContent())
+        ->toContain('EXP-ACTIVE')
+        ->toContain('EXP-VOIDED')
+        ->toContain('voided')
+        ->toContain('Duplicate entry');
+});
+
 it('renders dedicated contextual transfer pages with export filters', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();
@@ -89,6 +275,27 @@ it('renders dedicated contextual transfer pages with export filters', function (
             ->where('dataset', 'unit-rates')
             ->where('context.property_slug', $property->slug)
             ->where('context.unit_name', $unit->name));
+});
+
+it('renders contextual expense transfer pages with status and currency filters', function () {
+    $user = User::factory()->owner()->create();
+
+    $this->actingAs($user)
+        ->get(route('expenses.transfer.import'))
+        ->assertInertia(fn ($page) => $page
+            ->component('data-transfer/import')
+            ->where('dataset', 'expenses')
+            ->where('backUrl', route('expenses.index')));
+
+    $this->actingAs($user)
+        ->get(route('expenses.transfer.export', ['status' => 'voided']))
+        ->assertInertia(fn ($page) => $page
+            ->component('data-transfer/export')
+            ->where('dataset', 'expenses')
+            ->where('initialQuery.status', 'voided')
+            ->where('includeArchivedDefault', true)
+            ->where('filters.0.key', 'status')
+            ->where('filters.1.key', 'currency'));
 });
 
 it('uses namespaced transfer routes that do not collide with entity slugs', function () {

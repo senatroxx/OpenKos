@@ -9,6 +9,7 @@ enum DataTransferDataset: string
     case Tenants = 'tenants';
     case UnitRates = 'unit-rates';
     case PropertyTypes = 'property-types';
+    case Expenses = 'expenses';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum DataTransferDataset: string
             self::Tenants => 'Tenants',
             self::UnitRates => 'Unit rates',
             self::PropertyTypes => 'Property types',
+            self::Expenses => 'Expenses',
         };
     }
 

@@ -31,7 +31,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { t } from '@/lib/i18n';
-import { commit as commitRoute, preview as previewRoute } from '@/routes/data-transfer';
+import {
+    commit as commitRoute,
+    preview as previewRoute,
+} from '@/routes/data-transfer';
 import type { QueryParams } from '@/wayfinder';
 
 export const TRANSFER_MAX_ROWS = 10_000;
@@ -382,7 +385,7 @@ export function TransferExportForm({
                     }
                     className="size-4 rounded border-input"
                 />
-                {t('Include archived/inactive')}
+                {t('Include non-active records')}
             </label>
 
             <DialogFooter>

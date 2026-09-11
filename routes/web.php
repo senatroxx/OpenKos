@@ -315,6 +315,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('expenses')->name('expenses.')->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index')->middleware('permission:expenses.view');
         Route::post('/', [ExpenseController::class, 'store'])->name('store')->middleware('permission:expenses.create');
+        Route::get('transfer/import', [DataTransferController::class, 'importPage'])
+            ->defaults('dataset', 'expenses')
+            ->name('transfer.import')
+            ->middleware('permission:expenses.import');
+        Route::get('transfer/export', [DataTransferController::class, 'exportPage'])
+            ->defaults('dataset', 'expenses')
+            ->name('transfer.export')
+            ->middleware('permission:expenses.export');
 
         Route::prefix('{expense}')->whereNumber('expense')->group(function () {
             Route::put('/', [ExpenseController::class, 'update'])->name('update')->middleware('permission:expenses.update');
