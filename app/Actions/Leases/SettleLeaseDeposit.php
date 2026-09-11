@@ -115,7 +115,7 @@ class SettleLeaseDeposit
                     'lease_id' => $lockedLease->getKey(),
                     'original_amount' => $originalAmount,
                     'currency' => $currency,
-                    'status' => $data->status,
+                    'status' => DepositSettlementStatus::Draft,
                     'settlement_date' => $data->settlementDate,
                     'refund_amount' => $refundAmount,
                     'refund_reference' => $data->refundReference,
@@ -123,7 +123,6 @@ class SettleLeaseDeposit
                 ]);
 
                 $settlement->update([
-                    'status' => $data->status,
                     'settlement_date' => $data->settlementDate,
                     'refund_amount' => $refundAmount,
                     'refund_reference' => $data->refundReference,
@@ -139,6 +138,8 @@ class SettleLeaseDeposit
                 foreach ($deductions as $deduction) {
                     $settlement->deductions()->create($deduction);
                 }
+
+                $settlement->update(['status' => $data->status]);
 
                 return $settlement->load('deductions');
             }, attempts: 3);

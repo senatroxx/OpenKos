@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
 
 #[Fillable([
     'lease_id',
@@ -29,6 +30,25 @@ class DepositSettlement extends Model
     use Auditable, HasFactory, SerializesDatesWithTimezone;
 
     protected $appends = ['deductions_total'];
+
+    protected static function booted(): void
+    {
+        static::updating(function (DepositSettlement $settlement): void {
+            if ($settlement->getRawOriginal('status') === DepositSettlementStatus::Settled->value) {
+                throw new LogicException('Settled deposit settlements are immutable.');
+            }
+
+            if ($settlement->isDirty(['lease_id', 'original_amount', 'currency'])) {
+                throw new LogicException('Deposit settlement snapshots are immutable.');
+            }
+        });
+
+        static::deleting(function (DepositSettlement $settlement): void {
+            if ($settlement->status === DepositSettlementStatus::Settled) {
+                throw new LogicException('Settled deposit settlements are immutable.');
+            }
+        });
+    }
 
     protected function casts(): array
     {

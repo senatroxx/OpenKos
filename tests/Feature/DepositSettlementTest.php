@@ -147,6 +147,32 @@ it('does not allow settled settlements to be changed', function () {
         ->toThrow(ValidationException::class);
 });
 
+it('keeps settled settlements and deduction lines immutable at the model boundary', function () {
+    $lease = terminatedDepositLease();
+    $settlement = app(SettleLeaseDeposit::class)->execute(
+        $lease,
+        depositSettlementData(
+            DepositSettlementStatus::Settled,
+            refundAmount: '700',
+            deductions: [['amount' => '300', 'reason' => 'Repairs']],
+        ),
+    );
+    $deduction = $settlement->deductions->firstOrFail();
+
+    expect(fn () => $settlement->update(['notes' => 'Changed']))
+        ->toThrow(LogicException::class);
+    expect(fn () => $settlement->delete())
+        ->toThrow(LogicException::class);
+    expect(fn () => $deduction->update(['amount' => '200']))
+        ->toThrow(LogicException::class);
+    expect(fn () => $deduction->delete())
+        ->toThrow(LogicException::class);
+    expect(fn () => $settlement->deductions()->create([
+        'amount' => '100',
+        'reason' => 'Additional repairs',
+    ]))->toThrow(LogicException::class);
+});
+
 it('saves a post-move-out draft through the lease endpoint', function () {
     $user = User::factory()->owner()->create();
     $lease = terminatedDepositLease();
