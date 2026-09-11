@@ -378,6 +378,21 @@ describe('CRUD', function () {
         );
     });
 
+    it('applies multiple unit status filters', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        Unit::factory()->for($property)->create(['status' => 'available']);
+        Unit::factory()->for($property)->occupied()->create();
+        Unit::factory()->for($property)->maintenance()->create();
+
+        $this->actingAs($user)
+            ->get(route('properties.units.index', [$property, 'status' => 'available,occupied']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('units.data', 2)
+            );
+    });
+
     it('filters archived units', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();

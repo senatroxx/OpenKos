@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     DoorOpen,
     EllipsisVertical,
@@ -21,6 +21,7 @@ import {
     UnitDetailSheet,
     UnitFormSheet,
 } from '@/components/features';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +45,7 @@ import { t } from '@/lib/i18n';
 import { PropertyLayout } from '@/pages/properties/layout';
 import properties from '@/routes/properties';
 import type {
+    Auth,
     LeaseInfo,
     PaginatedData,
     Property,
@@ -87,6 +89,7 @@ export default function Index({
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
@@ -463,8 +466,31 @@ export default function Index({
             <Head title={`${t('Units')} - ${property.name}`} />
 
             <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-end gap-2">
                     <Button onClick={openCreate}>{t('New Unit')}</Button>
+                    <EntityTransferMenu
+                        datasetLabel={t('Units')}
+                        canImport={
+                            auth.role === 'owner' ||
+                            auth.permissions.includes('units.import')
+                        }
+                        canExport={
+                            auth.role === 'owner' ||
+                            auth.permissions.includes('units.export')
+                        }
+                        importHref={properties.units.transfer.import.url(
+                            property,
+                        )}
+                        exportHref={properties.units.transfer.export.url(
+                            property,
+                            {
+                                query: {
+                                    search: currentSearch || undefined,
+                                    status: currentStatus || undefined,
+                                },
+                            },
+                        )}
+                    />
                 </div>
 
                 <FilterBar

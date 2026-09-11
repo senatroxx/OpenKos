@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BrandingAssetController;
+use App\Http\Controllers\DataTransferController;
 use App\Http\Controllers\Settings\AboutController;
 use App\Http\Controllers\Settings\ExpenseCategoryController;
 use App\Http\Controllers\Settings\GeneralController;
@@ -68,6 +69,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('settings/whatsapp/status', [WhatsAppController::class, 'status'])->name('settings.whatsapp.status');
 
         Route::get('settings/property-types', [PropertyTypeController::class, 'index'])->name('settings.property-types.index');
+        Route::get('settings/property-types/transfer/export', [DataTransferController::class, 'exportPage'])
+            ->defaults('dataset', 'property-types')
+            ->name('settings.property-types.transfer.export')
+            ->middleware('permission:properties.export');
         Route::post('settings/property-types', [PropertyTypeController::class, 'store'])->name('settings.property-types.store');
         Route::patch('settings/property-types/{propertyType}', [PropertyTypeController::class, 'update'])->name('settings.property-types.update');
         Route::delete('settings/property-types/{propertyType}', [PropertyTypeController::class, 'destroy'])->name('settings.property-types.destroy');

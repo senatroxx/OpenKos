@@ -145,6 +145,33 @@ class Unit extends Model
         ]);
     }
 
+    public function scopeStatusFilter(Builder $query, string $status): void
+    {
+        if ($status === 'archived') {
+            $query->whereNotNull('units.deleted_at');
+
+            return;
+        }
+
+        if (in_array($status, UnitStatus::values(), true)) {
+            $query->whereNull('units.deleted_at')->where('units.status', $status);
+
+            return;
+        }
+
+        $query->whereRaw('1 = 0');
+    }
+
+    public function scopeListSearch(Builder $query, string $search): void
+    {
+        $search = mb_strtolower($search);
+
+        $query->where(function (Builder $query) use ($search): void {
+            $query->whereRaw('lower(units.name) like ?', ["%{$search}%"])
+                ->orWhereRaw('lower(units.floor) like ?', ["%{$search}%"]);
+        });
+    }
+
     public function maintenanceTickets(): HasMany
     {
         return $this->hasMany(MaintenanceTicket::class);
