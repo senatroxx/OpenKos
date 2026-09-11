@@ -696,7 +696,6 @@ function makeRuntimePluginArtifact(
         'version' => '1.0.0',
         'description' => 'Runtime fixture plugin.',
         'entry_class' => $entryClass,
-        'core_version' => '^0.2',
         'php' => '>=8.4 <8.6',
         'dependencies' => [],
         ...$overrides,
@@ -713,8 +712,10 @@ function makeRuntimePluginArtifact(
         'extra' => ['openkos' => ['plugin' => $entryClass]],
     ];
     $dependencies = var_export($manifest['dependencies'], true);
-    $source = "<?php\n\nnamespace RuntimeArtifact;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$manifest['id']}',\n            name: '{$manifest['name']}',\n            version: '{$manifest['version']}',\n            description: '{$manifest['description']}',\n            coreVersion: '{$manifest['core_version']}',\n            dependencies: [],\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void\n    {\n        \$platform->permissions()->register('runtime-fixture.view', 'Runtime Fixture');\n    }\n}\n";
-    $source = str_replace('dependencies: [],', "dependencies: {$dependencies},", $source);
+    $coreVersion = isset($manifest['core_version'])
+        ? "            coreVersion: '{$manifest['core_version']}',\n"
+        : '';
+    $source = "<?php\n\nnamespace RuntimeArtifact;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$manifest['id']}',\n            name: '{$manifest['name']}',\n            version: '{$manifest['version']}',\n            description: '{$manifest['description']}',\n{$coreVersion}            dependencies: {$dependencies},\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void\n    {\n        \$platform->permissions()->register('runtime-fixture.view', 'Runtime Fixture');\n    }\n}\n";
 
     $installedPackages = [
         ...array_map(

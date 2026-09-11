@@ -1079,16 +1079,16 @@ export default function Plugins({
                                                             </dd>
                                                         </div>
                                                     )}
-                                                {plugin.core_version && (
+                                                {plugin.platform_constraint && (
                                                     <div>
                                                         <dt className="text-muted-foreground">
                                                             {t(
-                                                                'OpenKOS requirement',
+                                                                'OpenKOS platform requirement',
                                                             )}
                                                         </dt>
                                                         <dd className="font-mono">
                                                             {
-                                                                plugin.core_version
+                                                                plugin.platform_constraint
                                                             }
                                                         </dd>
                                                     </div>

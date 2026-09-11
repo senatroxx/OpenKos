@@ -55,7 +55,7 @@ class PluginManagementService
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     platform_constraint: string|null,
      *     php: string,
      *     dependencies: array<int, string>
      * }
@@ -314,7 +314,7 @@ class PluginManagementService
         return __('The plugin artifact was rejected. Check that it is a valid prepared runtime plugin ZIP.');
     }
 
-    /** @return array{0: string, 1: string, 2: string}|null */
+    /** @return array{0: string, 1: string}|null */
     private function marketplaceHostVersions(): ?array
     {
         $versions = [config('platform.version'), PHP_VERSION];
@@ -329,7 +329,7 @@ class PluginManagementService
             }
         }
 
-        return [$versions[0], $versions[0], $versions[1]];
+        return [$versions[0], $versions[1]];
     }
 
     /** @param array<string, mixed> $record @param array<string, mixed>|null $compatible @param array<string, mixed>|null $local @return array<string, mixed> */
@@ -379,7 +379,6 @@ class PluginManagementService
             || ! is_string($versionMetadata['entry_class'] ?? null)
             || ! is_array($versionMetadata['dependencies'] ?? null)
             || ! is_array($versionMetadata['manifest'] ?? null)
-            || ! is_string($compatibility['core'] ?? null)
             || ! is_string($compatibility['platform'] ?? null)
             || ! is_string($compatibility['php'] ?? null)
         ) {
@@ -408,7 +407,6 @@ class PluginManagementService
                 expectedCurrentState: $expectedCurrentState,
                 expectedMetadata: [
                     'entry_class' => $versionMetadata['entry_class'],
-                    'core_version' => $compatibility['core'],
                     'platform_constraint' => $compatibility['platform'],
                     'php' => $compatibility['php'],
                     'dependencies' => $versionMetadata['dependencies'],
@@ -649,7 +647,7 @@ class PluginManagementService
                 'version' => null,
                 'description' => '',
                 'entry_class' => null,
-                'core_version' => null,
+                'platform_constraint' => null,
                 'php' => null,
                 'dependencies' => [],
                 ...$this->runtimeProvenance($entry),
@@ -859,7 +857,7 @@ class PluginManagementService
                     'version' => $manifest->version,
                     'description' => $manifest->description,
                     'entry_class' => $class,
-                    'core_version' => $manifest->coreVersion,
+                    'platform_constraint' => null,
                     'php' => null,
                     'dependencies' => $manifest->dependencies,
                     'provenance' => null,
@@ -959,7 +957,7 @@ class PluginManagementService
                 ? __('Runtime recovery metadata exists, but its package identity cannot be trusted.')
                 : __('No runtime package is installed, but lifecycle metadata still requires recovery.'),
             'entry_class' => null,
-            'core_version' => null,
+            'platform_constraint' => null,
             'php' => null,
             'dependencies' => [],
             'provenance' => null,
@@ -991,7 +989,7 @@ class PluginManagementService
             'version' => null,
             'description' => __('Recovery metadata exists for a package that is not installed.'),
             'entry_class' => null,
-            'core_version' => null,
+            'platform_constraint' => null,
             'php' => null,
             'dependencies' => [],
             'provenance' => null,
@@ -1032,7 +1030,7 @@ class PluginManagementService
                 ? __('A managed runtime path is a symlink and was not followed.')
                 : __('A managed runtime path has an unexpected filesystem type.'),
             'entry_class' => null,
-            'core_version' => null,
+            'platform_constraint' => null,
             'php' => null,
             'dependencies' => [],
             'provenance' => null,
@@ -1093,7 +1091,7 @@ class PluginManagementService
             'version' => null,
             'description' => '',
             'entry_class' => null,
-            'core_version' => null,
+            'platform_constraint' => null,
             'php' => null,
             'dependencies' => [],
         ];
@@ -1124,7 +1122,7 @@ class PluginManagementService
             return $preview;
         }
 
-        foreach (['id', 'name', 'version', 'description', 'entry_class', 'core_version', 'php'] as $key) {
+        foreach (['id', 'name', 'version', 'description', 'entry_class', 'php'] as $key) {
             if (is_string($manifest[$key] ?? null) && $manifest[$key] !== '') {
                 if ($key === 'id') {
                     $preview['declared_id'] = $manifest[$key];
@@ -1136,6 +1134,19 @@ class PluginManagementService
 
         if (is_array($manifest['dependencies'] ?? null)) {
             $preview['dependencies'] = array_values(array_filter($manifest['dependencies'], 'is_string'));
+        }
+
+        $composerPath = $path.'/composer.json';
+        if (is_file($composerPath) && ! is_link($composerPath)) {
+            try {
+                $composer = json_decode(file_get_contents($composerPath) ?: '', true, 512, JSON_THROW_ON_ERROR);
+                $constraint = is_array($composer) ? data_get($composer, 'require.openkos/platform') : null;
+                if (is_string($constraint) && $constraint !== '') {
+                    $preview['platform_constraint'] = $constraint;
+                }
+            } catch (Throwable) {
+                // The runtime validator reports malformed Composer metadata.
+            }
         }
 
         return $preview;

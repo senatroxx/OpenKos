@@ -13,7 +13,7 @@ use OpenKOS\Plugins\Example\Listeners\LogPaymentRecorded;
 
 /**
  * Reference plugin demonstrating every extension point:
- *  - a manifest (id, version, core-version constraint)
+ *  - a manifest (id, version, dependencies)
  *  - registry registrations: a sidebar nav item, a Dashboard sub-page,
  *    a settings page (+ a workspace-header badge, client side)
  *  - a domain-event subscription via listens()
@@ -29,7 +29,6 @@ class ExamplePlugin extends Plugin
             name: 'Example Plugin',
             version: '1.0.0',
             description: 'Reference plugin demonstrating every extension point.',
-            coreVersion: '^0.2',
         );
     }
 
