@@ -40,6 +40,7 @@ final class ExpensesDefinition extends DatasetDefinition
             'notes',
             'status',
             'voided_at',
+            'voided_by',
             'void_reason',
         ];
     }
@@ -94,6 +95,7 @@ final class ExpensesDefinition extends DatasetDefinition
             'notes' => ['nullable', 'string', 'max:65535'],
             'status' => ['nullable', Rule::in(ExpenseStatus::values())],
             'voided_at' => ['nullable', 'date'],
+            'voided_by' => ['nullable', 'integer'],
             'void_reason' => ['nullable', 'string', 'max:65535'],
         ], $line, $context);
 
@@ -121,7 +123,7 @@ final class ExpensesDefinition extends DatasetDefinition
             $context->error($line, 'status', __('Imported expenses must be active. Voided records cannot be imported.'));
         }
 
-        foreach (['voided_at', 'void_reason'] as $field) {
+        foreach (['voided_at', 'voided_by', 'void_reason'] as $field) {
             if (($values[$field] ?? null) !== null) {
                 $context->error($line, $field, __('Voided expense metadata is export-only.'));
             }
@@ -318,6 +320,7 @@ final class ExpensesDefinition extends DatasetDefinition
             $expense->notes,
             $expense->status?->value ?? $expense->status,
             $expense->voided_at?->toIso8601String(),
+            $expense->voided_by,
             $expense->void_reason,
         ];
     }

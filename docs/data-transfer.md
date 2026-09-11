@@ -20,6 +20,7 @@ Expense exports use `expenses-v1.csv` with these columns:
 | `notes` | Optional | Additional notes. |
 | `status` | Optional on import | Exports `active` or `voided`; imports accept only `active` and assign active status internally. |
 | `voided_at` | Export only | ISO 8601 void timestamp. |
+| `voided_by` | Export only | ID of the user who voided the expense, when available. |
 | `void_reason` | Export only | Reason recorded when the expense was voided. |
 
 Imports are create-only. The transfer layer treats `(property, reference)` as

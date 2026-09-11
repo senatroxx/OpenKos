@@ -147,15 +147,15 @@ it('rejects blank and duplicate expense references including voided records', fu
     $voided = $this->actingAs($user)->post(route('data-transfer.preview'), [
         'dataset' => 'expenses',
         'file' => csvFile('expenses.csv', implode("\n", [
-            'property_slug,category_slug,reference,amount,currency,expense_date,status,voided_at,void_reason',
-            "{$property->slug},{$category->slug},EXP-VOIDED-IMPORT,100,IDR,2026-09-01,voided,2026-09-02T10:00:00+00:00,Already voided",
+            'property_slug,category_slug,reference,amount,currency,expense_date,status,voided_at,voided_by,void_reason',
+            "{$property->slug},{$category->slug},EXP-VOIDED-IMPORT,100,IDR,2026-09-01,voided,2026-09-02T10:00:00+00:00,{$user->id},Already voided",
         ])),
     ]);
 
     $voided->assertUnprocessable();
     $voidedFields = collect($voided->json('errors'))->pluck('field');
 
-    expect($voidedFields)->toContain('status')->toContain('voided_at')->toContain('void_reason');
+    expect($voidedFields)->toContain('status')->toContain('voided_at')->toContain('voided_by')->toContain('void_reason');
 });
 
 it('rechecks expense references at commit and rolls back the whole import on conflict', function () {
@@ -213,6 +213,7 @@ it('exports active and voided expenses with stable business and void metadata', 
     ]);
     Expense::factory()->for($property)->for($category, 'category')->voided()->create([
         'reference' => 'EXP-VOIDED',
+        'voided_by' => $user->id,
     ]);
 
     $active = $this->actingAs($user)->get(route('data-transfer.export', [
@@ -221,7 +222,7 @@ it('exports active and voided expenses with stable business and void metadata', 
 
     $active->assertDownload('expenses-v1.csv');
     expect($active->streamedContent())
-        ->toContain('property_slug,category_slug,reference,amount,currency,expense_date,vendor,description,notes,status,voided_at,void_reason')
+        ->toContain('property_slug,category_slug,reference,amount,currency,expense_date,vendor,description,notes,status,voided_at,voided_by,void_reason')
         ->toContain('EXP-ACTIVE')
         ->toContain('Active Vendor')
         ->not->toContain('EXP-VOIDED');
