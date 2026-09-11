@@ -138,6 +138,11 @@ class Lease extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    public function depositSettlement(): HasOne
+    {
+        return $this->hasOne(DepositSettlement::class);
+    }
+
     public function payments(): HasManyThrough
     {
         return $this->hasManyThrough(Payment::class, Invoice::class);

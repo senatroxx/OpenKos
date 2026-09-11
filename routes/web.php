@@ -286,6 +286,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::get('invoices/{invoice}/download', [LeaseInvoiceController::class, 'download'])->name('workspace.invoices.download')->middleware('permission:leases.view');
             Route::get('rent-schedule', LeaseRentScheduleController::class)->name('rent-schedule')->middleware('permission:leases.view');
             Route::post('move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
+            Route::post('deposit-settlement', [LeaseController::class, 'saveDepositSettlement'])->name('deposit-settlement')->middleware('permission:leases.move_out');
             Route::post('renew', [LeaseController::class, 'renew'])->name('renew')->middleware('permission:leases.renew');
 
             Route::prefix('payments')->group(function () {

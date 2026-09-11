@@ -407,16 +407,7 @@ export default function Index({
             />
 
             <MoveOutSheet
-                lease={
-                    detailLease
-                        ? {
-                              id: detailLease.id,
-                              tenants: detailLease.tenants,
-                              primary_tenant: detailLease.primary_tenant,
-                              unit: detailLease.unit,
-                          }
-                        : null
-                }
+                lease={detailLease}
                 availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}

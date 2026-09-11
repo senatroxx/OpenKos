@@ -1,5 +1,7 @@
 import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { StatusBadge } from '@/components/shared/status-badge';
+import { Button } from '@/components/ui/button';
 import {
     Collapsible,
     CollapsibleContent,
@@ -10,13 +12,16 @@ import { BILLING_STRATEGIES } from '@/lib/constants/billing';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import type { Lease } from '@/types';
+import DepositSettlementSheet from './deposit-settlement-sheet';
 
 export default function LeaseOverview({ lease }: { lease: Lease }) {
+    const [settlementOpen, setSettlementOpen] = useState(false);
     const unitLabel = lease.unit?.name ?? '—';
     const propertyName = lease.unit?.property?.name ?? '—';
     const city = lease.unit?.property?.city;
     const propertyCity =
         city && typeof city === 'object' ? city.name : (city ?? '');
+    const depositSettlement = lease.deposit_settlement;
     const billingStrategy =
         BILLING_STRATEGIES.find((s) => s.value === lease.billing_strategy)
             ?.label ?? 'Advance (due within period)';
@@ -234,8 +239,10 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                 </span>
                                 <span className="tabular-nums">
                                     {formatPrice(
-                                        lease.deposit_amount,
-                                        lease.currency,
+                                        depositSettlement?.original_amount ??
+                                            lease.deposit_amount,
+                                        depositSettlement?.currency ??
+                                            lease.currency,
                                     )}
                                 </span>
                             </div>
@@ -249,28 +256,126 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                                     </span>
                                 </div>
                             )}
-                            {lease.deposit_refund_amount && (
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">
-                                        {t('Refund')}
-                                    </span>
-                                    <span className="tabular-nums">
-                                        {formatPrice(
-                                            lease.deposit_refund_amount,
-                                            lease.currency,
-                                        )}
-                                    </span>
-                                </div>
+                            {depositSettlement ? (
+                                <>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            {t('Settlement')}
+                                        </span>
+                                        <span className="font-medium capitalize">
+                                            {depositSettlement.status}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            {t('Settlement date')}
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {formatDate(
+                                                depositSettlement.settlement_date,
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            {t('Refund')}
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {formatPrice(
+                                                depositSettlement.refund_amount,
+                                                depositSettlement.currency,
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            {t('Deductions')}
+                                        </span>
+                                        <span className="tabular-nums">
+                                            {formatPrice(
+                                                depositSettlement.deductions_total,
+                                                depositSettlement.currency,
+                                            )}
+                                        </span>
+                                    </div>
+                                    {depositSettlement.deductions.map(
+                                        (deduction) => (
+                                            <div
+                                                key={deduction.id}
+                                                className="rounded-md bg-muted/30 p-2 text-xs"
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span>
+                                                        {deduction.reason}
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {formatPrice(
+                                                            deduction.amount,
+                                                            depositSettlement.currency,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                {deduction.description && (
+                                                    <p className="mt-1 text-muted-foreground">
+                                                        {deduction.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ),
+                                    )}
+                                    {depositSettlement.refund_reference && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                {t('Refund reference')}
+                                            </span>
+                                            <span className="text-right">
+                                                {
+                                                    depositSettlement.refund_reference
+                                                }
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {lease.deposit_refund_amount && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                {t('Refund')}
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {formatPrice(
+                                                    lease.deposit_refund_amount,
+                                                    lease.currency,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {lease.deposit_refunded_at && (
+                                        <div className="flex items-center justify-between text-sm">
+                                            <span className="text-muted-foreground">
+                                                {t('Refunded at')}
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {formatDate(
+                                                    lease.deposit_refunded_at,
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
+                                </>
                             )}
-                            {lease.deposit_refunded_at && (
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">
-                                        {t('Refunded at')}
-                                    </span>
-                                    <span className="tabular-nums">
-                                        {formatDate(lease.deposit_refunded_at)}
-                                    </span>
-                                </div>
+                            {lease.status === 'terminated' && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="mt-2 w-full"
+                                    onClick={() => setSettlementOpen(true)}
+                                >
+                                    {depositSettlement
+                                        ? t('View Deposit Settlement')
+                                        : t('Settle Deposit')}
+                                </Button>
                             )}
                         </div>
                     </CollapsibleContent>
@@ -287,6 +392,12 @@ export default function LeaseOverview({ lease }: { lease: Lease }) {
                     </p>
                 </div>
             )}
+
+            <DepositSettlementSheet
+                lease={lease}
+                open={settlementOpen}
+                onOpenChange={setSettlementOpen}
+            />
         </div>
     );
 }
