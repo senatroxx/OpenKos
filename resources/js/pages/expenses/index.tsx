@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { Ban, EllipsisVertical, Eye, FileText, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
@@ -6,6 +6,7 @@ import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import { ExpenseDetailSheet, ExpenseFormSheet } from '@/components/features';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import expenses from '@/routes/expenses';
 import type {
     Expense,
     ExpenseCategory,
+    Auth,
     MoneyAggregate,
     PaginatedData,
     TableMeta,
@@ -78,6 +80,7 @@ export default function Index({
     date_to: currentDateTo = '',
     summary,
 }: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const [formOpen, setFormOpen] = useState(false);
     const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
@@ -310,9 +313,32 @@ export default function Index({
                             'Track operating costs across your properties',
                         )}
                     />
-                    {can.create && (
-                        <Button onClick={openCreate}>{t('New Expense')}</Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {can.create && (
+                            <Button onClick={openCreate}>
+                                {t('New Expense')}
+                            </Button>
+                        )}
+                        <EntityTransferMenu
+                            datasetLabel={t('Expenses')}
+                            canImport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('expenses.import')
+                            }
+                            canExport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('expenses.export')
+                            }
+                            importHref={expenses.transfer.import.url()}
+                            exportHref={expenses.transfer.export.url({
+                                query: {
+                                    search: currentSearch || undefined,
+                                    status: currentStatus || undefined,
+                                    currency: currentCurrency || undefined,
+                                },
+                            })}
+                        />
+                    </div>
                 </div>
 
                 {summary?.has_data && (

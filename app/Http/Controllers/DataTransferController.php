@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\DataTransferDataset;
+use App\Enums\ExpenseStatus;
 use App\Enums\Permission;
 use App\Enums\UnitStatus;
 use App\Http\Requests\DataTransfer\ImportDataRequest;
+use App\Models\Expense;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Unit;
@@ -14,6 +16,7 @@ use App\Services\DataTransfer\ImportCommitException;
 use App\Services\DataTransfer\MasterDataTransferService;
 use App\Services\Settings\InstallationCurrencySettings;
 use App\Support\DelimitedValues;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -88,7 +91,7 @@ class DataTransferController extends Controller
             'pageUrl' => $request->url(),
             'backUrl' => $this->backUrl($dataset, $property, $unit),
             'context' => $this->transferContext($dataset, $property, $unit),
-            'filters' => $this->exportFilters($dataset, $unit),
+            'filters' => $this->exportFilters($dataset, $unit, $request->user()),
             'initialQuery' => [
                 'search' => $request->string('search')->trim()->toString(),
                 'status' => implode(',', $status),
@@ -97,7 +100,9 @@ class DataTransferController extends Controller
                 'currency' => implode(',', DelimitedValues::normalize($request->query('currency'))),
             ],
             'includeArchivedDefault' => $request->boolean('include_archived')
-                || in_array('archived', $status, true),
+                || in_array('archived', $status, true)
+                || ($dataset === DataTransferDataset::Expenses
+                    && in_array(ExpenseStatus::Voided->value, $status, true)),
             'canExportSensitive' => $dataset === DataTransferDataset::Tenants
                 && ($request->user()->isOwner()
                     || $request->user()->can(Permission::TenantsExportSensitive->value)),
@@ -308,13 +313,14 @@ class DataTransferController extends Controller
                     'unit' => $unit,
                 ]),
             DataTransferDataset::PropertyTypes => route('settings.property-types.index'),
+            DataTransferDataset::Expenses => route('expenses.index'),
         };
     }
 
     /**
      * @return array<int, array{key: string, label: string, type: string, options: array<int, mixed>}>
      */
-    private function exportFilters(DataTransferDataset $dataset, ?Unit $unit): array
+    private function exportFilters(DataTransferDataset $dataset, ?Unit $unit, User $actor): array
     {
         return match ($dataset) {
             DataTransferDataset::Properties => [
@@ -389,7 +395,45 @@ class DataTransferController extends Controller
                 ],
             ],
             DataTransferDataset::PropertyTypes => [],
+            DataTransferDataset::Expenses => [
+                [
+                    'key' => 'status',
+                    'label' => 'Status',
+                    'type' => 'select',
+                    'options' => array_map(
+                        fn (ExpenseStatus $status): array => [
+                            'value' => $status->value,
+                            'label' => $status->label(),
+                        ],
+                        ExpenseStatus::cases(),
+                    ),
+                ],
+                [
+                    'key' => 'currency',
+                    'label' => 'Currency',
+                    'type' => 'select',
+                    'options' => $this->expenseCurrencies($actor),
+                ],
+            ],
         };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function expenseCurrencies(User $actor): array
+    {
+        return Expense::query()
+            ->whereHas('property', function (Builder $property) use ($actor): void {
+                $property->when(! $actor->isOwner(), fn (Builder $query) => $query->whereHas(
+                    'users',
+                    fn (Builder $users) => $users->whereKey($actor->id),
+                ));
+            })
+            ->distinct()
+            ->orderBy('currency')
+            ->pluck('currency')
+            ->all();
     }
 
     /**
@@ -468,6 +512,9 @@ class DataTransferController extends Controller
             DataTransferDataset::UnitRates => $action === 'import'
                 ? Permission::UnitRatesImport->value
                 : Permission::UnitRatesExport->value,
+            DataTransferDataset::Expenses => $action === 'import'
+                ? Permission::ExpensesImport->value
+                : Permission::ExpensesExport->value,
         };
     }
 }

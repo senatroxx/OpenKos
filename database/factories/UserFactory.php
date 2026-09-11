@@ -97,6 +97,8 @@ class UserFactory extends Factory
                 Permission::ExpensesCreate->value,
                 Permission::ExpensesUpdate->value,
                 Permission::ExpensesDelete->value,
+                Permission::ExpensesImport->value,
+                Permission::ExpensesExport->value,
                 Permission::UnitRatesImport->value,
                 Permission::UnitRatesExport->value,
                 Permission::UsersView->value,
