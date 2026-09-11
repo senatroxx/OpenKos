@@ -141,7 +141,7 @@ export default function Recurring({
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                        {can.update && item.status !== 'ended' && (
+                        {can.update && (
                             <DropdownMenuItem onClick={() => openEdit(item)}>
                                 <Pencil className="size-4" />
                                 {t('Edit')}
@@ -220,6 +220,7 @@ export default function Recurring({
             </div>
 
             <RecurringExpenseFormSheet
+                key={editing?.id ?? 'new'}
                 recurringExpense={editing}
                 properties={properties}
                 categories={categories}
