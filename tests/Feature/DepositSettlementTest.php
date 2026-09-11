@@ -1,19 +1,23 @@
 <?php
 
+use App\Actions\Leases\MoveOutLease;
 use App\Actions\Leases\SettleLeaseDeposit;
 use App\Data\Lease\DepositDeductionData;
 use App\Data\Lease\DepositSettlementData;
+use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\DepositSettlementStatus;
 use App\Enums\LeaseStatus;
 use App\Models\AuditLog;
 use App\Models\DepositSettlement;
 use App\Models\Lease;
+use App\Models\Unit;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -202,6 +206,24 @@ it('keeps one settlement when a draft is saved more than once', function () {
     expect(DepositSettlement::where('lease_id', $lease->id)->count())->toBe(1);
 });
 
+it('keeps the original snapshot when lease deposit data later changes', function () {
+    $lease = terminatedDepositLease();
+    $action = app(SettleLeaseDeposit::class);
+
+    $action->execute($lease, depositSettlementData());
+    DB::table('leases')->whereKey($lease->id)->update([
+        'deposit_amount' => '2000',
+        'currency' => 'EUR',
+    ]);
+
+    $settlement = $action->execute($lease, depositSettlementData(refundAmount: '600'));
+
+    expect($settlement)
+        ->original_amount->toBe('1000.000')
+        ->currency->toBe('USD')
+        ->refund_amount->toBe('600.000');
+});
+
 it('translates concurrent settlement creation conflicts into validation errors', function () {
     $lease = terminatedDepositLease();
     $dispatcher = DepositSettlement::getEventDispatcher();
@@ -237,6 +259,28 @@ it('translates concurrent settlement creation conflicts into validation errors',
     }
 
     expect(DepositSettlement::count())->toBe(0);
+});
+
+it('does not settle a deposit while transferring a lease to another unit', function () {
+    $sourceUnit = Unit::factory()->withRate('1000', 'USD')->create();
+    $targetUnit = Unit::factory()->withRate('1000', 'USD')->create();
+    $lease = Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'deposit_amount' => '1000',
+        'currency' => 'USD',
+    ]);
+
+    expect(fn () => app(MoveOutLease::class)->execute($lease, new MoveOutLeaseData(
+        terminationDate: '2026-09-11',
+        endDate: '2026-09-11',
+        reason: 'Moved unit',
+        moveToAnotherUnit: true,
+        targetUnitId: $targetUnit->id,
+        depositSettlement: depositSettlementData(DepositSettlementStatus::Settled, refundAmount: '1000'),
+    )))->toThrow(HttpException::class);
+
+    expect($lease->fresh()->status)->toBe(LeaseStatus::Active)
+        ->and(DepositSettlement::count())->toBe(0);
 });
 
 it('rejects zero-deposit settlements', function () {
