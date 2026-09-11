@@ -1,5 +1,5 @@
 import { useForm, usePage } from '@inertiajs/react';
-import { useMemo } from 'react';
+import { useState } from 'react';
 import { InputError, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,8 @@ import { todayISO } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import recurringExpenses from '@/routes/expenses/recurring';
 import type { ExpenseCategory, RecurringExpense } from '@/types';
+
+const OTHER_CURRENCY = '__other__';
 
 type RecurringExpenseFormData = {
     property_id: string;
@@ -54,24 +56,59 @@ export default function RecurringExpenseFormSheet({
     onOpenChange: (open: boolean) => void;
 }) {
     const { setting } = usePage<{
-        setting: { currency: string };
+        setting: { currency: string; supported_currencies: string[] };
     }>().props;
     const isEdit = Boolean(recurringExpense);
+    const currentRecurringCurrency = recurringExpense?.currency?.toUpperCase();
     const defaultCurrency = setting.currency.toUpperCase();
-    const currencyOptions = useMemo(
-        () =>
-            Array.from(
-                new Set([...currencies, defaultCurrency].map((currency) => currency.toUpperCase())),
-            ).sort(),
-        [currencies, defaultCurrency],
+    const allCurrencies = Array.from(
+        new Set(
+            [
+                ...currencies,
+                defaultCurrency,
+                ...(currentRecurringCurrency ? [currentRecurringCurrency] : []),
+            ].map((currency) => currency.toUpperCase()),
+        ),
     );
+    const supportedCurrencies = Array.from(
+        new Set([
+            defaultCurrency,
+            ...setting.supported_currencies.map((currency) =>
+                currency.toUpperCase(),
+            ),
+        ]),
+    ).filter((currency) => allCurrencies.includes(currency));
+    const otherCurrencies = allCurrencies
+        .filter((currency) => !supportedCurrencies.includes(currency))
+        .sort();
+    const supportedCurrencyOptions = supportedCurrencies.map((currency) => ({
+        value: currency,
+        label: currency,
+    }));
+    const otherCurrencyOptions = otherCurrencies.map((currency) => ({
+        value: currency,
+        label: currency,
+    }));
+    const currencyOptions = [
+        ...supportedCurrencyOptions,
+        ...(otherCurrencyOptions.length > 0
+            ? [{ value: OTHER_CURRENCY, label: t('Other currency') }]
+            : []),
+    ];
+    const initialOtherCurrency = Boolean(
+        currentRecurringCurrency &&
+        !supportedCurrencies.includes(currentRecurringCurrency),
+    );
+    const [isOtherCurrency, setIsOtherCurrency] =
+        useState(initialOtherCurrency);
     const propertyOptions = properties.map((property) => ({
         value: String(property.id),
         label: property.name,
     }));
     const availableCategories = categories.filter(
         (category) =>
-            category.is_active || category.id === recurringExpense?.expense_category_id,
+            category.is_active ||
+            category.id === recurringExpense?.expense_category_id,
     );
     const { data, setData, submit, reset, processing, errors } =
         useForm<RecurringExpenseFormData>({
@@ -82,9 +119,11 @@ export default function RecurringExpenseFormSheet({
                   : '',
             expense_category_id: recurringExpense?.expense_category_id
                 ? String(recurringExpense.expense_category_id)
-                : (categories.find((category) => category.is_active)?.id.toString() ?? ''),
+                : (categories
+                      .find((category) => category.is_active)
+                      ?.id.toString() ?? ''),
             amount: recurringExpense?.amount ?? '',
-            currency: recurringExpense?.currency ?? defaultCurrency,
+            currency: currentRecurringCurrency ?? defaultCurrency,
             vendor: recurringExpense?.vendor ?? '',
             description: recurringExpense?.description ?? '',
             billing_interval: String(recurringExpense?.billing_interval ?? 1),
@@ -98,6 +137,7 @@ export default function RecurringExpenseFormSheet({
 
         if (!next) {
             reset();
+            setIsOtherCurrency(initialOtherCurrency);
         }
     }
 
@@ -113,14 +153,24 @@ export default function RecurringExpenseFormSheet({
     }
 
     return (
-        <Sheet key={recurringExpense?.id ?? 'new'} open={open} onOpenChange={close}>
+        <Sheet
+            key={recurringExpense?.id ?? 'new'}
+            open={open}
+            onOpenChange={close}
+        >
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        {t(isEdit ? 'Edit recurring expense' : 'New recurring expense')}
+                        {t(
+                            isEdit
+                                ? 'Edit recurring expense'
+                                : 'New recurring expense',
+                        )}
                     </SheetTitle>
                     <SheetDescription>
-                        {t('Future expenses use the current schedule values; generated expenses never change.')}
+                        {t(
+                            'Future expenses use the current schedule values; generated expenses never change.',
+                        )}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -135,7 +185,10 @@ export default function RecurringExpenseFormSheet({
                                 options={propertyOptions}
                                 value={data.property_id || null}
                                 onChange={(value) =>
-                                    setData('property_id', value === null ? '' : String(value))
+                                    setData(
+                                        'property_id',
+                                        value === null ? '' : String(value),
+                                    )
                                 }
                                 placeholder={t('Select property...')}
                                 searchPlaceholder={t('Search property...')}
@@ -144,22 +197,33 @@ export default function RecurringExpenseFormSheet({
                             <InputError message={errors.property_id} />
                         </div>
 
-                        <div className="grid gap-2">
+                        <div className="grid w-full gap-2">
                             <Label htmlFor="recurring-expense-category">
                                 {t('Category')}
                             </Label>
                             <Select
                                 value={data.expense_category_id}
-                                onValueChange={(value) => setData('expense_category_id', value)}
+                                onValueChange={(value) =>
+                                    setData('expense_category_id', value)
+                                }
                             >
-                                <SelectTrigger id="recurring-expense-category">
-                                    <SelectValue placeholder={t('Select category')} />
+                                <SelectTrigger
+                                    id="recurring-expense-category"
+                                    className="w-full"
+                                >
+                                    <SelectValue
+                                        placeholder={t('Select category')}
+                                    />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {availableCategories.map((category) => (
-                                        <SelectItem key={category.id} value={String(category.id)}>
+                                        <SelectItem
+                                            key={category.id}
+                                            value={String(category.id)}
+                                        >
                                             {category.label}
-                                            {!category.is_active && ` (${t('archived')})`}
+                                            {!category.is_active &&
+                                                ' (' + t('archived') + ')'}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -167,9 +231,11 @@ export default function RecurringExpenseFormSheet({
                             <InputError message={errors.expense_category_id} />
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
-                                <Label htmlFor="recurring-expense-amount">{t('Amount')}</Label>
+                        <div className="grid w-full grid-cols-1 items-start gap-4 sm:grid-cols-[2fr_1fr]">
+                            <div className="grid min-w-0 gap-2">
+                                <Label htmlFor="recurring-expense-amount">
+                                    {t('Amount')}
+                                </Label>
                                 <Input
                                     id="recurring-expense-amount"
                                     type="number"
@@ -178,27 +244,60 @@ export default function RecurringExpenseFormSheet({
                                     inputMode="decimal"
                                     required
                                     value={data.amount}
-                                    onChange={(event) => setData('amount', event.target.value)}
+                                    onChange={(event) =>
+                                        setData('amount', event.target.value)
+                                    }
                                 />
                                 <InputError message={errors.amount} />
                             </div>
-                            <div className="grid gap-2">
+                            <div className="grid min-w-0 gap-2 overflow-hidden">
                                 <Label>{t('Currency')}</Label>
-                                <Select
-                                    value={data.currency}
-                                    onValueChange={(value) => setData('currency', value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={t('Select currency')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {currencyOptions.map((currency) => (
-                                            <SelectItem key={currency} value={currency}>
-                                                {currency}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <SearchableSelect
+                                    options={currencyOptions}
+                                    value={
+                                        isOtherCurrency
+                                            ? OTHER_CURRENCY
+                                            : data.currency || null
+                                    }
+                                    onChange={(value) => {
+                                        if (value === OTHER_CURRENCY) {
+                                            setIsOtherCurrency(true);
+                                            setData('currency', '');
+
+                                            return;
+                                        }
+
+                                        setIsOtherCurrency(false);
+                                        setData(
+                                            'currency',
+                                            value === null ? '' : String(value),
+                                        );
+                                    }}
+                                    placeholder={t('Select currency...')}
+                                    searchPlaceholder={t('Search currency...')}
+                                    emptyText={t('No currencies found.')}
+                                />
+                                {isOtherCurrency && (
+                                    <SearchableSelect
+                                        options={otherCurrencyOptions}
+                                        value={data.currency || null}
+                                        onChange={(value) =>
+                                            setData(
+                                                'currency',
+                                                value === null
+                                                    ? ''
+                                                    : String(value),
+                                            )
+                                        }
+                                        placeholder={t(
+                                            'Select other currency...',
+                                        )}
+                                        searchPlaceholder={t(
+                                            'Search other currencies...',
+                                        )}
+                                        emptyText={t('No currencies found.')}
+                                    />
+                                )}
                                 <InputError message={errors.currency} />
                             </div>
                         </div>
@@ -213,16 +312,24 @@ export default function RecurringExpenseFormSheet({
                                     required
                                     value={data.billing_interval}
                                     onChange={(event) =>
-                                        setData('billing_interval', event.target.value)
+                                        setData(
+                                            'billing_interval',
+                                            event.target.value,
+                                        )
                                     }
                                 />
                                 <Select
                                     value={data.billing_unit}
                                     onValueChange={(value) =>
-                                        setData('billing_unit', value as RecurringExpense['billing_unit'])
+                                        setData(
+                                            'billing_unit',
+                                            value as RecurringExpense['billing_unit'],
+                                        )
                                     }
                                 >
-                                    <SelectTrigger aria-label={t('Billing unit')}>
+                                    <SelectTrigger
+                                        aria-label={t('Billing unit')}
+                                    >
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -235,59 +342,86 @@ export default function RecurringExpenseFormSheet({
                                 </Select>
                             </div>
                             <InputError
-                                message={errors.billing_interval ?? errors.billing_unit}
+                                message={
+                                    errors.billing_interval ??
+                                    errors.billing_unit
+                                }
                             />
                         </div>
 
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div className="grid gap-2">
-                                <Label htmlFor="recurring-expense-start">{t('Start date')}</Label>
+                            <div className="grid min-w-0 gap-2">
+                                <Label htmlFor="recurring-expense-start">
+                                    {t('Start date')}
+                                </Label>
                                 <Input
                                     id="recurring-expense-start"
                                     type="date"
                                     required
                                     value={data.start_date}
-                                    onChange={(event) => setData('start_date', event.target.value)}
+                                    onChange={(event) =>
+                                        setData(
+                                            'start_date',
+                                            event.target.value,
+                                        )
+                                    }
                                 />
                                 <InputError message={errors.start_date} />
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="recurring-expense-end">{t('End date')}</Label>
+                            <div className="grid min-w-0 gap-2">
+                                <Label htmlFor="recurring-expense-end">
+                                    {t('End date')}
+                                </Label>
                                 <Input
                                     id="recurring-expense-end"
                                     type="date"
                                     value={data.end_date}
-                                    onChange={(event) => setData('end_date', event.target.value)}
+                                    onChange={(event) =>
+                                        setData('end_date', event.target.value)
+                                    }
                                 />
                                 <InputError message={errors.end_date} />
                             </div>
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="recurring-expense-vendor">{t('Vendor / Payee')}</Label>
+                            <Label htmlFor="recurring-expense-vendor">
+                                {t('Vendor / Payee')}
+                            </Label>
                             <Input
                                 id="recurring-expense-vendor"
                                 value={data.vendor}
-                                onChange={(event) => setData('vendor', event.target.value)}
+                                onChange={(event) =>
+                                    setData('vendor', event.target.value)
+                                }
                                 placeholder={t('Optional')}
                             />
                             <InputError message={errors.vendor} />
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="recurring-expense-description">{t('Description')}</Label>
+                            <Label htmlFor="recurring-expense-description">
+                                {t('Description')}
+                            </Label>
                             <Textarea
                                 id="recurring-expense-description"
                                 value={data.description}
-                                onChange={(event) => setData('description', event.target.value)}
+                                onChange={(event) =>
+                                    setData('description', event.target.value)
+                                }
                                 placeholder={t('Optional')}
                             />
                             <InputError message={errors.description} />
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-3 border-t pt-4">
-                        <Button type="button" variant="outline" onClick={() => close(false)} disabled={processing}>
+                    <div className="flex flex-wrap items-center justify-end gap-4 border-t pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => close(false)}
+                            disabled={processing}
+                        >
                             {t('Cancel')}
                         </Button>
                         <Button type="submit" disabled={processing}>
