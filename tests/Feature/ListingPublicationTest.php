@@ -68,6 +68,23 @@ it('retries a public slug transaction after a unique-key collision', function ()
     expect($result)->toBe('completed')->and($attempts)->toBe(2);
 });
 
+it('rejects publishing inactive properties and unit types', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['is_active' => false]);
+    $unitType = UnitType::factory()->for($property)->create(['is_active' => false]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertUnprocessable();
+
+    $this->actingAs($user)
+        ->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])
+        ->assertUnprocessable();
+
+    expect($property->refresh()->is_published)->toBeFalse()
+        ->and($unitType->refresh()->is_published)->toBeFalse();
+});
+
 it('allocates property-scoped unit type slugs and derives effective visibility', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();
@@ -75,6 +92,7 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
     $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
     $duplicateUnitType = UnitType::factory()->for($property)->create(['name' => 'Studio.']);
     $otherUnitType = UnitType::factory()->for($otherProperty)->create(['name' => 'Studio']);
+    $foreignOnlyUnitType = UnitType::factory()->for($otherProperty)->create(['name' => 'Penthouse']);
 
     foreach ([$property, $otherProperty] as $item) {
         $this->actingAs($user)
@@ -82,7 +100,7 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
             ->assertRedirect();
     }
 
-    foreach ([$unitType, $duplicateUnitType, $otherUnitType] as $item) {
+    foreach ([$unitType, $duplicateUnitType, $otherUnitType, $foreignOnlyUnitType] as $item) {
         $this->actingAs($user)
             ->patch(route('properties.unit-types.publication.update', [$item->property, $item]), ['is_published' => true])
             ->assertRedirect();
@@ -93,6 +111,7 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
     $unitType->refresh();
     $duplicateUnitType->refresh();
     $otherUnitType->refresh();
+    $foreignOnlyUnitType->refresh();
 
     expect($unitType->refresh()->public_slug)->toBe('studio')
         ->and($duplicateUnitType->refresh()->public_slug)->toBe('studio-1')
@@ -117,10 +136,17 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
         ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertRedirect();
 
-    $this->getJson(route('public.listings.unit-types.show', [
+    $unitTypeResponse = $this->getJson(route('public.listings.unit-types.show', [
         'property' => $property->public_slug,
         'unitType' => $unitType->public_slug,
     ]))->assertSuccessful();
+
+    expect($unitTypeResponse->headers->get('Cache-Control'))->toContain('no-store');
+
+    $this->getJson(route('public.listings.unit-types.show', [
+        'property' => $property->public_slug,
+        'unitType' => $foreignOnlyUnitType->public_slug,
+    ]))->assertNotFound();
 
     expect($unitType->refresh()->public_slug)->toBe('studio');
 
@@ -193,6 +219,7 @@ it('projects availability and independent rate variants without operational deta
         ->assertJsonCount(3, 'data.unit_types.0.starting_prices')
         ->assertJsonMissingPath('data.id')
         ->assertJsonMissingPath('data.phone')
+        ->assertJsonMissingPath('data.unit_types.0.id')
         ->assertJsonMissingPath('data.unit_types.0.units')
         ->assertJsonMissingPath('data.unit_types.0.leases');
 
@@ -220,13 +247,16 @@ it('projects availability and independent rate variants without operational deta
         ],
     ])->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
 
+    expect($response->headers->get('Cache-Control'))->toContain('no-store');
+
     DB::connection()->flushQueryLog();
 
-    $this->getJson(route('public.listings.index'))
+    $indexResponse = $this->getJson(route('public.listings.index'))
         ->assertSuccessful()
         ->assertJsonPath('data.0.inventory.available_units', 2);
 
-    expect(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
+    expect($indexResponse->headers->get('Cache-Control'))->toContain('no-store')
+        ->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
 });
 
 it('serves public media only for currently effective listings', function () {
@@ -247,8 +277,13 @@ it('serves public media only for currently effective listings', function () {
     $attachment = $manager->store($property, 'attachments', UploadedFile::fake()->create('private.pdf', 1, 'application/pdf'));
     auth()->logout();
 
-    $this->get(route('public.listings.media', $propertyMedia))->assertSuccessful();
-    $this->get(route('public.listings.media', $unitTypeMedia))->assertSuccessful();
+    $propertyMediaResponse = $this->get(route('public.listings.media', $propertyMedia))
+        ->assertSuccessful();
+    $unitTypeMediaResponse = $this->get(route('public.listings.media', $unitTypeMedia))
+        ->assertSuccessful();
+
+    expect($propertyMediaResponse->headers->get('Cache-Control'))->toContain('no-store')
+        ->and($unitTypeMediaResponse->headers->get('Cache-Control'))->toContain('no-store');
     $this->get(route('public.listings.media', $attachment))->assertNotFound();
 
     $property->refresh()->update(['is_published' => false]);

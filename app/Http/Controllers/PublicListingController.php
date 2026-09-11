@@ -46,7 +46,8 @@ final class PublicListingController extends Controller
         abort_unless(
             $unitType->property_id === $property->id
                 && $unitType->is_active
-                && $unitType->is_published,
+                && $unitType->is_published
+                && filled($unitType->public_slug),
             404,
         );
 
@@ -69,6 +70,7 @@ final class PublicListingController extends Controller
         return Property::query()
             ->where('is_active', true)
             ->where('is_published', true)
+            ->whereNotNull('public_slug')
             ->with($this->publicRelations())
             ->orderBy('name');
     }
@@ -89,6 +91,7 @@ final class PublicListingController extends Controller
             'unitTypes' => fn ($query) => $query
                 ->where('is_active', true)
                 ->where('is_published', true)
+                ->whereNotNull('public_slug')
                 ->orderBy('name')
                 ->with($this->unitTypeRelations()),
         ];
@@ -288,7 +291,10 @@ final class PublicListingController extends Controller
 
     private function isPublicProperty(Property $property): bool
     {
-        return ! $property->trashed() && $property->is_active && $property->is_published;
+        return ! $property->trashed()
+            && $property->is_active
+            && $property->is_published
+            && filled($property->public_slug);
     }
 
     /**

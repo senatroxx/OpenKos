@@ -216,7 +216,10 @@ export default function Index({
                             <Pencil className="size-4" />
                             {t('Edit')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => togglePublication(p)}>
+                        <DropdownMenuItem
+                            disabled={!p.is_active && !p.is_published}
+                            onClick={() => togglePublication(p)}
+                        >
                             <Globe className="size-4" />
                             {t(p.is_published ? 'Unpublish' : 'Publish')}
                         </DropdownMenuItem>

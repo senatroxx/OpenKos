@@ -283,6 +283,10 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
+                                                            disabled={
+                                                                !unitType.is_active &&
+                                                                !unitType.is_published
+                                                            }
                                                             onSelect={() =>
                                                                 togglePublication(
                                                                     unitType,

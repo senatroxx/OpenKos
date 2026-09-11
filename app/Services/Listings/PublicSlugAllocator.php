@@ -20,7 +20,7 @@ final class PublicSlugAllocator
     {
         for ($attempt = 1; $attempt <= 5; $attempt++) {
             try {
-                return DB::transaction($callback);
+                return DB::transaction($callback, attempts: 5);
             } catch (QueryException $exception) {
                 if (! $this->isUniqueViolation($exception) || $attempt === 5) {
                     throw $exception;
