@@ -3,6 +3,7 @@ import {
     EllipsisVertical,
     ExternalLink,
     Eye,
+    Globe,
     Pencil,
     RotateCcw,
     Trash2,
@@ -128,6 +129,12 @@ export default function Index({
         router.post(properties.restore.url(property));
     }
 
+    function togglePublication(property: ManagedProperty) {
+        router.patch(properties.publication.update.url(property), {
+            is_published: !property.is_published,
+        });
+    }
+
     const columns: TableColumn<ManagedProperty>[] = [
         {
             key: 'name',
@@ -208,6 +215,10 @@ export default function Index({
                         <DropdownMenuItem onClick={() => openEdit(p)}>
                             <Pencil className="size-4" />
                             {t('Edit')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => togglePublication(p)}>
+                            <Globe className="size-4" />
+                            {t(p.is_published ? 'Unpublish' : 'Publish')}
                         </DropdownMenuItem>
                         {p.is_active ? (
                             <DropdownMenuItem

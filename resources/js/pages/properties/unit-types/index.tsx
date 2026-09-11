@@ -1,6 +1,7 @@
 import { Head, router } from '@inertiajs/react';
 import {
     EllipsisVertical,
+    Globe,
     ImageOff,
     ImageIcon,
     Pencil,
@@ -124,6 +125,15 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
         );
     }
 
+    function togglePublication(unitType: UnitType) {
+        router.patch(properties.unitTypes.publication.update.url({
+            property: property.slug,
+            unitType: unitType.id,
+        }), {
+            is_published: !unitType.is_published,
+        });
+    }
+
     return (
         <PropertyLayout property={property} activeTab="unit-types">
             <Head title={`${t('Unit Types')} - ${property.name}`} />
@@ -218,6 +228,19 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                                 : 'inactive'
                                                         }
                                                     />
+                                                    <Badge
+                                                        variant={
+                                                            unitType.is_published
+                                                                ? 'secondary'
+                                                                : 'outline'
+                                                        }
+                                                    >
+                                                        {t(
+                                                            unitType.is_published
+                                                                ? 'Published'
+                                                                : 'Unpublished',
+                                                        )}
+                                                    </Badge>
                                                     <Badge variant="outline">
                                                         {unitCountLabel(
                                                             unitType.units_count ??
@@ -259,6 +282,20 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onSelect={() =>
+                                                                togglePublication(
+                                                                    unitType,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Globe className="size-4" />
+                                                            {t(
+                                                                unitType.is_published
+                                                                    ? 'Unpublish'
+                                                                    : 'Publish',
+                                                            )}
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem
                                                             onSelect={() =>
                                                                 toggleActive(

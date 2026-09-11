@@ -23,6 +23,7 @@ use Illuminate\Support\Str;
     'name',
     'type',
     'slug',
+    'public_slug',
     'address',
     'region_id',
     'city_id',
@@ -30,6 +31,7 @@ use Illuminate\Support\Str;
     'phone',
     'description',
     'is_active',
+    'is_published',
 ])]
 class Property extends Model
 {
@@ -43,6 +45,7 @@ class Property extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_published' => 'boolean',
         ];
     }
 

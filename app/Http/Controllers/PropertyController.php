@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Properties\CreateProperty;
 use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
+use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\Amenity;
@@ -15,6 +16,7 @@ use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
+use App\Services\Listings\PublicSlugAllocator;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -138,6 +140,39 @@ class PropertyController extends Controller
         $property->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property updated.')]);
+
+        return back();
+    }
+
+    public function updatePublication(
+        UpdateListingPublicationRequest $request,
+        Property $property,
+        PublicSlugAllocator $slugAllocator,
+    ): RedirectResponse {
+        $this->authorize('update', $property);
+        $isPublished = $request->boolean('is_published');
+
+        $slugAllocator->transaction(function () use ($property, $isPublished, $slugAllocator): void {
+            $lockedProperty = Property::withTrashed()->lockForUpdate()->findOrFail($property->id);
+
+            abort_if($isPublished && ! $lockedProperty->is_active, 422, __('Inactive properties cannot be published.'));
+
+            $attributes = ['is_published' => $isPublished];
+            if ($isPublished && empty($lockedProperty->public_slug)) {
+                $attributes['public_slug'] = $slugAllocator->allocate(
+                    Property::withTrashed(),
+                    $lockedProperty->name,
+                    'property',
+                );
+            }
+
+            $lockedProperty->forceFill($attributes)->saveOrFail();
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __($isPublished ? 'Property published.' : 'Property unpublished.'),
+        ]);
 
         return back();
     }

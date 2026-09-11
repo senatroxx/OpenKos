@@ -109,6 +109,8 @@ export type Property = {
     phone?: string | null;
     description?: string | null;
     is_active?: boolean;
+    is_published?: boolean;
+    public_slug?: string | null;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
     units_count?: number;
@@ -146,6 +148,8 @@ export type UnitType = {
     size_sqm: string | null;
     furnishing: string | null;
     is_active: boolean;
+    is_published: boolean;
+    public_slug: string | null;
     updated_at?: string | null;
     amenities?: Amenity[];
     gallery?: GalleryItem[];
@@ -532,6 +536,8 @@ export type ManagedProperty = {
     postal_code: string | null;
     phone: string | null;
     is_active: boolean;
+    is_published: boolean;
+    public_slug: string | null;
     units_count: number;
     occupied_units_count: number;
     tenants_count: number;
