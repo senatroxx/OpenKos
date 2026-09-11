@@ -45,28 +45,15 @@ class PropertyAmenityController extends Controller
         return back();
     }
 
-    public function deactivate(Property $property, int $amenity): RedirectResponse
+    public function destroy(Property $property, int $amenity): RedirectResponse
     {
         $this->authorize('update', $property);
         $amenity = Amenity::query()->findOrFail($amenity);
         abort_unless($amenity->owner_property_id === $property->id, 404);
 
-        $amenity->update(['is_active' => false]);
+        $amenity->deleteOrFail();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Amenity deactivated.')]);
-
-        return back();
-    }
-
-    public function restore(Property $property, int $amenity): RedirectResponse
-    {
-        $this->authorize('update', $property);
-        $amenity = Amenity::query()->findOrFail($amenity);
-        abort_unless($amenity->owner_property_id === $property->id, 404);
-
-        $amenity->update(['is_active' => true]);
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Amenity activated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Custom amenity deleted.')]);
 
         return back();
     }

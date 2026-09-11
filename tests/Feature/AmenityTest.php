@@ -221,34 +221,31 @@ it('creates custom amenities with the requested applicability scope', function (
     expect(Amenity::query()->sole()->scope)->toBe(AmenityScope::UnitType);
 });
 
-it('deactivates custom amenities without detaching existing associations', function () {
+it('deletes custom amenities and detaches existing associations', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();
     $amenity = Amenity::factory()->customFor($property)->create();
-    $inactiveAmenity = Amenity::factory()->customFor($property)->create(['is_active' => false]);
     $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
     $property->facilities()->attach($amenity);
     $unitType->amenities()->attach($amenity);
 
     $this->actingAs($user)
-        ->post(route('properties.amenities.deactivate', [$property, $amenity]))
+        ->delete(route('properties.amenities.destroy', [$property, $amenity]))
         ->assertRedirect();
 
-    expect($amenity->refresh()->is_active)->toBeFalse()
-        ->and($property->fresh()->facilities->modelKeys())->toBe([$amenity->id])
-        ->and($unitType->fresh()->amenities->modelKeys())->toBe([$amenity->id]);
+    expect(Amenity::query()->whereKey($amenity->id)->exists())->toBeFalse()
+        ->and($property->fresh()->facilities->modelKeys())->toBe([])
+        ->and($unitType->fresh()->amenities->modelKeys())->toBe([]);
+});
+
+it('does not allow deleting global amenities from a property workspace', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $amenity = Amenity::factory()->create();
 
     $this->actingAs($user)
-        ->put(route('properties.facilities.update', $property), [
-            'amenity_ids' => [$amenity->id, $inactiveAmenity->id],
-        ])
-        ->assertSessionHasErrors('amenity_ids');
+        ->delete(route('properties.amenities.destroy', [$property, $amenity]))
+        ->assertNotFound();
 
-    expect($property->fresh()->facilities->modelKeys())->toBe([$amenity->id]);
-
-    $this->actingAs($user)
-        ->post(route('properties.amenities.restore', [$property, $amenity]))
-        ->assertRedirect();
-
-    expect($amenity->refresh()->is_active)->toBeTrue();
+    expect(Amenity::query()->whereKey($amenity->id)->exists())->toBeTrue();
 });

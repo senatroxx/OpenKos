@@ -1,9 +1,18 @@
-import { useForm } from '@inertiajs/react';
+import { router, useForm } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,6 +35,7 @@ export default function PropertyFacilitiesEditor({
     amenities: Amenity[];
 }) {
     const [manageOpen, setManageOpen] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState<Amenity | null>(null);
     const facilityForm = useForm<{ amenity_ids: number[] }>({
         amenity_ids: property.facilities?.map((amenity) => amenity.id) ?? [],
     });
@@ -62,6 +72,30 @@ export default function PropertyFacilitiesEditor({
         customForm.post(properties.amenities.store.url(property), {
             onSuccess: () => customForm.reset(),
         });
+    }
+
+    function confirmDelete() {
+        if (!deleteConfirm) {
+            return;
+        }
+
+        router.delete(
+            properties.amenities.destroy.url({
+                property: property.slug,
+                amenity: deleteConfirm.id,
+            }),
+            {
+                onSuccess: () => {
+                    facilityForm.setData(
+                        'amenity_ids',
+                        facilityForm.data.amenity_ids.filter(
+                            (id) => id !== deleteConfirm.id,
+                        ),
+                    );
+                    setDeleteConfirm(null);
+                },
+            },
+        );
     }
 
     function handleManageChange(open: boolean) {
@@ -182,6 +216,23 @@ export default function PropertyFacilitiesEditor({
                                                 </Badge>
                                             )}
                                         </label>
+                                        {amenity.owner_property_id ===
+                                            property.id && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8 shrink-0 text-destructive hover:text-destructive"
+                                                aria-label={t(
+                                                    'Delete custom amenity',
+                                                )}
+                                                onClick={() =>
+                                                    setDeleteConfirm(amenity)
+                                                }
+                                            >
+                                                <Trash2 className="size-4" />
+                                            </Button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -243,6 +294,37 @@ export default function PropertyFacilitiesEditor({
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
+
+            <Dialog
+                open={deleteConfirm !== null}
+                onOpenChange={() => setDeleteConfirm(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('Delete custom amenity?')}</DialogTitle>
+                        <DialogDescription>
+                            {t('Delete')}{' '}
+                            <span className="font-medium">
+                                {deleteConfirm?.name}
+                            </span>{' '}
+                            {t(
+                                'permanently? It will be removed from this property and any Unit Types using it. This cannot be undone.',
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteConfirm(null)}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            {t('Delete amenity')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </section>
     );
 }
