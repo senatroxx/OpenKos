@@ -144,6 +144,7 @@ abstract class DatasetDefinition
     {
         return Property::query()
             ->whereKey($propertyId)
+            ->whereNull('properties.deleted_at')
             ->where('is_active', true)
             ->when(! $actor->isOwner(), fn (Builder $query) => $query->whereHas(
                 'users',
