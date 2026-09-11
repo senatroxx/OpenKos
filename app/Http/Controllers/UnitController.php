@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Units\CreateUnit;
 use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\StoreUnitRequest;
@@ -13,6 +14,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Settings\InstallationCurrencySettings;
+use App\Support\DelimitedValues;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -108,36 +110,35 @@ class UnitController extends Controller
 
         $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
-        $archived = $request->query('status') === 'archived';
+        $statusValues = DelimitedValues::normalize($request->query('status'));
+        $includesArchived = in_array('archived', $statusValues, true);
 
         $table = Table::make()
             ->columns([
-                Column::make('name', 'Name')->sortable()->searchable(),
-                Column::make('floor', 'Floor')->sortable()->searchable(),
+                Column::make('name', 'Name')->sortable()->searchable(
+                    fn (Builder $q, string $search) => $q->listSearch($search),
+                ),
+                Column::make('floor', 'Floor')->sortable(),
                 Column::make('size_sqm', 'Size')->sortable(),
                 Column::make('status', 'Status')->sortable(),
                 Column::make('capacity', 'Capacity')->sortable(),
             ])
             ->filters([
                 Filter::select('status', 'Status', ['available', 'occupied', 'maintenance', 'unavailable', 'archived'])
-                    ->query(fn (Builder $q, string $value) => match ($value) {
-                        'archived' => null,
-                        default => $q->where('status', $value),
-                    }),
+                    ->query(fn (Builder $q, string $value) => $q->statusFilter($value)),
             ])
             ->defaultSort('name');
 
-        $query = $archived
-            ? $property->units()->onlyTrashed()
-            : $property->units()
-                ->withCount([
-                    'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
-                ])
-                ->with([
-                    'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
-                    'activeRates',
-                    'rates',
-                ]);
+        $query = $property->units()
+            ->when($includesArchived, fn (Builder $q) => $q->withTrashed())
+            ->withCount([
+                'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
+            ])
+            ->with([
+                'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+                'activeRates',
+                'rates',
+            ]);
 
         $result = $table->paginate($query, $request, 'units');
 
@@ -170,7 +171,7 @@ class UnitController extends Controller
         ]);
     }
 
-    public function store(StoreUnitRequest $request, Property $property): RedirectResponse
+    public function store(StoreUnitRequest $request, Property $property, CreateUnit $createUnit): RedirectResponse
     {
         $this->authorize('create', [Unit::class, $property]);
 
@@ -178,10 +179,10 @@ class UnitController extends Controller
         $rates = $validated['rates'] ?? [];
         unset($validated['rates']);
 
-        DB::transaction(function () use ($property, $validated, $rates): void {
+        DB::transaction(function () use ($property, $validated, $rates, $createUnit): void {
             $this->assertNewRateCurrenciesSupported($rates);
 
-            $unit = $property->units()->create($validated);
+            $unit = $createUnit->execute($property, $validated);
 
             foreach ($rates as $rate) {
                 $unit->rates()->create([

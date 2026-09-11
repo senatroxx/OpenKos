@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Properties\CreateProperty;
 use App\Enums\LeaseStatus;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
@@ -38,32 +39,23 @@ class PropertyController extends Controller
     {
         $table = Table::make()
             ->columns([
-                Column::make('name', 'Name')->sortable()->searchable(),
+                Column::make('name', 'Name')->sortable()->searchable(
+                    fn (Builder $q, string $search) => $q->listSearch($search),
+                ),
                 Column::make('type', 'Type')->sortable(),
                 Column::make('city', 'City')->sortable(
                     fn (Builder $q, string $dir) => $q->orderBy(
                         City::select('name')->whereColumn('cities.id', 'properties.city_id'),
                         $dir,
                     ),
-                )->searchable(function (Builder $q, string $search): void {
-                    $q->orWhereHas('region', fn (Builder $q) => $q->where(
-                        DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%',
-                    ));
-                    $q->orWhereHas('city', fn (Builder $q) => $q->where(
-                        DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%',
-                    ));
-                }),
+                ),
                 Column::make('units_count', 'Total Units')->sortable(),
                 Column::make('occupied_units_count', 'Occupied')->sortable(),
                 Column::make('tenants_count', 'Tenants')->sortable(),
             ])
             ->filters([
                 Filter::select('status', 'Status', ['active', 'archived'])
-                    ->query(fn (Builder $q, string $value) => match ($value) {
-                        'active' => $q->where('is_active', true),
-                        'archived' => $q->where('is_active', false),
-                        default => $q,
-                    }),
+                    ->query(fn (Builder $q, string $value) => $q->statusFilter($value)),
                 Filter::select('type', 'Type', PropertyType::ordered()->pluck('slug')->all())
                     ->query(fn (Builder $q, string $value) => $q->where('type', $value)),
             ])
@@ -94,12 +86,9 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function store(StorePropertyRequest $request): RedirectResponse
+    public function store(StorePropertyRequest $request, CreateProperty $createProperty): RedirectResponse
     {
-        DB::transaction(function () use ($request): void {
-            $property = Property::create($request->validated());
-            $property->users()->attach($request->user());
-        });
+        DB::transaction(fn (): Property => $createProperty->execute($request->user(), $request->validated()));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property created.')]);
 

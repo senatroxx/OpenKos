@@ -23,6 +23,7 @@ import {
     TenantDocumentsSheet,
     TenantFormSheet,
 } from '@/components/features';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import InviteToAppSheet from '@/components/features/tenants/invite-to-app-sheet';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -62,6 +63,7 @@ type PageProps = {
     sort?: string;
     search?: string;
     status?: string;
+    app_access?: string;
     per_page?: number;
     table: TableMeta;
 };
@@ -72,6 +74,7 @@ export default function Index({
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
+    app_access: currentAppAccess = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: PageProps) {
@@ -118,6 +121,7 @@ export default function Index({
             search: currentSearch,
             per_page: String(currentPerPage),
             status: currentStatus,
+            app_access: currentAppAccess,
         },
         defaults: {
             sort: 'name',
@@ -387,7 +391,25 @@ export default function Index({
                         description={t('Manage your tenants')}
                     />
 
-                    <Button onClick={openCreate}>{t('New Tenant')}</Button>
+                    <div className="flex items-center gap-2">
+                        <Button onClick={openCreate}>{t('New Tenant')}</Button>
+                        <EntityTransferMenu
+                            datasetLabel={t('Tenants')}
+                            canImport={auth.role === 'owner'}
+                            canExport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('tenants.export')
+                            }
+                            importHref={tenants.transfer.import.url()}
+                            exportHref={tenants.transfer.export.url({
+                                query: {
+                                    search: currentSearch || undefined,
+                                    status: currentStatus || undefined,
+                                    app_access: currentAppAccess || undefined,
+                                },
+                            })}
+                        />
+                    </div>
                 </div>
 
                 <FilterBar

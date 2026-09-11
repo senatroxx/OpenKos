@@ -136,4 +136,24 @@ class Property extends Model
                 ->where('leases.status', 'active'),
         ]);
     }
+
+    public function scopeStatusFilter(Builder $query, string $status): void
+    {
+        match ($status) {
+            'active' => $query->where('properties.is_active', true),
+            'archived' => $query->where('properties.is_active', false),
+            default => $query->whereRaw('1 = 0'),
+        };
+    }
+
+    public function scopeListSearch(Builder $query, string $search): void
+    {
+        $search = mb_strtolower($search);
+
+        $query->where(function (Builder $query) use ($search): void {
+            $query->whereRaw('lower(properties.name) like ?', ["%{$search}%"])
+                ->orWhereHas('region', fn (Builder $region) => $region->whereRaw('lower(name) like ?', ["%{$search}%"]))
+                ->orWhereHas('city', fn (Builder $city) => $city->whereRaw('lower(name) like ?', ["%{$search}%"]));
+        });
+    }
 }

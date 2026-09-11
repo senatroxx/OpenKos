@@ -71,6 +71,20 @@ describe('CRUD', function () {
             );
     });
 
+    it('applies multiple property type filters', function () {
+        $user = User::factory()->owner()->create();
+        Property::factory()->create(['type' => 'boarding_house']);
+        Property::factory()->create(['type' => 'apartment']);
+        Property::factory()->create(['type' => 'villa']);
+
+        $this->actingAs($user)
+            ->get(route('properties.index', ['type' => 'boarding_house,apartment']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('properties.data', 2)
+            );
+    });
+
     it('does not automatically load property relations for light queries', function () {
         Property::factory()->create();
 

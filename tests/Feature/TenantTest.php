@@ -176,6 +176,21 @@ describe('CRUD', function () {
         );
     });
 
+    it('applies multiple tenant status filters', function () {
+        $user = User::factory()->owner()->create();
+        Tenant::factory()->create(['is_active' => true]);
+        Tenant::factory()->inactive()->create();
+        $archived = Tenant::factory()->create();
+        $archived->delete();
+
+        $this->actingAs($user)
+            ->get(route('tenants.index', ['status' => 'active,inactive']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('tenants.data', 2)
+            );
+    });
+
     it('filters archived tenants', function () {
         $user = User::factory()->owner()->create();
         Tenant::factory()->create();

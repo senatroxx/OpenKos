@@ -1,6 +1,7 @@
 import { useForm, usePage } from '@inertiajs/react';
 import { Ellipsis, Pencil, Plus, RotateCcw, X } from 'lucide-react';
 import { Fragment, useState } from 'react';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { InputError } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,7 +33,11 @@ import { BILLING_UNITS } from '@/lib/constants';
 import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Property, Unit, UnitRate } from '@/types';
+import {
+    exportMethod as exportRates,
+    importMethod as importRates,
+} from '@/routes/properties/units/rates/transfer';
+import type { Auth, Property, Unit, UnitRate } from '@/types';
 import { UnitLayout } from './layout';
 
 type UnitFormData = {
@@ -80,8 +85,9 @@ export default function UnitRates({
     property: Property;
     unit: Unit;
 }) {
-    const { setting } = usePage<{
+    const { setting, auth } = usePage<{
         setting: { currency: string; supported_currencies: string[] };
+        auth: Auth;
     }>().props;
     const defaultCurrency = setting.currency.toUpperCase();
     const supportedCurrencies = setting.supported_currencies.includes(
@@ -377,13 +383,41 @@ export default function UnitRates({
                             )}
                         </p>
                     </div>
-                    <Button
-                        type="button"
-                        onClick={() => setAddDialogOpen(true)}
-                    >
-                        <Plus />
-                        {t('Add Rate')}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            onClick={() => setAddDialogOpen(true)}
+                        >
+                            <Plus />
+                            {t('Add Rate')}
+                        </Button>
+                        <EntityTransferMenu
+                            datasetLabel={t('Unit rates')}
+                            canImport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('unit-rates.import')
+                            }
+                            canExport={
+                                auth.role === 'owner' ||
+                                auth.permissions.includes('unit-rates.export')
+                            }
+                            importHref={importRates.url([property, unit])}
+                            exportHref={exportRates.url([property, unit], {
+                                query: {
+                                    currency:
+                                        currencyFilter === 'all'
+                                            ? undefined
+                                            : currencyFilter,
+                                    status:
+                                        statusFilter === 'all'
+                                            ? undefined
+                                            : statusFilter,
+                                    include_archived:
+                                        statusFilter === 'all' ? 1 : undefined,
+                                },
+                            })}
+                        />
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap gap-3">

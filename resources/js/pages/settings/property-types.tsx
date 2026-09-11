@@ -1,6 +1,7 @@
-import { router, useForm } from '@inertiajs/react';
+import { router, useForm, usePage } from '@inertiajs/react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +30,8 @@ import {
 } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { t } from '@/lib/i18n';
-import type { PropertyTypeOption } from '@/types';
+import propertyTypesRoutes from '@/routes/settings/property-types';
+import type { Auth, PropertyTypeOption } from '@/types';
 
 const BASE = '/settings/property-types';
 
@@ -123,6 +125,7 @@ export default function PropertyTypes({
 }: {
     propertyTypes: PropertyTypeOption[];
 }) {
+    const { auth } = usePage<{ auth: Auth }>().props;
     const [editing, setEditing] = useState<PropertyTypeOption | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [deleteConfirm, setDeleteConfirm] =
@@ -171,7 +174,17 @@ export default function PropertyTypes({
                         )}
                     </p>
                 </div>
-                <Button onClick={openNew}>{t('Add type')}</Button>
+                <div className="flex items-center gap-2">
+                    <Button onClick={openNew}>{t('Add type')}</Button>
+                    <EntityTransferMenu
+                        datasetLabel={t('Property types')}
+                        canExport={
+                            auth.role === 'owner' ||
+                            auth.permissions.includes('properties.export')
+                        }
+                        exportHref={propertyTypesRoutes.transfer.export.url()}
+                    />
+                </div>
             </div>
 
             <Card>
