@@ -203,7 +203,11 @@ it('creates custom amenities for the current property', function () {
         ->post(route('properties.amenities.store', $property), ['name' => 'Bike storage'])
         ->assertRedirect();
 
-    expect(Amenity::query()->sole()->owner_property_id)->toBe($property->id);
+    $amenity = Amenity::query()->sole();
+
+    expect($amenity->owner_property_id)->toBe($property->id)
+        ->and($amenity->is_active)->toBeTrue()
+        ->and($property->fresh()->facilities->modelKeys())->toBe([$amenity->id]);
 });
 
 it('creates custom amenities with the requested applicability scope', function () {

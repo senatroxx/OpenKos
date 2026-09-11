@@ -16,12 +16,16 @@ class PropertyAmenityController extends Controller
     {
         $this->authorize('update', $property);
 
-        Amenity::create([
+        $amenity = Amenity::create([
             'owner_property_id' => $property->id,
             'name' => $request->validated('name'),
             'scope' => $request->validated('scope'),
             'is_active' => true,
         ]);
+
+        if ($amenity->scope->allowsProperty()) {
+            $property->facilities()->attach($amenity);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Custom amenity created.')]);
 
