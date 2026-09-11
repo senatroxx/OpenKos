@@ -14,11 +14,13 @@ export type MetricEmphasis = 'neutral' | 'subtle' | 'attention';
 
 export interface MetricCardProps {
     label: string;
+    subParams?: React.ReactNode;
     value: React.ReactNode;
     subtext?: React.ReactNode;
     variant?: MetricVariant;
     emphasis?: MetricEmphasis;
     icon?: React.ComponentType<{ className?: string }>;
+    valueFullWidth?: boolean;
     subtextFullWidth?: boolean;
     progress?: number;
     onClick?: () => void;
@@ -213,11 +215,13 @@ const VARIANT_STYLES: Record<
 
 export function MetricCard({
     label,
+    subParams,
     value,
     subtext,
     variant = 'neutral',
     emphasis = 'subtle',
     icon: Icon,
+    valueFullWidth = false,
     subtextFullWidth = false,
     progress,
     onClick,
@@ -246,14 +250,21 @@ export function MetricCard({
                     <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                         {label}
                     </p>
-                    <p
-                        className={cn(
-                            'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
-                            styles.value,
-                        )}
-                    >
-                        {value}
-                    </p>
+                    {subParams && (
+                        <div className="mt-1 text-xs font-medium text-muted-foreground">
+                            {subParams}
+                        </div>
+                    )}
+                    {!valueFullWidth && (
+                        <div
+                            className={cn(
+                                'mt-1.5 text-2xl font-bold tabular-nums sm:text-3xl',
+                                styles.value,
+                            )}
+                        >
+                            {value}
+                        </div>
+                    )}
                     {subtext && !subtextFullWidth && (
                         <div className="mt-1 text-xs font-medium text-muted-foreground">
                             {subtext}
@@ -272,6 +283,17 @@ export function MetricCard({
                     </div>
                 )}
             </div>
+
+            {valueFullWidth && (
+                <div
+                    className={cn(
+                        'mt-3 border-t border-border pt-3 text-xs font-medium',
+                        styles.value,
+                    )}
+                >
+                    {value}
+                </div>
+            )}
 
             {subtext && subtextFullWidth && (
                 <div className="mt-3 border-t border-border pt-3 text-xs font-medium text-muted-foreground">

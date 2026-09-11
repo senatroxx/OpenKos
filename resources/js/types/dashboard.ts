@@ -29,6 +29,87 @@ export type MoneyAggregate = {
     amount: string;
 };
 
+export type RateAggregate = {
+    currency: string;
+    rate: string;
+};
+
+export type FinancialTrendPoint = {
+    month: string;
+    label: string;
+    revenue: MoneyAggregate[];
+    expenses: MoneyAggregate[];
+    noi: MoneyAggregate[];
+};
+
+export type FinancialCashFlowPoint = {
+    month: string;
+    label: string;
+    collected: MoneyAggregate[];
+    expenses: MoneyAggregate[];
+};
+
+export type FinancialPropertyPerformance = {
+    id: number;
+    name: string;
+    revenue: MoneyAggregate[];
+    expenses: MoneyAggregate[];
+    noi: MoneyAggregate[];
+    operating_margin: RateAggregate[];
+    billed: MoneyAggregate[];
+    collected: MoneyAggregate[];
+    outstanding: MoneyAggregate[];
+    collection_rate: RateAggregate[];
+    occupancy: {
+        total_units: number;
+        occupied_units: number;
+        occupancy_percentage: number;
+    };
+};
+
+export type FinancialDashboardData = {
+    period: 'current_month' | 'ytd';
+    period_start: string;
+    period_end: string;
+    overview: {
+        revenue: MoneyAggregate[];
+        expenses: MoneyAggregate[];
+        noi: MoneyAggregate[];
+        operating_margin: RateAggregate[];
+    };
+    collections: {
+        billed: MoneyAggregate[];
+        collected: MoneyAggregate[];
+        outstanding: MoneyAggregate[];
+        collection_rate: RateAggregate[];
+    };
+    cash_flow: FinancialCashFlowPoint[];
+    trends: FinancialTrendPoint[];
+    property_performance: FinancialPropertyPerformance[];
+    occupancy: {
+        total_units: number;
+        occupied_units: number;
+        occupancy_percentage: number;
+        properties: Array<{
+            id: number;
+            name: string;
+            total_units: number;
+            occupied_units: number;
+            occupancy_percentage: number;
+        }>;
+    };
+    expense_breakdown: Array<{
+        category_id: number;
+        category_label: string;
+        amounts: MoneyAggregate[];
+    }>;
+    upcoming_receivables: Array<{
+        month: string;
+        label: string;
+        receivable: MoneyAggregate[];
+    }>;
+};
+
 export type Stats = {
     total_units: number;
     occupied_units: number;
