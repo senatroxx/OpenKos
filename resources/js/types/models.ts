@@ -63,6 +63,7 @@ export type ExpenseCategory = {
     is_active: boolean;
     sort_order?: number;
     expenses_count?: number;
+    recurring_expenses_count?: number;
 };
 
 export type ExpenseReceipt = {
@@ -77,6 +78,7 @@ export type Expense = {
     id: number;
     property_id: number;
     expense_category_id: number;
+    recurring_expense_id: number | null;
     amount: string;
     currency: string;
     expense_date: string;
@@ -92,8 +94,37 @@ export type Expense = {
     updated_at: string;
     property?: { id: number; name: string } | null;
     category?: ExpenseCategory | null;
+    recurring_expense?: {
+        id: number;
+        vendor: string | null;
+        description: string | null;
+        billing_interval: number;
+        billing_unit: 'day' | 'week' | 'month' | 'year';
+    } | null;
     voided_by_user?: { id: number; name: string } | null;
     receipt?: ExpenseReceipt | null;
+};
+
+export type RecurringExpense = {
+    id: number;
+    property_id: number;
+    expense_category_id: number;
+    amount: string;
+    currency: string;
+    vendor: string | null;
+    description: string | null;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    start_date: string;
+    end_date: string | null;
+    is_active: boolean;
+    next_due_on: string | null;
+    paused_at: string | null;
+    status: 'active' | 'paused' | 'ended' | string;
+    created_at: string;
+    updated_at: string;
+    property?: { id: number; name: string } | null;
+    category?: ExpenseCategory | null;
 };
 
 export type Property = {

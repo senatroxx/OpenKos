@@ -12,6 +12,11 @@ Schedule::command('invoices:generate')
     ->dailyAt('01:00')
     ->withoutOverlapping(60);
 
+Schedule::command('expenses:generate-recurring')
+    ->dailyAt('01:05')
+    ->withoutOverlapping(60)
+    ->onOneServer();
+
 Schedule::command('payments:reconcile')
     ->everyFiveMinutes()
     ->withoutOverlapping(15);

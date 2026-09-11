@@ -20,7 +20,12 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { formatDate, formatDateTime, formatPrice } from '@/lib/formatters';
+import {
+    formatBillingPeriod,
+    formatDate,
+    formatDateTime,
+    formatPrice,
+} from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import expenses from '@/routes/expenses';
 import type { Expense } from '@/types';
@@ -120,6 +125,18 @@ export default function ExpenseDetailSheet({
                                     value={expense.vendor ?? '—'}
                                 />
                             </section>
+
+                            {expense.recurring_expense && (
+                                <section className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+                                    <p className="font-medium">{t('Recurring expense')}</p>
+                                    <p className="mt-1 text-muted-foreground">
+                                        {formatBillingPeriod(
+                                            expense.recurring_expense.billing_interval,
+                                            expense.recurring_expense.billing_unit,
+                                        )}
+                                    </p>
+                                </section>
+                            )}
 
                             {expense.description && (
                                 <section>
