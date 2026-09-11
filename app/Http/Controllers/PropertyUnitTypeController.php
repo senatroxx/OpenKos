@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AmenityScope;
+use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
 use App\Http\Requests\UnitType\UpdateUnitTypeRequest;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
+use App\Services\Listings\PublicSlugAllocator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -101,6 +103,41 @@ class PropertyUnitTypeController extends Controller
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type updated.')]);
+
+        return back();
+    }
+
+    public function updatePublication(
+        UpdateListingPublicationRequest $request,
+        Property $property,
+        UnitType $unitType,
+        PublicSlugAllocator $slugAllocator,
+    ): RedirectResponse {
+        $this->authorize('update', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+        $isPublished = $request->boolean('is_published');
+
+        $slugAllocator->transaction(function () use ($unitType, $isPublished, $slugAllocator): void {
+            $lockedUnitType = UnitType::query()->lockForUpdate()->findOrFail($unitType->id);
+
+            abort_if($isPublished && ! $lockedUnitType->is_active, 422, __('Inactive Unit Types cannot be published.'));
+
+            $attributes = ['is_published' => $isPublished];
+            if ($isPublished && empty($lockedUnitType->public_slug)) {
+                $attributes['public_slug'] = $slugAllocator->allocate(
+                    UnitType::query()->where('property_id', $lockedUnitType->property_id),
+                    $lockedUnitType->name,
+                    'unit-type',
+                );
+            }
+
+            $lockedUnitType->forceFill($attributes)->saveOrFail();
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __($isPublished ? 'Unit Type published.' : 'Unit Type unpublished.'),
+        ]);
 
         return back();
     }

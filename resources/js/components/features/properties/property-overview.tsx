@@ -1,18 +1,9 @@
-import { MediaGalleryManager } from '@/components/shared/media-gallery-manager';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { t } from '@/lib/i18n';
-import properties from '@/routes/properties';
-import type { Amenity, Property } from '@/types';
-import PropertyFacilitiesEditor from './property-facilities-editor';
+import type { Property } from '@/types';
 
-export default function PropertyOverview({
-    property,
-    amenities,
-}: {
-    property: Property;
-    amenities: Amenity[];
-}) {
+export default function PropertyOverview({ property }: { property: Property }) {
     const city =
         property?.city && typeof property.city !== 'string'
             ? property.city
@@ -116,42 +107,6 @@ export default function PropertyOverview({
                     </div>
                 </div>
             </div>
-
-            <PropertyFacilitiesEditor
-                property={property}
-                amenities={amenities}
-            />
-
-            <section className="space-y-4">
-                <div>
-                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                        {t('Property gallery')}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        {t(
-                            'Manage ordered property photos and their metadata.',
-                        )}
-                    </p>
-                </div>
-                <MediaGalleryManager
-                    items={property.gallery ?? []}
-                    idPrefix="property"
-                    uploadUrl={properties.gallery.store.url(property)}
-                    reorderUrl={properties.gallery.reorder.url(property)}
-                    updateUrl={(mediaId) =>
-                        properties.gallery.update.url({
-                            property,
-                            media: mediaId,
-                        })
-                    }
-                    destroyUrl={(mediaId) =>
-                        properties.gallery.destroy.url({
-                            property,
-                            media: mediaId,
-                        })
-                    }
-                />
-            </section>
         </div>
     );
 }

@@ -27,6 +27,7 @@ class UnitTypeFactory extends Factory
             'size_sqm' => fake()->optional()->randomFloat(2, 15, 80),
             'furnishing' => fake()->optional()->randomElement(['furnished', 'semi-furnished', 'unfurnished']),
             'is_active' => true,
+            'is_published' => false,
         ];
     }
 }

@@ -26,6 +26,7 @@ class PropertyFactory extends Factory
             'phone' => fake()->phoneNumber(),
             'description' => fake()->sentence(),
             'is_active' => true,
+            'is_published' => false,
         ];
     }
 }

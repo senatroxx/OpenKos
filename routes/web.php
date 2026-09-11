@@ -117,8 +117,10 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::scopeBindings()->group(function () {
             Route::prefix('{property}')->group(function () {
                 Route::get('/', [PropertyController::class, 'show'])->name('show')->middleware('permission:properties.view');
+                Route::get('listing', [PropertyController::class, 'listing'])->name('listing')->middleware('permission:properties.view');
                 Route::put('/', [PropertyController::class, 'update'])->name('update')->middleware('permission:properties.update');
                 Route::delete('/', [PropertyController::class, 'destroy'])->name('destroy')->middleware('permission:properties.delete');
+                Route::patch('publication', [PropertyController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
                 Route::post('restore', [PropertyController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
                 Route::get('leases', PropertyLeasesController::class)->name('workspace.leases')->middleware('permission:properties.view');
                 Route::get('documents', PropertyDocumentsController::class)->name('workspace.documents')->middleware('permission:properties.view');
@@ -129,6 +131,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
 
                     Route::prefix('{unitType}')->group(function () {
                         Route::put('/', [PropertyUnitTypeController::class, 'update'])->name('update')->middleware('permission:properties.update');
+                        Route::patch('publication', [PropertyUnitTypeController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
                         Route::post('deactivate', [PropertyUnitTypeController::class, 'deactivate'])->name('deactivate')->middleware('permission:properties.update');
                         Route::post('restore', [PropertyUnitTypeController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
 
@@ -145,8 +148,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::post('amenities', [PropertyAmenityController::class, 'store'])->name('amenities.store')->middleware('permission:properties.update');
                 Route::put('facilities', [PropertyAmenityController::class, 'syncProperty'])->name('facilities.update')->middleware('permission:properties.update');
                 Route::withoutScopedBindings()->prefix('amenities/{amenity}')->whereNumber('amenity')->group(function () {
-                    Route::post('deactivate', [PropertyAmenityController::class, 'deactivate'])->name('amenities.deactivate')->middleware('permission:properties.update');
-                    Route::post('restore', [PropertyAmenityController::class, 'restore'])->name('amenities.restore')->middleware('permission:properties.update');
+                    Route::delete('/', [PropertyAmenityController::class, 'destroy'])->name('amenities.destroy')->middleware('permission:properties.update');
                 });
 
                 Route::prefix('gallery')->name('gallery.')->group(function () {
