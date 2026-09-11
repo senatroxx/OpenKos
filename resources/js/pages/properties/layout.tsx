@@ -49,6 +49,11 @@ export function PropertyLayout({
                         href: `/properties/${property.slug}/leases`,
                     },
                     {
+                        key: 'listing',
+                        label: 'Listing',
+                        href: properties.listing.url(property),
+                    },
+                    {
                         key: 'documents',
                         label: 'Documents',
                         href: `/properties/${property.slug}/documents`,

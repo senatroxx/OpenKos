@@ -53,8 +53,9 @@ it('offers amenities only in their declared workspace scope', function () {
     ]);
 
     $this->actingAs($user)
-        ->get(route('properties.show', $property))
+        ->get(route('properties.listing', $property))
         ->assertInertia(fn ($page) => $page
+            ->component('properties/listing')
             ->where('amenities', fn ($amenities): bool => $amenities->pluck('name')->sort()->values()->all() === ['Laundry', 'Parking']));
 
     $this->actingAs($user)

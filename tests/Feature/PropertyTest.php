@@ -284,6 +284,33 @@ describe('cross-property access', function () {
 });
 
 describe('workspace tabs', function () {
+    it('keeps the overview tab read-only', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('properties.show', $property))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/overview')
+                ->missing('amenities')
+                ->missing('property.gallery'));
+    });
+
+    it('renders the listing tab with listing management data', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('properties.listing', $property))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('properties/listing')
+                ->where('property.id', $property->id)
+                ->has('property.gallery')
+                ->has('amenities'));
+    });
+
     it('renders the leases tab with workspace stats', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
@@ -321,6 +348,10 @@ describe('workspace tabs', function () {
 
         $this->actingAs($user)
             ->get(route('properties.workspace.leases', $property))
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->get(route('properties.listing', $property))
             ->assertForbidden();
     });
 });

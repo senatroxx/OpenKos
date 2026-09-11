@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::scopeBindings()->group(function () {
             Route::prefix('{property}')->group(function () {
                 Route::get('/', [PropertyController::class, 'show'])->name('show')->middleware('permission:properties.view');
+                Route::get('listing', [PropertyController::class, 'listing'])->name('listing')->middleware('permission:properties.view');
                 Route::put('/', [PropertyController::class, 'update'])->name('update')->middleware('permission:properties.update');
                 Route::delete('/', [PropertyController::class, 'destroy'])->name('destroy')->middleware('permission:properties.delete');
                 Route::patch('publication', [PropertyController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');

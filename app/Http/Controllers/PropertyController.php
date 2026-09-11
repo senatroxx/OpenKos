@@ -29,7 +29,19 @@ use Inertia\Response;
 
 class PropertyController extends Controller
 {
-    public function show(Request $request, Property $property): Response
+    public function show(Property $property): Response
+    {
+        $this->authorize('view', $property);
+
+        $property = Property::withWorkspaceStats()
+            ->findOrFail($property->id);
+
+        return Inertia::render('properties/overview', [
+            'property' => $property,
+        ]);
+    }
+
+    public function listing(Property $property): Response
     {
         $this->authorize('view', $property);
 
@@ -67,7 +79,7 @@ class PropertyController extends Controller
             ->orderBy('name')
             ->get(['id', 'owner_property_id', 'name', 'scope', 'is_active']);
 
-        return Inertia::render('properties/overview', [
+        return Inertia::render('properties/listing', [
             'property' => $property,
             'amenities' => $amenities,
         ]);
