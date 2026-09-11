@@ -24,6 +24,7 @@ class MoveOutLease
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
         private ReferenceAllocationRetry $referenceAllocationRetry,
+        private SettleLeaseDeposit $settleLeaseDeposit,
     ) {}
 
     private function cancelFutureInvoices(Lease $lease): void
@@ -93,9 +94,12 @@ class MoveOutLease
 
         $this->leaseStatusValidator->validate($oldLeaseStatus, LeaseStatus::Terminated);
 
-        $depositRefundAmount = $data->depositReturned
-            ? ($data->depositRefundAmount ?? $lease->deposit_amount)
-            : null;
+        $depositRefundAmount = $data->depositSettlement !== null
+            ? $lease->deposit_refund_amount
+            : ($data->depositReturned ? ($data->depositRefundAmount ?? $lease->deposit_amount) : null);
+        $depositRefundedAt = $data->depositSettlement !== null
+            ? $lease->deposit_refunded_at
+            : ($data->depositReturned ? now() : null);
 
         $lease->update([
             'end_date' => $data->endDate,
@@ -103,9 +107,13 @@ class MoveOutLease
             'termination_date' => $data->terminationDate,
             'termination_reason' => $data->reason,
             'deposit_refund_amount' => $depositRefundAmount,
-            'deposit_refunded_at' => $data->depositReturned ? now() : null,
+            'deposit_refunded_at' => $depositRefundedAt,
             'notes' => $data->notes ?? $lease->notes,
         ]);
+
+        if ($data->depositSettlement !== null) {
+            $this->settleLeaseDeposit->execute($lease, $data->depositSettlement);
+        }
 
         $this->cancelFutureInvoices($lease);
 
@@ -124,6 +132,8 @@ class MoveOutLease
 
     private function transfer(Lease $lease, Unit $oldUnit, Unit $targetUnit, MoveOutLeaseData $data): MoveOutLeaseResult
     {
+        abort_if($data->depositSettlement !== null, 422, __('A deposit cannot be settled while moving to another unit.'));
+
         $oldLeaseStatus = $lease->status;
         $oldSourceStatus = $oldUnit->status;
         $oldTargetStatus = $targetUnit->status;

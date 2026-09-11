@@ -251,6 +251,26 @@ export type TenantLease = {
     primary_tenant: TenantInfo | null;
 };
 
+export type DepositDeduction = {
+    id: number;
+    amount: string;
+    reason: string;
+    description: string | null;
+};
+
+export type DepositSettlement = {
+    id: number;
+    original_amount: string;
+    currency: string;
+    status: 'draft' | 'settled' | string;
+    settlement_date: string;
+    refund_amount: string;
+    deductions_total: string;
+    refund_reference: string | null;
+    notes: string | null;
+    deductions: DepositDeduction[];
+};
+
 export type LeaseInfo = {
     id: number;
     reference: string | null;
@@ -268,6 +288,7 @@ export type LeaseInfo = {
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
     deposit_refunded_at: string | null;
+    deposit_settlement?: DepositSettlement | null;
     rent_due_day: number;
     status: string;
     notes: string | null;
@@ -294,6 +315,7 @@ export type Lease = {
     deposit_paid_at: string | null;
     deposit_refund_amount: string | null;
     deposit_refunded_at: string | null;
+    deposit_settlement?: DepositSettlement | null;
     rent_due_day: number;
     status: string;
     termination_date: string | null;
@@ -334,7 +356,8 @@ export type TenantLeaseContext = {
 
 export type LeaseData = {
     id: number;
-    currency?: string;
+    currency: string;
+    deposit_amount: string;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
     unit: { id: number; name: string } | null;
