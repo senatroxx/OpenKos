@@ -50,6 +50,7 @@ export default function PropertyFormSheet({
         city_id: property?.city_id ?? city?.id ?? null,
         postal_code: property?.postal_code ?? '',
         phone: property?.phone ?? '',
+        description: property?.description ?? '',
     });
 
     function handleOpenChange(next: boolean) {
@@ -215,6 +216,19 @@ export default function PropertyFormSheet({
                             />
                             <InputError message={errors.phone} />
                         </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="description">{t('Description')}</Label>
+                        <Textarea
+                            id="description"
+                            value={data.description}
+                            onChange={(event) =>
+                                setData('description', event.target.value)
+                            }
+                            placeholder={t('Property description')}
+                        />
+                        <InputError message={errors.description} />
                     </div>
                     <div className="flex flex-wrap items-center justify-end gap-4">
                         <Button

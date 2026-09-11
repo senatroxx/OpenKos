@@ -85,8 +85,8 @@ it('retrieves and reorders media within an owner collection', function () {
     $property = Property::factory()->create();
     $manager = app(MediaManager::class);
 
-    $first = $manager->store($property, 'photos', UploadedFile::fake()->create('first.jpg', 1, 'image/jpeg'));
-    $second = $manager->store($property, 'photos', UploadedFile::fake()->create('second.jpg', 1, 'image/jpeg'));
+    $first = $manager->storeAtEnd($property, 'photos', UploadedFile::fake()->create('first.jpg', 1, 'image/jpeg'));
+    $second = $manager->storeAtEnd($property, 'photos', UploadedFile::fake()->create('second.jpg', 1, 'image/jpeg'));
     $document = $manager->store($property, 'documents', UploadedFile::fake()->create('lease.pdf', 1, 'application/pdf'));
 
     $manager->reorder($property, 'photos', [$second->id, $first->id]);
@@ -297,8 +297,8 @@ it('preserves media through owner soft deletion until explicit cleanup', functio
 it('rolls back all owner media rows when bulk cleanup fails', function () {
     $property = Property::factory()->create();
     $manager = app(MediaManager::class);
-    $first = $manager->store($property, 'photos', UploadedFile::fake()->create('first.jpg', 1, 'image/jpeg'));
-    $second = $manager->store($property, 'photos', UploadedFile::fake()->create('second.jpg', 1, 'image/jpeg'));
+    $first = $manager->storeAtEnd($property, 'photos', UploadedFile::fake()->create('first.jpg', 1, 'image/jpeg'));
+    $second = $manager->storeAtEnd($property, 'photos', UploadedFile::fake()->create('second.jpg', 1, 'image/jpeg'));
     $event = 'eloquent.deleting: '.Media::class;
     $deletions = 0;
 

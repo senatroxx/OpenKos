@@ -197,6 +197,7 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
             className:
                 'bg-surface-green/70 text-surface-green-foreground border-surface-green-border/80',
         },
+        inactive: { label: 'Inactive', variant: 'secondary' },
         archived: { label: 'Archived', variant: 'secondary' },
     },
     expense: {

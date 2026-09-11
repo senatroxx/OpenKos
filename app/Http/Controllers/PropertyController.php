@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Properties\CreateProperty;
+use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
+use App\Models\Amenity;
 use App\Models\City;
 use App\Models\Lease;
+use App\Models\Media;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
@@ -28,10 +31,43 @@ class PropertyController extends Controller
     {
         $this->authorize('view', $property);
 
-        $property = Property::withWorkspaceStats()->findOrFail($property->id);
+        $property = Property::withWorkspaceStats()
+            ->with([
+                'facilities',
+                'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id'),
+            ])
+            ->findOrFail($property->id);
+
+        $property->setAttribute('gallery', $property->media->map(fn (Media $media): array => [
+            'id' => $media->id,
+            'url' => route('properties.gallery.show', [$property, $media]),
+            'position' => $media->position,
+            'alt' => $media->metadata['alt'] ?? null,
+            'caption' => $media->metadata['caption'] ?? null,
+            'original_name' => $media->original_name,
+            'mime_type' => $media->mime_type,
+        ])->values()->all());
+        $property->unsetRelation('media');
+
+        $facilityIds = $property->facilities->modelKeys();
+        $amenities = Amenity::query()
+            ->where(function (Builder $query) use ($property, $facilityIds): void {
+                $query->where(function (Builder $query) use ($property): void {
+                    $query->where(function (Builder $query): void {
+                        $query->whereIn('scope', [AmenityScope::Property->value, AmenityScope::Both->value])
+                            ->whereNull('owner_property_id')
+                            ->where('is_active', true);
+                    })->orWhere(function (Builder $query) use ($property): void {
+                        $query->where('owner_property_id', $property->id);
+                    });
+                })->orWhereIn('id', $facilityIds);
+            })
+            ->orderBy('name')
+            ->get(['id', 'owner_property_id', 'name', 'scope', 'is_active']);
 
         return Inertia::render('properties/overview', [
             'property' => $property,
+            'amenities' => $amenities,
         ]);
     }
 

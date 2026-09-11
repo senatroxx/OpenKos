@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\UnitType;
 use App\Policies\ExpensePolicy;
 use App\Policies\InvoicePolicy;
 use App\Policies\LeasePolicy;
@@ -19,6 +20,7 @@ use App\Policies\PaymentPolicy;
 use App\Policies\PropertyPolicy;
 use App\Policies\TenantPolicy;
 use App\Policies\UnitPolicy;
+use App\Policies\UnitTypePolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 
@@ -27,6 +29,7 @@ class AuthServiceProvider extends ServiceProvider
     protected $policies = [
         Property::class => PropertyPolicy::class,
         Unit::class => UnitPolicy::class,
+        UnitType::class => UnitTypePolicy::class,
         Tenant::class => TenantPolicy::class,
         Lease::class => LeasePolicy::class,
         Invoice::class => InvoicePolicy::class,

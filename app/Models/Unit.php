@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 
 #[Fillable([
     'property_id',
+    'unit_type_id',
     'name',
     'slug',
     'floor',
@@ -67,6 +68,11 @@ class Unit extends Model
     public function property(): BelongsTo
     {
         return $this->belongsTo(Property::class);
+    }
+
+    public function unitType(): BelongsTo
+    {
+        return $this->belongsTo(UnitType::class);
     }
 
     public function leases(): HasMany

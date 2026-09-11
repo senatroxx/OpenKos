@@ -3,17 +3,20 @@
 use App\Http\Controllers\Dashboard\FinancialController;
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
-use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\DataTransferController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseInvoiceController;
 use App\Http\Controllers\LeaseRentScheduleController;
 use App\Http\Controllers\MaintenanceTicketController;
 use App\Http\Controllers\PaymentAttemptController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PropertyAmenityController;
 use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyDocumentsController;
 use App\Http\Controllers\PropertyLeasesController;
+use App\Http\Controllers\PropertyMediaController;
+use App\Http\Controllers\PropertyUnitTypeController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SignedPaymentController;
 use App\Http\Controllers\TenantController;
@@ -24,6 +27,7 @@ use App\Http\Controllers\TenantPortal\LeaseController as TenantPortalLeaseContro
 use App\Http\Controllers\TenantPortal\NotificationController as TenantPortalNotificationController;
 use App\Http\Controllers\TenantPortal\PaymentController as TenantPortalPaymentController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UnitTypeMediaController;
 use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -118,6 +122,40 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::post('restore', [PropertyController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
                 Route::get('leases', PropertyLeasesController::class)->name('workspace.leases')->middleware('permission:properties.view');
                 Route::get('documents', PropertyDocumentsController::class)->name('workspace.documents')->middleware('permission:properties.view');
+
+                Route::prefix('unit-types')->name('unit-types.')->group(function () {
+                    Route::get('/', [PropertyUnitTypeController::class, 'index'])->name('index')->middleware('permission:properties.view');
+                    Route::post('/', [PropertyUnitTypeController::class, 'store'])->name('store')->middleware('permission:properties.update');
+
+                    Route::prefix('{unitType}')->group(function () {
+                        Route::put('/', [PropertyUnitTypeController::class, 'update'])->name('update')->middleware('permission:properties.update');
+                        Route::post('deactivate', [PropertyUnitTypeController::class, 'deactivate'])->name('deactivate')->middleware('permission:properties.update');
+                        Route::post('restore', [PropertyUnitTypeController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
+
+                        Route::prefix('gallery')->name('gallery.')->group(function () {
+                            Route::post('/', [UnitTypeMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');
+                            Route::post('reorder', [UnitTypeMediaController::class, 'reorder'])->name('reorder')->middleware('permission:properties.update');
+                            Route::get('{media}', [UnitTypeMediaController::class, 'show'])->name('show')->whereNumber('media')->middleware('permission:properties.view');
+                            Route::patch('{media}', [UnitTypeMediaController::class, 'update'])->name('update')->whereNumber('media')->middleware('permission:properties.update');
+                            Route::delete('{media}', [UnitTypeMediaController::class, 'destroy'])->name('destroy')->whereNumber('media')->middleware('permission:properties.update');
+                        });
+                    });
+                });
+
+                Route::post('amenities', [PropertyAmenityController::class, 'store'])->name('amenities.store')->middleware('permission:properties.update');
+                Route::put('facilities', [PropertyAmenityController::class, 'syncProperty'])->name('facilities.update')->middleware('permission:properties.update');
+                Route::withoutScopedBindings()->prefix('amenities/{amenity}')->whereNumber('amenity')->group(function () {
+                    Route::post('deactivate', [PropertyAmenityController::class, 'deactivate'])->name('amenities.deactivate')->middleware('permission:properties.update');
+                    Route::post('restore', [PropertyAmenityController::class, 'restore'])->name('amenities.restore')->middleware('permission:properties.update');
+                });
+
+                Route::prefix('gallery')->name('gallery.')->group(function () {
+                    Route::post('/', [PropertyMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');
+                    Route::post('reorder', [PropertyMediaController::class, 'reorder'])->name('reorder')->middleware('permission:properties.update');
+                    Route::get('{media}', [PropertyMediaController::class, 'show'])->name('show')->whereNumber('media')->middleware('permission:properties.view');
+                    Route::patch('{media}', [PropertyMediaController::class, 'update'])->name('update')->whereNumber('media')->middleware('permission:properties.update');
+                    Route::delete('{media}', [PropertyMediaController::class, 'destroy'])->name('destroy')->whereNumber('media')->middleware('permission:properties.update');
+                });
 
                 Route::prefix('units')->name('units.')->group(function () {
                     Route::get('/', [UnitController::class, 'index'])->name('index')->middleware('permission:units.view');

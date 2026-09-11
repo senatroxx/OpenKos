@@ -34,6 +34,12 @@ $expected = [
     'media' => [
         'idx_media_owner_collection_position' => ['mediable_type', 'mediable_id', 'collection', 'position'],
     ],
+    'unit_types' => [
+        'unit_types_property_id_is_active_name_index' => ['property_id', 'is_active', 'name'],
+    ],
+    'amenities' => [
+        'amenities_owner_property_id_is_active_name_index' => ['owner_property_id', 'is_active', 'name'],
+    ],
     'utility_meters' => [
         'idx_utility_meters_unit_active' => ['unit_id', 'is_active'],
     ],
@@ -64,6 +70,25 @@ it('every expected composite index exists with correct columns', function () use
     }
 });
 
+it('has catalog and gallery uniqueness indexes', function () {
+    if (DB::getDriverName() === 'sqlite') {
+        $indexes = collect(['amenities', 'unit_types', 'media'])
+            ->flatMap(fn (string $table) => DB::select("PRAGMA index_list({$table})"))
+            ->pluck('name')
+            ->all();
+    } else {
+        $indexes = DB::table('pg_indexes')
+            ->whereIn('tablename', ['amenities', 'unit_types', 'media'])
+            ->pluck('indexname')
+            ->all();
+    }
+
+    expect($indexes)->toContain('amenities_global_lower_name_unique')
+        ->toContain('amenities_property_lower_name_unique')
+        ->toContain('unit_types_property_lower_name_unique')
+        ->toContain('media_gallery_owner_position_unique');
+});
+
 function loadIndexesSqlite(array $tables): array
 {
     $indexes = [];
@@ -73,8 +98,8 @@ function loadIndexesSqlite(array $tables): array
         foreach ($rows as $row) {
             $name = $row->name;
 
-            // Skip auto-generated indexes (unique, primary)
-            if (str_starts_with($name, 'sqlite_autoindex')) {
+            // Skip unique and primary indexes; this test covers non-unique composites.
+            if (str_starts_with($name, 'sqlite_autoindex') || (int) $row->unique === 1) {
                 continue;
             }
 

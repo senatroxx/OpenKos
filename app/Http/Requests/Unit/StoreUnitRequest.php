@@ -4,6 +4,7 @@ namespace App\Http\Requests\Unit;
 
 use App\Enums\BillingUnit;
 use App\Enums\UnitStatus;
+use App\Models\UnitType;
 use App\Rules\MoneyAmount;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Settings\InstallationCurrencySettings;
@@ -26,6 +27,13 @@ class StoreUnitRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('units')->where(fn ($q) => $q->where('property_id', $this->route('property')->id)),
+            ],
+            'unit_type_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('unit_types', 'id')->where(fn ($query) => $query
+                    ->where('property_id', $this->route('property')->id)
+                    ->where('is_active', true)),
             ],
             'floor' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:65535'],
@@ -75,6 +83,8 @@ class StoreUnitRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
+            $this->validateUnitType($validator);
+
             $seen = [];
             $rates = $this->input('rates', []);
 
@@ -116,5 +126,20 @@ class StoreUnitRequest extends FormRequest
                 $seen[$key] = true;
             }
         }];
+    }
+
+    private function validateUnitType(Validator $validator): void
+    {
+        $unitTypeId = $this->input('unit_type_id');
+
+        if ($unitTypeId === null || $unitTypeId === '') {
+            return;
+        }
+
+        $unitType = UnitType::query()->find($unitTypeId);
+
+        if ($unitType === null || $unitType->property_id !== $this->route('property')->id) {
+            $validator->errors()->add('unit_type_id', __('The selected Unit Type does not belong to this property.'));
+        }
     }
 }

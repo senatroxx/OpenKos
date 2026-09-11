@@ -96,6 +96,18 @@ class Property extends Model
         return $this->hasMany(Unit::class);
     }
 
+    public function unitTypes(): HasMany
+    {
+        return $this->hasMany(UnitType::class);
+    }
+
+    public function facilities(): BelongsToMany
+    {
+        return $this->belongsToMany(Amenity::class, 'amenity_property')
+            ->using(AmenityProperty::class)
+            ->withTimestamps();
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withTimestamps();

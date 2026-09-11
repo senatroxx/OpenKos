@@ -50,6 +50,7 @@ import type {
     PaginatedData,
     Property,
     Unit,
+    UnitType,
     TableMeta,
 } from '@/types';
 
@@ -69,6 +70,7 @@ type PageProps = {
             city: { name: string } | null;
         } | null;
     }[];
+    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
     sort?: string;
     search?: string;
     status?: string;
@@ -79,6 +81,7 @@ type PageProps = {
 export default function Index({
     property,
     units: data,
+    unitTypes,
     availableUnits: _availableUnits,
     sort: currentSort = 'name',
     search: currentSearch = '',
@@ -272,6 +275,11 @@ export default function Index({
             sortable: true,
             className: 'text-muted-foreground',
             render: (r) => r.floor ?? '\u2014',
+        },
+        {
+            key: 'unit_type',
+            label: 'Unit Type',
+            render: (r) => r.unit_type?.name ?? '—',
         },
         {
             key: 'size_sqm',
@@ -535,6 +543,7 @@ export default function Index({
                 key={`${currentEditingUnit?.id ?? 'new'}-${currentEditingUnit?.updated_at ?? ''}`}
                 unit={currentEditingUnit}
                 property={property}
+                unitTypes={unitTypes}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
             />

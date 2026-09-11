@@ -55,6 +55,37 @@ class MediaManager
         );
     }
 
+    /**
+     * Append media to an owner's collection with serialized position allocation.
+     */
+    public function storeAtEnd(
+        Model $owner,
+        string $collection,
+        UploadedFile $file,
+        ?string $disk = null,
+        ?array $metadata = null,
+    ): Media {
+        $ownerId = $this->ownerId($owner);
+        $collection = $this->validateCollection($collection);
+
+        return DB::transaction(function () use ($owner, $ownerId, $collection, $file, $disk, $metadata): Media {
+            $lockedOwner = $owner->newQuery()->lockForUpdate()->findOrFail($ownerId);
+            $media = $this->forCollection($lockedOwner, $collection)
+                ->lockForUpdate()
+                ->get(['position']);
+            $lastPosition = $media->max('position');
+
+            return $this->store(
+                $lockedOwner,
+                $collection,
+                $file,
+                disk: $disk,
+                position: $lastPosition === null ? 0 : ((int) $lastPosition) + 1,
+                metadata: $metadata,
+            );
+        }, attempts: 5);
+    }
+
     public function replace(
         Media $media,
         UploadedFile $file,
@@ -129,6 +160,25 @@ class MediaManager
         });
     }
 
+    /**
+     * @param  array<string, mixed>|null  $metadata
+     */
+    public function updateMetadata(Media $media, ?array $metadata): Media
+    {
+        $mediaId = $this->persistedMediaId($media);
+
+        if ($mediaId === null) {
+            throw new InvalidArgumentException('Media must be persisted before its metadata can be updated.');
+        }
+
+        return DB::transaction(function () use ($mediaId, $metadata): Media {
+            $lockedMedia = Media::query()->lockForUpdate()->findOrFail($mediaId);
+            $lockedMedia->forceFill(['metadata' => $metadata])->saveOrFail();
+
+            return $lockedMedia;
+        });
+    }
+
     public function removeForOwner(Model $owner, ?string $collection = null): void
     {
         $ownerId = $this->ownerId($owner);
@@ -200,6 +250,12 @@ class MediaManager
 
             if ($ownerIds !== $requestedIds) {
                 throw new InvalidArgumentException('Media IDs must belong to the owner and collection.');
+            }
+
+            $temporaryPosition = ((int) ($media->max('position') ?? -1)) + $media->count() + 1;
+
+            foreach ($media->values() as $index => $item) {
+                $item->forceFill(['position' => $temporaryPosition + $index])->saveOrFail();
             }
 
             foreach ($normalizedIds as $position => $mediaId) {
