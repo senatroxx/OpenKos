@@ -318,7 +318,7 @@ export default function Index({
             </div>
 
             <PropertyDetailSheet
-                key={viewingProperty?.id ?? 'new'}
+                key={`detail-${viewingProperty?.id ?? 'new'}`}
                 property={viewingProperty}
                 open={detailOpen}
                 onOpenChange={setDetailOpen}
@@ -326,7 +326,7 @@ export default function Index({
             />
 
             <PropertyFormSheet
-                key={editingProperty?.id ?? 'new'}
+                key={`form-${editingProperty?.id ?? 'new'}`}
                 property={editingProperty}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
