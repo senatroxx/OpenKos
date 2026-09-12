@@ -14,8 +14,8 @@ return [
     | Platform version
     |--------------------------------------------------------------------------
     |
-    | Plugins declare a `coreVersion` constraint in their manifest; it is
-    | checked against this value at boot (see PluginLoader).
+    | Plugin compatibility is declared by the Composer requirement for
+    | openkos/platform and validated when the plugin is installed.
     |
     */
 

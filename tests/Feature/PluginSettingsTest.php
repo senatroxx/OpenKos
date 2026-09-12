@@ -414,7 +414,7 @@ it('keeps the plugins page available when a runtime dependency is missing or dis
         ->toContain("disabled plugin [{$dependency['id']}]");
 });
 
-it('surfaces a runtime plugin that is incompatible with the current core', function (): void {
+it('does not gate legacy core metadata during runtime discovery', function (): void {
     $artifact = makePluginSettingsArtifact(['core_version' => '^9.0']);
     $path = $this->runtimePluginPath.'/'.$artifact['id'];
     File::makeDirectory($path, 0750, true);
@@ -432,7 +432,7 @@ it('surfaces a runtime plugin that is incompatible with the current core', funct
         ->inertiaProps('plugins');
 
     expect(collect($plugins)->firstWhere('id', $artifact['id']))->toMatchArray([
-        'status' => 'incompatible',
+        'status' => 'enabled',
         'can_enable' => false,
         'can_disable' => true,
         'can_remove' => true,
@@ -861,8 +861,9 @@ it('lists marketplace plugins with the latest compatible version', function (): 
 
         parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
 
-        return ($query['core_version'] ?? null) === '0.2.5'
-            && ($query['platform_version'] ?? null) === '0.2.5';
+        return ! isset($query['core_version'])
+            && ($query['platform_version'] ?? null) === '0.2.5'
+            && ($query['php_version'] ?? null) === PHP_VERSION;
     });
 });
 
@@ -870,8 +871,7 @@ it('accepts legacy marketplace compatibility metadata', function (): void {
     configureMarketplaceForTests();
     $artifact = makePluginSettingsArtifact(['version' => '1.0.0']);
     $metadata = marketplaceVersionMetadata($artifact, '1.0.0');
-    $metadata['compatibility']['core'] = $metadata['compatibility']['openkos'];
-    unset($metadata['compatibility']['openkos']);
+    $metadata['compatibility']['openkos'] = '^9';
     fakeMarketplace($artifact, ['1.0.0' => $metadata], '1.0.0');
 
     $this->actingAs(User::factory()->owner()->create())
@@ -1252,15 +1252,16 @@ function makePluginSettingsArtifact(array $overrides = []): array
         'version' => '1.0.0',
         'description' => 'Settings runtime fixture.',
         'entry_class' => $entryClass,
-        'core_version' => '^0.2',
         'php' => '>=8.4 <8.6',
         'dependencies' => [],
         ...$overrides,
     ];
     $dependencies = var_export($manifest['dependencies'], true);
-    $source = "<?php\n\nnamespace SettingsRuntime;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$id}',\n            name: 'Settings Runtime Fixture',\n            version: '1.0.0',\n            description: 'Settings runtime fixture.',\n            coreVersion: '^0.2',\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void {}\n}\n";
+    $coreVersion = isset($manifest['core_version'])
+        ? "            coreVersion: '{$manifest['core_version']}',\n"
+        : '';
+    $source = "<?php\n\nnamespace SettingsRuntime;\n\nuse OpenKOS\\Platform\\OpenKOSManager;\nuse OpenKOS\\Platform\\Plugin\\Plugin;\nuse OpenKOS\\Platform\\Plugin\\PluginManifest;\n\nfinal class {$classShort} extends Plugin\n{\n    public function manifest(): PluginManifest\n    {\n        return new PluginManifest(\n            id: '{$id}',\n            name: 'Settings Runtime Fixture',\n            version: '1.0.0',\n            description: 'Settings runtime fixture.',\n{$coreVersion}            dependencies: {$dependencies},\n        );\n    }\n\n    public function register(OpenKOSManager \$platform): void {}\n}\n";
     $source = str_replace("version: '1.0.0',", "version: '{$manifest['version']}',", $source);
-    $source = str_replace("coreVersion: '^0.2',", "coreVersion: '{$manifest['core_version']}',\n            dependencies: {$dependencies},", $source);
 
     $directory = sys_get_temp_dir().'/openkos-settings-zip-'.bin2hex(random_bytes(8));
     mkdir($directory, 0750, true);

@@ -138,14 +138,13 @@ use OpenKOS\Platform\Plugin\PluginManifest;
 
 class MyPlugin extends Plugin
 {
-    // Identity + compatibility. Required.
+    // Identity and dependencies. Compatibility is declared in composer.json.
     public function manifest(): PluginManifest
     {
         return new PluginManifest(
             id: 'acme/my-plugin',      // unique, vendor-namespaced
             name: 'My Plugin',
             version: '1.0.0',
-            coreVersion: '^0.2',        // constraint against config('platform.version')
             dependencies: [],           // ids of plugins that must load first
         );
     }
@@ -213,10 +212,10 @@ The package `PlatformServiceProvider::boot()`:
    removes duplicate class names.
 2. Resolves and validates **every** class before loading any plugin resources or
    running lifecycle methods. Each class must extend `Plugin`.
-3. **Validates & orders** them with `PluginLoader`: checks each `coreVersion`
-   against `config('platform.version')`, verifies declared `dependencies` exist,
-   and topologically sorts so each plugin loads after its dependencies. Throws on
-   an incompatible version, missing dependency, dependency cycle, or duplicate id.
+3. **Validates & orders** them with `PluginLoader`: verifies declared
+   `dependencies` exist and topologically sorts so each plugin loads after its
+   dependencies. Composer validates `openkos/platform` compatibility before
+   runtime loading.
 4. **Loads resources** — each plugin's `routes/web.php` and `database/migrations/`.
 5. Runs **two passes**: every plugin's `register()`, then every plugin's `boot()`
    (so `boot()` can rely on all plugins having registered).
@@ -225,12 +224,12 @@ The package `PlatformServiceProvider::boot()`:
 ### Manifest, versioning & dependencies
 
 - **Manifest** (`PluginManifest`): `id`, `name`, `version`, `description`,
-  `coreVersion`, `dependencies`. It's a PHP value object, not a JSON file — type-safe
+  `dependencies`. It's a PHP value object, not a JSON file — type-safe
   and IDE-navigable; a JSON manifest can wrap it later if external discovery needs one.
-- **Version compatibility**: `coreVersion` is checked against `config('platform.version')`
-  (currently `0.2.0`). Supported constraints: any Composer semver constraint supported by `composer/semver`
-  (`*`, `^`, `~`, ranges, wildcards like `1.*`, `||`, …). Incompatible plugins fail fast at boot rather than
-  half-loading.
+- **Version compatibility**: plugin `composer.json` must require `openkos/platform`
+  and declare its PHP requirement. The host validates both constraints before loading.
+- **Legacy compatibility**: `coreVersion` remains accepted by the SDK for old
+  artifacts but is deprecated and never gates loading.
 - **Dependencies**: a plugin lists other plugin **ids**; the loader guarantees they're
   present and loaded first. Missing deps and cycles are hard errors.
 

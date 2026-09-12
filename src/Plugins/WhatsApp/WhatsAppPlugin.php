@@ -25,7 +25,6 @@ class WhatsAppPlugin extends Plugin
             name: 'WhatsApp Notifications',
             version: '1.0.0',
             description: 'Registers the built-in WhatsApp drivers as notification channels.',
-            coreVersion: '^0.2',
         );
     }
 
