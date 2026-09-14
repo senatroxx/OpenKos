@@ -38,7 +38,6 @@ $expected = [
         'unit_type_id,property_id' => 'RESTRICT',
     ],
     'unit_types' => ['property_id' => 'RESTRICT'],
-    'amenities' => ['owner_property_id' => 'RESTRICT'],
     'amenity_property' => ['amenity_id' => 'CASCADE', 'property_id' => 'CASCADE'],
     'amenity_unit_type' => ['amenity_id' => 'CASCADE', 'unit_type_id' => 'CASCADE'],
     'cities' => ['region_id' => 'RESTRICT'],

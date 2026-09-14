@@ -145,11 +145,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     });
                 });
 
-                Route::post('amenities', [PropertyAmenityController::class, 'store'])->name('amenities.store')->middleware('permission:properties.update');
                 Route::put('facilities', [PropertyAmenityController::class, 'syncProperty'])->name('facilities.update')->middleware('permission:properties.update');
-                Route::withoutScopedBindings()->prefix('amenities/{amenity}')->whereNumber('amenity')->group(function () {
-                    Route::delete('/', [PropertyAmenityController::class, 'destroy'])->name('amenities.destroy')->middleware('permission:properties.update');
-                });
 
                 Route::prefix('gallery')->name('gallery.')->group(function () {
                     Route::post('/', [PropertyMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');

@@ -11,9 +11,9 @@ enum AmenityScope: string
     public function label(): string
     {
         return match ($this) {
-            self::Property => 'Property facilities',
-            self::UnitType => 'Unit Type amenities',
-            self::Both => 'Property and Unit Type',
+            self::Property => 'Property',
+            self::UnitType => 'Unit Type',
+            self::Both => 'Both',
         };
     }
 

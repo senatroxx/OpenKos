@@ -11,7 +11,6 @@ use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
 use App\Services\Listings\PublicSlugAllocator;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -43,21 +42,15 @@ class PropertyUnitTypeController extends Controller
             ->values()
             ->all();
         $amenities = Amenity::query()
-            ->where(function ($query) use ($property, $unitTypeAmenityIds): void {
-                $query->where(function ($query) use ($property): void {
-                    $query->whereIn('scope', [AmenityScope::UnitType->value, AmenityScope::Both->value])
-                        ->whereNull('owner_property_id')
-                        ->where('is_active', true)
-                        ->orWhere(function (Builder $query) use ($property): void {
-                            $query->whereIn('scope', [AmenityScope::UnitType->value, AmenityScope::Both->value])
-                                ->where('owner_property_id', $property->id);
-                        });
-                })->when($unitTypeAmenityIds !== [], function ($query) use ($unitTypeAmenityIds): void {
-                    $query->orWhereIn('id', $unitTypeAmenityIds);
-                });
+            ->where(function ($query) use ($unitTypeAmenityIds): void {
+                $query->whereIn('scope', [AmenityScope::UnitType->value, AmenityScope::Both->value])
+                    ->where('is_active', true)
+                    ->when($unitTypeAmenityIds !== [], function ($query) use ($unitTypeAmenityIds): void {
+                        $query->orWhereIn('id', $unitTypeAmenityIds);
+                    });
             })
             ->orderBy('name')
-            ->get(['id', 'owner_property_id', 'name', 'scope', 'is_active']);
+            ->get(['id', 'name', 'slug', 'icon', 'scope', 'is_active']);
 
         return Inertia::render('properties/unit-types/index', [
             'property' => $property,

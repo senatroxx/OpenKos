@@ -18,14 +18,14 @@ class AmenityProperty extends Pivot
         static::saving(function (AmenityProperty $pivot): void {
             $amenity = Amenity::query()
                 ->whereKey($pivot->amenity_id)
-                ->first(['owner_property_id', 'scope']);
+                ->first(['scope', 'is_active']);
 
             if (! $amenity || ! $amenity->scope->allowsProperty()) {
                 throw new InvalidArgumentException('This amenity is not available as a property facility.');
             }
 
-            if ($amenity->owner_property_id !== null && (int) $amenity->owner_property_id !== (int) $pivot->property_id) {
-                throw new InvalidArgumentException('Property-owned amenities may only be attached to their owner property.');
+            if (! $amenity->is_active) {
+                throw new InvalidArgumentException('Inactive amenities cannot be newly assigned.');
             }
         });
     }

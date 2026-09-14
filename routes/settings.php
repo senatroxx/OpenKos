@@ -3,6 +3,7 @@
 use App\Http\Controllers\BrandingAssetController;
 use App\Http\Controllers\DataTransferController;
 use App\Http\Controllers\Settings\AboutController;
+use App\Http\Controllers\Settings\AmenityController;
 use App\Http\Controllers\Settings\ExpenseCategoryController;
 use App\Http\Controllers\Settings\GeneralController;
 use App\Http\Controllers\Settings\MailController;
@@ -81,6 +82,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('settings/expense-categories', [ExpenseCategoryController::class, 'store'])->name('settings.expense-categories.store');
         Route::patch('settings/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'update'])->name('settings.expense-categories.update');
         Route::delete('settings/expense-categories/{expenseCategory}', [ExpenseCategoryController::class, 'destroy'])->name('settings.expense-categories.destroy');
+
+        Route::get('settings/amenities', [AmenityController::class, 'index'])->name('settings.amenities.index');
+        Route::post('settings/amenities', [AmenityController::class, 'store'])->name('settings.amenities.store');
+        Route::patch('settings/amenities/{amenity}', [AmenityController::class, 'update'])->name('settings.amenities.update');
+        Route::delete('settings/amenities/{amenity}', [AmenityController::class, 'destroy'])->name('settings.amenities.destroy');
 
         Route::get('settings/plugins', [PluginController::class, 'index'])->name('settings.plugins.index');
         Route::post('settings/plugins', [PluginController::class, 'install'])->name('settings.plugins.install');

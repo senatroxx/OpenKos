@@ -57,13 +57,12 @@ class UpdateUnitTypeRequest extends FormRequest
                 return;
             }
 
-            $propertyId = $this->route('property')->id;
-            $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'owner_property_id', 'scope', 'is_active']);
+            $amenities = Amenity::query()->whereIn('id', $ids)->get(['id', 'scope', 'is_active']);
 
             foreach ($ids as $index => $id) {
                 $amenity = $amenities->firstWhere('id', $id);
 
-                if (! $amenity || ! $amenity->scope->allowsUnitType() || ($amenity->owner_property_id !== null && $amenity->owner_property_id !== $propertyId)) {
+                if (! $amenity || ! $amenity->scope->allowsUnitType()) {
                     $validator->errors()->add("amenity_ids.{$index}", __('The selected amenity is not available for this property.'));
 
                     continue;

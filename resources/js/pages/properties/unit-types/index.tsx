@@ -19,6 +19,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { AmenityIcon } from '@/lib/amenity-icons';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Amenity, Property, UnitType } from '@/types';
@@ -126,12 +127,15 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
     }
 
     function togglePublication(unitType: UnitType) {
-        router.patch(properties.unitTypes.publication.update.url({
-            property: property.slug,
-            unitType: unitType.id,
-        }), {
-            is_published: !unitType.is_published,
-        });
+        router.patch(
+            properties.unitTypes.publication.update.url({
+                property: property.slug,
+                unitType: unitType.id,
+            }),
+            {
+                is_published: !unitType.is_published,
+            },
+        );
     }
 
     return (
@@ -357,7 +361,16 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                                     : 'outline'
                                                             }
                                                         >
-                                                            {amenity.name}
+                                                            <span className="flex items-center gap-1.5">
+                                                                <AmenityIcon
+                                                                    icon={
+                                                                        amenity.icon
+                                                                    }
+                                                                    className="size-3.5"
+                                                                    aria-hidden="true"
+                                                                />
+                                                                {amenity.name}
+                                                            </span>
                                                             {!amenity.is_active &&
                                                                 ` (${t('inactive')})`}
                                                         </Badge>

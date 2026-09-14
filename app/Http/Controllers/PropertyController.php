@@ -65,19 +65,13 @@ class PropertyController extends Controller
 
         $facilityIds = $property->facilities->modelKeys();
         $amenities = Amenity::query()
-            ->where(function (Builder $query) use ($property, $facilityIds): void {
-                $query->where(function (Builder $query) use ($property): void {
-                    $query->where(function (Builder $query): void {
-                        $query->whereIn('scope', [AmenityScope::Property->value, AmenityScope::Both->value])
-                            ->whereNull('owner_property_id')
-                            ->where('is_active', true);
-                    })->orWhere(function (Builder $query) use ($property): void {
-                        $query->where('owner_property_id', $property->id);
-                    });
-                })->orWhereIn('id', $facilityIds);
+            ->where(function (Builder $query) use ($facilityIds): void {
+                $query->whereIn('scope', [AmenityScope::Property->value, AmenityScope::Both->value])
+                    ->where('is_active', true)
+                    ->orWhereIn('id', $facilityIds);
             })
             ->orderBy('name')
-            ->get(['id', 'owner_property_id', 'name', 'scope', 'is_active']);
+            ->get(['id', 'name', 'slug', 'icon', 'scope', 'is_active']);
 
         return Inertia::render('properties/listing', [
             'property' => $property,

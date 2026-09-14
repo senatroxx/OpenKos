@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Requests\Amenity;
+namespace App\Http\Requests\Settings;
 
+use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
 use App\Models\Amenity;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -16,7 +17,12 @@ class StoreAmenityRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->isOwner() ?? false;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['name' => trim((string) $this->input('name'))]);
     }
 
     /**
@@ -27,20 +33,11 @@ class StoreAmenityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => [
-                'required',
-                'string',
-                'max:255',
-            ],
-            'scope' => ['nullable', Rule::enum(AmenityScope::class)],
+            'name' => ['required', 'string', 'max:255'],
+            'scope' => ['required', Rule::enum(AmenityScope::class)],
+            'icon' => ['nullable', Rule::enum(AmenityIcon::class)],
+            'is_active' => ['nullable', 'boolean'],
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'scope' => $this->input('scope', AmenityScope::Property->value),
-        ]);
     }
 
     /**
@@ -49,13 +46,8 @@ class StoreAmenityRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            $exists = Amenity::query()
-                ->where('owner_property_id', $this->route('property')->id)
-                ->whereRaw('LOWER(name) = LOWER(?)', [$this->input('name')])
-                ->exists();
-
-            if ($exists) {
-                $validator->errors()->add('name', __('The amenity name is already used by this property.'));
+            if (Amenity::query()->whereRaw('LOWER(TRIM(name)) = LOWER(TRIM(?))', [$this->input('name')])->exists()) {
+                $validator->errors()->add('name', __('The amenity name is already in use.'));
             }
         }];
     }

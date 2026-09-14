@@ -1,0 +1,935 @@
+import {
+    Accessibility,
+    AirVent,
+    AlarmClock,
+    Armchair,
+    Baby,
+    BadgeCheck,
+    Bath,
+    Bed,
+    BedDouble,
+    BedSingle,
+    Bike,
+    Bird,
+    Bluetooth,
+    BookOpen,
+    Brush,
+    Building,
+    Building2,
+    Bus,
+    BusFront,
+    Cable,
+    CalendarCheck,
+    Car,
+    Cat,
+    Cctv,
+    ChefHat,
+    CircleCheck,
+    CircleParking,
+    CircleUser,
+    Clock,
+    Cloud,
+    Coffee,
+    ConciergeBell,
+    CookingPot,
+    Dog,
+    DoorClosed,
+    DoorOpen,
+    Droplet,
+    Droplets,
+    Dumbbell,
+    EthernetPort,
+    Fan,
+    Fence,
+    FerrisWheel,
+    FireExtinguisher,
+    Flame,
+    Flower2,
+    Gamepad2,
+    Gift,
+    GraduationCap,
+    Hammer,
+    HandHelping,
+    HandPlatter,
+    Heart,
+    House,
+    HousePlus,
+    KeyRound,
+    Lamp,
+    LampCeiling,
+    Landmark,
+    Leaf,
+    Lightbulb,
+    Lock,
+    Map,
+    MapPin,
+    MapPinHouse,
+    Microwave,
+    Monitor,
+    Mountain,
+    Music,
+    Package,
+    PawPrint,
+    Phone,
+    Plug,
+    Puzzle,
+    Recycle,
+    Refrigerator,
+    RockingChair,
+    Router,
+    School,
+    Shield,
+    ShieldCheck,
+    ShowerHead,
+    Siren,
+    Sofa,
+    Sparkles,
+    SprayCan,
+    Snowflake,
+    Star,
+    Store,
+    Sun,
+    Table2,
+    Tag,
+    TentTree,
+    Thermometer,
+    Toilet,
+    TrainFront,
+    TramFront,
+    Trash2,
+    TreeDeciduous,
+    TreePalm,
+    TreePine,
+    Trees,
+    Trophy,
+    Tv,
+    TvMinimal,
+    Umbrella,
+    Utensils,
+    UtensilsCrossed,
+    Vault,
+    Volleyball,
+    Warehouse,
+    WashingMachine,
+    Waves,
+    WavesLadder,
+    Wifi,
+    WifiHigh,
+    Wind,
+    Wine,
+    Wrench,
+    Zap,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { createElement } from 'react';
+import type { ComponentProps } from 'react';
+
+export type AmenityIconCategory =
+    | 'property'
+    | 'bedroom'
+    | 'bathroom'
+    | 'kitchen'
+    | 'utilities'
+    | 'connectivity'
+    | 'transport'
+    | 'security'
+    | 'accessibility'
+    | 'recreation'
+    | 'outdoor'
+    | 'cleaning'
+    | 'pets'
+    | 'services'
+    | 'general';
+
+type AmenityIconDefinition = {
+    label: string;
+    icon: LucideIcon;
+    category: AmenityIconCategory;
+    aliases?: readonly string[];
+    common?: boolean;
+};
+
+export const amenityIconRegistry = {
+    house: {
+        label: 'House',
+        icon: House,
+        category: 'property',
+        aliases: ['home', 'property'],
+        common: true,
+    },
+    'house-plus': {
+        label: 'House plus',
+        icon: HousePlus,
+        category: 'property',
+        aliases: ['home', 'property'],
+    },
+    building: {
+        label: 'Building',
+        icon: Building,
+        category: 'property',
+        aliases: ['property', 'apartment'],
+        common: true,
+    },
+    'building-2': {
+        label: 'Building 2',
+        icon: Building2,
+        category: 'property',
+        aliases: ['property', 'apartment', 'office'],
+    },
+    warehouse: {
+        label: 'Warehouse',
+        icon: Warehouse,
+        category: 'property',
+        aliases: ['storage'],
+    },
+    'door-open': {
+        label: 'Open door',
+        icon: DoorOpen,
+        category: 'property',
+        aliases: ['entrance', 'access'],
+    },
+    'door-closed': {
+        label: 'Closed door',
+        icon: DoorClosed,
+        category: 'property',
+        aliases: ['entrance', 'room'],
+    },
+    map: {
+        label: 'Map',
+        icon: Map,
+        category: 'property',
+        aliases: ['location', 'directions'],
+    },
+    'map-pin': {
+        label: 'Map pin',
+        icon: MapPin,
+        category: 'property',
+        aliases: ['location', 'address'],
+    },
+    'map-pin-house': {
+        label: 'House location',
+        icon: MapPinHouse,
+        category: 'property',
+        aliases: ['location', 'address', 'property'],
+    },
+    'key-round': {
+        label: 'Key',
+        icon: KeyRound,
+        category: 'property',
+        aliases: ['access', 'entry'],
+        common: true,
+    },
+    landmark: {
+        label: 'Landmark',
+        icon: Landmark,
+        category: 'property',
+        aliases: ['building', 'property'],
+    },
+    store: {
+        label: 'Store',
+        icon: Store,
+        category: 'property',
+        aliases: ['shop', 'service'],
+    },
+    bed: {
+        label: 'Bed',
+        icon: Bed,
+        category: 'bedroom',
+        aliases: ['bedroom', 'sleep'],
+        common: true,
+    },
+    'bed-double': {
+        label: 'Double bed',
+        icon: BedDouble,
+        category: 'bedroom',
+        aliases: ['bedroom', 'sleep', 'king', 'queen'],
+    },
+    'bed-single': {
+        label: 'Single bed',
+        icon: BedSingle,
+        category: 'bedroom',
+        aliases: ['bedroom', 'sleep'],
+    },
+    sofa: {
+        label: 'Sofa',
+        icon: Sofa,
+        category: 'bedroom',
+        aliases: ['living room', 'lounge', 'seating'],
+    },
+    armchair: {
+        label: 'Armchair',
+        icon: Armchair,
+        category: 'bedroom',
+        aliases: ['chair', 'seating', 'furniture'],
+    },
+    'rocking-chair': {
+        label: 'Rocking chair',
+        icon: RockingChair,
+        category: 'bedroom',
+        aliases: ['chair', 'seating', 'furniture'],
+    },
+    lamp: {
+        label: 'Lamp',
+        icon: Lamp,
+        category: 'bedroom',
+        aliases: ['lighting', 'light'],
+    },
+    'lamp-ceiling': {
+        label: 'Ceiling lamp',
+        icon: LampCeiling,
+        category: 'bedroom',
+        aliases: ['lighting', 'light'],
+    },
+    'table-2': {
+        label: 'Table',
+        icon: Table2,
+        category: 'bedroom',
+        aliases: ['furniture', 'dining'],
+    },
+    'book-open': {
+        label: 'Book',
+        icon: BookOpen,
+        category: 'bedroom',
+        aliases: ['reading', 'library'],
+    },
+    bath: {
+        label: 'Bath',
+        icon: Bath,
+        category: 'bathroom',
+        aliases: ['bathroom', 'tub', 'water'],
+        common: true,
+    },
+    'shower-head': {
+        label: 'Shower head',
+        icon: ShowerHead,
+        category: 'bathroom',
+        aliases: ['bathroom', 'shower', 'water'],
+        common: true,
+    },
+    toilet: {
+        label: 'Toilet',
+        icon: Toilet,
+        category: 'bathroom',
+        aliases: ['bathroom', 'restroom'],
+    },
+    droplets: {
+        label: 'Droplets',
+        icon: Droplets,
+        category: 'bathroom',
+        aliases: ['water', 'bathroom', 'pool'],
+    },
+    droplet: {
+        label: 'Droplet',
+        icon: Droplet,
+        category: 'bathroom',
+        aliases: ['water', 'bathroom'],
+    },
+    'hand-helping': {
+        label: 'Helping hand',
+        icon: HandHelping,
+        category: 'accessibility',
+        aliases: ['assistance', 'support', 'care'],
+    },
+    utensils: {
+        label: 'Utensils',
+        icon: Utensils,
+        category: 'kitchen',
+        aliases: ['kitchen', 'cooking', 'dining'],
+        common: true,
+    },
+    'utensils-crossed': {
+        label: 'Crossed utensils',
+        icon: UtensilsCrossed,
+        category: 'kitchen',
+        aliases: ['kitchen', 'cooking', 'dining'],
+    },
+    'cooking-pot': {
+        label: 'Cooking pot',
+        icon: CookingPot,
+        category: 'kitchen',
+        aliases: ['kitchen', 'cooking'],
+        common: true,
+    },
+    refrigerator: {
+        label: 'Refrigerator',
+        icon: Refrigerator,
+        category: 'kitchen',
+        aliases: ['kitchen', 'fridge', 'appliance'],
+    },
+    microwave: {
+        label: 'Microwave',
+        icon: Microwave,
+        category: 'kitchen',
+        aliases: ['kitchen', 'appliance'],
+    },
+    coffee: {
+        label: 'Coffee',
+        icon: Coffee,
+        category: 'kitchen',
+        aliases: ['kitchen', 'beverage', 'breakfast'],
+    },
+    wine: {
+        label: 'Wine',
+        icon: Wine,
+        category: 'kitchen',
+        aliases: ['kitchen', 'beverage', 'bar'],
+    },
+    'chef-hat': {
+        label: 'Chef hat',
+        icon: ChefHat,
+        category: 'kitchen',
+        aliases: ['kitchen', 'cooking'],
+    },
+    'washing-machine': {
+        label: 'Washing machine',
+        icon: WashingMachine,
+        category: 'cleaning',
+        aliases: ['laundry', 'washer', 'appliance'],
+        common: true,
+    },
+    snowflake: {
+        label: 'Snowflake',
+        icon: Snowflake,
+        category: 'utilities',
+        aliases: ['air', 'ac', 'air conditioning', 'cooling'],
+        common: true,
+    },
+    'air-vent': {
+        label: 'Air vent',
+        icon: AirVent,
+        category: 'utilities',
+        aliases: ['air', 'ac', 'cooling', 'ventilation'],
+    },
+    fan: {
+        label: 'Fan',
+        icon: Fan,
+        category: 'utilities',
+        aliases: ['air', 'ac', 'cooling', 'ventilation'],
+        common: true,
+    },
+    thermometer: {
+        label: 'Thermometer',
+        icon: Thermometer,
+        category: 'utilities',
+        aliases: ['temperature', 'heating', 'cooling'],
+    },
+    lightbulb: {
+        label: 'Lightbulb',
+        icon: Lightbulb,
+        category: 'utilities',
+        aliases: ['lighting', 'electricity', 'light'],
+    },
+    plug: {
+        label: 'Plug',
+        icon: Plug,
+        category: 'utilities',
+        aliases: ['electricity', 'power', 'outlet'],
+    },
+    zap: {
+        label: 'Electricity',
+        icon: Zap,
+        category: 'utilities',
+        aliases: ['power', 'electricity'],
+    },
+    flame: {
+        label: 'Flame',
+        icon: Flame,
+        category: 'utilities',
+        aliases: ['heating', 'fire', 'gas'],
+    },
+    sun: {
+        label: 'Sun',
+        icon: Sun,
+        category: 'utilities',
+        aliases: ['daylight', 'outdoor', 'light'],
+    },
+    wind: {
+        label: 'Wind',
+        icon: Wind,
+        category: 'utilities',
+        aliases: ['air', 'ventilation', 'cooling'],
+    },
+    cloud: {
+        label: 'Cloud',
+        icon: Cloud,
+        category: 'utilities',
+        aliases: ['weather', 'outdoor'],
+    },
+    wifi: {
+        label: 'Wi-Fi',
+        icon: Wifi,
+        category: 'connectivity',
+        aliases: ['internet', 'wireless', 'network'],
+        common: true,
+    },
+    'wifi-high': {
+        label: 'Strong Wi-Fi',
+        icon: WifiHigh,
+        category: 'connectivity',
+        aliases: ['wifi', 'internet', 'wireless', 'network'],
+    },
+    router: {
+        label: 'Router',
+        icon: Router,
+        category: 'connectivity',
+        aliases: ['wifi', 'internet', 'network'],
+    },
+    bluetooth: {
+        label: 'Bluetooth',
+        icon: Bluetooth,
+        category: 'connectivity',
+        aliases: ['wireless', 'speaker', 'audio'],
+    },
+    tv: {
+        label: 'TV',
+        icon: Tv,
+        category: 'connectivity',
+        aliases: ['television', 'entertainment'],
+        common: true,
+    },
+    'tv-minimal': {
+        label: 'TV minimal',
+        icon: TvMinimal,
+        category: 'connectivity',
+        aliases: ['tv', 'television', 'entertainment'],
+    },
+    monitor: {
+        label: 'Monitor',
+        icon: Monitor,
+        category: 'connectivity',
+        aliases: ['screen', 'workspace', 'display'],
+    },
+    cable: {
+        label: 'Cable',
+        icon: Cable,
+        category: 'connectivity',
+        aliases: ['internet', 'tv', 'electricity'],
+    },
+    'ethernet-port': {
+        label: 'Ethernet port',
+        icon: EthernetPort,
+        category: 'connectivity',
+        aliases: ['internet', 'network', 'wired'],
+    },
+    phone: {
+        label: 'Phone',
+        icon: Phone,
+        category: 'connectivity',
+        aliases: ['telephone', 'contact', 'communication'],
+    },
+    car: {
+        label: 'Car',
+        icon: Car,
+        category: 'transport',
+        aliases: ['parking', 'vehicle', 'garage'],
+        common: true,
+    },
+    'circle-parking': {
+        label: 'Parking',
+        icon: CircleParking,
+        category: 'transport',
+        aliases: ['car', 'vehicle', 'garage'],
+    },
+    bike: {
+        label: 'Bike',
+        icon: Bike,
+        category: 'transport',
+        aliases: ['bicycle', 'cycling', 'parking'],
+        common: true,
+    },
+    bus: {
+        label: 'Bus',
+        icon: Bus,
+        category: 'transport',
+        aliases: ['transit', 'transport'],
+    },
+    'bus-front': {
+        label: 'Bus front',
+        icon: BusFront,
+        category: 'transport',
+        aliases: ['transit', 'transport'],
+    },
+    'train-front': {
+        label: 'Train',
+        icon: TrainFront,
+        category: 'transport',
+        aliases: ['transit', 'transport', 'station'],
+    },
+    'tram-front': {
+        label: 'Tram',
+        icon: TramFront,
+        category: 'transport',
+        aliases: ['transit', 'transport', 'station'],
+    },
+    'shield-check': {
+        label: 'Shield check',
+        icon: ShieldCheck,
+        category: 'security',
+        aliases: ['security', 'safety', 'protection'],
+        common: true,
+    },
+    shield: {
+        label: 'Shield',
+        icon: Shield,
+        category: 'security',
+        aliases: ['security', 'safety', 'protection'],
+    },
+    lock: {
+        label: 'Lock',
+        icon: Lock,
+        category: 'security',
+        aliases: ['security', 'access', 'privacy'],
+        common: true,
+    },
+    cctv: {
+        label: 'CCTV',
+        icon: Cctv,
+        category: 'security',
+        aliases: ['security', 'camera', 'surveillance'],
+    },
+    'alarm-clock': {
+        label: 'Alarm clock',
+        icon: AlarmClock,
+        category: 'security',
+        aliases: ['alarm', 'safety', 'alert'],
+    },
+    'badge-check': {
+        label: 'Badge check',
+        icon: BadgeCheck,
+        category: 'security',
+        aliases: ['security', 'verified', 'approved'],
+    },
+    siren: {
+        label: 'Siren',
+        icon: Siren,
+        category: 'security',
+        aliases: ['alarm', 'emergency', 'alert'],
+    },
+    'fire-extinguisher': {
+        label: 'Fire extinguisher',
+        icon: FireExtinguisher,
+        category: 'security',
+        aliases: ['fire', 'safety', 'emergency'],
+    },
+    vault: {
+        label: 'Vault',
+        icon: Vault,
+        category: 'security',
+        aliases: ['safe', 'storage', 'security'],
+    },
+    accessibility: {
+        label: 'Accessibility',
+        icon: Accessibility,
+        category: 'accessibility',
+        aliases: ['accessible', 'wheelchair', 'mobility'],
+        common: true,
+    },
+    baby: {
+        label: 'Baby',
+        icon: Baby,
+        category: 'accessibility',
+        aliases: ['children', 'family', 'crib'],
+    },
+    waves: {
+        label: 'Waves',
+        icon: Waves,
+        category: 'recreation',
+        aliases: ['water', 'pool', 'swimming'],
+        common: true,
+    },
+    'waves-ladder': {
+        label: 'Pool ladder',
+        icon: WavesLadder,
+        category: 'recreation',
+        aliases: ['water', 'pool', 'swimming'],
+    },
+    dumbbell: {
+        label: 'Dumbbell',
+        icon: Dumbbell,
+        category: 'recreation',
+        aliases: ['gym', 'fitness', 'workout'],
+        common: true,
+    },
+    volleyball: {
+        label: 'Volleyball',
+        icon: Volleyball,
+        category: 'recreation',
+        aliases: ['sports', 'fitness', 'beach'],
+    },
+    'gamepad-2': {
+        label: 'Gamepad',
+        icon: Gamepad2,
+        category: 'recreation',
+        aliases: ['games', 'entertainment'],
+    },
+    'ferris-wheel': {
+        label: 'Ferris wheel',
+        icon: FerrisWheel,
+        category: 'recreation',
+        aliases: ['recreation', 'activities'],
+    },
+    trophy: {
+        label: 'Trophy',
+        icon: Trophy,
+        category: 'recreation',
+        aliases: ['sports', 'award', 'fitness'],
+    },
+    music: {
+        label: 'Music',
+        icon: Music,
+        category: 'recreation',
+        aliases: ['entertainment', 'audio'],
+    },
+    puzzle: {
+        label: 'Puzzle',
+        icon: Puzzle,
+        category: 'recreation',
+        aliases: ['activities', 'games', 'children'],
+    },
+    'tent-tree': {
+        label: 'Camping',
+        icon: TentTree,
+        category: 'outdoor',
+        aliases: ['outdoor', 'camping', 'recreation'],
+    },
+    trees: {
+        label: 'Trees',
+        icon: Trees,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'nature'],
+        common: true,
+    },
+    'tree-pine': {
+        label: 'Pine tree',
+        icon: TreePine,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'nature', 'trees'],
+        common: true,
+    },
+    'tree-deciduous': {
+        label: 'Tree',
+        icon: TreeDeciduous,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'nature', 'trees'],
+    },
+    'tree-palm': {
+        label: 'Palm tree',
+        icon: TreePalm,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'beach', 'nature'],
+    },
+    'flower-2': {
+        label: 'Flower',
+        icon: Flower2,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'nature'],
+    },
+    leaf: {
+        label: 'Leaf',
+        icon: Leaf,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'nature', 'green'],
+    },
+    umbrella: {
+        label: 'Umbrella',
+        icon: Umbrella,
+        category: 'outdoor',
+        aliases: ['outdoor', 'beach', 'rain'],
+    },
+    fence: {
+        label: 'Fence',
+        icon: Fence,
+        category: 'outdoor',
+        aliases: ['garden', 'outdoor', 'property'],
+    },
+    mountain: {
+        label: 'Mountain',
+        icon: Mountain,
+        category: 'outdoor',
+        aliases: ['outdoor', 'nature', 'view'],
+    },
+    brush: {
+        label: 'Brush',
+        icon: Brush,
+        category: 'cleaning',
+        aliases: ['cleaning', 'maintenance'],
+    },
+    'spray-can': {
+        label: 'Spray can',
+        icon: SprayCan,
+        category: 'cleaning',
+        aliases: ['cleaning', 'maintenance'],
+    },
+    recycle: {
+        label: 'Recycle',
+        icon: Recycle,
+        category: 'cleaning',
+        aliases: ['cleaning', 'sustainability', 'waste'],
+    },
+    'trash-2': {
+        label: 'Trash',
+        icon: Trash2,
+        category: 'cleaning',
+        aliases: ['cleaning', 'waste', 'bin'],
+    },
+    'paw-print': {
+        label: 'Paw print',
+        icon: PawPrint,
+        category: 'pets',
+        aliases: ['pets', 'animals', 'dogs', 'cats'],
+        common: true,
+    },
+    dog: {
+        label: 'Dog',
+        icon: Dog,
+        category: 'pets',
+        aliases: ['pets', 'animals'],
+    },
+    cat: {
+        label: 'Cat',
+        icon: Cat,
+        category: 'pets',
+        aliases: ['pets', 'animals'],
+    },
+    bird: {
+        label: 'Bird',
+        icon: Bird,
+        category: 'pets',
+        aliases: ['pets', 'animals'],
+    },
+    'concierge-bell': {
+        label: 'Concierge bell',
+        icon: ConciergeBell,
+        category: 'services',
+        aliases: ['service', 'front desk', 'reception'],
+    },
+    'hand-platter': {
+        label: 'Service',
+        icon: HandPlatter,
+        category: 'services',
+        aliases: ['room service', 'hospitality'],
+    },
+    'graduation-cap': {
+        label: 'Graduation cap',
+        icon: GraduationCap,
+        category: 'services',
+        aliases: ['education', 'study', 'school'],
+    },
+    school: {
+        label: 'School',
+        icon: School,
+        category: 'services',
+        aliases: ['education', 'study'],
+    },
+    hammer: {
+        label: 'Hammer',
+        icon: Hammer,
+        category: 'services',
+        aliases: ['maintenance', 'repairs', 'tools'],
+    },
+    wrench: {
+        label: 'Wrench',
+        icon: Wrench,
+        category: 'services',
+        aliases: ['maintenance', 'repairs', 'tools'],
+    },
+    package: {
+        label: 'Package',
+        icon: Package,
+        category: 'services',
+        aliases: ['delivery', 'storage', 'parcel'],
+    },
+    clock: {
+        label: 'Clock',
+        icon: Clock,
+        category: 'services',
+        aliases: ['hours', 'time', 'service'],
+    },
+    'calendar-check': {
+        label: 'Calendar check',
+        icon: CalendarCheck,
+        category: 'services',
+        aliases: ['booking', 'reservation', 'schedule'],
+    },
+    'circle-check': {
+        label: 'Check circle',
+        icon: CircleCheck,
+        category: 'general',
+        aliases: ['available', 'included', 'confirmed'],
+    },
+    'circle-user': {
+        label: 'User circle',
+        icon: CircleUser,
+        category: 'general',
+        aliases: ['people', 'resident', 'guest'],
+    },
+    sparkles: {
+        label: 'Sparkles',
+        icon: Sparkles,
+        category: 'general',
+        aliases: ['new', 'special', 'general'],
+    },
+    star: {
+        label: 'Star',
+        icon: Star,
+        category: 'general',
+        aliases: ['featured', 'favorite', 'general'],
+    },
+    heart: {
+        label: 'Heart',
+        icon: Heart,
+        category: 'general',
+        aliases: ['favorite', 'care', 'general'],
+    },
+    gift: {
+        label: 'Gift',
+        icon: Gift,
+        category: 'general',
+        aliases: ['welcome', 'included', 'general'],
+    },
+    tag: {
+        label: 'Tag',
+        icon: Tag,
+        category: 'general',
+        aliases: ['feature', 'label', 'general'],
+    },
+} satisfies Record<string, AmenityIconDefinition>;
+
+export type AmenityIconName = keyof typeof amenityIconRegistry;
+
+export const amenityIconOptions = Object.entries(amenityIconRegistry).map(
+    ([value, definition]) => ({
+        value: value as AmenityIconName,
+        ...definition,
+        searchText: [value, definition.label, ...(definition.aliases ?? [])]
+            .join(' ')
+            .toLocaleLowerCase(),
+    }),
+);
+
+export function isAmenityIcon(
+    value: string | null | undefined,
+): value is AmenityIconName {
+    return (
+        value !== null &&
+        value !== undefined &&
+        Object.prototype.hasOwnProperty.call(amenityIconRegistry, value)
+    );
+}
+
+export function getAmenityIcon(icon: string | null | undefined): LucideIcon {
+    return isAmenityIcon(icon) ? amenityIconRegistry[icon].icon : Sparkles;
+}
+
+export function getAmenityIconLabel(icon: string | null | undefined): string {
+    return isAmenityIcon(icon)
+        ? amenityIconRegistry[icon].label
+        : 'Generic amenity';
+}
+
+export function AmenityIcon({
+    icon,
+    ...props
+}: { icon: string | null | undefined } & ComponentProps<typeof Sparkles>) {
+    return createElement(getAmenityIcon(icon), props);
+}

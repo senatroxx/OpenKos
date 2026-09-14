@@ -122,10 +122,13 @@ export type Property = {
 
 export type Amenity = {
     id: number;
-    owner_property_id: number | null;
     name: string;
+    slug: string;
+    icon: string | null;
     scope: 'property' | 'unit_type' | 'both';
     is_active: boolean;
+    properties_count?: number;
+    unit_types_count?: number;
 };
 
 export type GalleryItem = {

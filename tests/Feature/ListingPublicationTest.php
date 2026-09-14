@@ -1,5 +1,8 @@
 <?php
 
+use App\Enums\AmenityIcon;
+use App\Enums\AmenityScope;
+use App\Models\Amenity;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Unit;
@@ -170,6 +173,28 @@ it('projects availability and independent rate variants without operational deta
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();
     $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
+    $propertyAmenity = Amenity::factory()->create([
+        'name' => 'Parking',
+        'scope' => AmenityScope::Property,
+        'icon' => AmenityIcon::Car->value,
+    ]);
+    $legacyIconAmenity = Amenity::factory()->create([
+        'name' => 'Legacy icon amenity',
+        'scope' => AmenityScope::Property,
+        'icon' => 'legacy-markup',
+    ]);
+    $inactivePropertyAmenity = Amenity::factory()->create([
+        'name' => 'Closed gym',
+        'scope' => AmenityScope::Property,
+    ]);
+    $inactiveUnitTypeAmenity = Amenity::factory()->create([
+        'name' => 'Air conditioning',
+        'scope' => AmenityScope::UnitType,
+    ]);
+    $property->facilities()->attach([$propertyAmenity, $legacyIconAmenity, $inactivePropertyAmenity]);
+    $inactivePropertyAmenity->update(['is_active' => false]);
+    $unitType->amenities()->attach($inactiveUnitTypeAmenity);
+    $inactiveUnitTypeAmenity->update(['is_active' => false]);
     $available = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
     $full = Unit::factory()->for($property)->create([
         'unit_type_id' => $unitType->id,
@@ -216,6 +241,11 @@ it('projects availability and independent rate variants without operational deta
         ->assertSuccessful()
         ->assertJsonPath('data.inventory.total_units', 3)
         ->assertJsonPath('data.inventory.available_units', 2)
+        ->assertJsonPath('data.amenities', [
+            ['name' => 'Legacy icon amenity', 'icon' => null],
+            ['name' => 'Parking', 'icon' => 'car'],
+        ])
+        ->assertJsonPath('data.unit_types.0.amenities', [])
         ->assertJsonCount(3, 'data.unit_types.0.starting_prices')
         ->assertJsonMissingPath('data.id')
         ->assertJsonMissingPath('data.phone')

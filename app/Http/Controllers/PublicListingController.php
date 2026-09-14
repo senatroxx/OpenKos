@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AmenityIcon;
+use App\Enums\AmenityScope;
 use App\Enums\BillingUnit;
+use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\Unit;
@@ -84,6 +87,10 @@ final class PublicListingController extends Controller
             'city:id,name',
             'region:id,name',
             'propertyType:id,slug,label',
+            'facilities' => fn ($query) => $query
+                ->where('amenities.is_active', true)
+                ->whereIn('amenities.scope', [AmenityScope::Property->value, AmenityScope::Both->value])
+                ->orderBy('amenities.name'),
             'media' => fn ($query) => $query
                 ->where('collection', 'photos')
                 ->orderBy('position')
@@ -105,6 +112,7 @@ final class PublicListingController extends Controller
         return [
             'amenities' => fn ($query) => $query
                 ->where('amenities.is_active', true)
+                ->whereIn('amenities.scope', [AmenityScope::UnitType->value, AmenityScope::Both->value])
                 ->orderBy('amenities.name'),
             'media' => fn ($query) => $query
                 ->where('collection', 'photos')
@@ -178,6 +186,10 @@ final class PublicListingController extends Controller
                 'region' => $property->region?->name,
             ],
             'description' => $property->description,
+            'amenities' => $property->facilities
+                ->map(fn (Amenity $amenity): array => $this->amenityPayload($amenity))
+                ->values()
+                ->all(),
             'gallery' => $this->gallery($property->media),
             'inventory' => [
                 'total_units' => array_sum(array_map(
@@ -207,7 +219,10 @@ final class PublicListingController extends Controller
             'bathrooms' => $unitType->bathrooms,
             'size_sqm' => $unitType->size_sqm,
             'furnishing' => $unitType->furnishing,
-            'amenities' => $unitType->amenities->pluck('name')->values()->all(),
+            'amenities' => $unitType->amenities
+                ->map(fn (Amenity $amenity): array => $this->amenityPayload($amenity))
+                ->values()
+                ->all(),
             'gallery' => $this->gallery($unitType->media),
             'inventory' => [
                 'total_units' => $unitType->units->count(),
@@ -230,6 +245,17 @@ final class PublicListingController extends Controller
             'caption' => $item->metadata['caption'] ?? null,
             'mime_type' => $item->mime_type,
         ])->values()->all();
+    }
+
+    /**
+     * @return array{name: string, icon: string|null}
+     */
+    private function amenityPayload(Amenity $amenity): array
+    {
+        return [
+            'name' => $amenity->name,
+            'icon' => AmenityIcon::tryFrom((string) $amenity->icon)?->value,
+        ];
     }
 
     /**

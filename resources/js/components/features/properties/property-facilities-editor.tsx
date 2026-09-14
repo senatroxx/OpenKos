@@ -1,20 +1,9 @@
-import { router, useForm } from '@inertiajs/react';
-import { Trash2 } from 'lucide-react';
+import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Sheet,
     SheetContent,
@@ -23,6 +12,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { AmenityIcon } from '@/lib/amenity-icons';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Amenity, Property } from '@/types';
@@ -35,15 +25,17 @@ export default function PropertyFacilitiesEditor({
     amenities: Amenity[];
 }) {
     const [manageOpen, setManageOpen] = useState(false);
-    const [deleteConfirm, setDeleteConfirm] = useState<Amenity | null>(null);
     const facilityForm = useForm<{ amenity_ids: number[] }>({
         amenity_ids: property.facilities?.map((amenity) => amenity.id) ?? [],
     });
-    const customForm = useForm<{ name: string; scope: 'property' }>({
-        name: '',
-        scope: 'property',
-    });
     const assignedAmenities = property.facilities ?? [];
+    const assignedIds = new Set(assignedAmenities.map((amenity) => amenity.id));
+    const availableAmenities = amenities
+        .filter(
+            (amenity) =>
+                amenity.scope !== 'unit_type' || assignedIds.has(amenity.id),
+        )
+        .sort((left, right) => left.name.localeCompare(right.name));
 
     function toggleAmenity(id: number, checked: boolean | 'indeterminate') {
         if (checked === 'indeterminate') {
@@ -67,44 +59,12 @@ export default function PropertyFacilitiesEditor({
         });
     }
 
-    function createCustomAmenity(event: React.FormEvent) {
-        event.preventDefault();
-        customForm.post(properties.amenities.store.url(property), {
-            onSuccess: () => customForm.reset(),
-        });
-    }
-
-    function confirmDelete() {
-        if (!deleteConfirm) {
-            return;
-        }
-
-        router.delete(
-            properties.amenities.destroy.url({
-                property: property.slug,
-                amenity: deleteConfirm.id,
-            }),
-            {
-                onSuccess: () => {
-                    facilityForm.setData(
-                        'amenity_ids',
-                        facilityForm.data.amenity_ids.filter(
-                            (id) => id !== deleteConfirm.id,
-                        ),
-                    );
-                    setDeleteConfirm(null);
-                },
-            },
-        );
-    }
-
     function handleManageChange(open: boolean) {
         setManageOpen(open);
 
         if (!open) {
             facilityForm.reset();
             facilityForm.clearErrors();
-            customForm.reset();
         }
     }
 
@@ -141,7 +101,14 @@ export default function PropertyFacilitiesEditor({
                                     : 'text-muted-foreground'
                             }
                         >
-                            {amenity.name}
+                            <span className="flex items-center gap-1.5">
+                                <AmenityIcon
+                                    icon={amenity.icon}
+                                    className="size-3.5"
+                                    aria-hidden="true"
+                                />
+                                {amenity.name}
+                            </span>
                             {!amenity.is_active && ` · ${t('Inactive')}`}
                         </Badge>
                     ))}
@@ -158,7 +125,7 @@ export default function PropertyFacilitiesEditor({
                         <SheetTitle>{t('Manage amenities')}</SheetTitle>
                         <SheetDescription>
                             {t(
-                                'Choose the amenities shown on this property listing.',
+                                'Choose the amenities shown on this property listing. Catalog changes are managed in Settings.',
                             )}
                         </SheetDescription>
                     </SheetHeader>
@@ -167,31 +134,28 @@ export default function PropertyFacilitiesEditor({
                         <form
                             id="property-facilities-form"
                             onSubmit={saveFacilities}
-                            className="space-y-6"
+                            className="space-y-3"
                         >
-                            <div className="grid gap-3">
-                                {amenities.map((amenity) => (
-                                    <div
-                                        key={amenity.id}
-                                        className="flex items-center gap-3 rounded-md border p-3 text-sm"
-                                    >
+                            {availableAmenities.length > 0 ? (
+                                availableAmenities.map((amenity) => {
+                                    const selected =
+                                        facilityForm.data.amenity_ids.includes(
+                                            amenity.id,
+                                        );
+
+                                    return (
                                         <label
+                                            key={amenity.id}
                                             htmlFor={`property-facility-${amenity.id}`}
-                                            className="flex min-w-0 flex-1 items-center gap-3"
+                                            className="flex items-center gap-3 rounded-md border p-3 text-sm"
                                         >
                                             <Checkbox
                                                 id={`property-facility-${amenity.id}`}
                                                 disabled={
-                                                    amenity.scope ===
-                                                        'unit_type' ||
-                                                    (!amenity.is_active &&
-                                                        !facilityForm.data.amenity_ids.includes(
-                                                            amenity.id,
-                                                        ))
+                                                    !amenity.is_active &&
+                                                    !selected
                                                 }
-                                                checked={facilityForm.data.amenity_ids.includes(
-                                                    amenity.id,
-                                                )}
+                                                checked={selected}
                                                 onCheckedChange={(checked) =>
                                                     toggleAmenity(
                                                         amenity.id,
@@ -199,14 +163,16 @@ export default function PropertyFacilitiesEditor({
                                                     )
                                                 }
                                             />
-                                            <span className="min-w-0 flex-1">
-                                                {amenity.name}
-                                            </span>
-                                            {amenity.scope === 'unit_type' && (
-                                                <span className="text-xs text-muted-foreground">
-                                                    {t('Unit Type only')}
+                                            <span className="flex min-w-0 flex-1 items-center gap-2">
+                                                <AmenityIcon
+                                                    icon={amenity.icon}
+                                                    className="size-4 shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                                <span className="truncate">
+                                                    {amenity.name}
                                                 </span>
-                                            )}
+                                            </span>
                                             {!amenity.is_active && (
                                                 <Badge
                                                     variant="outline"
@@ -216,62 +182,18 @@ export default function PropertyFacilitiesEditor({
                                                 </Badge>
                                             )}
                                         </label>
-                                        {amenity.owner_property_id ===
-                                            property.id && (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="icon"
-                                                className="size-8 shrink-0 text-destructive hover:text-destructive"
-                                                aria-label={t(
-                                                    'Delete custom amenity',
-                                                )}
-                                                onClick={() =>
-                                                    setDeleteConfirm(amenity)
-                                                }
-                                            >
-                                                <Trash2 className="size-4" />
-                                            </Button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                                    {t(
+                                        'No active property amenities are available. Add one in Settings.',
+                                    )}
+                                </p>
+                            )}
                             <InputError
                                 message={facilityForm.errors.amenity_ids}
                             />
-                        </form>
-
-                        <form
-                            onSubmit={createCustomAmenity}
-                            className="mt-6 grid gap-3 rounded-lg border bg-muted/20 p-4"
-                        >
-                            <div className="grid gap-2">
-                                <Label htmlFor="custom-amenity">
-                                    {t('Add custom amenity')}
-                                </Label>
-                                <Input
-                                    id="custom-amenity"
-                                    value={customForm.data.name}
-                                    onChange={(event) =>
-                                        customForm.setData(
-                                            'name',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder={t('e.g. Rooftop garden')}
-                                />
-                                <InputError message={customForm.errors.name} />
-                            </div>
-                            <Button
-                                type="submit"
-                                variant="outline"
-                                disabled={
-                                    customForm.processing ||
-                                    !customForm.data.name.trim()
-                                }
-                            >
-                                {t('Add amenity')}
-                            </Button>
                         </form>
                     </div>
 
@@ -289,42 +211,11 @@ export default function PropertyFacilitiesEditor({
                             type="submit"
                             disabled={facilityForm.processing}
                         >
-                            {t('Save facilities')}
+                            {t('Save amenities')}
                         </Button>
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
-
-            <Dialog
-                open={deleteConfirm !== null}
-                onOpenChange={() => setDeleteConfirm(null)}
-            >
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>{t('Delete custom amenity?')}</DialogTitle>
-                        <DialogDescription>
-                            {t('Delete')}{' '}
-                            <span className="font-medium">
-                                {deleteConfirm?.name}
-                            </span>{' '}
-                            {t(
-                                'permanently? It will be removed from this property and any Unit Types using it. This cannot be undone.',
-                            )}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setDeleteConfirm(null)}
-                        >
-                            {t('Cancel')}
-                        </Button>
-                        <Button variant="destructive" onClick={confirmDelete}>
-                            {t('Delete amenity')}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </section>
     );
 }
