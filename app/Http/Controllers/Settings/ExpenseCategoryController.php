@@ -17,7 +17,7 @@ class ExpenseCategoryController extends Controller
     {
         return Inertia::render('settings/expense-categories', [
             'categories' => ExpenseCategory::ordered()
-                ->withCount('expenses')
+                ->withCount(['expenses', 'recurringExpenses'])
                 ->get(['id', 'slug', 'label', 'is_active', 'sort_order']),
         ]);
     }
@@ -49,7 +49,7 @@ class ExpenseCategoryController extends Controller
 
     public function destroy(ExpenseCategory $expenseCategory): RedirectResponse
     {
-        if ($expenseCategory->expenses()->exists()) {
+        if ($expenseCategory->expenses()->exists() || $expenseCategory->recurringExpenses()->exists()) {
             $expenseCategory->update(['is_active' => false]);
             Inertia::flash('toast', ['type' => 'success', 'message' => __('Expense category archived.')]);
 

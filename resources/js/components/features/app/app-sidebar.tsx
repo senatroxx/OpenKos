@@ -34,6 +34,7 @@ import {
     rent as dashboardRent,
 } from '@/routes/dashboard';
 import expenses from '@/routes/expenses';
+import recurringExpenses from '@/routes/expenses/recurring';
 import leases from '@/routes/leases';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import { dashboard as portalDashboard } from '@/routes/portal';
@@ -186,6 +187,11 @@ export function AppSidebar() {
                                                   {
                                                       title: 'All Expenses',
                                                       href: expenses.index(),
+                                                      icon: ReceiptText,
+                                                  },
+                                                  {
+                                                      title: 'Recurring Expenses',
+                                                      href: recurringExpenses.index(),
                                                       icon: ReceiptText,
                                                   },
                                                   ...(isOwner

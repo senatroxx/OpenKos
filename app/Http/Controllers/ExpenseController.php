@@ -113,6 +113,7 @@ class ExpenseController extends Controller
             ->with([
                 'property:id,name',
                 'category:id,slug,label,is_active',
+                'recurringExpense:id,vendor,description,billing_interval,billing_unit',
                 'voidedByUser:id,name',
                 'media' => fn ($mediaQuery) => $mediaQuery
                     ->where('collection', 'receipts')
