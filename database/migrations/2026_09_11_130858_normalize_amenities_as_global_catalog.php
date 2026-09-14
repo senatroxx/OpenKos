@@ -190,9 +190,11 @@ return new class extends Migration
                 $table->string('name_normalized')->storedAs('LOWER(TRIM(name))');
                 $table->unique('name_normalized', 'amenities_trimmed_lower_name_unique');
             }),
-            default => Schema::table('amenities', function (Blueprint $table): void {
-                $table->unique('name', 'amenities_trimmed_lower_name_unique');
+            'sqlsrv' => Schema::table('amenities', function (Blueprint $table): void {
+                $table->computed('name_normalized', 'LOWER(LTRIM(RTRIM([name])))');
+                $table->unique('name_normalized', 'amenities_trimmed_lower_name_unique');
             }),
+            default => throw new LogicException('The amenity catalog migration does not support this database driver.'),
         };
     }
 };
