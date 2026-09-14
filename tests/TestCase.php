@@ -5,6 +5,7 @@ namespace Tests;
 use App\Services\Platform\ComposerPluginDiscovery;
 use App\Services\Platform\RuntimePluginDiscovery;
 use App\Services\Platform\RuntimePluginStore;
+use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;
 use OpenKOS\Platform\Dashboard\DashboardRegistry;
@@ -20,6 +21,14 @@ use OpenKOS\Platform\Workspace\WorkspaceRegistry;
 
 abstract class TestCase extends BaseTestCase
 {
+    public function createApplication(): Application
+    {
+        $_ENV['APP_BASE_PATH'] = dirname(__DIR__);
+        $_SERVER['APP_BASE_PATH'] = dirname(__DIR__);
+
+        return parent::createApplication();
+    }
+
     protected function bootPlatformWithIsolatedRegistries(): void
     {
         foreach ([

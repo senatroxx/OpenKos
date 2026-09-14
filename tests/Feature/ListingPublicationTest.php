@@ -321,3 +321,111 @@ it('serves public media only for currently effective listings', function () {
     $this->get(route('public.listings.media', $propertyMedia))->assertNotFound();
     $this->get(route('public.listings.media', $unitTypeMedia))->assertNotFound();
 });
+
+it('renders the public storefront at the root for guests and authenticated users', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $property = Property::factory()->create([
+        'public_slug' => 'sunrise-house',
+        'is_published' => true,
+    ]);
+
+    $assertStorefront = function ($response) use ($property): void {
+        $response
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('public/listings/index')
+                ->where('canonicalUrl', '/')
+                ->where('listings.0.slug', $property->public_slug)
+                ->missing('listings.0.id')
+                ->missing('listings.0.phone'));
+    };
+
+    $assertStorefront($this->get('/'));
+    $assertStorefront($this->actingAs(User::factory()->owner()->create())->get('/'));
+});
+
+it('keeps login explicit and redirects the legacy listing index permanently', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('auth/login'));
+
+    $this->get('/listings')
+        ->assertStatus(308)
+        ->assertLocation('/');
+});
+
+it('renders public property and unit type pages from the safe listing projection', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $property = Property::factory()->create([
+        'public_slug' => 'sunrise-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+
+    $this->get(route('public.portal.show', ['property' => $property->public_slug]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/show')
+            ->where('canonicalUrl', route('public.portal.show', ['property' => $property->public_slug], absolute: false))
+            ->where('listing.slug', $property->public_slug)
+            ->where('listing.unit_types.0.slug', $unitType->public_slug)
+            ->missing('listing.id')
+            ->missing('listing.phone')
+            ->missing('listing.unit_types.0.id')
+            ->missing('listing.unit_types.0.units')
+            ->missing('listing.unit_types.0.leases'));
+
+    $this->get(route('public.portal.unit-types.show', [
+        'property' => $property->public_slug,
+        'unitType' => $unitType->public_slug,
+    ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/unit-type')
+            ->where('canonicalUrl', route('public.portal.unit-types.show', [
+                'property' => $property->public_slug,
+                'unitType' => $unitType->public_slug,
+            ], absolute: false))
+            ->where('listing.property.slug', $property->public_slug)
+            ->where('listing.unit_type.slug', $unitType->public_slug)
+            ->missing('listing.unit_type.id')
+            ->missing('listing.unit_type.units')
+            ->missing('listing.unit_type.leases'));
+});
+
+it('fails closed for unpublished and mismatched public detail pages', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $property = Property::factory()->create([
+        'public_slug' => 'sunrise-house',
+        'is_published' => false,
+    ]);
+    $otherProperty = Property::factory()->create([
+        'public_slug' => 'sunset-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($otherProperty)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+
+    $this->get(route('public.portal.show', ['property' => $property->public_slug]))
+        ->assertNotFound();
+
+    $this->get(route('public.portal.unit-types.show', [
+        'property' => $property->public_slug,
+        'unitType' => $unitType->public_slug,
+    ]))->assertNotFound();
+
+    $this->get(route('public.portal.unit-types.show', [
+        'property' => $otherProperty->public_slug,
+        'unitType' => 'missing',
+    ]))->assertNotFound();
+});

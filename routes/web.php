@@ -17,6 +17,7 @@ use App\Http\Controllers\PropertyDocumentsController;
 use App\Http\Controllers\PropertyLeasesController;
 use App\Http\Controllers\PropertyMediaController;
 use App\Http\Controllers\PropertyUnitTypeController;
+use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SignedPaymentController;
@@ -33,7 +34,16 @@ use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/login');
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/', [PublicListingController::class, 'pageIndex'])->name('public.portal.index');
+    Route::redirect('/listings', '/', 308)->name('public.portal.redirect');
+
+    Route::scopeBindings()->prefix('listings')->name('public.portal.')->group(function () {
+        Route::get('{property:public_slug}', [PublicListingController::class, 'pageShow'])->name('show');
+        Route::get('{property:public_slug}/unit-types/{unitType:public_slug}', [PublicListingController::class, 'pageUnitType'])
+            ->name('unit-types.show');
+    });
+});
 
 Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->group(function () {
     Route::get('{token}', [UserController::class, 'acceptInvitation'])->name('accept');

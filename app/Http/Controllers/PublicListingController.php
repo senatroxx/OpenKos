@@ -14,6 +14,8 @@ use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Inertia\Response;
 
 final class PublicListingController extends Controller
 {
@@ -21,29 +23,84 @@ final class PublicListingController extends Controller
 
     public function index(): JsonResponse
     {
-        $properties = $this->publicProperties()->get();
-        $availableCounts = $this->availableUnitCounts($this->unitTypeIds($properties));
-
         return $this->json([
-            'data' => $properties->map(
-                fn (Property $property): array => $this->propertyPayload($property, $availableCounts),
-            )->values()->all(),
+            'data' => $this->indexData(),
+        ]);
+    }
+
+    public function pageIndex(): Response
+    {
+        return Inertia::render('public/listings/index', [
+            'listings' => $this->indexData(),
+            'canonicalUrl' => route('public.portal.index', absolute: false),
         ]);
     }
 
     public function show(Property $property): JsonResponse
+    {
+        return $this->json([
+            'data' => $this->propertyData($property),
+        ]);
+    }
+
+    public function pageShow(Property $property): Response
+    {
+        return Inertia::render('public/listings/show', [
+            'listing' => $this->propertyData($property),
+            'canonicalUrl' => route('public.portal.show', [
+                'property' => $property->public_slug,
+            ], absolute: false),
+        ]);
+    }
+
+    public function unitType(Property $property, UnitType $unitType): JsonResponse
+    {
+        return $this->json([
+            'data' => $this->unitTypeData($property, $unitType),
+        ]);
+    }
+
+    public function pageUnitType(Property $property, UnitType $unitType): Response
+    {
+        return Inertia::render('public/listings/unit-type', [
+            'listing' => $this->unitTypeData($property, $unitType),
+            'canonicalUrl' => route('public.portal.unit-types.show', [
+                'property' => $property->public_slug,
+                'unitType' => $unitType->public_slug,
+            ], absolute: false),
+        ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function indexData(): array
+    {
+        $properties = $this->publicProperties()->get();
+        $availableCounts = $this->availableUnitCounts($this->unitTypeIds($properties));
+
+        return $properties->map(
+            fn (Property $property): array => $this->propertyPayload($property, $availableCounts),
+        )->values()->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function propertyData(Property $property): array
     {
         abort_unless($this->isPublicProperty($property), 404);
 
         $property->load($this->publicRelations());
         $availableCounts = $this->availableUnitCounts($property->unitTypes->modelKeys());
 
-        return $this->json([
-            'data' => $this->propertyPayload($property, $availableCounts),
-        ]);
+        return $this->propertyPayload($property, $availableCounts);
     }
 
-    public function unitType(Property $property, UnitType $unitType): JsonResponse
+    /**
+     * @return array{property: array{slug: string, name: string}, unit_type: array<string, mixed>}
+     */
+    private function unitTypeData(Property $property, UnitType $unitType): array
     {
         abort_unless($this->isPublicProperty($property), 404);
         abort_unless(
@@ -57,15 +114,13 @@ final class PublicListingController extends Controller
         $unitType->load($this->unitTypeRelations());
         $availableCounts = $this->availableUnitCounts([$unitType->id]);
 
-        return $this->json([
-            'data' => [
-                'property' => [
-                    'slug' => $property->public_slug,
-                    'name' => $property->name,
-                ],
-                'unit_type' => $this->unitTypePayload($unitType, $availableCounts),
+        return [
+            'property' => [
+                'slug' => $property->public_slug,
+                'name' => $property->name,
             ],
-        ]);
+            'unit_type' => $this->unitTypePayload($unitType, $availableCounts),
+        ];
     }
 
     private function publicProperties(): Builder

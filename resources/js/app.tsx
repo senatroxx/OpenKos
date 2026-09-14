@@ -4,6 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
+import PublicListingLayout from '@/layouts/public-listing-layout';
 import PublicPaymentLayout from '@/layouts/public-payment-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import TenantPortalLayout from '@/layouts/tenant-portal-layout';
@@ -100,6 +101,8 @@ createInertiaApp({
                 return AuthLayout;
             case name.startsWith('payments/'):
                 return PublicPaymentLayout;
+            case name.startsWith('public/'):
+                return PublicListingLayout;
             case name.startsWith('settings/'):
                 if (auth.auth?.tenant) {
                     return [TenantPortalLayout, SettingsLayout];
