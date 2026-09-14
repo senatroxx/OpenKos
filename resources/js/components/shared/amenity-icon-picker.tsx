@@ -100,7 +100,20 @@ function IconGrid({
                                 title={t(option.label)}
                                 className={`relative flex aspect-square min-h-12 w-full items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 ${isSelected ? 'border-primary bg-accent text-accent-foreground' : ''}`}
                                 onClick={() => onSelect(option.value)}
-                                onKeyDown={(event) => moveFocus(event, index)}
+                                onKeyDown={(event) => {
+                                    if (
+                                        event.key === 'Enter' ||
+                                        event.key === ' '
+                                    ) {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        onSelect(option.value);
+
+                                        return;
+                                    }
+
+                                    moveFocus(event, index);
+                                }}
                             >
                                 <AmenityIcon
                                     icon={option.value}
@@ -137,6 +150,7 @@ export default function AmenityIconPicker({
 }) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const triggerRef = useRef<HTMLButtonElement>(null);
     const selected = amenityIconOptions.find(
         (option) => option.value === value,
     );
@@ -173,6 +187,7 @@ export default function AmenityIconPicker({
         <Popover open={open} onOpenChange={handleOpenChange}>
             <PopoverTrigger asChild>
                 <Button
+                    ref={triggerRef}
                     id="amenity-icon"
                     type="button"
                     variant="outline"
@@ -191,6 +206,10 @@ export default function AmenityIconPicker({
             </PopoverTrigger>
             <PopoverContent
                 align="start"
+                onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    triggerRef.current?.focus();
+                }}
                 className="w-96 max-w-[calc(100vw-1rem)] overflow-hidden p-0"
             >
                 <Command shouldFilter={false}>
