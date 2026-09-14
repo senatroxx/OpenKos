@@ -105,6 +105,8 @@ export default function Index({
 
     const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
         id: number;
+        currency: string;
+        deposit_amount: string;
         tenants: { id: number; name: string; phone: string | null }[];
         primary_tenant: {
             id: number;
@@ -208,6 +210,8 @@ export default function Index({
 
         setMoveOutLeaseData({
             id: lease.id,
+            currency: lease.currency,
+            deposit_amount: lease.deposit_amount,
             tenants: lease.tenants ?? [],
             primary_tenant: lease.primary_tenant ?? null,
             unit: {

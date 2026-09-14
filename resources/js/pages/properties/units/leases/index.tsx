@@ -171,11 +171,25 @@ export default function Index({
                                         <td className="px-4 py-3 tabular-nums">
                                             <div>
                                                 {formatPrice(
-                                                    lease.deposit_amount,
-                                                    lease.currency,
+                                                    lease.deposit_settlement
+                                                        ?.original_amount ??
+                                                        lease.deposit_amount,
+                                                    lease.deposit_settlement
+                                                        ?.currency ??
+                                                        lease.currency,
                                                 )}
                                             </div>
-                                            {lease.deposit_refund_amount && (
+                                            {lease.deposit_settlement ? (
+                                                <div className="text-xs text-muted-foreground">
+                                                    {t('Refund')}:{' '}
+                                                    {formatPrice(
+                                                        lease.deposit_settlement
+                                                            .refund_amount,
+                                                        lease.deposit_settlement
+                                                            .currency,
+                                                    )}
+                                                </div>
+                                            ) : lease.deposit_refund_amount ? (
                                                 <div className="text-xs text-muted-foreground">
                                                     Refund:{' '}
                                                     {formatPrice(
@@ -183,7 +197,7 @@ export default function Index({
                                                         lease.currency,
                                                     )}
                                                 </div>
-                                            )}
+                                            ) : null}
                                         </td>
                                         <td className="px-4 py-3 tabular-nums">
                                             {lease.rent_due_day}
@@ -236,16 +250,7 @@ export default function Index({
             />
 
             <MoveOutSheet
-                lease={
-                    detailLease
-                        ? {
-                              id: detailLease.id,
-                              tenants: detailLease.tenants,
-                              primary_tenant: detailLease.primary_tenant,
-                              unit: detailLease.unit,
-                          }
-                        : null
-                }
+                lease={detailLease}
                 availableUnits={_availableUnits}
                 open={moveOutOpen}
                 onOpenChange={setMoveOutOpen}

@@ -2,6 +2,7 @@
 
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\RecurringExpense;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 
@@ -67,6 +68,18 @@ it('archives a category referenced by an expense', function (): void {
 
     expect($category->refresh()->is_active)->toBeFalse()
         ->and($expense->refresh()->expense_category_id)->toBe($category->id);
+});
+
+it('archives a category referenced by a recurring expense', function (): void {
+    $owner = User::factory()->owner()->create();
+    $category = ExpenseCategory::factory()->create();
+    RecurringExpense::factory()->create(['expense_category_id' => $category->id]);
+
+    $this->actingAs($owner)
+        ->delete(route('settings.expense-categories.destroy', $category))
+        ->assertRedirect();
+
+    expect($category->refresh()->is_active)->toBeFalse();
 });
 
 it('deletes an unused category', function (): void {

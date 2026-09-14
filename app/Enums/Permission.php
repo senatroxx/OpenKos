@@ -65,6 +65,8 @@ enum Permission: string
     case ExpensesCreate = 'expenses.create';
     case ExpensesUpdate = 'expenses.update';
     case ExpensesDelete = 'expenses.delete';
+    case ExpensesImport = 'expenses.import';
+    case ExpensesExport = 'expenses.export';
 
     case MaintenanceTicketsView = 'maintenance-tickets.view';
     case MaintenanceTicketsCreate = 'maintenance-tickets.create';
@@ -160,6 +162,8 @@ enum Permission: string
             self::ExpensesCreate => 'Record operating expenses.',
             self::ExpensesUpdate => 'Edit operating expenses.',
             self::ExpensesDelete => 'Void operating expenses.',
+            self::ExpensesImport => 'Import operating expenses from CSV files.',
+            self::ExpensesExport => 'Export operating expenses to CSV files.',
 
             self::MaintenanceTicketsView => 'View the maintenance ticket list.',
             self::MaintenanceTicketsCreate => 'Report new maintenance issues.',

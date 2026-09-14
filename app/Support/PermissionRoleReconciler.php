@@ -23,6 +23,8 @@ final class PermissionRoleReconciler
         'tenants.export_sensitive',
         'unit-rates.import',
         'unit-rates.export',
+        'expenses.import',
+        'expenses.export',
     ];
 
     public function reconcile(): void

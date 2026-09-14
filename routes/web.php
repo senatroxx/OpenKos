@@ -17,6 +17,7 @@ use App\Http\Controllers\PropertyDocumentsController;
 use App\Http\Controllers\PropertyLeasesController;
 use App\Http\Controllers\PropertyMediaController;
 use App\Http\Controllers\PropertyUnitTypeController;
+use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SignedPaymentController;
 use App\Http\Controllers\TenantController;
@@ -284,6 +285,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::get('invoices/{invoice}/download', [LeaseInvoiceController::class, 'download'])->name('workspace.invoices.download')->middleware('permission:leases.view');
             Route::get('rent-schedule', LeaseRentScheduleController::class)->name('rent-schedule')->middleware('permission:leases.view');
             Route::post('move-out', [LeaseController::class, 'moveOut'])->name('move-out')->middleware('permission:leases.move_out');
+            Route::post('deposit-settlement', [LeaseController::class, 'saveDepositSettlement'])->name('deposit-settlement')->middleware('permission:leases.move_out');
             Route::post('renew', [LeaseController::class, 'renew'])->name('renew')->middleware('permission:leases.renew');
 
             Route::prefix('payments')->group(function () {
@@ -313,6 +315,25 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
     Route::prefix('expenses')->name('expenses.')->group(function () {
         Route::get('/', [ExpenseController::class, 'index'])->name('index')->middleware('permission:expenses.view');
         Route::post('/', [ExpenseController::class, 'store'])->name('store')->middleware('permission:expenses.create');
+        Route::get('transfer/import', [DataTransferController::class, 'importPage'])
+            ->defaults('dataset', 'expenses')
+            ->name('transfer.import')
+            ->middleware('permission:expenses.import');
+        Route::get('transfer/export', [DataTransferController::class, 'exportPage'])
+            ->defaults('dataset', 'expenses')
+            ->name('transfer.export')
+            ->middleware('permission:expenses.export');
+
+        Route::prefix('recurring')->name('recurring.')->group(function () {
+            Route::get('/', [RecurringExpenseController::class, 'index'])->name('index')->middleware('permission:expenses.view');
+            Route::post('/', [RecurringExpenseController::class, 'store'])->name('store')->middleware('permission:expenses.create');
+
+            Route::prefix('{recurringExpense}')->whereNumber('recurringExpense')->group(function () {
+                Route::put('/', [RecurringExpenseController::class, 'update'])->name('update')->middleware('permission:expenses.update');
+                Route::post('pause', [RecurringExpenseController::class, 'pause'])->name('pause')->middleware('permission:expenses.update');
+                Route::post('resume', [RecurringExpenseController::class, 'resume'])->name('resume')->middleware('permission:expenses.update');
+            });
+        });
 
         Route::prefix('{expense}')->whereNumber('expense')->group(function () {
             Route::put('/', [ExpenseController::class, 'update'])->name('update')->middleware('permission:expenses.update');

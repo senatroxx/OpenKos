@@ -380,6 +380,10 @@ export default function Index({
         },
     ];
 
+    const tenantMoveOutLease = moveOutTenant
+        ? (moveOutTenant as WorkspaceTenant & { leases?: Lease[] }).leases?.[0]
+        : null;
+
     return (
         <>
             <Head title={t('Tenants')} />
@@ -508,14 +512,11 @@ export default function Index({
 
             <MoveOutSheet
                 lease={
-                    moveOutTenant
+                    moveOutTenant && tenantMoveOutLease
                         ? {
-                              id:
-                                  (
-                                      moveOutTenant as WorkspaceTenant & {
-                                          leases?: Lease[];
-                                      }
-                                  ).leases?.[0]?.id ?? 0,
+                              id: tenantMoveOutLease.id,
+                              currency: tenantMoveOutLease.currency,
+                              deposit_amount: tenantMoveOutLease.deposit_amount,
                               tenants: [
                                   {
                                       id: moveOutTenant.id,
@@ -529,12 +530,7 @@ export default function Index({
                                   name: moveOutTenant.name,
                                   phone: moveOutTenant.phone,
                               },
-                              unit:
-                                  (
-                                      moveOutTenant as WorkspaceTenant & {
-                                          leases?: Lease[];
-                                      }
-                                  ).leases?.[0]?.unit ?? null,
+                              unit: tenantMoveOutLease.unit ?? null,
                           }
                         : null
                 }

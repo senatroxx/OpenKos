@@ -22,6 +22,8 @@ it('reconciles existing default roles idempotently without changing custom roles
         Permission::TenantsExport->value,
         Permission::UnitRatesImport->value,
         Permission::UnitRatesExport->value,
+        Permission::ExpensesImport->value,
+        Permission::ExpensesExport->value,
     ];
 
     $admin = Role::create([
@@ -46,6 +48,8 @@ it('reconciles existing default roles idempotently without changing custom roles
 
     expect($admin->fresh()->hasPermissionTo(Permission::PropertiesImport->value))->toBeTrue()
         ->and($admin->fresh()->hasPermissionTo(Permission::UnitRatesExport->value))->toBeTrue()
+        ->and($admin->fresh()->hasPermissionTo(Permission::ExpensesImport->value))->toBeTrue()
+        ->and($admin->fresh()->hasPermissionTo(Permission::ExpensesExport->value))->toBeTrue()
         ->and($custom->fresh()->hasPermissionTo(Permission::UnitsView->value))->toBeTrue()
         ->and($custom->fresh()->hasPermissionTo(Permission::PropertiesImport->value))->toBeFalse();
 

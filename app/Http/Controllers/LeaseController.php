@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Leases\CreateLease;
 use App\Actions\Leases\MoveOutLease;
 use App\Actions\Leases\RenewLease;
+use App\Actions\Leases\SettleLeaseDeposit;
 use App\Actions\Reminders\ForceSendReminder;
 use App\Business\Leases\LeaseStatusValidator;
 use App\Data\Lease\CreateLeaseData;
@@ -17,6 +18,7 @@ use App\Enums\UnitStatus;
 use App\Events\Lease\LeaseCreated;
 use App\Events\Lease\LeaseStatusChanged;
 use App\Events\Unit\UnitStatusChanged;
+use App\Http\Requests\Lease\DepositSettlementRequest;
 use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\RenewLeaseRequest;
@@ -60,6 +62,7 @@ class LeaseController extends Controller
             'payments.proofs.media',
             'payments.invoice:id,period_start,period_end,reference,status',
             'unitHistories.transferredBy:id,name',
+            'depositSettlement.deductions',
         ]);
 
         return Inertia::render('leases/show', [
@@ -153,7 +156,7 @@ class LeaseController extends Controller
         $unit->load('property.city');
 
         $leases = $unit->leases()
-            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status'])
+            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status', 'depositSettlement.deductions'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -224,7 +227,7 @@ class LeaseController extends Controller
             ->defaultSort('status,-start_date');
 
         $query = Lease::query()
-            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name'])
+            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name', 'depositSettlement.deductions'])
             ->addSelect(['payment_status' => Invoice::query()
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'overdue' ELSE 'paid' END")
                 ->whereColumn('lease_id', 'leases.id')
@@ -423,6 +426,7 @@ class LeaseController extends Controller
             notes: $validated['notes'] ?? null,
             moveToAnotherUnit: $validated['move_to_another_unit'] ?? false,
             targetUnitId: $validated['target_unit_id'] ?? null,
+            depositSettlement: $request->settlementData(),
         );
 
         $result = $action->execute($lease, $data);
@@ -445,14 +449,28 @@ class LeaseController extends Controller
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $validated['move_to_another_unit']
+            'message' => ($validated['move_to_another_unit'] ?? false)
                 ? __('Tenant moved to new unit.')
                 : __('Tenant moved out.'),
         ]);
 
-        if ($validated['move_to_another_unit']) {
+        if ($validated['move_to_another_unit'] ?? false) {
             return back();
         }
+
+        return back();
+    }
+
+    public function saveDepositSettlement(
+        DepositSettlementRequest $request,
+        Lease $lease,
+        SettleLeaseDeposit $action,
+    ): RedirectResponse {
+        $this->authorize('moveOut', $lease);
+
+        $action->execute($lease, $request->toData());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Deposit settlement saved.')]);
 
         return back();
     }

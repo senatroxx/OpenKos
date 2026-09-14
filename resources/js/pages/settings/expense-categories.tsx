@@ -207,7 +207,8 @@ export default function ExpenseCategories({
                                 <tbody>
                                     {categories.map((category) => {
                                         const inUse =
-                                            (category.expenses_count ?? 0) > 0;
+                                            (category.expenses_count ?? 0) > 0 ||
+                                            (category.recurring_expenses_count ?? 0) > 0;
 
                                         return (
                                             <tr
@@ -218,8 +219,9 @@ export default function ExpenseCategories({
                                                     {category.label}
                                                 </td>
                                                 <td className="px-4 py-3 text-muted-foreground tabular-nums">
-                                                    {category.expenses_count ??
-                                                        0}
+                                                    {(category.expenses_count ?? 0) +
+                                                        (category.recurring_expenses_count ??
+                                                            0)}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <Switch

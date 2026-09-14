@@ -52,6 +52,13 @@ abstract class DatasetDefinition
     abstract public function exportRow(Model $model, bool $sensitive = false): array;
 
     /**
+     * Recheck data that must remain stable for the duration of a commit.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    public function prepareCommit(array $rows, User $actor): void {}
+
+    /**
      * @param  array<string, array<int, mixed>|string>  $rules
      * @param  array<string, mixed>  $values
      */
