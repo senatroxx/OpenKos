@@ -1,12 +1,14 @@
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { t } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 type SearchInputProps = {
     value: string;
     onChange: (value: string) => void;
     onClear: () => void;
     placeholder?: string;
+    className?: string;
 };
 
 export function SearchInput({
@@ -14,9 +16,10 @@ export function SearchInput({
     onChange,
     onClear,
     placeholder = 'Search...',
+    className,
 }: SearchInputProps) {
     return (
-        <div className="relative flex-1 md:max-w-xs">
+        <div className={cn('relative flex-1 md:max-w-xs', className)}>
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
                 placeholder={t(placeholder)}
