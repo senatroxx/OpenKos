@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Enums\AmenityScope;
 use App\Models\Amenity;
-use App\Models\Property;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,17 +19,11 @@ class AmenityFactory extends Factory
     public function definition(): array
     {
         return [
-            'owner_property_id' => null,
             'name' => fake()->unique()->words(2, true),
+            'slug' => fake()->unique()->slug(),
+            'icon' => null,
             'scope' => AmenityScope::Both,
             'is_active' => true,
         ];
-    }
-
-    public function customFor(Property $property): static
-    {
-        return $this->state([
-            'owner_property_id' => $property->id,
-        ]);
     }
 }

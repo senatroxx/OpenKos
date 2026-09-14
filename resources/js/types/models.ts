@@ -140,6 +140,8 @@ export type Property = {
     phone?: string | null;
     description?: string | null;
     is_active?: boolean;
+    is_published?: boolean;
+    public_slug?: string | null;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
     units_count?: number;
@@ -151,10 +153,13 @@ export type Property = {
 
 export type Amenity = {
     id: number;
-    owner_property_id: number | null;
     name: string;
+    slug: string;
+    icon: string | null;
     scope: 'property' | 'unit_type' | 'both';
     is_active: boolean;
+    properties_count?: number;
+    unit_types_count?: number;
 };
 
 export type GalleryItem = {
@@ -177,6 +182,8 @@ export type UnitType = {
     size_sqm: string | null;
     furnishing: string | null;
     is_active: boolean;
+    is_published: boolean;
+    public_slug: string | null;
     updated_at?: string | null;
     amenities?: Amenity[];
     gallery?: GalleryItem[];
@@ -586,6 +593,8 @@ export type ManagedProperty = {
     postal_code: string | null;
     phone: string | null;
     is_active: boolean;
+    is_published: boolean;
+    public_slug: string | null;
     units_count: number;
     occupied_units_count: number;
     tenants_count: number;

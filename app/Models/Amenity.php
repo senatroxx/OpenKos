@@ -5,14 +5,15 @@ namespace App\Models;
 use App\Enums\AmenityScope;
 use Database\Factories\AmenityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 #[Fillable([
-    'owner_property_id',
     'name',
+    'slug',
+    'icon',
     'scope',
     'is_active',
 ])]
@@ -21,18 +22,41 @@ class Amenity extends Model
     /** @use HasFactory<AmenityFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::updating(function (Amenity $amenity): void {
+            if ($amenity->isDirty('slug')) {
+                $amenity->slug = $amenity->getOriginal('slug');
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
-            'owner_property_id' => 'integer',
             'scope' => AmenityScope::class,
             'is_active' => 'boolean',
         ];
     }
 
-    public function ownerProperty(): BelongsTo
+    public function getRouteKeyName(): string
     {
-        return $this->belongsTo(Property::class, 'owner_property_id');
+        return 'slug';
+    }
+
+    public function scopeActive(Builder $query): void
+    {
+        $query->where('is_active', true);
+    }
+
+    public function scopeForProperty(Builder $query): void
+    {
+        $query->whereIn('scope', [AmenityScope::Property->value, AmenityScope::Both->value]);
+    }
+
+    public function scopeForUnitType(Builder $query): void
+    {
+        $query->whereIn('scope', [AmenityScope::UnitType->value, AmenityScope::Both->value]);
     }
 
     public function properties(): BelongsToMany

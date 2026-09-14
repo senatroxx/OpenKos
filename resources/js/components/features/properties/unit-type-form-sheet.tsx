@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { ChevronsUpDown, Plus } from 'lucide-react';
+import { ChevronsUpDown } from 'lucide-react';
 import { useState } from 'react';
 import { InputError } from '@/components/shared';
 import { MediaGalleryManager } from '@/components/shared/media-gallery-manager';
@@ -38,6 +38,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { AmenityIcon } from '@/lib/amenity-icons';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type { Amenity, Property, UnitType } from '@/types';
@@ -50,11 +51,6 @@ type UnitTypeFormData = {
     size_sqm: string;
     furnishing: string;
     amenity_ids: number[];
-};
-
-type CustomAmenityFormData = {
-    name: string;
-    scope: 'unit_type';
 };
 
 const furnishingOptions = [
@@ -113,11 +109,6 @@ export default function UnitTypeFormSheet({
             amenity_ids:
                 unitType?.amenities?.map((amenity) => amenity.id) ?? [],
         });
-    const customForm = useForm<CustomAmenityFormData>({
-        name: '',
-        scope: 'unit_type',
-    });
-
     const currentAmenityIds = new Set(
         (unitType?.amenities ?? []).map((amenity) => amenity.id),
     );
@@ -143,7 +134,6 @@ export default function UnitTypeFormSheet({
 
         if (!next) {
             reset();
-            customForm.reset();
             setAmenityPickerOpen(false);
         }
     }
@@ -168,16 +158,6 @@ export default function UnitTypeFormSheet({
                 ? [...new Set([...data.amenity_ids, id])]
                 : data.amenity_ids.filter((current) => current !== id),
         );
-    }
-
-    function createCustomAmenity(): void {
-        if (!customForm.data.name.trim()) {
-            return;
-        }
-
-        customForm.post(properties.amenities.store.url(property), {
-            onSuccess: () => customForm.reset(),
-        });
     }
 
     return (
@@ -396,14 +376,31 @@ export default function UnitTypeFormSheet({
                                             aria-expanded={amenityPickerOpen}
                                             className="w-full justify-between font-normal"
                                         >
-                                            <span className="truncate text-left">
-                                                {selectedAmenities.length === 0
-                                                    ? t('No amenities selected')
-                                                    : selectedAmenities.length ===
-                                                        1
-                                                      ? selectedAmenities[0]
-                                                            .name
-                                                      : `${selectedAmenities.length} ${t('amenities selected')}`}
+                                            <span className="flex min-w-0 items-center gap-2 truncate text-left">
+                                                {selectedAmenities.length ===
+                                                0 ? (
+                                                    t('No amenities selected')
+                                                ) : selectedAmenities.length ===
+                                                  1 ? (
+                                                    <>
+                                                        <AmenityIcon
+                                                            icon={
+                                                                selectedAmenities[0]
+                                                                    .icon
+                                                            }
+                                                            className="size-4 shrink-0"
+                                                            aria-hidden="true"
+                                                        />
+                                                        <span className="truncate">
+                                                            {
+                                                                selectedAmenities[0]
+                                                                    .name
+                                                            }
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    `${selectedAmenities.length} ${t('amenities selected')}`
+                                                )}
                                             </span>
                                             <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
                                         </Button>
@@ -457,6 +454,13 @@ export default function UnitTypeFormSheet({
                                                                         className="pointer-events-none"
                                                                         aria-hidden="true"
                                                                     />
+                                                                    <AmenityIcon
+                                                                        icon={
+                                                                            amenity.icon
+                                                                        }
+                                                                        className="size-4"
+                                                                        aria-hidden="true"
+                                                                    />
                                                                     <span className="min-w-0 flex-1 truncate">
                                                                         {
                                                                             amenity.name
@@ -492,46 +496,20 @@ export default function UnitTypeFormSheet({
                                                     : 'outline'
                                             }
                                         >
-                                            {amenity.name}
+                                            <span className="flex items-center gap-1.5">
+                                                <AmenityIcon
+                                                    icon={amenity.icon}
+                                                    className="size-3.5"
+                                                    aria-hidden="true"
+                                                />
+                                                {amenity.name}
+                                            </span>
                                             {!amenity.is_active &&
                                                 ` (${t('Inactive')})`}
                                         </Badge>
                                     ))}
                                 </div>
                             )}
-
-                            <div className="grid gap-2 rounded-lg border bg-muted/20 p-4">
-                                <Label htmlFor="unit-type-custom-amenity">
-                                    {t('Add custom Unit Type amenity')}
-                                </Label>
-                                <div className="flex flex-col gap-2 sm:flex-row">
-                                    <Input
-                                        id="unit-type-custom-amenity"
-                                        value={customForm.data.name}
-                                        onChange={(event) =>
-                                            customForm.setData(
-                                                'name',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder={t('e.g. Reading light')}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="sm:shrink-0"
-                                        disabled={
-                                            customForm.processing ||
-                                            !customForm.data.name.trim()
-                                        }
-                                        onClick={createCustomAmenity}
-                                    >
-                                        <Plus className="size-4" />
-                                        {t('Add amenity')}
-                                    </Button>
-                                </div>
-                                <InputError message={customForm.errors.name} />
-                            </div>
                         </section>
                     </form>
 

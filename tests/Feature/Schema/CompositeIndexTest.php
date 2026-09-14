@@ -38,7 +38,7 @@ $expected = [
         'unit_types_property_id_is_active_name_index' => ['property_id', 'is_active', 'name'],
     ],
     'amenities' => [
-        'amenities_owner_property_id_is_active_name_index' => ['owner_property_id', 'is_active', 'name'],
+        'amenities_scope_is_active_name_index' => ['scope', 'is_active', 'name'],
     ],
     'utility_meters' => [
         'idx_utility_meters_unit_active' => ['unit_id', 'is_active'],
@@ -83,8 +83,8 @@ it('has catalog and gallery uniqueness indexes', function () {
             ->all();
     }
 
-    expect($indexes)->toContain('amenities_global_lower_name_unique')
-        ->toContain('amenities_property_lower_name_unique')
+    expect($indexes)->toContain('amenities_trimmed_lower_name_unique')
+        ->toContain('amenities_slug_unique')
         ->toContain('unit_types_property_lower_name_unique')
         ->toContain('media_gallery_owner_position_unique');
 });

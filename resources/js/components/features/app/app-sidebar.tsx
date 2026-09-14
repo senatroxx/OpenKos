@@ -8,6 +8,7 @@ import {
     Receipt,
     ReceiptText,
     Shield,
+    Sparkles,
     Tags,
     UserCog,
     Users,
@@ -42,6 +43,7 @@ import { index as portalBilling } from '@/routes/portal/billing';
 import { index as portalLease } from '@/routes/portal/lease';
 import properties from '@/routes/properties';
 import roles from '@/routes/roles';
+import amenities from '@/routes/settings/amenities';
 import expenseCategories from '@/routes/settings/expense-categories';
 import propertyTypes from '@/routes/settings/property-types';
 import tenants from '@/routes/tenants';
@@ -238,6 +240,11 @@ export function AppSidebar() {
                                                                 title: 'Property Types',
                                                                 href: propertyTypes.index(),
                                                                 icon: Tags,
+                                                            },
+                                                            {
+                                                                title: 'Amenities',
+                                                                href: amenities.index(),
+                                                                icon: Sparkles,
                                                             },
                                                         ]
                                                       : []),

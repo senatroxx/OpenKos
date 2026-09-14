@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Properties\CreateProperty;
 use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
+use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\Amenity;
@@ -15,6 +16,7 @@ use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
+use App\Services\Listings\PublicSlugAllocator;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -27,7 +29,19 @@ use Inertia\Response;
 
 class PropertyController extends Controller
 {
-    public function show(Request $request, Property $property): Response
+    public function show(Property $property): Response
+    {
+        $this->authorize('view', $property);
+
+        $property = Property::withWorkspaceStats()
+            ->findOrFail($property->id);
+
+        return Inertia::render('properties/overview', [
+            'property' => $property,
+        ]);
+    }
+
+    public function listing(Property $property): Response
     {
         $this->authorize('view', $property);
 
@@ -51,21 +65,15 @@ class PropertyController extends Controller
 
         $facilityIds = $property->facilities->modelKeys();
         $amenities = Amenity::query()
-            ->where(function (Builder $query) use ($property, $facilityIds): void {
-                $query->where(function (Builder $query) use ($property): void {
-                    $query->where(function (Builder $query): void {
-                        $query->whereIn('scope', [AmenityScope::Property->value, AmenityScope::Both->value])
-                            ->whereNull('owner_property_id')
-                            ->where('is_active', true);
-                    })->orWhere(function (Builder $query) use ($property): void {
-                        $query->where('owner_property_id', $property->id);
-                    });
-                })->orWhereIn('id', $facilityIds);
+            ->where(function (Builder $query) use ($facilityIds): void {
+                $query->whereIn('scope', [AmenityScope::Property->value, AmenityScope::Both->value])
+                    ->where('is_active', true)
+                    ->orWhereIn('id', $facilityIds);
             })
             ->orderBy('name')
-            ->get(['id', 'owner_property_id', 'name', 'scope', 'is_active']);
+            ->get(['id', 'name', 'slug', 'icon', 'scope', 'is_active']);
 
-        return Inertia::render('properties/overview', [
+        return Inertia::render('properties/listing', [
             'property' => $property,
             'amenities' => $amenities,
         ]);
@@ -138,6 +146,39 @@ class PropertyController extends Controller
         $property->update($request->validated());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property updated.')]);
+
+        return back();
+    }
+
+    public function updatePublication(
+        UpdateListingPublicationRequest $request,
+        Property $property,
+        PublicSlugAllocator $slugAllocator,
+    ): RedirectResponse {
+        $this->authorize('update', $property);
+        $isPublished = $request->boolean('is_published');
+
+        $slugAllocator->transaction(function () use ($property, $isPublished, $slugAllocator): void {
+            $lockedProperty = Property::withTrashed()->lockForUpdate()->findOrFail($property->id);
+
+            abort_if($isPublished && ! $lockedProperty->is_active, 422, __('Inactive properties cannot be published.'));
+
+            $attributes = ['is_published' => $isPublished];
+            if ($isPublished && empty($lockedProperty->public_slug)) {
+                $attributes['public_slug'] = $slugAllocator->allocate(
+                    Property::withTrashed(),
+                    $lockedProperty->name,
+                    'property',
+                );
+            }
+
+            $lockedProperty->forceFill($attributes)->saveOrFail();
+        });
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __($isPublished ? 'Property published.' : 'Property unpublished.'),
+        ]);
 
         return back();
     }

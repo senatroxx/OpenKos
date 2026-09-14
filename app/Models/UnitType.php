@@ -16,12 +16,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'property_id',
     'name',
+    'public_slug',
     'description',
     'bedrooms',
     'bathrooms',
     'size_sqm',
     'furnishing',
     'is_active',
+    'is_published',
 ])]
 class UnitType extends Model
 {
@@ -35,6 +37,7 @@ class UnitType extends Model
             'bathrooms' => 'decimal:1',
             'size_sqm' => 'decimal:2',
             'is_active' => 'boolean',
+            'is_published' => 'boolean',
         ];
     }
 
