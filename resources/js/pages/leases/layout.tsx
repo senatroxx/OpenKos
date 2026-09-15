@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
+import leases from '@/routes/leases';
 import type { WorkspaceLease } from '@/types';
 
 export function LeaseLayout({
@@ -46,6 +47,11 @@ export function LeaseLayout({
                         key: 'documents',
                         label: 'Documents',
                         href: `/leases/${lease.id}/documents`,
+                    },
+                    {
+                        key: 'inspections',
+                        label: 'Inspections',
+                        href: leases.workspace.inspections.url(lease),
                     },
                 ]}
             />

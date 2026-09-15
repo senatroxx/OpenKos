@@ -172,6 +172,88 @@ export type GalleryItem = {
     mime_type: string;
 };
 
+export type InspectionType = 'move_in' | 'move_out' | 'periodic';
+
+export type InspectionStatus = 'draft' | 'completed';
+
+export type InspectionItemCondition =
+    | 'good'
+    | 'fair'
+    | 'damaged'
+    | 'not_applicable';
+
+export type InspectionTemplateItem = {
+    id: number;
+    label: string;
+    description: string | null;
+    position: number;
+};
+
+export type InspectionTemplate = {
+    id: number;
+    name: string;
+    inspection_type: InspectionType;
+    is_active: boolean;
+    items: InspectionTemplateItem[];
+};
+
+export type InspectionTemplateOption = Pick<
+    InspectionTemplate,
+    'id' | 'name' | 'inspection_type'
+>;
+
+export type InspectionPhoto = {
+    id: number;
+    url: string;
+    original_name: string;
+    mime_type: string;
+    size: number;
+};
+
+export type InspectionItem = {
+    id: number;
+    label: string;
+    description: string | null;
+    position: number;
+    condition: InspectionItemCondition | null;
+    notes: string | null;
+    photos?: InspectionPhoto[];
+};
+
+export type Inspection = {
+    id: number;
+    template_name: string;
+    inspection_type: InspectionType;
+    inspection_date: string;
+    status: InspectionStatus;
+    notes: string | null;
+    damage_observations: string | null;
+    completed_at: string | null;
+    property?: {
+        id: number;
+        name: string;
+        slug: string;
+        deleted_at?: string | null;
+    } | null;
+    unit?: {
+        id: number;
+        name: string;
+        slug: string;
+        property_id: number;
+        deleted_at?: string | null;
+    } | null;
+    lease?: {
+        id: number;
+        reference: string | null;
+        unit_id: number;
+        deleted_at?: string | null;
+        primary_tenant?: { id: number; name: string } | null;
+    } | null;
+    inspector?: { id: number; name: string } | null;
+    completed_by?: { id: number; name: string } | null;
+    items?: InspectionItem[];
+};
+
 export type UnitType = {
     id: number;
     property_id: number;

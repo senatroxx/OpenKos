@@ -121,6 +121,11 @@ class Property extends Model
         return $this->hasManyThrough(Lease::class, Unit::class);
     }
 
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class);
+    }
+
     /**
      * Everything the property workspace header/tabs need.
      */

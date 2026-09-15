@@ -5,6 +5,9 @@ use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
 use App\Http\Controllers\DataTransferController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\InspectionController;
+use App\Http\Controllers\InspectionMediaController;
+use App\Http\Controllers\InspectionTemplateController;
 use App\Http\Controllers\LeaseController;
 use App\Http\Controllers\LeaseInvoiceController;
 use App\Http\Controllers\LeaseRentScheduleController;
@@ -125,6 +128,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::post('restore', [PropertyController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
                 Route::get('leases', PropertyLeasesController::class)->name('workspace.leases')->middleware('permission:properties.view');
                 Route::get('documents', PropertyDocumentsController::class)->name('workspace.documents')->middleware('permission:properties.view');
+                Route::get('inspections', [InspectionController::class, 'propertyIndex'])
+                    ->name('workspace.inspections')
+                    ->middleware('permission:inspections.view')
+                    ->withoutMiddleware('permission:dashboard.view');
+                Route::post('inspections', [InspectionController::class, 'storeForProperty'])
+                    ->name('inspections.store')
+                    ->middleware('permission:inspections.create')
+                    ->withoutMiddleware('permission:dashboard.view');
 
                 Route::prefix('unit-types')->name('unit-types.')->group(function () {
                     Route::get('/', [PropertyUnitTypeController::class, 'index'])->name('index')->middleware('permission:properties.view');
@@ -223,6 +234,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                         Route::get('lease-history', [UnitController::class, 'leaseHistory'])
                             ->name('lease-history')
                             ->middleware('permission:leases.view');
+                        Route::get('inspections', [InspectionController::class, 'unitIndex'])
+                            ->name('inspections')
+                            ->middleware('permission:inspections.view')
+                            ->withoutMiddleware('permission:dashboard.view');
+                        Route::post('inspections', [InspectionController::class, 'storeForUnit'])
+                            ->name('inspections.store')
+                            ->middleware('permission:inspections.create')
+                            ->withoutMiddleware('permission:dashboard.view');
 
                         Route::prefix('leases')->name('leases.')->group(function () {
                             Route::get('/', [LeaseController::class, 'index'])->name('index')->middleware('permission:leases.view');
@@ -275,6 +294,14 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
         Route::prefix('{lease}')->whereNumber('lease')->group(function () {
             Route::get('/', [LeaseController::class, 'show'])->name('show')->middleware('permission:leases.view');
             Route::get('documents', [LeaseController::class, 'documents'])->name('workspace.documents')->middleware('permission:leases.view');
+            Route::get('inspections', [InspectionController::class, 'leaseIndex'])
+                ->name('workspace.inspections')
+                ->middleware('permission:inspections.view')
+                ->withoutMiddleware('permission:dashboard.view');
+            Route::post('inspections', [InspectionController::class, 'storeForLease'])
+                ->name('inspections.store')
+                ->middleware('permission:inspections.create')
+                ->withoutMiddleware('permission:dashboard.view');
             Route::get('invoices', [LeaseInvoiceController::class, 'index'])->name('workspace.invoices')->middleware('permission:leases.view');
             Route::get('invoices/{invoice}', [LeaseInvoiceController::class, 'show'])->name('workspace.invoices.show')->middleware('permission:leases.view');
             Route::post('invoices/{invoice}/payment-attempts/{paymentAttempt}/recheck', [PaymentAttemptController::class, 'recheck'])
@@ -294,6 +321,40 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             });
         });
     });
+
+    Route::prefix('inspections')
+        ->name('inspections.')
+        ->withoutMiddleware('permission:dashboard.view')
+        ->group(function () {
+            Route::get('/', [InspectionController::class, 'index'])
+                ->name('index')
+                ->middleware('permission:inspections.view');
+
+            Route::prefix('templates')->name('templates.')->middleware('permission:inspection-templates.manage')->group(function () {
+                Route::get('/', [InspectionTemplateController::class, 'index'])->name('index');
+                Route::post('/', [InspectionTemplateController::class, 'store'])->name('store');
+                Route::patch('{inspectionTemplate}', [InspectionTemplateController::class, 'update'])->name('update');
+            });
+
+            Route::get('{inspection}', [InspectionController::class, 'show'])
+                ->whereNumber('inspection')
+                ->name('show')
+                ->middleware('permission:inspections.view');
+            Route::put('{inspection}', [InspectionController::class, 'update'])
+                ->whereNumber('inspection')
+                ->name('update')
+                ->middleware('permission:inspections.update');
+            Route::post('{inspection}/complete', [InspectionController::class, 'complete'])
+                ->whereNumber('inspection')
+                ->name('complete')
+                ->middleware('permission:inspections.complete');
+
+            Route::prefix('{inspection}/items/{item}/photos')->name('items.photos.')->group(function () {
+                Route::post('/', [InspectionMediaController::class, 'store'])->name('store')->middleware('permission:inspections.update');
+                Route::get('{media}', [InspectionMediaController::class, 'show'])->whereNumber('media')->name('show')->middleware('permission:inspections.view');
+                Route::delete('{media}', [InspectionMediaController::class, 'destroy'])->whereNumber('media')->name('destroy')->middleware('permission:inspections.update');
+            });
+        });
 
     Route::prefix('payments/{payment}')->name('payments.')->scopeBindings()->group(function () {
         Route::get('proof/{proof}', [PaymentController::class, 'proof'])->name('proof');

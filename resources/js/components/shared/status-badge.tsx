@@ -200,6 +200,32 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
         inactive: { label: 'Inactive', variant: 'secondary' },
         archived: { label: 'Archived', variant: 'secondary' },
     },
+    inspection: {
+        draft: { label: 'Draft', variant: 'outline' },
+        completed: {
+            label: 'Completed',
+            className:
+                'bg-surface-green/70 text-surface-green-foreground border-surface-green-border/80',
+        },
+    },
+    inspection_condition: {
+        good: {
+            label: 'Good',
+            className:
+                'bg-surface-green/70 text-surface-green-foreground border-surface-green-border/80',
+        },
+        fair: {
+            label: 'Fair',
+            className:
+                'bg-surface-amber/70 text-surface-amber-foreground border-surface-amber-border/80',
+        },
+        damaged: {
+            label: 'Damaged',
+            className:
+                'bg-surface-red/70 text-surface-red-foreground border-surface-red-border/80',
+        },
+        not_applicable: { label: 'Not applicable', variant: 'secondary' },
+    },
     expense: {
         active: {
             label: 'Active',
