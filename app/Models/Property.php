@@ -7,6 +7,7 @@ use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
 use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
+use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -105,6 +106,109 @@ class Property extends Model
     public function unitTypes(): HasMany
     {
         return $this->hasMany(UnitType::class);
+    }
+
+    public function propertyRates(): HasMany
+    {
+        return $this->hasMany(PropertyRate::class);
+    }
+
+    public function activePropertyRates(): HasMany
+    {
+        return $this->hasMany(PropertyRate::class)
+            ->where('is_active', true)
+            ->orderByRaw(
+                "case billing_unit when 'day' then 1 when 'week' then 2 when 'month' then 3 when 'year' then 4 else 5 end"
+            )
+            ->orderBy('billing_interval')
+            ->orderBy('id');
+    }
+
+    public function defaultActivePropertyRate(?string $currency = null): ?PropertyRate
+    {
+        $preferredCurrency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        $rates = $this->relationLoaded('activePropertyRates')
+            ? $this->activePropertyRates
+            : $this->activePropertyRates()->get();
+
+        return $rates->first(fn (PropertyRate $rate): bool => $rate->currency === $preferredCurrency)
+            ?? $rates->first();
+    }
+
+    public function hasActivePropertyRate(): bool
+    {
+        return $this->relationLoaded('activePropertyRates')
+            ? $this->activePropertyRates->isNotEmpty()
+            : $this->activePropertyRates()->exists();
+    }
+
+    public function hasViableWholePropertyOffering(): bool
+    {
+        return $this->rental_mode->supportsWholePropertyRental()
+            && $this->hasActivePropertyRate();
+    }
+
+    public function hasViableUnitTypeOffering(): bool
+    {
+        return $this->rental_mode->supportsUnitInventory()
+            && $this->unitTypes()
+                ->where('is_active', true)
+                ->where('is_published', true)
+                ->whereNotNull('public_slug')
+                ->exists();
+    }
+
+    /**
+     * Unit properties retain their existing property-level publication
+     * semantics. Hybrid properties need at least one independently viable
+     * public offering path.
+     */
+    public function hasViablePublicOffering(): bool
+    {
+        return match ($this->rental_mode) {
+            PropertyRentalMode::Unit => true,
+            PropertyRentalMode::WholeProperty => $this->hasViableWholePropertyOffering(),
+            PropertyRentalMode::Hybrid => $this->hasViableWholePropertyOffering()
+                || $this->hasViableUnitTypeOffering(),
+        };
+    }
+
+    public function isPubliclyVisible(): bool
+    {
+        return ! $this->trashed()
+            && $this->is_active
+            && $this->is_published
+            && filled($this->public_slug)
+            && $this->hasViablePublicOffering();
+    }
+
+    public function scopePubliclyVisible(Builder $query): void
+    {
+        $query
+            ->where('properties.is_active', true)
+            ->where('properties.is_published', true)
+            ->whereNotNull('properties.public_slug')
+            ->where(function (Builder $query): void {
+                $query
+                    ->where('properties.rental_mode', PropertyRentalMode::Unit->value)
+                    ->orWhere(function (Builder $query): void {
+                        $query
+                            ->where('properties.rental_mode', PropertyRentalMode::WholeProperty->value)
+                            ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true));
+                    })
+                    ->orWhere(function (Builder $query): void {
+                        $query
+                            ->where('properties.rental_mode', PropertyRentalMode::Hybrid->value)
+                            ->where(function (Builder $query): void {
+                                $query
+                                    ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true))
+                                    ->orWhereHas('unitTypes', fn (Builder $query) => $query
+                                        ->where('is_active', true)
+                                        ->where('is_published', true)
+                                        ->whereNotNull('public_slug'));
+                            });
+                    });
+            });
     }
 
     public function facilities(): BelongsToMany

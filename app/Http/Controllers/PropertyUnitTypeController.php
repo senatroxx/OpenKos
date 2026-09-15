@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AmenityScope;
-use App\Enums\PropertyRentalMode;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
 use App\Http\Requests\UnitType\UpdateUnitTypeRequest;
@@ -111,7 +110,7 @@ class PropertyUnitTypeController extends Controller
         abort_unless($unitType->property_id === $property->id, 404);
         $isPublished = $request->boolean('is_published');
 
-        abort_if($isPublished && $property->rental_mode === PropertyRentalMode::WholeProperty, 422, __('Unit Types cannot be published for a Whole property listing.'));
+        abort_if($isPublished && ! $property->rental_mode->supportsUnitInventory(), 422, __('Unit Types cannot be published for a Whole property listing.'));
 
         $slugAllocator->transaction(function () use ($unitType, $isPublished, $slugAllocator): void {
             $lockedUnitType = UnitType::query()->lockForUpdate()->findOrFail($unitType->id);

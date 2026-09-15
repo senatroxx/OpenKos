@@ -6,6 +6,7 @@ use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Unit;
 use App\Models\UnitType;
 use App\Models\User;
@@ -291,31 +292,89 @@ it('projects availability and independent rate variants without operational deta
         ->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
 });
 
-it('blocks whole-property publication until offering support exists', function () {
+it('requires an active property rate before whole-property publication', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create([
         'rental_mode' => PropertyRentalMode::WholeProperty,
     ]);
-    $unitType = UnitType::factory()->for($property)->create();
+    PropertyRate::factory()->for($property)->create(['is_active' => false]);
 
     $this->actingAs($user)
         ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertUnprocessable();
 
-    $this->actingAs($user)
-        ->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])
-        ->assertUnprocessable();
-
     expect($property->refresh()->is_published)->toBeFalse()
-        ->and($unitType->refresh()->is_published)->toBeFalse();
+        ->and($property->public_slug)->toBeNull();
 });
 
-it('does not expose whole-property records through the unit listing projection', function () {
+it('publishes whole-property offerings without unit inventory', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    PropertyRate::factory()->for($property)->create([
+        'billing_unit' => 'month',
+        'amount' => '15000000',
+        'currency' => 'IDR',
+    ]);
+    PropertyRate::factory()->for($property)->create([
+        'billing_unit' => 'week',
+        'amount' => '12000000',
+        'currency' => 'USD',
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertRedirect();
+
+    $property->refresh();
+
+    $response = $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertSuccessful()
+        ->assertJsonPath('data.rental_mode', PropertyRentalMode::WholeProperty->value)
+        ->assertJsonPath('data.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
+        ->assertJsonPath('data.whole_property_offering.availability', 'available_for_inquiry')
+        ->assertJsonPath('data.whole_property_offering.starting_price.amount', '15000000.000')
+        ->assertJsonPath('data.whole_property_offering.starting_price.currency', 'IDR')
+        ->assertJsonCount(2, 'data.whole_property_offering.rates')
+        ->assertJsonPath('data.whole_property_offering.rates.0.billing_unit', 'week')
+        ->assertJsonPath('data.whole_property_offering.rates.0.currency', 'USD')
+        ->assertJsonPath('data.whole_property_offering.rates.1.billing_unit', 'month')
+        ->assertJsonPath('data.whole_property_offering.rates.1.currency', 'IDR')
+        ->assertJsonMissingPath('data.inventory')
+        ->assertJsonMissingPath('data.unit_types')
+        ->assertJsonMissingPath('data.whole_property_offering.starting_price.id');
+
+    expect($response->json('data.whole_property_offering.rates.0'))->toHaveKeys([
+        'amount',
+        'currency',
+        'billing_interval',
+        'billing_unit',
+        'billing_label',
+    ]);
+    expect($response->json('data.whole_property_offering.rates.0'))->not->toHaveKey('id');
+
+    $this->getJson(route('public.listings.index'))
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.slug', $property->public_slug)
+        ->assertJsonPath('data.0.whole_property_offering.starting_price.amount', '15000000.000')
+        ->assertJsonMissingPath('data.0.inventory')
+        ->assertJsonMissingPath('data.0.unit_types');
+});
+
+it('restores whole-property visibility when an active rate is re-enabled', function () {
     $property = Property::factory()->create([
         'rental_mode' => PropertyRentalMode::WholeProperty,
         'public_slug' => 'whole-house',
         'is_published' => true,
     ]);
+    $rate = PropertyRate::factory()->for($property)->create(['is_active' => true]);
+
+    $this->getJson(route('public.listings.index'))
+        ->assertSuccessful()
+        ->assertJsonCount(1, 'data');
+
+    $rate->update(['is_active' => false]);
 
     $this->getJson(route('public.listings.index'))
         ->assertSuccessful()
@@ -323,9 +382,14 @@ it('does not expose whole-property records through the unit listing projection',
 
     $this->getJson(route('public.listings.show', $property->public_slug))
         ->assertNotFound();
+
+    $rate->update(['is_active' => true]);
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertSuccessful();
 });
 
-it('exposes hybrid mode while preserving its supported unit inventory', function () {
+it('exposes hybrid offerings independently', function () {
     $property = Property::factory()->create([
         'rental_mode' => PropertyRentalMode::Hybrid,
         'public_slug' => 'hybrid-house',
@@ -339,7 +403,72 @@ it('exposes hybrid mode while preserving its supported unit inventory', function
     $this->getJson(route('public.listings.show', $property->public_slug))
         ->assertSuccessful()
         ->assertJsonPath('data.rental_mode', PropertyRentalMode::Hybrid->value)
+        ->assertJsonPath('data.unit_types.0.slug', $unitType->public_slug)
+        ->assertJsonMissingPath('data.whole_property_offering');
+
+    $rate = PropertyRate::factory()->for($property)->create([
+        'amount' => '2500000',
+        'currency' => 'IDR',
+    ]);
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertSuccessful()
+        ->assertJsonPath('data.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
         ->assertJsonPath('data.unit_types.0.slug', $unitType->public_slug);
+
+    $unitType->update(['is_published' => false]);
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertSuccessful()
+        ->assertJsonPath('data.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
+        ->assertJsonCount(0, 'data.unit_types');
+
+    $rate->update(['is_active' => false]);
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertNotFound();
+});
+
+it('fails closed when a hybrid property has no viable offering path', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+        'public_slug' => 'empty-hybrid-house',
+        'is_published' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertUnprocessable();
+
+    $this->getJson(route('public.listings.index'))
+        ->assertSuccessful()
+        ->assertJsonCount(0, 'data');
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertNotFound();
+});
+
+it('uses whole-property readiness for public property media', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+        'public_slug' => 'whole-house',
+        'is_published' => true,
+    ]);
+    $rate = PropertyRate::factory()->for($property)->create();
+    $media = app(MediaManager::class)->store(
+        $property,
+        'photos',
+        UploadedFile::fake()->create('whole-house.jpg', 1, 'image/jpeg'),
+    );
+
+    $this->get(route('public.listings.media', $media))
+        ->assertSuccessful();
+
+    $rate->update(['is_active' => false]);
+
+    $this->get(route('public.listings.media', $media))
+        ->assertNotFound();
 });
 
 it('serves public media only for currently effective listings', function () {

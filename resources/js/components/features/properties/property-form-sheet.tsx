@@ -204,6 +204,9 @@ export default function PropertyFormSheet({
                                         (option) =>
                                             option.value === data.rental_mode,
                                     )?.description ?? '',
+                                )}{' '}
+                                {t(
+                                    'This setting overrides the default rental model from the selected property type.',
                                 )}
                             </p>
                             <InputError message={errors.rental_mode} />

@@ -17,7 +17,11 @@ import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import { index as publicIndex } from '@/routes/public/portal';
 import { show as unitTypeShow } from '@/routes/public/portal/unit-types';
-import type { PublicListing, PublicUnitType } from '@/types';
+import type {
+    PublicListing,
+    PublicUnitType,
+    PublicWholePropertyOffering,
+} from '@/types';
 
 function locationLabel(listing: PublicListing): string {
     return [
@@ -54,6 +58,93 @@ function UnitTypeDetails({ unitType }: { unitType: PublicUnitType }) {
     );
 }
 
+function WholePropertyOffering({
+    offering,
+}: {
+    offering: PublicWholePropertyOffering;
+}) {
+    return (
+        <section aria-labelledby="whole-property-heading" className="space-y-4">
+            <div>
+                <h2
+                    id="whole-property-heading"
+                    className="text-2xl font-semibold"
+                >
+                    {t('Entire property')}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                    {t('Rent the property as one offering.')}
+                </p>
+            </div>
+
+            <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="flex flex-wrap items-end justify-between gap-4 px-5 py-5">
+                    <div>
+                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                            {t('Starting from')}
+                        </p>
+                        <p className="mt-1 text-2xl font-semibold">
+                            {formatPrice(
+                                offering.starting_price.amount,
+                                offering.starting_price.currency,
+                            )}{' '}
+                            <span className="text-base font-normal text-muted-foreground">
+                                {formatBillingPeriod(
+                                    offering.starting_price.billing_interval,
+                                    offering.starting_price.billing_unit,
+                                )}
+                            </span>
+                        </p>
+                    </div>
+                    <Badge variant="outline">
+                        {offering.availability === 'available_for_inquiry'
+                            ? t('Available for inquiry')
+                            : t('Unavailable')}
+                    </Badge>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-3">
+                <h3 className="text-lg font-semibold">{t('Pricing')}</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    {offering.rates.map((price) => (
+                        <Card
+                            key={`${price.currency}-${price.billing_unit}-${price.billing_interval}`}
+                        >
+                            <CardHeader className="px-5 pt-5 pb-0">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    {formatBillingPeriod(
+                                        price.billing_interval,
+                                        price.billing_unit,
+                                    )}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="px-5 pt-2 pb-5">
+                                <p className="text-2xl font-semibold">
+                                    {formatPrice(price.amount, price.currency)}
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    {price.billing_label}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+
+            <p className="flex gap-2 text-xs leading-5 text-muted-foreground">
+                <Check
+                    className="mt-0.5 size-4 shrink-0 text-primary"
+                    aria-hidden="true"
+                />
+                {t(
+                    'Availability is shown for inquiry purposes; date-specific availability is not currently calculated.',
+                )}
+            </p>
+        </section>
+    );
+}
+
 export default function Show({
     listing,
     canonicalUrl,
@@ -62,6 +153,9 @@ export default function Show({
     canonicalUrl: string;
 }) {
     const location = locationLabel(listing);
+    const unitTypes = listing.unit_types ?? [];
+    const inventory = listing.inventory;
+    const wholePropertyOffering = listing.whole_property_offering;
 
     return (
         <>
@@ -87,10 +181,15 @@ export default function Show({
                 <header className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="secondary">{listing.type_label}</Badge>
-                        {listing.inventory.available_units > 0 && (
+                        {wholePropertyOffering && (
+                            <Badge variant="outline">
+                                {t('Available for inquiry')}
+                            </Badge>
+                        )}
+                        {inventory && inventory.available_units > 0 && (
                             <Badge variant="outline">
                                 {t(':count available', {
-                                    count: listing.inventory.available_units,
+                                    count: inventory.available_units,
                                 })}
                             </Badge>
                         )}
@@ -159,188 +258,227 @@ export default function Show({
                             </section>
                         )}
 
-                        <section
-                            aria-labelledby="unit-types-heading"
-                            className="space-y-4"
-                        >
-                            <div>
-                                <h2
-                                    id="unit-types-heading"
-                                    className="text-2xl font-semibold"
-                                >
-                                    {t('Available unit types')}
-                                </h2>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {t('Choose the space that suits you best.')}
-                                </p>
-                            </div>
-                            {listing.unit_types.length > 0 ? (
-                                <div className="grid gap-5 md:grid-cols-2">
-                                    {listing.unit_types.map((unitType) => {
-                                        const cover = unitType.gallery[0];
-                                        const startingPrice =
-                                            unitType.starting_prices[0];
+                        {wholePropertyOffering && (
+                            <WholePropertyOffering
+                                offering={wholePropertyOffering}
+                            />
+                        )}
 
-                                        return (
-                                            <Link
-                                                key={unitType.slug}
-                                                href={unitTypeShow({
-                                                    property: listing.slug,
-                                                    unitType: unitType.slug,
-                                                })}
-                                                className="group rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                            >
-                                                <Card className="h-full overflow-hidden py-0 transition-shadow group-hover:shadow-lg">
-                                                    <div className="aspect-[4/3] overflow-hidden bg-muted">
-                                                        {cover ? (
-                                                            <img
-                                                                src={cover.url}
-                                                                alt={
-                                                                    cover.alt ||
-                                                                    unitType.name
-                                                                }
-                                                                className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                            />
-                                                        ) : (
-                                                            <div className="flex size-full items-center justify-center text-muted-foreground">
-                                                                <Building2
-                                                                    className="size-12"
-                                                                    aria-hidden="true"
-                                                                />
-                                                                <span className="sr-only">
-                                                                    {t(
-                                                                        'No photos available',
-                                                                    )}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <CardHeader className="gap-3 px-5 pt-5">
-                                                        <CardTitle className="flex items-start justify-between gap-3 text-xl">
-                                                            <span>
-                                                                {unitType.name}
-                                                            </span>
-                                                            <ArrowRight
-                                                                className="mt-1 size-5 shrink-0 transition-transform group-hover:translate-x-1"
-                                                                aria-hidden="true"
-                                                            />
-                                                        </CardTitle>
-                                                        <UnitTypeDetails
-                                                            unitType={unitType}
-                                                        />
-                                                    </CardHeader>
-                                                    <CardContent className="space-y-3 px-5 pt-0 pb-5">
-                                                        {unitType.furnishing && (
-                                                            <p className="text-sm text-muted-foreground capitalize">
-                                                                {
-                                                                    unitType.furnishing
-                                                                }
-                                                            </p>
-                                                        )}
-                                                        <div className="flex flex-wrap items-end justify-between gap-3 border-t pt-4">
-                                                            <div>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {startingPrice
-                                                                        ? t(
-                                                                              'Starting from',
-                                                                          )
-                                                                        : t(
-                                                                              'Pricing unavailable',
-                                                                          )}
-                                                                </p>
-                                                                {startingPrice && (
-                                                                    <p className="font-semibold">
-                                                                        {formatPrice(
-                                                                            startingPrice.amount,
-                                                                            startingPrice.currency,
-                                                                        )}{' '}
-                                                                        <span className="font-normal text-muted-foreground">
-                                                                            {formatBillingPeriod(
-                                                                                startingPrice.billing_interval,
-                                                                                startingPrice.billing_unit,
+                        {listing.rental_mode !== 'whole_property' &&
+                            (listing.rental_mode === 'unit' ||
+                                unitTypes.length > 0) && (
+                                <section
+                                    aria-labelledby="unit-types-heading"
+                                    className="space-y-4"
+                                >
+                                    <div>
+                                        <h2
+                                            id="unit-types-heading"
+                                            className="text-2xl font-semibold"
+                                        >
+                                            {t('Available unit types')}
+                                        </h2>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            {t(
+                                                'Choose the space that suits you best.',
+                                            )}
+                                        </p>
+                                    </div>
+                                    {unitTypes.length > 0 ? (
+                                        <div className="grid gap-5 md:grid-cols-2">
+                                            {unitTypes.map((unitType) => {
+                                                const cover =
+                                                    unitType.gallery[0];
+                                                const startingPrice =
+                                                    unitType.starting_prices[0];
+
+                                                return (
+                                                    <Link
+                                                        key={unitType.slug}
+                                                        href={unitTypeShow({
+                                                            property:
+                                                                listing.slug,
+                                                            unitType:
+                                                                unitType.slug,
+                                                        })}
+                                                        className="group rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                                    >
+                                                        <Card className="h-full overflow-hidden py-0 transition-shadow group-hover:shadow-lg">
+                                                            <div className="aspect-[4/3] overflow-hidden bg-muted">
+                                                                {cover ? (
+                                                                    <img
+                                                                        src={
+                                                                            cover.url
+                                                                        }
+                                                                        alt={
+                                                                            cover.alt ||
+                                                                            unitType.name
+                                                                        }
+                                                                        className="size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                                    />
+                                                                ) : (
+                                                                    <div className="flex size-full items-center justify-center text-muted-foreground">
+                                                                        <Building2
+                                                                            className="size-12"
+                                                                            aria-hidden="true"
+                                                                        />
+                                                                        <span className="sr-only">
+                                                                            {t(
+                                                                                'No photos available',
                                                                             )}
                                                                         </span>
-                                                                    </p>
+                                                                    </div>
                                                                 )}
                                                             </div>
-                                                            <p className="text-sm font-medium text-muted-foreground">
-                                                                {unitType
-                                                                    .inventory
-                                                                    .available_units >
-                                                                0
-                                                                    ? t(
-                                                                          ':count available',
-                                                                          {
-                                                                              count: unitType
-                                                                                  .inventory
-                                                                                  .available_units,
-                                                                          },
-                                                                      )
-                                                                    : t(
-                                                                          'Unavailable',
-                                                                      )}
-                                                            </p>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <Card>
-                                    <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                                        {t(
-                                            'No published unit types are available yet.',
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                                            <CardHeader className="gap-3 px-5 pt-5">
+                                                                <CardTitle className="flex items-start justify-between gap-3 text-xl">
+                                                                    <span>
+                                                                        {
+                                                                            unitType.name
+                                                                        }
+                                                                    </span>
+                                                                    <ArrowRight
+                                                                        className="mt-1 size-5 shrink-0 transition-transform group-hover:translate-x-1"
+                                                                        aria-hidden="true"
+                                                                    />
+                                                                </CardTitle>
+                                                                <UnitTypeDetails
+                                                                    unitType={
+                                                                        unitType
+                                                                    }
+                                                                />
+                                                            </CardHeader>
+                                                            <CardContent className="space-y-3 px-5 pt-0 pb-5">
+                                                                {unitType.furnishing && (
+                                                                    <p className="text-sm text-muted-foreground capitalize">
+                                                                        {
+                                                                            unitType.furnishing
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                <div className="flex flex-wrap items-end justify-between gap-3 border-t pt-4">
+                                                                    <div>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {startingPrice
+                                                                                ? t(
+                                                                                      'Starting from',
+                                                                                  )
+                                                                                : t(
+                                                                                      'Pricing unavailable',
+                                                                                  )}
+                                                                        </p>
+                                                                        {startingPrice && (
+                                                                            <p className="font-semibold">
+                                                                                {formatPrice(
+                                                                                    startingPrice.amount,
+                                                                                    startingPrice.currency,
+                                                                                )}{' '}
+                                                                                <span className="font-normal text-muted-foreground">
+                                                                                    {formatBillingPeriod(
+                                                                                        startingPrice.billing_interval,
+                                                                                        startingPrice.billing_unit,
+                                                                                    )}
+                                                                                </span>
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                    <p className="text-sm font-medium text-muted-foreground">
+                                                                        {unitType
+                                                                            .inventory
+                                                                            .available_units >
+                                                                        0
+                                                                            ? t(
+                                                                                  ':count available',
+                                                                                  {
+                                                                                      count: unitType
+                                                                                          .inventory
+                                                                                          .available_units,
+                                                                                  },
+                                                                              )
+                                                                            : t(
+                                                                                  'Unavailable',
+                                                                              )}
+                                                                    </p>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <Card>
+                                            <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                                                {t(
+                                                    'No published unit types are available yet.',
+                                                )}
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                </section>
                             )}
-                        </section>
                     </div>
 
-                    <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">
-                        <div className="space-y-4">
-                            <h2 className="font-semibold">
-                                {t('At a glance')}
-                            </h2>
-                            <dl className="grid gap-4 text-sm">
-                                <div className="flex items-center justify-between gap-4">
-                                    <dt className="text-muted-foreground">
-                                        {t('Unit types')}
-                                    </dt>
-                                    <dd className="font-medium">
-                                        {listing.unit_types.length}
-                                    </dd>
-                                </div>
-                                <div className="flex items-center justify-between gap-4">
-                                    <dt className="text-muted-foreground">
-                                        {t('Total units')}
-                                    </dt>
-                                    <dd className="font-medium">
-                                        {listing.inventory.total_units}
-                                    </dd>
-                                </div>
-                                <div className="flex items-center justify-between gap-4">
-                                    <dt className="text-muted-foreground">
-                                        {t('Available now')}
-                                    </dt>
-                                    <dd className="font-medium">
-                                        {listing.inventory.available_units}
-                                    </dd>
-                                </div>
-                            </dl>
-                            <p className="flex gap-2 border-t pt-4 text-xs leading-5 text-muted-foreground">
-                                <Check
-                                    className="mt-0.5 size-4 shrink-0 text-primary"
-                                    aria-hidden="true"
-                                />
-                                {t(
-                                    'Availability and pricing are shown from the latest published listing data.',
-                                )}
-                            </p>
-                        </div>
-                    </aside>
+                    {listing.rental_mode === 'whole_property' ? (
+                        <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">
+                            <div className="space-y-4">
+                                <h2 className="font-semibold">
+                                    {t('Availability')}
+                                </h2>
+                                <p className="font-medium">
+                                    {t('Available for inquiry')}
+                                </p>
+                                <p className="border-t pt-4 text-xs leading-5 text-muted-foreground">
+                                    {t(
+                                        'Date-specific availability is not currently calculated.',
+                                    )}
+                                </p>
+                            </div>
+                        </aside>
+                    ) : (
+                        <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">
+                            <div className="space-y-4">
+                                <h2 className="font-semibold">
+                                    {t('At a glance')}
+                                </h2>
+                                <dl className="grid gap-4 text-sm">
+                                    <div className="flex items-center justify-between gap-4">
+                                        <dt className="text-muted-foreground">
+                                            {t('Unit types')}
+                                        </dt>
+                                        <dd className="font-medium">
+                                            {unitTypes.length}
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <dt className="text-muted-foreground">
+                                            {t('Total units')}
+                                        </dt>
+                                        <dd className="font-medium">
+                                            {inventory?.total_units ?? 0}
+                                        </dd>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                        <dt className="text-muted-foreground">
+                                            {t('Available now')}
+                                        </dt>
+                                        <dd className="font-medium">
+                                            {inventory?.available_units ?? 0}
+                                        </dd>
+                                    </div>
+                                </dl>
+                                <p className="flex gap-2 border-t pt-4 text-xs leading-5 text-muted-foreground">
+                                    <Check
+                                        className="mt-0.5 size-4 shrink-0 text-primary"
+                                        aria-hidden="true"
+                                    />
+                                    {t(
+                                        'Availability and pricing are shown from the latest published listing data.',
+                                    )}
+                                </p>
+                            </div>
+                        </aside>
+                    )}
                 </div>
             </div>
         </>

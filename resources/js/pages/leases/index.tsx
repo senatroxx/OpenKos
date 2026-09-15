@@ -35,6 +35,7 @@ import { useTable } from '@/hooks/use-table';
 import { DUE_DAY_LABELS } from '@/lib/constants';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import { supportsUnitInventory } from '@/lib/property-rental-mode';
 import leases from '@/routes/leases';
 import units from '@/routes/properties/units';
 import type {
@@ -149,17 +150,23 @@ export default function Index({
                     </p>
                     {lease.unit && (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                            <Link
-                                href={units.index({
-                                    property: lease.unit.property!.slug,
-                                })}
-                                onClick={(e: React.MouseEvent) =>
-                                    e.stopPropagation()
-                                }
-                                className="text-primary hover:underline"
-                            >
-                                {lease.unit.name}
-                            </Link>
+                            {supportsUnitInventory(
+                                lease.unit.property?.rental_mode,
+                            ) ? (
+                                <Link
+                                    href={units.index({
+                                        property: lease.unit.property!.slug,
+                                    })}
+                                    onClick={(e: React.MouseEvent) =>
+                                        e.stopPropagation()
+                                    }
+                                    className="text-primary hover:underline"
+                                >
+                                    {lease.unit.name}
+                                </Link>
+                            ) : (
+                                lease.unit.name
+                            )}
                             {' · '}
                             {lease.unit.property?.name ?? '\u2014'}
                         </p>

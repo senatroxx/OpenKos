@@ -227,7 +227,7 @@ class LeaseController extends Controller
             ->defaultSort('status,-start_date');
 
         $query = Lease::query()
-            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name', 'depositSettlement.deductions'])
+            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name,rental_mode', 'depositSettlement.deductions'])
             ->addSelect(['payment_status' => Invoice::query()
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'overdue' ELSE 'paid' END")
                 ->whereColumn('lease_id', 'leases.id')

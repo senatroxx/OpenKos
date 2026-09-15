@@ -15,7 +15,7 @@ export default function PublicListingHead({
 }: Props) {
     const resolvedDescription =
         description?.trim() ||
-        'Explore published properties and available unit types.';
+        'Explore published properties and available rental options.';
 
     return (
         <Head title={title}>

@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import { t } from '@/lib/i18n';
+import { propertyRentalModeOptions } from '@/lib/property-rental-mode';
 import properties from '@/routes/properties';
 import type { Auth, ManagedProperty, PaginatedData, TableMeta } from '@/types';
 
@@ -141,6 +142,20 @@ export default function Index({
             sortable: true,
             render: (p) => (
                 <Badge variant="outline">{p.type_label ?? p.type}</Badge>
+            ),
+        },
+        {
+            key: 'rental_mode',
+            label: t('Rental model'),
+            sortable: true,
+            render: (p) => (
+                <Badge variant="secondary">
+                    {t(
+                        propertyRentalModeOptions.find(
+                            (option) => option.value === p.rental_mode,
+                        )?.label ?? 'Individual units',
+                    )}
+                </Badge>
             ),
         },
         {

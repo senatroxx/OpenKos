@@ -16,6 +16,7 @@ use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyDocumentsController;
 use App\Http\Controllers\PropertyLeasesController;
 use App\Http\Controllers\PropertyMediaController;
+use App\Http\Controllers\PropertyRateController;
 use App\Http\Controllers\PropertyUnitTypeController;
 use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\RecurringExpenseController;
@@ -129,6 +130,12 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::prefix('{property}')->group(function () {
                 Route::get('/', [PropertyController::class, 'show'])->name('show')->middleware('permission:properties.view');
                 Route::get('listing', [PropertyController::class, 'listing'])->name('listing')->middleware('permission:properties.view');
+                Route::get('pricing', [PropertyRateController::class, 'index'])
+                    ->name('pricing.index')
+                    ->middleware(['permission:properties.view', 'property-rental-mode:property_pricing']);
+                Route::put('pricing', [PropertyRateController::class, 'update'])
+                    ->name('pricing.update')
+                    ->middleware(['permission:properties.update', 'property-rental-mode:property_pricing']);
                 Route::put('/', [PropertyController::class, 'update'])->name('update')->middleware('permission:properties.update');
                 Route::delete('/', [PropertyController::class, 'destroy'])->name('destroy')->middleware('permission:properties.delete');
                 Route::patch('publication', [PropertyController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
@@ -136,7 +143,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::get('leases', PropertyLeasesController::class)->name('workspace.leases')->middleware('permission:properties.view');
                 Route::get('documents', PropertyDocumentsController::class)->name('workspace.documents')->middleware('permission:properties.view');
 
-                Route::prefix('unit-types')->name('unit-types.')->group(function () {
+                Route::prefix('unit-types')->name('unit-types.')->middleware('property-rental-mode:unit_inventory')->group(function () {
                     Route::get('/', [PropertyUnitTypeController::class, 'index'])->name('index')->middleware('permission:properties.view');
                     Route::post('/', [PropertyUnitTypeController::class, 'store'])->name('store')->middleware('permission:properties.update');
 
@@ -166,7 +173,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::delete('{media}', [PropertyMediaController::class, 'destroy'])->name('destroy')->whereNumber('media')->middleware('permission:properties.update');
                 });
 
-                Route::prefix('units')->name('units.')->group(function () {
+                Route::prefix('units')->name('units.')->middleware('property-rental-mode:unit_inventory')->group(function () {
                     Route::get('/', [UnitController::class, 'index'])->name('index')->middleware('permission:units.view');
                     Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('permission:units.create');
                     Route::get('transfer/import', [DataTransferController::class, 'importPage'])

@@ -9,6 +9,7 @@ use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Unit;
 use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
@@ -78,6 +79,28 @@ final class PublicListingController extends Controller
     private function indexData(): array
     {
         $properties = $this->publicProperties()->get();
+        $propertiesWithUnitInventory = $properties->filter(
+            fn (Property $property): bool => $property->rental_mode->supportsUnitInventory(),
+        );
+        $propertiesWithPropertyRates = $properties->filter(
+            fn (Property $property): bool => $property->rental_mode->supportsWholePropertyRental(),
+        );
+
+        if ($propertiesWithUnitInventory->isNotEmpty()) {
+            $propertiesWithUnitInventory->load([
+                'unitTypes' => fn ($query) => $query
+                    ->where('is_active', true)
+                    ->where('is_published', true)
+                    ->whereNotNull('public_slug')
+                    ->orderBy('name')
+                    ->with($this->unitTypeRelations()),
+            ]);
+        }
+
+        if ($propertiesWithPropertyRates->isNotEmpty()) {
+            $propertiesWithPropertyRates->load('activePropertyRates');
+        }
+
         $availableCounts = $this->availableUnitCounts($this->unitTypeIds($properties));
 
         return $properties->map(
@@ -92,8 +115,14 @@ final class PublicListingController extends Controller
     {
         abort_unless($this->isPublicProperty($property), 404);
 
-        $property->load($this->publicRelations());
-        $availableCounts = $this->availableUnitCounts($property->unitTypes->modelKeys());
+        $property->load($this->publicRelations($property->rental_mode->supportsUnitInventory()));
+        if ($property->rental_mode->supportsWholePropertyRental()) {
+            $property->load('activePropertyRates');
+        }
+
+        $availableCounts = $property->rental_mode->supportsUnitInventory()
+            ? $this->availableUnitCounts($property->unitTypes->modelKeys())
+            : [];
 
         return $this->propertyPayload($property, $availableCounts);
     }
@@ -104,6 +133,7 @@ final class PublicListingController extends Controller
     private function unitTypeData(Property $property, UnitType $unitType): array
     {
         abort_unless($this->isPublicProperty($property), 404);
+        abort_unless($property->rental_mode->supportsUnitInventory(), 404);
         abort_unless(
             $unitType->property_id === $property->id
                 && $unitType->is_active
@@ -128,20 +158,17 @@ final class PublicListingController extends Controller
     private function publicProperties(): Builder
     {
         return Property::query()
-            ->where('is_active', true)
-            ->where('is_published', true)
-            ->where('rental_mode', '!=', PropertyRentalMode::WholeProperty->value)
-            ->whereNotNull('public_slug')
-            ->with($this->publicRelations())
+            ->publiclyVisible()
+            ->with($this->publicRelations(includeUnitInventory: false))
             ->orderBy('name');
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function publicRelations(): array
+    private function publicRelations(bool $includeUnitInventory = true): array
     {
-        return [
+        $relations = [
             'city:id,name',
             'region:id,name',
             'propertyType:id,slug,label',
@@ -153,13 +180,18 @@ final class PublicListingController extends Controller
                 ->where('collection', 'photos')
                 ->orderBy('position')
                 ->orderBy('id'),
-            'unitTypes' => fn ($query) => $query
+        ];
+
+        if ($includeUnitInventory) {
+            $relations['unitTypes'] = fn ($query) => $query
                 ->where('is_active', true)
                 ->where('is_published', true)
                 ->whereNotNull('public_slug')
                 ->orderBy('name')
-                ->with($this->unitTypeRelations()),
-        ];
+                ->with($this->unitTypeRelations());
+        }
+
+        return $relations;
     }
 
     /**
@@ -215,6 +247,7 @@ final class PublicListingController extends Controller
     private function unitTypeIds(Collection $properties): array
     {
         return $properties
+            ->filter(fn (Property $property): bool => $property->rental_mode->supportsUnitInventory())
             ->flatMap(fn (Property $property) => $property->unitTypes->modelKeys())
             ->map(fn (mixed $id): int => (int) $id)
             ->unique()
@@ -228,11 +261,7 @@ final class PublicListingController extends Controller
      */
     private function propertyPayload(Property $property, array $availableCounts): array
     {
-        $unitTypes = $property->unitTypes->map(
-            fn (UnitType $unitType): array => $this->unitTypePayload($unitType, $availableCounts),
-        )->values()->all();
-
-        return [
+        $payload = [
             'slug' => $property->public_slug,
             'name' => $property->name,
             'type' => $property->type,
@@ -250,17 +279,82 @@ final class PublicListingController extends Controller
                 ->values()
                 ->all(),
             'gallery' => $this->gallery($property->media),
-            'inventory' => [
-                'total_units' => array_sum(array_map(
-                    fn (array $unitType): int => $unitType['inventory']['total_units'],
-                    $unitTypes,
-                )),
-                'available_units' => array_sum(array_map(
-                    fn (array $unitType): int => $unitType['inventory']['available_units'],
-                    $unitTypes,
-                )),
-            ],
-            'unit_types' => $unitTypes,
+        ];
+
+        if ($property->rental_mode === PropertyRentalMode::WholeProperty) {
+            $payload['whole_property_offering'] = $this->wholePropertyOfferingPayload($property);
+
+            return $payload;
+        }
+
+        $unitTypes = $property->unitTypes->map(
+            fn (UnitType $unitType): array => $this->unitTypePayload($unitType, $availableCounts),
+        )->values()->all();
+
+        $payload['inventory'] = [
+            'total_units' => array_sum(array_map(
+                fn (array $unitType): int => $unitType['inventory']['total_units'],
+                $unitTypes,
+            )),
+            'available_units' => array_sum(array_map(
+                fn (array $unitType): int => $unitType['inventory']['available_units'],
+                $unitTypes,
+            )),
+        ];
+        $payload['unit_types'] = $unitTypes;
+
+        if ($property->rental_mode === PropertyRentalMode::Hybrid) {
+            $wholePropertyOffering = $this->wholePropertyOfferingPayload($property);
+
+            if ($wholePropertyOffering !== null) {
+                $payload['whole_property_offering'] = $wholePropertyOffering;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array{type: string, availability: string, starting_price: array<string, mixed>, rates: array<int, array<string, mixed>>}|null
+     */
+    private function wholePropertyOfferingPayload(Property $property): ?array
+    {
+        $rates = $property->relationLoaded('activePropertyRates')
+            ? $property->activePropertyRates
+            : $property->activePropertyRates()->get();
+
+        if ($rates->isEmpty()) {
+            return null;
+        }
+
+        $startingPrice = $property->defaultActivePropertyRate();
+
+        if ($startingPrice === null) {
+            return null;
+        }
+
+        return [
+            'type' => PropertyRentalMode::WholeProperty->value,
+            'availability' => 'available_for_inquiry',
+            'starting_price' => $this->propertyRatePayload($startingPrice),
+            'rates' => $rates
+                ->map(fn (PropertyRate $rate): array => $this->propertyRatePayload($rate))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * @return array{amount: string, currency: string, billing_interval: int, billing_unit: string, billing_label: string}
+     */
+    private function propertyRatePayload(PropertyRate $rate): array
+    {
+        return [
+            'amount' => (string) $rate->amount,
+            'currency' => $rate->currency,
+            'billing_interval' => $rate->billing_interval,
+            'billing_unit' => $rate->billing_unit->value,
+            'billing_label' => $this->billingLabel($rate->billing_interval, $rate->billing_unit),
         ];
     }
 
@@ -376,11 +470,7 @@ final class PublicListingController extends Controller
 
     private function isPublicProperty(Property $property): bool
     {
-        return ! $property->trashed()
-            && $property->is_active
-            && $property->is_published
-            && $property->rental_mode !== PropertyRentalMode::WholeProperty
-            && filled($property->public_slug);
+        return $property->isPubliclyVisible();
     }
 
     /**

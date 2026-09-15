@@ -146,6 +146,7 @@ export type Property = {
     is_active?: boolean;
     is_published?: boolean;
     public_slug?: string | null;
+    updated_at?: string | null;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
     units_count?: number;
@@ -201,6 +202,18 @@ export type UnitRate = {
     amount: string;
     currency?: string;
     is_active?: boolean;
+};
+
+export type PropertyRate = {
+    id?: number;
+    property_id?: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+    currency: string;
+    is_active?: boolean;
+    effective_from?: string | null;
+    effective_until?: string | null;
 };
 
 export type UtilityReading = {

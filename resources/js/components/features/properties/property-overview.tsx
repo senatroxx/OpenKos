@@ -1,6 +1,7 @@
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { t } from '@/lib/i18n';
+import { supportsUnitInventory } from '@/lib/property-rental-mode';
 import type { Property } from '@/types';
 
 export default function PropertyOverview({ property }: { property: Property }) {
@@ -76,37 +77,39 @@ export default function PropertyOverview({ property }: { property: Property }) {
                 </div>
             )}
 
-            <div>
-                <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                    {t('Statistics')}
-                </p>
-                <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="rounded-lg border bg-muted/30 p-4">
-                        <p className="text-2xl font-semibold tabular-nums">
-                            {property.units_count ?? 0}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {t('Total Units')}
-                        </p>
-                    </div>
-                    <div className="rounded-lg border bg-muted/30 p-4">
-                        <p className="text-2xl font-semibold tabular-nums">
-                            {property.occupied_units_count ?? 0}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {t('Occupied')}
-                        </p>
-                    </div>
-                    <div className="rounded-lg border bg-muted/30 p-4">
-                        <p className="text-2xl font-semibold tabular-nums">
-                            {property.tenants_count ?? 0}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {t('Tenants')}
-                        </p>
+            {supportsUnitInventory(property.rental_mode) && (
+                <div>
+                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {t('Statistics')}
+                    </p>
+                    <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <p className="text-2xl font-semibold tabular-nums">
+                                {property.units_count ?? 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {t('Total Units')}
+                            </p>
+                        </div>
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <p className="text-2xl font-semibold tabular-nums">
+                                {property.occupied_units_count ?? 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {t('Occupied')}
+                            </p>
+                        </div>
+                        <div className="rounded-lg border bg-muted/30 p-4">
+                            <p className="text-2xl font-semibold tabular-nums">
+                                {property.tenants_count ?? 0}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {t('Tenants')}
+                            </p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

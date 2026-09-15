@@ -248,6 +248,15 @@ describe('type', function () {
         expect(Property::firstOrFail()->rental_mode)->toBe(PropertyRentalMode::Unit);
     });
 
+    it('exposes rental model capabilities', function () {
+        expect(PropertyRentalMode::Unit->supportsUnitInventory())->toBeTrue()
+            ->and(PropertyRentalMode::Unit->supportsPropertyPricing())->toBeFalse()
+            ->and(PropertyRentalMode::WholeProperty->supportsUnitInventory())->toBeFalse()
+            ->and(PropertyRentalMode::WholeProperty->supportsPropertyPricing())->toBeTrue()
+            ->and(PropertyRentalMode::Hybrid->supportsUnitInventory())->toBeTrue()
+            ->and(PropertyRentalMode::Hybrid->supportsPropertyPricing())->toBeTrue();
+    });
+
     it('preserves an explicit rental model when the property type changes', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create([

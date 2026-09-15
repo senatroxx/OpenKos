@@ -8,7 +8,8 @@ export const propertyRentalModeOptions: {
     {
         value: 'unit',
         label: 'Individual units',
-        description: 'Customers rent a unit or unit type.',
+        description:
+            'Use this when the property contains multiple rooms or units that customers rent separately.',
     },
     {
         value: 'whole_property',
@@ -22,3 +23,21 @@ export const propertyRentalModeOptions: {
         description: 'The property can support both models.',
     },
 ];
+
+export function supportsUnitInventory(
+    mode: PropertyRentalMode | null | undefined,
+): boolean {
+    return (mode ?? 'unit') !== 'whole_property';
+}
+
+export function supportsWholePropertyRental(
+    mode: PropertyRentalMode | null | undefined,
+): boolean {
+    return mode === 'whole_property' || mode === 'hybrid';
+}
+
+export function supportsPropertyPricing(
+    mode: PropertyRentalMode | null | undefined,
+): boolean {
+    return supportsWholePropertyRental(mode);
+}

@@ -26,6 +26,21 @@ enum PropertyRentalMode: string
         };
     }
 
+    public function supportsUnitInventory(): bool
+    {
+        return $this !== self::WholeProperty;
+    }
+
+    public function supportsWholePropertyRental(): bool
+    {
+        return $this !== self::Unit;
+    }
+
+    public function supportsPropertyPricing(): bool
+    {
+        return $this->supportsWholePropertyRental();
+    }
+
     /**
      * @return array<int, string>
      */

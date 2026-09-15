@@ -24,6 +24,13 @@ export type PublicStartingPrice = {
     billing_label: string;
 };
 
+export type PublicWholePropertyOffering = {
+    type: 'whole_property';
+    availability: 'available_for_inquiry';
+    starting_price: PublicStartingPrice;
+    rates: PublicStartingPrice[];
+};
+
 export type PublicUnitType = {
     slug: string;
     name: string;
@@ -53,8 +60,9 @@ export type PublicListing = {
     description: string | null;
     amenities: PublicAmenity[];
     gallery: PublicGalleryItem[];
-    inventory: PublicInventory;
-    unit_types: PublicUnitType[];
+    inventory?: PublicInventory;
+    unit_types?: PublicUnitType[];
+    whole_property_offering?: PublicWholePropertyOffering | null;
 };
 
 export type PublicUnitTypePage = {

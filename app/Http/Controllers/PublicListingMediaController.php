@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\PropertyRentalMode;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
@@ -35,11 +34,7 @@ final class PublicListingMediaController extends Controller
 
     private function isPublicProperty(Property $property): bool
     {
-        return ! $property->trashed()
-            && $property->is_active
-            && $property->is_published
-            && $property->rental_mode !== PropertyRentalMode::WholeProperty
-            && filled($property->public_slug);
+        return $property->isPubliclyVisible();
     }
 
     private function isPublicUnitType(UnitType $unitType): bool
@@ -50,6 +45,7 @@ final class PublicListingMediaController extends Controller
             && $unitType->is_published
             && filled($unitType->public_slug)
             && $property instanceof Property
+            && $property->rental_mode->supportsUnitInventory()
             && $this->isPublicProperty($property);
     }
 }

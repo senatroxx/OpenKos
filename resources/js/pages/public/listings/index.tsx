@@ -21,11 +21,11 @@ function locationLabel(listing: PublicListing): string {
         .join(', ');
 }
 
-function firstStartingPrice(
+function firstUnitStartingPrice(
     listing: PublicListing,
 ): PublicStartingPrice | null {
     return (
-        listing.unit_types.find(
+        listing.unit_types?.find(
             (unitType) => unitType.starting_prices.length > 0,
         )?.starting_prices[0] ?? null
     );
@@ -69,7 +69,7 @@ export default function Index({
             <PublicListingHead
                 title={t('Available properties')}
                 description={t(
-                    'Explore our published properties and available unit types.',
+                    'Explore our published properties and available rental options.',
                 )}
                 canonicalUrl={canonicalUrl}
                 imageUrl={listings[0]?.gallery[0]?.url}
@@ -172,10 +172,13 @@ export default function Index({
                             {filteredListings.map((listing) => {
                                 const cover = listing.gallery[0];
                                 const location = locationLabel(listing);
-                                const startingPrice =
-                                    firstStartingPrice(listing);
+                                const wholePropertyOffering =
+                                    listing.whole_property_offering;
+                                const unitStartingPrice =
+                                    firstUnitStartingPrice(listing);
+                                const unitTypes = listing.unit_types ?? [];
                                 const availableUnits =
-                                    listing.inventory.available_units;
+                                    listing.inventory?.available_units ?? 0;
 
                                 return (
                                     <Link
@@ -235,52 +238,130 @@ export default function Index({
                                             </CardHeader>
                                             <CardContent className="mt-auto space-y-4 px-5 pt-0 pb-5 text-sm">
                                                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
-                                                    <span>
-                                                        {listing.unit_types
-                                                            .length > 0
-                                                            ? t(
-                                                                  ':count unit types',
-                                                                  {
-                                                                      count: listing
-                                                                          .unit_types
-                                                                          .length,
-                                                                  },
-                                                              )
-                                                            : t(
-                                                                  'No unit types listed',
-                                                              )}
-                                                    </span>
-                                                    <span aria-hidden="true">
-                                                        ·
-                                                    </span>
-                                                    <span
-                                                        className={cn(
-                                                            'font-medium',
-                                                            availableUnits > 0
-                                                                ? 'text-emerald-600 dark:text-emerald-400'
-                                                                : 'text-muted-foreground',
-                                                        )}
-                                                    >
-                                                        {availableUnits > 0
-                                                            ? t(
-                                                                  ':count units available',
-                                                                  {
-                                                                      count: availableUnits,
-                                                                  },
-                                                              )
-                                                            : listing.unit_types
-                                                                    .length > 0
-                                                              ? t(
-                                                                    'Currently unavailable',
-                                                                )
-                                                              : t(
-                                                                    'No availability listed',
+                                                    {wholePropertyOffering ? (
+                                                        <>
+                                                            <span className="font-medium text-foreground">
+                                                                {t(
+                                                                    'Entire property',
                                                                 )}
-                                                    </span>
+                                                            </span>
+                                                            <span aria-hidden="true">
+                                                                ·
+                                                            </span>
+                                                            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                                                {t(
+                                                                    'Available for inquiry',
+                                                                )}
+                                                            </span>
+                                                            {listing.rental_mode ===
+                                                                'hybrid' &&
+                                                                unitTypes.length >
+                                                                    0 && (
+                                                                    <span className="w-full text-muted-foreground">
+                                                                        {t(
+                                                                            ':count unit types · :available available',
+                                                                            {
+                                                                                count: unitTypes.length,
+                                                                                available:
+                                                                                    availableUnits,
+                                                                            },
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span>
+                                                                {unitTypes.length >
+                                                                0
+                                                                    ? t(
+                                                                          ':count unit types',
+                                                                          {
+                                                                              count: unitTypes.length,
+                                                                          },
+                                                                      )
+                                                                    : t(
+                                                                          'No unit types listed',
+                                                                      )}
+                                                            </span>
+                                                            <span aria-hidden="true">
+                                                                ·
+                                                            </span>
+                                                            <span
+                                                                className={cn(
+                                                                    'font-medium',
+                                                                    availableUnits >
+                                                                        0
+                                                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                                                        : 'text-muted-foreground',
+                                                                )}
+                                                            >
+                                                                {availableUnits >
+                                                                0
+                                                                    ? t(
+                                                                          ':count units available',
+                                                                          {
+                                                                              count: availableUnits,
+                                                                          },
+                                                                      )
+                                                                    : unitTypes.length >
+                                                                        0
+                                                                      ? t(
+                                                                            'Currently unavailable',
+                                                                        )
+                                                                      : t(
+                                                                            'No availability listed',
+                                                                        )}
+                                                            </span>
+                                                        </>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-end justify-between gap-3 border-t pt-4">
                                                     <p className="min-w-0 text-sm font-medium">
-                                                        {startingPrice ? (
+                                                        {wholePropertyOffering ? (
+                                                            <>
+                                                                <span className="text-muted-foreground">
+                                                                    {t(
+                                                                        'Entire property · From',
+                                                                    )}{' '}
+                                                                </span>
+                                                                {formatPrice(
+                                                                    wholePropertyOffering
+                                                                        .starting_price
+                                                                        .amount,
+                                                                    wholePropertyOffering
+                                                                        .starting_price
+                                                                        .currency,
+                                                                )}{' '}
+                                                                <span className="font-normal text-muted-foreground">
+                                                                    {formatBillingPeriod(
+                                                                        wholePropertyOffering
+                                                                            .starting_price
+                                                                            .billing_interval,
+                                                                        wholePropertyOffering
+                                                                            .starting_price
+                                                                            .billing_unit,
+                                                                    )}
+                                                                </span>
+                                                                {unitStartingPrice &&
+                                                                    listing.rental_mode ===
+                                                                        'hybrid' && (
+                                                                        <span className="block font-normal text-muted-foreground">
+                                                                            {t(
+                                                                                'Unit types · From',
+                                                                            )}{' '}
+                                                                            {formatPrice(
+                                                                                unitStartingPrice.amount,
+                                                                                unitStartingPrice.currency,
+                                                                            )}{' '}
+                                                                            {formatBillingPeriod(
+                                                                                unitStartingPrice.billing_interval,
+                                                                                unitStartingPrice.billing_unit,
+                                                                            )}
+                                                                        </span>
+                                                                    )}
+                                                            </>
+                                                        ) : unitStartingPrice ? (
                                                             <>
                                                                 <span className="text-muted-foreground">
                                                                     {t(
@@ -288,13 +369,13 @@ export default function Index({
                                                                     )}{' '}
                                                                 </span>
                                                                 {formatPrice(
-                                                                    startingPrice.amount,
-                                                                    startingPrice.currency,
+                                                                    unitStartingPrice.amount,
+                                                                    unitStartingPrice.currency,
                                                                 )}{' '}
                                                                 <span className="font-normal text-muted-foreground">
                                                                     {formatBillingPeriod(
-                                                                        startingPrice.billing_interval,
-                                                                        startingPrice.billing_unit,
+                                                                        unitStartingPrice.billing_interval,
+                                                                        unitStartingPrice.billing_unit,
                                                                     )}
                                                                 </span>
                                                             </>
