@@ -176,4 +176,9 @@ class Unit extends Model
     {
         return $this->hasMany(MaintenanceTicket::class);
     }
+
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class);
+    }
 }

@@ -158,6 +158,11 @@ class Lease extends Model
         return $this->hasOne(Lease::class, 'previous_lease_id');
     }
 
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class);
+    }
+
     public function unitHistories(): HasMany
     {
         return $this->hasMany(LeaseUnitHistory::class)->orderBy('effective_date');

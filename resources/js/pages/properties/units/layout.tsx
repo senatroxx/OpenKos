@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { EntityWorkspaceLayout } from '@/components/shared/entity-workspace-layout';
 import { WorkspaceTabs } from '@/components/shared/workspace-tabs';
+import properties from '@/routes/properties';
 
 import type { WorkspaceProperty, WorkspaceUnit } from '@/types';
 
@@ -47,6 +48,14 @@ export function UnitLayout({
                         key: 'maintenance',
                         label: 'Maintenance',
                         href: `${base}/maintenance-history`,
+                    },
+                    {
+                        key: 'inspections',
+                        label: 'Inspections',
+                        href: properties.units.inspections.url({
+                            property: property.slug,
+                            unit: unit.slug,
+                        }),
                     },
                     {
                         key: 'lease-history',

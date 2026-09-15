@@ -1,10 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Building2,
+    ClipboardCheck,
     DollarSign,
     FileText,
     Landmark,
     LayoutGrid,
+    ListChecks,
     Receipt,
     ReceiptText,
     Shield,
@@ -36,6 +38,7 @@ import {
 } from '@/routes/dashboard';
 import expenses from '@/routes/expenses';
 import recurringExpenses from '@/routes/expenses/recurring';
+import inspections from '@/routes/inspections';
 import leases from '@/routes/leases';
 import maintenanceTickets from '@/routes/maintenance-tickets';
 import { dashboard as portalDashboard } from '@/routes/portal';
@@ -57,7 +60,7 @@ export function AppSidebar() {
     const permissions = auth.permissions;
     const isOwner = auth.role === 'owner';
     const home = auth.tenant ? portalDashboard() : dashboard();
-    const settingsNavItems = [
+    const settingsNavItems: NavItem[] = [
         ...platformPageNavItems(
             platform.settings.filter((page) => page.key !== 'about'),
             auth,
@@ -154,7 +157,9 @@ export function AppSidebar() {
               ...(isOwner ||
               permissions.includes('dashboard.view') ||
               permissions.includes('maintenance-tickets.view') ||
-              permissions.includes('expenses.view')
+              permissions.includes('expenses.view') ||
+              permissions.includes('inspections.view') ||
+              permissions.includes('inspection-templates.manage')
                   ? [
                         {
                             title: 'DAILY OPERATIONS',
@@ -202,6 +207,44 @@ export function AppSidebar() {
                                                                 title: 'Expense Categories',
                                                                 href: expenseCategories.index(),
                                                                 icon: Tags,
+                                                            },
+                                                        ]
+                                                      : []),
+                                              ],
+                                          },
+                                      ]
+                                    : []),
+                                ...(isOwner ||
+                                permissions.includes('inspections.view') ||
+                                permissions.includes(
+                                    'inspection-templates.manage',
+                                )
+                                    ? [
+                                          {
+                                              title: 'Inspections',
+                                              icon: ClipboardCheck,
+                                              children: [
+                                                  ...(isOwner ||
+                                                  permissions.includes(
+                                                      'inspections.view',
+                                                  )
+                                                      ? [
+                                                            {
+                                                                title: 'All Inspections',
+                                                                href: inspections.index(),
+                                                                icon: ListChecks,
+                                                            },
+                                                        ]
+                                                      : []),
+                                                  ...(isOwner ||
+                                                  permissions.includes(
+                                                      'inspection-templates.manage',
+                                                  )
+                                                      ? [
+                                                            {
+                                                                title: 'Templates',
+                                                                href: inspections.templates.index(),
+                                                                icon: ClipboardCheck,
                                                             },
                                                         ]
                                                       : []),

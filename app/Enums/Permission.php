@@ -74,6 +74,12 @@ enum Permission: string
     case MaintenanceTicketsDelete = 'maintenance-tickets.delete';
     case MaintenanceTicketsAssign = 'maintenance-tickets.assign';
 
+    case InspectionsView = 'inspections.view';
+    case InspectionsCreate = 'inspections.create';
+    case InspectionsUpdate = 'inspections.update';
+    case InspectionsComplete = 'inspections.complete';
+    case InspectionTemplatesManage = 'inspection-templates.manage';
+
     public function label(): string
     {
         $action = explode('.', $this->value)[1] ?? '';
@@ -96,6 +102,8 @@ enum Permission: string
             'send' => 'Send',
             'clone' => 'Clone',
             'assign' => 'Assign',
+            'complete' => 'Complete',
+            'manage' => 'Manage',
             default => $action,
         };
     }
@@ -170,6 +178,12 @@ enum Permission: string
             self::MaintenanceTicketsUpdate => 'Update existing maintenance ticket details.',
             self::MaintenanceTicketsDelete => 'Delete maintenance tickets.',
             self::MaintenanceTicketsAssign => 'Assign maintenance tickets to staff.',
+
+            self::InspectionsView => 'View inspection history and completed inspections.',
+            self::InspectionsCreate => 'Create property, unit, and lease inspections.',
+            self::InspectionsUpdate => 'Update draft inspection details and checklist items.',
+            self::InspectionsComplete => 'Complete and lock an inspection record.',
+            self::InspectionTemplatesManage => 'Create, edit, and deactivate inspection templates.',
         };
     }
 
