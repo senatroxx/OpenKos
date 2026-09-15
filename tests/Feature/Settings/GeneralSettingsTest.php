@@ -67,6 +67,18 @@ describe('General settings page', function () {
             );
     });
 
+    it('exposes all supported currencies for client-side filtering', function () {
+        $owner = User::factory()->owner()->create();
+        Setting::set('currency', 'IDR');
+        Setting::set('supported_currencies', ['IDR', 'USD']);
+
+        $this->actingAs($owner)
+            ->get(route('settings.general.edit'))
+            ->assertInertia(fn ($page) => $page
+                ->where('settings.supported_currencies', ['IDR', 'USD'])
+            );
+    });
+
     it('exposes the canonical currency when persisted storage is non-canonical', function () {
         $owner = User::factory()->owner()->create();
         Setting::set('currency', ' usd ');
