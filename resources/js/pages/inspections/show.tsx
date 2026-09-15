@@ -52,14 +52,27 @@ type InspectionFormData = {
 };
 
 function backContext(inspection: Inspection): { href: string; label: string } {
-    if (inspection.lease) {
+    const archived = (record?: { deleted_at?: string | null } | null) =>
+        Boolean(record?.deleted_at);
+
+    if (
+        inspection.lease &&
+        !archived(inspection.property) &&
+        !archived(inspection.unit) &&
+        !archived(inspection.lease)
+    ) {
         return {
             href: leases.workspace.inspections.url(inspection.lease),
             label: 'Lease inspections',
         };
     }
 
-    if (inspection.property && inspection.unit) {
+    if (
+        inspection.property &&
+        inspection.unit &&
+        !archived(inspection.property) &&
+        !archived(inspection.unit)
+    ) {
         return {
             href: properties.units.inspections.url({
                 property: inspection.property.slug,
@@ -69,13 +82,16 @@ function backContext(inspection: Inspection): { href: string; label: string } {
         };
     }
 
+    if (inspection.property && !archived(inspection.property)) {
+        return {
+            href: properties.workspace.inspections.url(inspection.property),
+            label: `${inspection.property.name} inspections`,
+        };
+    }
+
     return {
-        href: inspection.property
-            ? properties.workspace.inspections.url(inspection.property)
-            : '/',
-        label: inspection.property
-            ? `${inspection.property.name} inspections`
-            : 'Inspections',
+        href: inspectionRoutes.index.url(),
+        label: 'All inspections',
     };
 }
 
@@ -149,7 +165,8 @@ export default function InspectionShow({
                         <CardHeader>
                             <CardDescription>{t('Property')}</CardDescription>
                             <CardTitle className="text-base">
-                                {inspection.property ? (
+                                {inspection.property &&
+                                !inspection.property.deleted_at ? (
                                     <Link
                                         href={properties.show.url(
                                             inspection.property,
@@ -168,7 +185,9 @@ export default function InspectionShow({
                         <CardHeader>
                             <CardDescription>{t('Unit')}</CardDescription>
                             <CardTitle className="text-base">
-                                {inspection.unit ? (
+                                {inspection.unit &&
+                                !inspection.unit.deleted_at &&
+                                !inspection.property?.deleted_at ? (
                                     <Link
                                         href={properties.units.show.url({
                                             property:

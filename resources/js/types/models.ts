@@ -229,17 +229,24 @@ export type Inspection = {
     notes: string | null;
     damage_observations: string | null;
     completed_at: string | null;
-    property?: { id: number; name: string; slug: string } | null;
+    property?: {
+        id: number;
+        name: string;
+        slug: string;
+        deleted_at?: string | null;
+    } | null;
     unit?: {
         id: number;
         name: string;
         slug: string;
         property_id: number;
+        deleted_at?: string | null;
     } | null;
     lease?: {
         id: number;
         reference: string | null;
         unit_id: number;
+        deleted_at?: string | null;
         primary_tenant?: { id: number; name: string } | null;
     } | null;
     inspector?: { id: number; name: string } | null;

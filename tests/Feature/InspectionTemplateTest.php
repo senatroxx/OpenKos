@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\InspectionType;
+use App\Enums\Permission;
 use App\Models\Inspection;
 use App\Models\InspectionTemplate;
 use App\Models\InspectionTemplateItem;
@@ -45,6 +46,23 @@ it('restricts template management to the template capability', function () {
     $this->actingAs($staff)
         ->get(route('inspections.templates.index'))
         ->assertForbidden();
+});
+
+it('allows template access without dashboard access', function () {
+    $staff = User::factory()->create();
+    $staff->givePermissionTo(Permission::InspectionTemplatesManage->value);
+
+    $this->actingAs($staff)
+        ->get(route('inspections.templates.index'))
+        ->assertSuccessful();
+});
+
+it('redirects the former settings template URL to inspections', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/settings/inspection-templates')
+        ->assertRedirect(route('inspections.templates.index'));
 });
 
 it('snapshots template lineage and checklist content when an inspection is created', function () {

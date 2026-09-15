@@ -134,6 +134,21 @@ it('limits the global inspection workspace to assigned properties', function () 
         );
 });
 
+it('allows inspection access without dashboard access', function () {
+    $staff = User::factory()->create();
+    $staff->givePermissionTo(Permission::InspectionsView->value);
+    $property = Property::factory()->create();
+    $staff->properties()->attach($property);
+
+    $this->actingAs($staff)
+        ->get(route('inspections.index'))
+        ->assertSuccessful();
+
+    $this->actingAs($staff)
+        ->get(route('properties.workspace.inspections', $property))
+        ->assertSuccessful();
+});
+
 it('requires move-in and move-out inspections to be lease-scoped', function () {
     $owner = User::factory()->owner()->create();
     $property = Property::factory()->create();
@@ -196,6 +211,7 @@ it('counts not applicable as assessed and locks completed inspections', function
 });
 
 it('keeps inspections readable when property, unit, or lease records are archived', function () {
+    $owner = User::factory()->owner()->create();
     $propertyInspection = Inspection::factory()->create();
     $property = $propertyInspection->property;
     $property->delete();
@@ -218,4 +234,28 @@ it('keeps inspections readable when property, unit, or lease records are archive
     expect($propertyInspection->fresh()->property->is($property))->toBeTrue()
         ->and($unitInspection->fresh()->unit->is($unit))->toBeTrue()
         ->and($leaseInspection->fresh()->lease->is($lease))->toBeTrue();
+
+    $this->actingAs($owner)
+        ->get(route('inspections.show', $propertyInspection))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->where(
+            'inspection.property.deleted_at',
+            fn ($deletedAt): bool => $deletedAt !== null,
+        ));
+
+    $this->actingAs($owner)
+        ->get(route('inspections.show', $unitInspection))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->where(
+            'inspection.unit.deleted_at',
+            fn ($deletedAt): bool => $deletedAt !== null,
+        ));
+
+    $this->actingAs($owner)
+        ->get(route('inspections.show', $leaseInspection))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->where(
+            'inspection.lease.deleted_at',
+            fn ($deletedAt): bool => $deletedAt !== null,
+        ));
 });

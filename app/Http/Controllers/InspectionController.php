@@ -76,9 +76,9 @@ class InspectionController extends Controller
         $this->authorize('view', $inspection);
 
         $inspection->load([
-            'property:id,name,slug',
-            'unit:id,name,slug,property_id',
-            'lease:id,reference,unit_id',
+            'property:id,name,slug,deleted_at',
+            'unit:id,name,slug,property_id,deleted_at',
+            'lease:id,reference,unit_id,deleted_at',
             'inspector:id,name',
             'completedBy:id,name',
             'items.media',
