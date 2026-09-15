@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
 use App\Enums\BillingUnit;
+use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
@@ -118,6 +119,7 @@ final class PublicListingController extends Controller
             'property' => [
                 'slug' => $property->public_slug,
                 'name' => $property->name,
+                'rental_mode' => $property->rental_mode->value,
             ],
             'unit_type' => $this->unitTypePayload($unitType, $availableCounts),
         ];
@@ -128,6 +130,7 @@ final class PublicListingController extends Controller
         return Property::query()
             ->where('is_active', true)
             ->where('is_published', true)
+            ->where('rental_mode', '!=', PropertyRentalMode::WholeProperty->value)
             ->whereNotNull('public_slug')
             ->with($this->publicRelations())
             ->orderBy('name');
@@ -234,6 +237,7 @@ final class PublicListingController extends Controller
             'name' => $property->name,
             'type' => $property->type,
             'type_label' => $property->type_label,
+            'rental_mode' => $property->rental_mode->value,
             'location' => [
                 'address' => $property->address,
                 'postal_code' => $property->postal_code,
@@ -375,6 +379,7 @@ final class PublicListingController extends Controller
         return ! $property->trashed()
             && $property->is_active
             && $property->is_published
+            && $property->rental_mode !== PropertyRentalMode::WholeProperty
             && filled($property->public_slug);
     }
 

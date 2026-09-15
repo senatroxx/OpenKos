@@ -178,7 +178,7 @@ class OverviewController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $propertyTypes = PropertyType::active()->ordered()->get(['slug', 'label']);
+        $propertyTypes = PropertyType::active()->ordered()->get(['slug', 'label', 'default_rental_mode']);
 
         $financeResult = [
             ...$finance->computeFinance($accessibleLeases),

@@ -45,12 +45,15 @@ export type Region = {
     cities: { id: number; name: string }[];
 };
 
+export type PropertyRentalMode = 'unit' | 'whole_property' | 'hybrid';
+
 // A user-managed property classification (App\Models\PropertyType). The slug
 // is stored on properties.type; the label is the editable display name.
 export type PropertyTypeOption = {
     id?: number;
     slug: string;
     label: string;
+    default_rental_mode?: PropertyRentalMode;
     is_active?: boolean;
     sort_order?: number;
     properties_count?: number;
@@ -132,6 +135,7 @@ export type Property = {
     name: string;
     type?: string; // property_types.slug
     type_label?: string; // resolved label (appended by the model)
+    rental_mode?: PropertyRentalMode;
     slug: string; // route key
     address?: string | null;
     region_id?: number | null;
@@ -587,6 +591,7 @@ export type ManagedProperty = {
     slug: string;
     type: string;
     type_label?: string;
+    rental_mode: PropertyRentalMode;
     address: string | null;
     region_id: number | null;
     city_id: number | null;

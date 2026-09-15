@@ -18,7 +18,7 @@ final class PropertyTypesDefinition extends DatasetDefinition
 
     public function importHeaders(): array
     {
-        return ['slug', 'label', 'is_active', 'sort_order'];
+        return ['slug', 'label', 'default_rental_mode', 'is_active', 'sort_order'];
     }
 
     public function exportHeaders(bool $sensitive = false): array
@@ -52,6 +52,6 @@ final class PropertyTypesDefinition extends DatasetDefinition
         /** @var PropertyType $type */
         $type = $model;
 
-        return [$type->slug, $type->label, $type->is_active ? '1' : '0', $type->sort_order];
+        return [$type->slug, $type->label, $type->default_rental_mode->value, $type->is_active ? '1' : '0', $type->sort_order];
     }
 }

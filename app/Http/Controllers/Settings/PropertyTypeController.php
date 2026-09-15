@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Enums\PropertyRentalMode;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\StorePropertyTypeRequest;
 use App\Http\Requests\Settings\UpdatePropertyTypeRequest;
@@ -18,7 +19,7 @@ class PropertyTypeController extends Controller
         return Inertia::render('settings/property-types', [
             'propertyTypes' => PropertyType::ordered()
                 ->withCount('properties')
-                ->get(['id', 'slug', 'label', 'is_active', 'sort_order']),
+                ->get(['id', 'slug', 'label', 'default_rental_mode', 'is_active', 'sort_order']),
         ]);
     }
 
@@ -29,6 +30,7 @@ class PropertyTypeController extends Controller
         PropertyType::create([
             'slug' => $this->uniqueSlug($validated['label']),
             'label' => $validated['label'],
+            'default_rental_mode' => $validated['default_rental_mode'] ?? PropertyRentalMode::Unit->value,
             'is_active' => $validated['is_active'] ?? true,
             'sort_order' => (int) PropertyType::max('sort_order') + 1,
         ]);

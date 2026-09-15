@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PropertyRentalMode;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
@@ -37,6 +38,7 @@ final class PublicListingMediaController extends Controller
         return ! $property->trashed()
             && $property->is_active
             && $property->is_published
+            && $property->rental_mode !== PropertyRentalMode::WholeProperty
             && filled($property->public_slug);
     }
 

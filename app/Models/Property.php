@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\Auditable;
 use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
+use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,7 @@ use Illuminate\Support\Str;
 #[Fillable([
     'name',
     'type',
+    'rental_mode',
     'slug',
     'public_slug',
     'address',
@@ -44,6 +46,7 @@ class Property extends Model
     protected function casts(): array
     {
         return [
+            'rental_mode' => PropertyRentalMode::class,
             'is_active' => 'boolean',
             'is_published' => 'boolean',
         ];

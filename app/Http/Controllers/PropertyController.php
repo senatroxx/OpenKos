@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Properties\CreateProperty;
 use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
+use App\Enums\PropertyRentalMode;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
@@ -126,7 +127,7 @@ class PropertyController extends Controller
         return Inertia::render('properties/index', [
             ...$result,
             'regions' => $regions,
-            'propertyTypes' => PropertyType::active()->ordered()->get(['slug', 'label']),
+            'propertyTypes' => PropertyType::active()->ordered()->get(['slug', 'label', 'default_rental_mode']),
         ]);
     }
 
@@ -162,6 +163,7 @@ class PropertyController extends Controller
             $lockedProperty = Property::withTrashed()->lockForUpdate()->findOrFail($property->id);
 
             abort_if($isPublished && ! $lockedProperty->is_active, 422, __('Inactive properties cannot be published.'));
+            abort_if($isPublished && $lockedProperty->rental_mode === PropertyRentalMode::WholeProperty, 422, __('Whole property listings need an offering, pricing, and availability before they can be published.'));
 
             $attributes = ['is_published' => $isPublished];
             if ($isPublished && empty($lockedProperty->public_slug)) {

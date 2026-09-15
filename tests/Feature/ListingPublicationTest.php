@@ -2,6 +2,7 @@
 
 use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
+use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
 use App\Models\Lease;
 use App\Models\Property;
@@ -239,6 +240,7 @@ it('projects availability and independent rate variants without operational deta
 
     $response = $this->getJson(route('public.listings.show', $property->public_slug))
         ->assertSuccessful()
+        ->assertJsonPath('data.rental_mode', PropertyRentalMode::Unit->value)
         ->assertJsonPath('data.inventory.total_units', 3)
         ->assertJsonPath('data.inventory.available_units', 2)
         ->assertJsonPath('data.amenities', [
@@ -287,6 +289,57 @@ it('projects availability and independent rate variants without operational deta
 
     expect($indexResponse->headers->get('Cache-Control'))->toContain('no-store')
         ->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
+});
+
+it('blocks whole-property publication until offering support exists', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create();
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertUnprocessable();
+
+    $this->actingAs($user)
+        ->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])
+        ->assertUnprocessable();
+
+    expect($property->refresh()->is_published)->toBeFalse()
+        ->and($unitType->refresh()->is_published)->toBeFalse();
+});
+
+it('does not expose whole-property records through the unit listing projection', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+        'public_slug' => 'whole-house',
+        'is_published' => true,
+    ]);
+
+    $this->getJson(route('public.listings.index'))
+        ->assertSuccessful()
+        ->assertJsonCount(0, 'data');
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertNotFound();
+});
+
+it('exposes hybrid mode while preserving its supported unit inventory', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+        'public_slug' => 'hybrid-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+
+    $this->getJson(route('public.listings.show', $property->public_slug))
+        ->assertSuccessful()
+        ->assertJsonPath('data.rental_mode', PropertyRentalMode::Hybrid->value)
+        ->assertJsonPath('data.unit_types.0.slug', $unitType->public_slug);
 });
 
 it('serves public media only for currently effective listings', function () {

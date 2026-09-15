@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PropertyRentalMode;
 use App\Models\City;
 use App\Models\Lease;
 use App\Models\Property;
@@ -222,6 +223,91 @@ describe('type', function () {
 
         expect($property->type)->toBe('villa')
             ->and($property->type_label)->toBe('Villa');
+    });
+
+    it('uses the property type rental model default for new properties', function () {
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)->post(route('properties.store'), [
+            'name' => 'Villa Bali',
+            'type' => 'villa',
+        ]);
+
+        expect(Property::firstOrFail()->rental_mode)->toBe(PropertyRentalMode::WholeProperty);
+    });
+
+    it('allows a new property to override the property type rental model default', function () {
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)->post(route('properties.store'), [
+            'name' => 'Villa Rooms',
+            'type' => 'villa',
+            'rental_mode' => PropertyRentalMode::Unit->value,
+        ]);
+
+        expect(Property::firstOrFail()->rental_mode)->toBe(PropertyRentalMode::Unit);
+    });
+
+    it('preserves an explicit rental model when the property type changes', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create([
+            'type' => 'boarding_house',
+            'rental_mode' => PropertyRentalMode::WholeProperty,
+        ]);
+
+        $this->actingAs($user)->put(route('properties.update', $property), [
+            'name' => $property->name,
+            'type' => 'villa',
+            'rental_mode' => PropertyRentalMode::WholeProperty->value,
+        ])->assertRedirect();
+
+        expect($property->refresh()->rental_mode)->toBe(PropertyRentalMode::WholeProperty);
+    });
+
+    it('rejects invalid rental models', function () {
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.store'), [
+                'name' => 'Invalid Model House',
+                'rental_mode' => 'rooms_only',
+            ])
+            ->assertSessionHasErrors('rental_mode');
+    });
+
+    it('does not allow rental model changes while a property is published', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create([
+            'is_published' => true,
+            'public_slug' => 'published-house',
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('properties.update', $property), [
+                'name' => $property->name,
+                'rental_mode' => PropertyRentalMode::Hybrid->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('rental_mode');
+
+        expect($property->refresh()->rental_mode)->toBe(PropertyRentalMode::Unit);
+    });
+
+    it('does not allow a unit property with active leases to become whole property', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unit = Unit::factory()->for($property)->create();
+        Lease::factory()->create(['unit_id' => $unit->id]);
+
+        $this->actingAs($user)
+            ->put(route('properties.update', $property), [
+                'name' => $property->name,
+                'rental_mode' => PropertyRentalMode::WholeProperty->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('rental_mode');
+
+        expect($property->refresh()->rental_mode)->toBe(PropertyRentalMode::Unit);
     });
 
     it('falls back to the raw type without lazy loading propertyType', function () {

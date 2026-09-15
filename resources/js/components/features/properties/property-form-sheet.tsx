@@ -1,4 +1,5 @@
 import { useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import { InputError, PhoneInput, SearchableSelect } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +20,7 @@ import {
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
 import { t } from '@/lib/i18n';
+import { propertyRentalModeOptions } from '@/lib/property-rental-mode';
 import { store, update } from '@/routes/properties';
 import type { Property, PropertyTypeOption, Region } from '@/types';
 
@@ -37,6 +39,10 @@ export default function PropertyFormSheet({
     }>().props;
 
     const isEdit = Boolean(property);
+    const [hasExplicitRentalMode, setHasExplicitRentalMode] = useState(isEdit);
+    const selectedType = propertyTypes.find(
+        (option) => option.slug === (property?.type ?? propertyTypes[0]?.slug),
+    );
     const city =
         property?.city && typeof property.city !== 'string'
             ? property.city
@@ -45,6 +51,10 @@ export default function PropertyFormSheet({
     const { data, setData, submit, reset, processing, errors } = useForm({
         name: property?.name ?? '',
         type: property?.type ?? propertyTypes[0]?.slug ?? '',
+        rental_mode:
+            property?.rental_mode ??
+            selectedType?.default_rental_mode ??
+            'unit',
         address: property?.address ?? '',
         region_id: property?.region_id ?? property?.region?.id ?? null,
         city_id: property?.city_id ?? city?.id ?? null,
@@ -121,7 +131,24 @@ export default function PropertyFormSheet({
                             <Label htmlFor="type">{t('Type')}</Label>
                             <Select
                                 value={data.type}
-                                onValueChange={(v) => setData('type', v)}
+                                onValueChange={(value) => {
+                                    if (!isEdit && !hasExplicitRentalMode) {
+                                        setData((current) => ({
+                                            ...current,
+                                            type: value,
+                                            rental_mode:
+                                                propertyTypes.find(
+                                                    (option) =>
+                                                        option.slug === value,
+                                                )?.default_rental_mode ??
+                                                'unit',
+                                        }));
+
+                                        return;
+                                    }
+
+                                    setData('type', value);
+                                }}
                             >
                                 <SelectTrigger id="type" className="w-full">
                                     <SelectValue />
@@ -138,6 +165,48 @@ export default function PropertyFormSheet({
                                 </SelectContent>
                             </Select>
                             <InputError message={errors.type} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="rental_mode">
+                                {t('Rental model')}
+                            </Label>
+                            <Select
+                                value={data.rental_mode}
+                                onValueChange={(value) => {
+                                    setHasExplicitRentalMode(true);
+                                    setData(
+                                        'rental_mode',
+                                        value as typeof data.rental_mode,
+                                    );
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="rental_mode"
+                                    className="w-full"
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {propertyRentalModeOptions.map((option) => (
+                                        <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            {t(option.label)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-sm text-muted-foreground">
+                                {t(
+                                    propertyRentalModeOptions.find(
+                                        (option) =>
+                                            option.value === data.rental_mode,
+                                    )?.description ?? '',
+                                )}
+                            </p>
+                            <InputError message={errors.rental_mode} />
                         </div>
 
                         <div className="grid gap-2">

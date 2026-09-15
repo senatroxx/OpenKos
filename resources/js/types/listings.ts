@@ -43,6 +43,7 @@ export type PublicListing = {
     name: string;
     type: string;
     type_label: string;
+    rental_mode: 'unit' | 'whole_property' | 'hybrid';
     location: {
         address: string | null;
         postal_code: string | null;
@@ -60,6 +61,7 @@ export type PublicUnitTypePage = {
     property: {
         slug: string;
         name: string;
+        rental_mode: 'unit' | 'whole_property' | 'hybrid';
     };
     unit_type: PublicUnitType;
 };
