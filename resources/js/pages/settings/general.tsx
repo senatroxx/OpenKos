@@ -1,6 +1,6 @@
 import { router, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { SearchInput } from '@/components/data-table/search-input';
 import { AppearanceTabs } from '@/components/features';
 import { InputError } from '@/components/shared';
@@ -66,11 +66,16 @@ export default function General({
         };
     }>().props;
     const allCurrencyOptions = Object.keys(app.currency_scales).sort();
-    const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' });
+    const currencyNames = useMemo(
+        () => new Intl.DisplayNames(['en'], { type: 'currency' }),
+        [],
+    );
 
-    function currencyLabel(currency: string): string {
-        return `${currency} — ${currencyNames.of(currency) ?? currency}`;
-    }
+    const currencyLabel = useCallback(
+        (currency: string): string =>
+            `${currency} — ${currencyNames.of(currency) ?? currency}`,
+        [currencyNames],
+    );
     const [currencySearch, setCurrencySearch] = useState('');
     const normalizedCurrencySearch = currencySearch.trim().toLowerCase();
     const currencyOptions = allCurrencyOptions.filter((currency) =>
@@ -476,7 +481,9 @@ export default function General({
                                         value={currencySearch}
                                         onChange={setCurrencySearch}
                                         onClear={() => setCurrencySearch('')}
-                                        placeholder={t('Search')}
+                                        id="supported-currencies-search"
+                                        aria-label={t('Search')}
+                                        placeholder="Search"
                                         className="w-full md:max-w-none"
                                     />
                                     <div className="grid max-h-72 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">

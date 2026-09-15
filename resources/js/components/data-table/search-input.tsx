@@ -9,6 +9,8 @@ type SearchInputProps = {
     onClear: () => void;
     placeholder?: string;
     className?: string;
+    id?: string;
+    'aria-label'?: string;
 };
 
 export function SearchInput({
@@ -17,11 +19,15 @@ export function SearchInput({
     onClear,
     placeholder = 'Search...',
     className,
+    id,
+    'aria-label': ariaLabel,
 }: SearchInputProps) {
     return (
         <div className={cn('relative flex-1 md:max-w-xs', className)}>
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+                id={id}
+                aria-label={ariaLabel}
                 placeholder={t(placeholder)}
                 className="bg-card pl-9"
                 value={value}
