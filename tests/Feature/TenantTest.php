@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PropertyRentalMode;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Setting;
@@ -308,6 +309,29 @@ describe('unit assignment authorization', function () {
                 'start_date' => '2026-06-01',
             ])
             ->assertForbidden();
+    });
+
+    it('rejects assigning a tenant to a unit in a whole-property property', function () {
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $property = Property::factory()->create([
+            'rental_mode' => PropertyRentalMode::WholeProperty,
+        ]);
+        $unit = Unit::factory()->for($property)->create();
+
+        $this->actingAs($user)
+            ->get(route('tenants.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('availableUnits', []));
+
+        $this->actingAs($user)
+            ->post(route('tenants.assign-unit', $tenant), [
+                'unit_id' => $unit->id,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertNotFound();
+
+        expect(Lease::query()->exists())->toBeFalse();
     });
 });
 

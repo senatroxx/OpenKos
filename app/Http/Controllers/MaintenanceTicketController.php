@@ -104,7 +104,7 @@ class MaintenanceTicketController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        $units = Unit::query()
+        $unitQuery = Unit::query()
             ->select(['id', 'slug', 'name', 'property_id', 'status'])
             ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)])
             ->with(['leases' => fn ($q) => $q->where('status', LeaseStatus::Active->value)->with('tenants:id,name')])
@@ -119,7 +119,11 @@ class MaintenanceTicketController extends Controller
                 'property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
-            ->orderBy('name')
+            ->orderBy('name');
+
+        $units = (clone $unitQuery)->get();
+        $transferUnits = (clone $unitQuery)
+            ->whereHas('property', fn (Builder $q) => $q->supportsUnitInventory())
             ->get();
 
         $transfers = LeaseUnitHistory::query()
@@ -140,6 +144,7 @@ class MaintenanceTicketController extends Controller
             'property_id' => $request->query('property_id'),
             'properties' => $properties,
             'units' => $units,
+            'transferUnits' => $transferUnits,
             'users' => User::query()
                 ->with('roles')
                 ->orderBy('name')

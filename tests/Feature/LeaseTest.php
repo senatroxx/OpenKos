@@ -5,6 +5,7 @@ use App\Actions\Leases\MoveOutLease;
 use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
 use App\Enums\LeaseStatus;
+use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
@@ -542,6 +543,30 @@ describe('move unit', function () {
         expect($newLease->status)->toBe(LeaseStatus::Active);
         expect($newLease->rent_amount)->toBe('1000000.000');
         expect($newLease->deposit_amount)->toBe('500000.000');
+    });
+
+    it('rejects moving a lease into a whole-property unit', function () {
+        [$sourceProperty, $sourceUnit] = createPropertyWithUnit();
+        $targetProperty = Property::factory()->create([
+            'rental_mode' => PropertyRentalMode::WholeProperty,
+        ]);
+        $targetUnit = Unit::factory()->for($targetProperty)->create();
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->create([
+            'primary_tenant_id' => $tenant->id,
+            'unit_id' => $sourceUnit->id,
+            'status' => LeaseStatus::Active,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('properties.units.leases.move', [$sourceProperty, $sourceUnit, $lease]), [
+                'target_unit_id' => $targetUnit->id,
+            ])
+            ->assertNotFound();
+
+        expect($lease->fresh()->status)->toBe(LeaseStatus::Active)
+            ->and(Lease::query()->where('unit_id', $targetUnit->id)->exists())->toBeFalse();
     });
 
     it('returns authoritative transition state from a move', function () {

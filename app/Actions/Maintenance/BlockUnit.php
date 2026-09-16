@@ -6,6 +6,7 @@ use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
+use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
@@ -51,6 +52,9 @@ class BlockUnit
     {
         abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
         abort_if($targetUnit->id === $unit->id, 422, __('Cannot move to the same unit.'));
+
+        $targetProperty = Property::query()->lockForUpdate()->findOrFail($targetUnit->property_id);
+        abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
 
         $targetHasLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->exists();
         abort_if($targetHasLease, 422, __('Target unit already has an active lease.'));

@@ -22,6 +22,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Sheet,
     SheetContent,
     SheetDescription,
@@ -30,6 +37,7 @@ import {
 } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { t } from '@/lib/i18n';
+import { propertyRentalModeOptions } from '@/lib/property-rental-mode';
 import propertyTypesRoutes from '@/routes/settings/property-types';
 import type { Auth, PropertyTypeOption } from '@/types';
 
@@ -46,6 +54,7 @@ function PropertyTypeFormSheet({
 }) {
     const { data, setData, submit, transform, processing, errors } = useForm({
         label: editing?.label ?? '',
+        default_rental_mode: editing?.default_rental_mode ?? 'unit',
     });
 
     function handleSubmit(e: React.FormEvent) {
@@ -97,6 +106,52 @@ function PropertyTypeFormSheet({
                                     required
                                 />
                                 <InputError message={errors.label} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="default_rental_mode">
+                                    {t('Default rental model')}
+                                </Label>
+                                <Select
+                                    value={data.default_rental_mode}
+                                    onValueChange={(value) =>
+                                        setData(
+                                            'default_rental_mode',
+                                            value as typeof data.default_rental_mode,
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="default_rental_mode"
+                                        className="w-full"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {propertyRentalModeOptions.map(
+                                            (option) => (
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {t(option.label)}
+                                                </SelectItem>
+                                            ),
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-sm text-muted-foreground">
+                                    {t(
+                                        propertyRentalModeOptions.find(
+                                            (option) =>
+                                                option.value ===
+                                                data.default_rental_mode,
+                                        )?.description ?? '',
+                                    )}
+                                </p>
+                                <InputError
+                                    message={errors.default_rental_mode}
+                                />
                             </div>
 
                             <div className="flex items-center justify-end gap-4">
@@ -206,6 +261,9 @@ export default function PropertyTypes({
                                         {t('Slug')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
+                                        {t('Default rental model')}
+                                    </th>
+                                    <th className="px-4 py-3 font-medium">
                                         {t('In use')}
                                     </th>
                                     <th className="px-4 py-3 font-medium">
@@ -225,6 +283,15 @@ export default function PropertyTypes({
                                         </td>
                                         <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                                             {type.slug}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {t(
+                                                propertyRentalModeOptions.find(
+                                                    (option) =>
+                                                        option.value ===
+                                                        type.default_rental_mode,
+                                                )?.label ?? 'Individual units',
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground tabular-nums">
                                             {type.properties_count ?? 0}

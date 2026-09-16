@@ -45,12 +45,15 @@ export type Region = {
     cities: { id: number; name: string }[];
 };
 
+export type PropertyRentalMode = 'unit' | 'whole_property' | 'hybrid';
+
 // A user-managed property classification (App\Models\PropertyType). The slug
 // is stored on properties.type; the label is the editable display name.
 export type PropertyTypeOption = {
     id?: number;
     slug: string;
     label: string;
+    default_rental_mode?: PropertyRentalMode;
     is_active?: boolean;
     sort_order?: number;
     properties_count?: number;
@@ -132,6 +135,7 @@ export type Property = {
     name: string;
     type?: string; // property_types.slug
     type_label?: string; // resolved label (appended by the model)
+    rental_mode?: PropertyRentalMode;
     slug: string; // route key
     address?: string | null;
     region_id?: number | null;
@@ -142,6 +146,7 @@ export type Property = {
     is_active?: boolean;
     is_published?: boolean;
     public_slug?: string | null;
+    updated_at?: string | null;
     city?: string | { id: number; name: string } | null;
     region?: { id: number; name: string } | null;
     units_count?: number;
@@ -279,6 +284,18 @@ export type UnitRate = {
     amount: string;
     currency?: string;
     is_active?: boolean;
+};
+
+export type PropertyRate = {
+    id?: number;
+    property_id?: number;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    amount: string;
+    currency: string;
+    is_active?: boolean;
+    effective_from?: string | null;
+    effective_until?: string | null;
 };
 
 export type UtilityReading = {
@@ -669,6 +686,7 @@ export type ManagedProperty = {
     slug: string;
     type: string;
     type_label?: string;
+    rental_mode: PropertyRentalMode;
     address: string | null;
     region_id: number | null;
     city_id: number | null;

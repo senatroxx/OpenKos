@@ -2,9 +2,11 @@
 
 use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
+use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Unit;
 use App\Models\UnitType;
 use App\Models\User;
@@ -25,6 +27,13 @@ it('publishes properties with stable public slugs', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create(['name' => 'Sunrise House']);
     $duplicateProperty = Property::factory()->create(['name' => 'Sunrise House']);
+    foreach ([$property, $duplicateProperty] as $item) {
+        $unitType = UnitType::factory()->for($item)->create([
+            'is_published' => true,
+            'public_slug' => 'studio',
+        ]);
+        Unit::factory()->for($item)->create(['unit_type_id' => $unitType->id]);
+    }
 
     $this->actingAs($user)
         ->patch(route('properties.publication.update', $property), ['is_published' => true])
@@ -90,22 +99,28 @@ it('rejects publishing inactive properties and unit types', function () {
 
 it('allocates property-scoped unit type slugs and derives effective visibility', function () {
     $user = User::factory()->owner()->create();
-    $property = Property::factory()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
     $otherProperty = Property::factory()->create();
     $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
     $duplicateUnitType = UnitType::factory()->for($property)->create(['name' => 'Studio.']);
     $otherUnitType = UnitType::factory()->for($otherProperty)->create(['name' => 'Studio']);
     $foreignOnlyUnitType = UnitType::factory()->for($otherProperty)->create(['name' => 'Penthouse']);
 
-    foreach ([$property, $otherProperty] as $item) {
-        $this->actingAs($user)
-            ->patch(route('properties.publication.update', $item), ['is_published' => true])
-            ->assertRedirect();
+    foreach ([$unitType, $duplicateUnitType, $otherUnitType, $foreignOnlyUnitType] as $item) {
+        Unit::factory()->for($item->property)->create(['unit_type_id' => $item->id]);
     }
 
     foreach ([$unitType, $duplicateUnitType, $otherUnitType, $foreignOnlyUnitType] as $item) {
         $this->actingAs($user)
             ->patch(route('properties.unit-types.publication.update', [$item->property, $item]), ['is_published' => true])
+            ->assertRedirect();
+    }
+
+    foreach ([$property, $otherProperty] as $item) {
+        $this->actingAs($user)
+            ->patch(route('properties.publication.update', $item), ['is_published' => true])
             ->assertRedirect();
     }
 
@@ -130,7 +145,7 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
 
     auth()->logout();
 
-    $this->getJson(route('public.listings.unit-types.show', [
+    $this->get(route('public.portal.unit-types.show', [
         'property' => $property->public_slug,
         'unitType' => $unitType->public_slug,
     ]))->assertNotFound();
@@ -139,14 +154,12 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
         ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertRedirect();
 
-    $unitTypeResponse = $this->getJson(route('public.listings.unit-types.show', [
+    $this->get(route('public.portal.unit-types.show', [
         'property' => $property->public_slug,
         'unitType' => $unitType->public_slug,
-    ]))->assertSuccessful();
+    ]))->assertOk();
 
-    expect($unitTypeResponse->headers->get('Cache-Control'))->toContain('no-store');
-
-    $this->getJson(route('public.listings.unit-types.show', [
+    $this->get(route('public.portal.unit-types.show', [
         'property' => $property->public_slug,
         'unitType' => $foreignOnlyUnitType->public_slug,
     ]))->assertNotFound();
@@ -155,7 +168,7 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
 
     $property->update(['is_active' => false]);
 
-    $this->getJson(route('public.listings.unit-types.show', [
+    $this->get(route('public.portal.unit-types.show', [
         'property' => $property->public_slug,
         'unitType' => $unitType->public_slug,
     ]))->assertNotFound();
@@ -163,7 +176,7 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
     $property->update(['is_active' => true]);
     $unitType->update(['is_active' => false]);
 
-    $this->getJson(route('public.listings.unit-types.show', [
+    $this->get(route('public.portal.unit-types.show', [
         'property' => $property->public_slug,
         'unitType' => $unitType->public_slug,
     ]))->assertNotFound();
@@ -171,7 +184,9 @@ it('allocates property-scoped unit type slugs and derives effective visibility',
 
 it('projects availability and independent rate variants without operational details', function () {
     $user = User::factory()->owner()->create();
-    $property = Property::factory()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
     $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
     $propertyAmenity = Amenity::factory()->create([
         'name' => 'Parking',
@@ -224,10 +239,10 @@ it('projects availability and independent rate variants without operational deta
     ]);
 
     $this->actingAs($user)
-        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])
         ->assertRedirect();
     $this->actingAs($user)
-        ->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertRedirect();
 
     $property->refresh();
@@ -237,23 +252,26 @@ it('projects availability and independent rate variants without operational deta
     DB::connection()->enableQueryLog();
     DB::connection()->flushQueryLog();
 
-    $response = $this->getJson(route('public.listings.show', $property->public_slug))
-        ->assertSuccessful()
-        ->assertJsonPath('data.inventory.total_units', 3)
-        ->assertJsonPath('data.inventory.available_units', 2)
-        ->assertJsonPath('data.amenities', [
-            ['name' => 'Legacy icon amenity', 'icon' => null],
-            ['name' => 'Parking', 'icon' => 'car'],
-        ])
-        ->assertJsonPath('data.unit_types.0.amenities', [])
-        ->assertJsonCount(3, 'data.unit_types.0.starting_prices')
-        ->assertJsonMissingPath('data.id')
-        ->assertJsonMissingPath('data.phone')
-        ->assertJsonMissingPath('data.unit_types.0.id')
-        ->assertJsonMissingPath('data.unit_types.0.units')
-        ->assertJsonMissingPath('data.unit_types.0.leases');
+    $response = $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/show')
+            ->where('listing.rental_mode', PropertyRentalMode::Unit->value)
+            ->where('listing.inventory.total_units', 3)
+            ->where('listing.inventory.available_units', 2)
+            ->where('listing.amenities', [
+                ['name' => 'Legacy icon amenity', 'icon' => null],
+                ['name' => 'Parking', 'icon' => 'car'],
+            ])
+            ->where('listing.unit_types.0.amenities', [])
+            ->has('listing.unit_types.0.starting_prices', 3)
+            ->missing('listing.id')
+            ->missing('listing.phone')
+            ->missing('listing.unit_types.0.id')
+            ->missing('listing.unit_types.0.units')
+            ->missing('listing.unit_types.0.leases'));
 
-    expect($response->json('data.unit_types.0.starting_prices'))->toEqual([
+    expect($response->inertiaProps('listing.unit_types.0.starting_prices'))->toEqual([
         [
             'amount' => '10000.000',
             'currency' => 'IDR',
@@ -275,30 +293,291 @@ it('projects availability and independent rate variants without operational deta
             'billing_unit' => 'month',
             'billing_label' => '/month',
         ],
-    ])->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
-
-    expect($response->headers->get('Cache-Control'))->toContain('no-store');
+    ])->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(13);
 
     DB::connection()->flushQueryLog();
 
-    $indexResponse = $this->getJson(route('public.listings.index'))
-        ->assertSuccessful()
-        ->assertJsonPath('data.0.inventory.available_units', 2);
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/index')
+            ->where('listings.0.inventory.available_units', 2));
 
-    expect($indexResponse->headers->get('Cache-Control'))->toContain('no-store')
-        ->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
+    expect(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
 });
 
-it('serves public media only for currently effective listings', function () {
+it('requires an active property rate before whole-property publication', function () {
     $user = User::factory()->owner()->create();
-    $property = Property::factory()->create();
-    $unitType = UnitType::factory()->for($property)->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    PropertyRate::factory()->for($property)->create(['is_active' => false]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertUnprocessable();
+
+    expect($property->refresh()->is_published)->toBeFalse()
+        ->and($property->public_slug)->toBeNull();
+});
+
+it('requires a published unit type with eligible inventory and active pricing', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+
+    expect($property->hasViableUnitTypeOffering())->toBeFalse();
+
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $unit->rates()->update(['is_active' => false]);
+
+    expect($property->refresh()->hasViableUnitTypeOffering())->toBeFalse();
+
+    $unit->rates()->firstOrFail()->update(['is_active' => true]);
+
+    expect($property->refresh()->hasViableUnitTypeOffering())->toBeTrue();
 
     $this->actingAs($user)
         ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertRedirect();
+});
+
+it('removes a unit listing when its last active unit rate is disabled', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+        'public_slug' => 'rate-disabled-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('listings', 1));
+
+    $unit->rates()->update(['is_active' => false]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('listings', 0));
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertNotFound();
+});
+
+it('publishes whole-property offerings without unit inventory', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    PropertyRate::factory()->for($property)->create([
+        'billing_unit' => 'month',
+        'amount' => '15000000',
+        'currency' => 'IDR',
+    ]);
+    PropertyRate::factory()->for($property)->create([
+        'billing_unit' => 'week',
+        'amount' => '12000000',
+        'currency' => 'USD',
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertRedirect();
+
+    $property->refresh();
+
+    $response = $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/show')
+            ->where('listing.rental_mode', PropertyRentalMode::WholeProperty->value)
+            ->where('listing.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
+            ->where('listing.whole_property_offering.availability', 'available_for_inquiry')
+            ->where('listing.whole_property_offering.starting_price.amount', '15000000.000')
+            ->where('listing.whole_property_offering.starting_price.currency', 'IDR')
+            ->has('listing.whole_property_offering.rates', 2)
+            ->where('listing.whole_property_offering.rates.0.billing_unit', 'week')
+            ->where('listing.whole_property_offering.rates.0.currency', 'USD')
+            ->where('listing.whole_property_offering.rates.1.billing_unit', 'month')
+            ->where('listing.whole_property_offering.rates.1.currency', 'IDR')
+            ->missing('listing.inventory')
+            ->missing('listing.unit_types')
+            ->missing('listing.whole_property_offering.starting_price.id'));
+
+    expect($response->inertiaProps('listing.whole_property_offering.rates.0'))->toHaveKeys([
+        'amount',
+        'currency',
+        'billing_interval',
+        'billing_unit',
+        'billing_label',
+    ]);
+    expect($response->inertiaProps('listing.whole_property_offering.rates.0'))->not->toHaveKey('id');
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listings.0.slug', $property->public_slug)
+            ->where('listings.0.whole_property_offering.starting_price.amount', '15000000.000')
+            ->missing('listings.0.inventory')
+            ->missing('listings.0.unit_types'));
+});
+
+it('restores whole-property visibility when an active rate is re-enabled', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+        'public_slug' => 'whole-house',
+        'is_published' => true,
+    ]);
+    $rate = PropertyRate::factory()->for($property)->create(['is_active' => true]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('listings', 1));
+
+    $rate->update(['is_active' => false]);
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('listings', 0));
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertNotFound();
+
+    $rate->update(['is_active' => true]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk();
+});
+
+it('exposes hybrid offerings independently', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+        'public_slug' => 'hybrid-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.rental_mode', PropertyRentalMode::Hybrid->value)
+            ->where('listing.unit_types.0.slug', $unitType->public_slug)
+            ->missing('listing.whole_property_offering'));
+
+    $rate = PropertyRate::factory()->for($property)->create([
+        'amount' => '2500000',
+        'currency' => 'IDR',
+    ]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
+            ->where('listing.unit_types.0.slug', $unitType->public_slug));
+
+    $unitType->update(['is_published' => false]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
+            ->missing('listing.inventory')
+            ->missing('listing.unit_types'));
+
+    $rate->update(['is_active' => false]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertNotFound();
+});
+
+it('omits non-viable unit metadata from a hybrid whole-property-only listing', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+        'public_slug' => 'hybrid-whole-only-house',
+        'is_published' => true,
+    ]);
+    PropertyRate::factory()->for($property)->create();
+    UnitType::factory()->for($property)->create([
+        'public_slug' => 'unavailable-studio',
+        'is_published' => true,
+    ]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
+            ->missing('listing.inventory')
+            ->missing('listing.unit_types'));
+});
+
+it('fails closed when a hybrid property has no viable offering path', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+        'public_slug' => 'empty-hybrid-house',
+        'is_published' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertUnprocessable();
+
+    $this->get('/')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('listings', 0));
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertNotFound();
+});
+
+it('uses whole-property readiness for public property media', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+        'public_slug' => 'whole-house',
+        'is_published' => true,
+    ]);
+    $rate = PropertyRate::factory()->for($property)->create();
+    $media = app(MediaManager::class)->store(
+        $property,
+        'photos',
+        UploadedFile::fake()->create('whole-house.jpg', 1, 'image/jpeg'),
+    );
+
+    $this->get(route('public.portal.media', $media))
+        ->assertSuccessful();
+
+    $rate->update(['is_active' => false]);
+
+    $this->get(route('public.portal.media', $media))
+        ->assertNotFound();
+});
+
+it('serves public media only for currently effective listings', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create();
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
     $this->actingAs($user)
         ->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])
+        ->assertRedirect();
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertRedirect();
 
     $manager = app(MediaManager::class);
@@ -307,17 +586,160 @@ it('serves public media only for currently effective listings', function () {
     $attachment = $manager->store($property, 'attachments', UploadedFile::fake()->create('private.pdf', 1, 'application/pdf'));
     auth()->logout();
 
-    $propertyMediaResponse = $this->get(route('public.listings.media', $propertyMedia))
+    $propertyMediaResponse = $this->get(route('public.portal.media', $propertyMedia))
         ->assertSuccessful();
-    $unitTypeMediaResponse = $this->get(route('public.listings.media', $unitTypeMedia))
+    $unitTypeMediaResponse = $this->get(route('public.portal.media', $unitTypeMedia))
         ->assertSuccessful();
 
     expect($propertyMediaResponse->headers->get('Cache-Control'))->toContain('no-store')
         ->and($unitTypeMediaResponse->headers->get('Cache-Control'))->toContain('no-store');
-    $this->get(route('public.listings.media', $attachment))->assertNotFound();
+    $this->get(route('public.portal.media', $attachment))->assertNotFound();
 
     $property->refresh()->update(['is_published' => false]);
 
-    $this->get(route('public.listings.media', $propertyMedia))->assertNotFound();
-    $this->get(route('public.listings.media', $unitTypeMedia))->assertNotFound();
+    $this->get(route('public.portal.media', $propertyMedia))->assertNotFound();
+    $this->get(route('public.portal.media', $unitTypeMedia))->assertNotFound();
+});
+
+it('renders the public storefront at the root for guests and authenticated users', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $property = Property::factory()->create([
+        'public_slug' => 'sunrise-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $assertStorefront = function ($response) use ($property): void {
+        $response
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('public/listings/index')
+                ->where('canonicalUrl', '/')
+                ->where('listings.0.slug', $property->public_slug)
+                ->missing('listings.0.id')
+                ->missing('listings.0.phone'));
+    };
+
+    $assertStorefront($this->get('/'));
+    $assertStorefront($this->actingAs(User::factory()->owner()->create())->get('/'));
+});
+
+it('keeps login explicit and redirects the legacy listing index permanently', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->component('auth/login'));
+
+    $this->get('/listings')
+        ->assertStatus(308)
+        ->assertLocation('/');
+});
+
+it('does not expose a public listing JSON API', function () {
+    $this->getJson('/api/v1/listings')->assertNotFound();
+    $this->getJson('/api/v1/listings/media/1')->assertNotFound();
+    $this->getJson('/api/v1/listings/example')->assertNotFound();
+    $this->getJson('/api/v1/listings/example/unit-types/studio')->assertNotFound();
+});
+
+it('keeps storefront metadata distinct from entity detail metadata', function () {
+    $homepage = file_get_contents(resource_path('js/pages/public/listings/index.tsx'));
+    $head = file_get_contents(resource_path('js/components/shared/public-listing-head.tsx'));
+    $propertyDetail = file_get_contents(resource_path('js/pages/public/listings/show.tsx'));
+    $unitTypeDetail = file_get_contents(resource_path('js/pages/public/listings/unit-type.tsx'));
+
+    expect($homepage)
+        ->toContain("title={t('OpenKOS — Find Your Next Place')}")
+        ->toContain("'Discover available properties and rental options that fit your needs.'")
+        ->not->toContain("title={t('Available properties')}");
+
+    expect($head)
+        ->toContain('head-key="og:title"')
+        ->toContain('head-key="og:description"')
+        ->toContain('head-key="twitter:title"')
+        ->toContain('head-key="twitter:description"')
+        ->toContain('head-key="canonical"');
+
+    expect($propertyDetail)->toContain('title={listing.name}');
+    expect($unitTypeDetail)->toContain('title={`${unitType.name} - ${listing.property.name}`}');
+});
+
+it('renders public property and unit type pages from the safe listing projection', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $property = Property::factory()->create([
+        'public_slug' => 'sunrise-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $this->get(route('public.portal.show', ['property' => $property->public_slug]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/show')
+            ->where('canonicalUrl', route('public.portal.show', ['property' => $property->public_slug], absolute: false))
+            ->where('listing.slug', $property->public_slug)
+            ->where('listing.unit_types.0.slug', $unitType->public_slug)
+            ->missing('listing.id')
+            ->missing('listing.phone')
+            ->missing('listing.unit_types.0.id')
+            ->missing('listing.unit_types.0.units')
+            ->missing('listing.unit_types.0.leases'));
+
+    $this->get(route('public.portal.unit-types.show', [
+        'property' => $property->public_slug,
+        'unitType' => $unitType->public_slug,
+    ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('public/listings/unit-type')
+            ->where('canonicalUrl', route('public.portal.unit-types.show', [
+                'property' => $property->public_slug,
+                'unitType' => $unitType->public_slug,
+            ], absolute: false))
+            ->where('listing.property.slug', $property->public_slug)
+            ->where('listing.unit_type.slug', $unitType->public_slug)
+            ->missing('listing.unit_type.id')
+            ->missing('listing.unit_type.units')
+            ->missing('listing.unit_type.leases'));
+});
+
+it('fails closed for unpublished and mismatched public detail pages', function () {
+    config(['inertia.ssr.enabled' => false]);
+
+    $property = Property::factory()->create([
+        'public_slug' => 'sunrise-house',
+        'is_published' => false,
+    ]);
+    $otherProperty = Property::factory()->create([
+        'public_slug' => 'sunset-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($otherProperty)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+
+    $this->get(route('public.portal.show', ['property' => $property->public_slug]))
+        ->assertNotFound();
+
+    $this->get(route('public.portal.unit-types.show', [
+        'property' => $property->public_slug,
+        'unitType' => $unitType->public_slug,
+    ]))->assertNotFound();
+
+    $this->get(route('public.portal.unit-types.show', [
+        'property' => $otherProperty->public_slug,
+        'unitType' => 'missing',
+    ]))->assertNotFound();
 });

@@ -19,6 +19,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { t } from '@/lib/i18n';
+import { supportsUnitInventory } from '@/lib/property-rental-mode';
 import properties from '@/routes/properties';
 
 import type { Property } from '@/types';
@@ -136,48 +137,52 @@ export default function PropertyDetailSheet({
                                 </div>
                             )}
 
-                            <div>
-                                <p className="text-xs font-medium text-muted-foreground uppercase">
-                                    {t('Statistics')}
-                                </p>
-                                <div className="mt-1 grid grid-cols-3 gap-4">
-                                    <div>
-                                        <p className="text-2xl font-semibold tabular-nums">
-                                            {property.units_count}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {t('Total Units')}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-semibold tabular-nums">
-                                            {property.occupied_units_count}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {t('Occupied')}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-2xl font-semibold tabular-nums">
-                                            {property.tenants_count}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {t('Tenants')}
-                                        </p>
+                            {supportsUnitInventory(property.rental_mode) && (
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                                        {t('Statistics')}
+                                    </p>
+                                    <div className="mt-1 grid grid-cols-3 gap-4">
+                                        <div>
+                                            <p className="text-2xl font-semibold tabular-nums">
+                                                {property.units_count}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t('Total Units')}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-semibold tabular-nums">
+                                                {property.occupied_units_count}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t('Occupied')}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-2xl font-semibold tabular-nums">
+                                                {property.tenants_count}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {t('Tenants')}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
 
-                        <div>
-                            <Link
-                                href={properties.units.index.url(property)}
-                                className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-                                onClick={() => onOpenChange(false)}
-                            >
-                                {t('Manage Units')} ({property.units_count})
-                            </Link>
-                        </div>
+                        {supportsUnitInventory(property.rental_mode) && (
+                            <div>
+                                <Link
+                                    href={properties.units.index.url(property)}
+                                    className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+                                    onClick={() => onOpenChange(false)}
+                                >
+                                    {t('Manage Units')} ({property.units_count})
+                                </Link>
+                            </div>
+                        )}
 
                         <div className="flex-1"></div>
 

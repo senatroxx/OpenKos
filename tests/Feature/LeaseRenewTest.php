@@ -5,6 +5,7 @@ use App\Data\Lease\RenewLeaseData;
 use App\Enums\DepositHandling;
 use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
+use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use App\Models\Invoice;
 use App\Models\Lease;
@@ -73,6 +74,25 @@ describe('authorization', function () {
                 'confirmed_outstanding' => true,
             ])
             ->assertRedirect(route('leases.index'));
+    });
+
+    it('rejects renewal of a legacy unit lease after its property becomes whole property', function () {
+        [$property, , $lease] = createRenewableLease();
+        $property->update(['rental_mode' => PropertyRentalMode::WholeProperty]);
+        $user = User::factory()->owner()->create();
+
+        $this->actingAs($user)
+            ->post(route('leases.renew', $lease), [
+                'rent_amount' => 1_200_000,
+                'extension_value' => 12,
+                'extension_unit' => 'months',
+                'deposit_handling' => 'carry_forward',
+                'confirmed_outstanding' => true,
+            ])
+            ->assertNotFound();
+
+        expect(Lease::query()->count())->toBe(1)
+            ->and($lease->fresh()->status)->toBe(LeaseStatus::Active);
     });
 
     it('allows admin with property access to renew', function () {

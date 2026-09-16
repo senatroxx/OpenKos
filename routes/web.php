@@ -19,7 +19,10 @@ use App\Http\Controllers\PropertyController;
 use App\Http\Controllers\PropertyDocumentsController;
 use App\Http\Controllers\PropertyLeasesController;
 use App\Http\Controllers\PropertyMediaController;
+use App\Http\Controllers\PropertyRateController;
 use App\Http\Controllers\PropertyUnitTypeController;
+use App\Http\Controllers\PublicListingController;
+use App\Http\Controllers\PublicListingMediaController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SignedPaymentController;
@@ -36,7 +39,19 @@ use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/login');
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/', [PublicListingController::class, 'pageIndex'])->name('public.portal.index');
+    Route::redirect('/listings', '/', 308)->name('public.portal.redirect');
+    Route::get('listings/media/{media}', [PublicListingMediaController::class, 'show'])
+        ->whereNumber('media')
+        ->name('public.portal.media');
+
+    Route::scopeBindings()->prefix('listings')->name('public.portal.')->group(function () {
+        Route::get('{property:public_slug}', [PublicListingController::class, 'pageShow'])->name('show');
+        Route::get('{property:public_slug}/unit-types/{unitType:public_slug}', [PublicListingController::class, 'pageUnitType'])
+            ->name('unit-types.show');
+    });
+});
 
 Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->group(function () {
     Route::get('{token}', [UserController::class, 'acceptInvitation'])->name('accept');
@@ -122,6 +137,12 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
             Route::prefix('{property}')->group(function () {
                 Route::get('/', [PropertyController::class, 'show'])->name('show')->middleware('permission:properties.view');
                 Route::get('listing', [PropertyController::class, 'listing'])->name('listing')->middleware('permission:properties.view');
+                Route::get('pricing', [PropertyRateController::class, 'index'])
+                    ->name('pricing.index')
+                    ->middleware(['permission:properties.view', 'property-rental-mode:property_pricing']);
+                Route::put('pricing', [PropertyRateController::class, 'update'])
+                    ->name('pricing.update')
+                    ->middleware(['permission:properties.update', 'property-rental-mode:property_pricing']);
                 Route::put('/', [PropertyController::class, 'update'])->name('update')->middleware('permission:properties.update');
                 Route::delete('/', [PropertyController::class, 'destroy'])->name('destroy')->middleware('permission:properties.delete');
                 Route::patch('publication', [PropertyController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
@@ -137,7 +158,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     ->middleware('permission:inspections.create')
                     ->withoutMiddleware('permission:dashboard.view');
 
-                Route::prefix('unit-types')->name('unit-types.')->group(function () {
+                Route::prefix('unit-types')->name('unit-types.')->middleware('property-rental-mode:unit_inventory')->group(function () {
                     Route::get('/', [PropertyUnitTypeController::class, 'index'])->name('index')->middleware('permission:properties.view');
                     Route::post('/', [PropertyUnitTypeController::class, 'store'])->name('store')->middleware('permission:properties.update');
 
@@ -167,7 +188,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::delete('{media}', [PropertyMediaController::class, 'destroy'])->name('destroy')->whereNumber('media')->middleware('permission:properties.update');
                 });
 
-                Route::prefix('units')->name('units.')->group(function () {
+                Route::prefix('units')->name('units.')->middleware('property-rental-mode:unit_inventory')->group(function () {
                     Route::get('/', [UnitController::class, 'index'])->name('index')->middleware('permission:units.view');
                     Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('permission:units.create');
                     Route::get('transfer/import', [DataTransferController::class, 'importPage'])

@@ -4,6 +4,7 @@ namespace App\Services\DataTransfer;
 
 use App\Actions\Properties\CreateProperty;
 use App\Enums\DataTransferDataset;
+use App\Enums\PropertyRentalMode;
 use App\Models\City;
 use App\Models\Property;
 use App\Models\PropertyType;
@@ -11,6 +12,7 @@ use App\Models\Region;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rule;
 
 final class PropertiesDefinition extends DatasetDefinition
 {
@@ -27,6 +29,7 @@ final class PropertiesDefinition extends DatasetDefinition
             'slug',
             'name',
             'type',
+            'rental_mode',
             'region_country_code',
             'region_name',
             'city_name',
@@ -59,6 +62,7 @@ final class PropertiesDefinition extends DatasetDefinition
             'slug' => ['required', 'string', 'max:255'],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'max:255'],
+            'rental_mode' => ['nullable', Rule::enum(PropertyRentalMode::class)],
             'region_country_code' => ['nullable', 'string', 'size:2'],
             'region_name' => ['nullable', 'string', 'max:255'],
             'city_name' => ['nullable', 'string', 'max:255'],
@@ -172,6 +176,10 @@ final class PropertiesDefinition extends DatasetDefinition
             $attributes['type'] = $type->slug;
         }
 
+        if (($values['rental_mode'] ?? null) !== null) {
+            $attributes['rental_mode'] = $values['rental_mode'];
+        }
+
         return $attributes;
     }
 
@@ -226,6 +234,7 @@ final class PropertiesDefinition extends DatasetDefinition
             $property->slug,
             $property->name,
             $property->type,
+            $property->rental_mode->value,
             $property->region?->country_code,
             $property->region?->name,
             $property->city?->name,

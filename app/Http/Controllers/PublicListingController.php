@@ -5,85 +5,144 @@ namespace App\Http\Controllers;
 use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
 use App\Enums\BillingUnit;
+use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Unit;
 use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
+use Inertia\Response;
 
 final class PublicListingController extends Controller
 {
     public function __construct(private MoneyConverter $money) {}
 
-    public function index(): JsonResponse
+    public function pageIndex(): Response
+    {
+        return Inertia::render('public/listings/index', [
+            'listings' => $this->indexData(),
+            'canonicalUrl' => route('public.portal.index', absolute: false),
+        ]);
+    }
+
+    public function pageShow(Property $property): Response
+    {
+        return Inertia::render('public/listings/show', [
+            'listing' => $this->propertyData($property),
+            'canonicalUrl' => route('public.portal.show', [
+                'property' => $property->public_slug,
+            ], absolute: false),
+        ]);
+    }
+
+    public function pageUnitType(Property $property, UnitType $unitType): Response
+    {
+        return Inertia::render('public/listings/unit-type', [
+            'listing' => $this->unitTypeData($property, $unitType),
+            'canonicalUrl' => route('public.portal.unit-types.show', [
+                'property' => $property->public_slug,
+                'unitType' => $unitType->public_slug,
+            ], absolute: false),
+        ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function indexData(): array
     {
         $properties = $this->publicProperties()->get();
+        $propertiesWithUnitInventory = $properties->filter(
+            fn (Property $property): bool => $property->rental_mode->supportsUnitInventory(),
+        );
+        $propertiesWithPropertyRates = $properties->filter(
+            fn (Property $property): bool => $property->rental_mode->supportsWholePropertyRental(),
+        );
+
+        if ($propertiesWithUnitInventory->isNotEmpty()) {
+            $propertiesWithUnitInventory->load([
+                'unitTypes' => fn ($query) => $query
+                    ->viablePublicOffering()
+                    ->orderBy('name')
+                    ->with($this->unitTypeRelations()),
+            ]);
+        }
+
+        if ($propertiesWithPropertyRates->isNotEmpty()) {
+            $propertiesWithPropertyRates->load('activePropertyRates');
+        }
+
         $availableCounts = $this->availableUnitCounts($this->unitTypeIds($properties));
 
-        return $this->json([
-            'data' => $properties->map(
-                fn (Property $property): array => $this->propertyPayload($property, $availableCounts),
-            )->values()->all(),
-        ]);
+        return $properties->map(
+            fn (Property $property): array => $this->propertyPayload($property, $availableCounts),
+        )->values()->all();
     }
 
-    public function show(Property $property): JsonResponse
+    /**
+     * @return array<string, mixed>
+     */
+    private function propertyData(Property $property): array
     {
         abort_unless($this->isPublicProperty($property), 404);
 
-        $property->load($this->publicRelations());
-        $availableCounts = $this->availableUnitCounts($property->unitTypes->modelKeys());
+        $property->load($this->publicRelations($property->rental_mode->supportsUnitInventory()));
+        if ($property->rental_mode->supportsWholePropertyRental()) {
+            $property->load('activePropertyRates');
+        }
 
-        return $this->json([
-            'data' => $this->propertyPayload($property, $availableCounts),
-        ]);
+        $availableCounts = $property->rental_mode->supportsUnitInventory()
+            ? $this->availableUnitCounts($property->unitTypes->modelKeys())
+            : [];
+
+        return $this->propertyPayload($property, $availableCounts);
     }
 
-    public function unitType(Property $property, UnitType $unitType): JsonResponse
+    /**
+     * @return array{property: array{slug: string, name: string}, unit_type: array<string, mixed>}
+     */
+    private function unitTypeData(Property $property, UnitType $unitType): array
     {
         abort_unless($this->isPublicProperty($property), 404);
+        abort_unless($property->rental_mode->supportsUnitInventory(), 404);
         abort_unless(
             $unitType->property_id === $property->id
-                && $unitType->is_active
-                && $unitType->is_published
-                && filled($unitType->public_slug),
+            && $unitType->isViablePublicOffering(),
             404,
         );
 
         $unitType->load($this->unitTypeRelations());
         $availableCounts = $this->availableUnitCounts([$unitType->id]);
 
-        return $this->json([
-            'data' => [
-                'property' => [
-                    'slug' => $property->public_slug,
-                    'name' => $property->name,
-                ],
-                'unit_type' => $this->unitTypePayload($unitType, $availableCounts),
+        return [
+            'property' => [
+                'slug' => $property->public_slug,
+                'name' => $property->name,
+                'rental_mode' => $property->rental_mode->value,
             ],
-        ]);
+            'unit_type' => $this->unitTypePayload($unitType, $availableCounts),
+        ];
     }
 
     private function publicProperties(): Builder
     {
         return Property::query()
-            ->where('is_active', true)
-            ->where('is_published', true)
-            ->whereNotNull('public_slug')
-            ->with($this->publicRelations())
+            ->publiclyVisible()
+            ->with($this->publicRelations(includeUnitInventory: false))
             ->orderBy('name');
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function publicRelations(): array
+    private function publicRelations(bool $includeUnitInventory = true): array
     {
-        return [
+        $relations = [
             'city:id,name',
             'region:id,name',
             'propertyType:id,slug,label',
@@ -95,13 +154,16 @@ final class PublicListingController extends Controller
                 ->where('collection', 'photos')
                 ->orderBy('position')
                 ->orderBy('id'),
-            'unitTypes' => fn ($query) => $query
-                ->where('is_active', true)
-                ->where('is_published', true)
-                ->whereNotNull('public_slug')
-                ->orderBy('name')
-                ->with($this->unitTypeRelations()),
         ];
+
+        if ($includeUnitInventory) {
+            $relations['unitTypes'] = fn ($query) => $query
+                ->viablePublicOffering()
+                ->orderBy('name')
+                ->with($this->unitTypeRelations());
+        }
+
+        return $relations;
     }
 
     /**
@@ -157,6 +219,7 @@ final class PublicListingController extends Controller
     private function unitTypeIds(Collection $properties): array
     {
         return $properties
+            ->filter(fn (Property $property): bool => $property->rental_mode->supportsUnitInventory())
             ->flatMap(fn (Property $property) => $property->unitTypes->modelKeys())
             ->map(fn (mixed $id): int => (int) $id)
             ->unique()
@@ -170,15 +233,12 @@ final class PublicListingController extends Controller
      */
     private function propertyPayload(Property $property, array $availableCounts): array
     {
-        $unitTypes = $property->unitTypes->map(
-            fn (UnitType $unitType): array => $this->unitTypePayload($unitType, $availableCounts),
-        )->values()->all();
-
-        return [
+        $payload = [
             'slug' => $property->public_slug,
             'name' => $property->name,
             'type' => $property->type,
             'type_label' => $property->type_label,
+            'rental_mode' => $property->rental_mode->value,
             'location' => [
                 'address' => $property->address,
                 'postal_code' => $property->postal_code,
@@ -191,7 +251,20 @@ final class PublicListingController extends Controller
                 ->values()
                 ->all(),
             'gallery' => $this->gallery($property->media),
-            'inventory' => [
+        ];
+
+        if ($property->rental_mode === PropertyRentalMode::WholeProperty) {
+            $payload['whole_property_offering'] = $this->wholePropertyOfferingPayload($property);
+
+            return $payload;
+        }
+
+        $unitTypes = $property->unitTypes->map(
+            fn (UnitType $unitType): array => $this->unitTypePayload($unitType, $availableCounts),
+        )->values()->all();
+
+        if ($property->rental_mode === PropertyRentalMode::Unit || $unitTypes !== []) {
+            $payload['inventory'] = [
                 'total_units' => array_sum(array_map(
                     fn (array $unitType): int => $unitType['inventory']['total_units'],
                     $unitTypes,
@@ -200,8 +273,62 @@ final class PublicListingController extends Controller
                     fn (array $unitType): int => $unitType['inventory']['available_units'],
                     $unitTypes,
                 )),
-            ],
-            'unit_types' => $unitTypes,
+            ];
+            $payload['unit_types'] = $unitTypes;
+        }
+
+        if ($property->rental_mode === PropertyRentalMode::Hybrid) {
+            $wholePropertyOffering = $this->wholePropertyOfferingPayload($property);
+
+            if ($wholePropertyOffering !== null) {
+                $payload['whole_property_offering'] = $wholePropertyOffering;
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array{type: string, availability: string, starting_price: array<string, mixed>, rates: array<int, array<string, mixed>>}|null
+     */
+    private function wholePropertyOfferingPayload(Property $property): ?array
+    {
+        $rates = $property->relationLoaded('activePropertyRates')
+            ? $property->activePropertyRates
+            : $property->activePropertyRates()->get();
+
+        if ($rates->isEmpty()) {
+            return null;
+        }
+
+        $startingPrice = $property->defaultActivePropertyRate();
+
+        if ($startingPrice === null) {
+            return null;
+        }
+
+        return [
+            'type' => PropertyRentalMode::WholeProperty->value,
+            'availability' => 'available_for_inquiry',
+            'starting_price' => $this->propertyRatePayload($startingPrice),
+            'rates' => $rates
+                ->map(fn (PropertyRate $rate): array => $this->propertyRatePayload($rate))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    /**
+     * @return array{amount: string, currency: string, billing_interval: int, billing_unit: string, billing_label: string}
+     */
+    private function propertyRatePayload(PropertyRate $rate): array
+    {
+        return [
+            'amount' => (string) $rate->amount,
+            'currency' => $rate->currency,
+            'billing_interval' => $rate->billing_interval,
+            'billing_unit' => $rate->billing_unit->value,
+            'billing_label' => $this->billingLabel($rate->billing_interval, $rate->billing_unit),
         ];
     }
 
@@ -239,7 +366,7 @@ final class PublicListingController extends Controller
     private function gallery(Collection $media): array
     {
         return $media->map(fn (Media $item): array => [
-            'url' => route('public.listings.media', $item),
+            'url' => route('public.portal.media', $item),
             'position' => $item->position,
             'alt' => $item->metadata['alt'] ?? null,
             'caption' => $item->metadata['caption'] ?? null,
@@ -317,17 +444,6 @@ final class PublicListingController extends Controller
 
     private function isPublicProperty(Property $property): bool
     {
-        return ! $property->trashed()
-            && $property->is_active
-            && $property->is_published
-            && filled($property->public_slug);
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    private function json(array $payload): JsonResponse
-    {
-        return response()->json($payload)->header('Cache-Control', 'no-store');
+        return $property->isPubliclyVisible();
     }
 }

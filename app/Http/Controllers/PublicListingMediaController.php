@@ -34,10 +34,7 @@ final class PublicListingMediaController extends Controller
 
     private function isPublicProperty(Property $property): bool
     {
-        return ! $property->trashed()
-            && $property->is_active
-            && $property->is_published
-            && filled($property->public_slug);
+        return $property->isPubliclyVisible();
     }
 
     private function isPublicUnitType(UnitType $unitType): bool
@@ -47,7 +44,9 @@ final class PublicListingMediaController extends Controller
         return $unitType->is_active
             && $unitType->is_published
             && filled($unitType->public_slug)
+            && $unitType->isViablePublicOffering()
             && $property instanceof Property
+            && $property->rental_mode->supportsUnitInventory()
             && $this->isPublicProperty($property);
     }
 }

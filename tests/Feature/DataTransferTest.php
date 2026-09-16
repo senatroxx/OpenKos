@@ -2,6 +2,7 @@
 
 use App\Enums\DataTransferDataset;
 use App\Enums\ExpenseStatus;
+use App\Enums\PropertyRentalMode;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Property;
@@ -54,6 +55,24 @@ it('previews the complete properties file without persisting anything', function
         ->assertJsonPath('error_count', 0);
 
     $this->assertDatabaseMissing('properties', ['slug' => 'sunrise-house']);
+});
+
+it('imports an explicit property rental model while keeping legacy files compatible', function () {
+    $user = User::factory()->owner()->create();
+    $csv = implode("\n", [
+        'slug,name,type,rental_mode',
+        'hybrid-house,Hybrid House,boarding_house,hybrid',
+    ]);
+
+    $response = $this->actingAs($user)->post(route('data-transfer.commit'), [
+        'dataset' => 'properties',
+        'file' => csvFile('properties.csv', $csv),
+    ]);
+
+    $response->assertSuccessful()->assertJsonPath('committed', true);
+
+    expect(Property::where('slug', 'hybrid-house')->firstOrFail()->rental_mode)
+        ->toBe(PropertyRentalMode::Hybrid);
 });
 
 it('imports expenses without requiring status and keeps optional business fields', function () {

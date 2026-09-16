@@ -10,6 +10,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
+use App\Models\Property;
 use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
 use App\Services\Payments\MoneyConverter;
@@ -133,6 +134,9 @@ class MoveOutLease
     private function transfer(Lease $lease, Unit $oldUnit, Unit $targetUnit, MoveOutLeaseData $data): MoveOutLeaseResult
     {
         abort_if($data->depositSettlement !== null, 422, __('A deposit cannot be settled while moving to another unit.'));
+
+        $targetProperty = Property::query()->lockForUpdate()->findOrFail($targetUnit->property_id);
+        abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
 
         $oldLeaseStatus = $lease->status;
         $oldSourceStatus = $oldUnit->status;
