@@ -34,7 +34,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useTable } from '@/hooks/use-table';
 import { t } from '@/lib/i18n';
-import { propertyRentalModeOptions } from '@/lib/property-rental-mode';
+import {
+    propertyRentalModeOptions,
+    supportsUnitInventory,
+} from '@/lib/property-rental-mode';
 import properties from '@/routes/properties';
 import type { Auth, ManagedProperty, PaginatedData, TableMeta } from '@/types';
 
@@ -170,18 +173,30 @@ export default function Index({
             label: t('Total Units'),
             sortable: true,
             className: 'tabular-nums',
+            render: (p) =>
+                supportsUnitInventory(p.rental_mode)
+                    ? (p.units_count ?? 0)
+                    : '\u2014',
         },
         {
             key: 'occupied_units_count',
             label: t('Occupied'),
             sortable: true,
             className: 'tabular-nums',
+            render: (p) =>
+                supportsUnitInventory(p.rental_mode)
+                    ? (p.occupied_units_count ?? 0)
+                    : '\u2014',
         },
         {
             key: 'tenants_count',
             label: t('Tenants'),
             sortable: true,
             className: 'tabular-nums',
+            render: (p) =>
+                supportsUnitInventory(p.rental_mode)
+                    ? (p.tenants_count ?? 0)
+                    : '\u2014',
         },
         {
             key: '_status',

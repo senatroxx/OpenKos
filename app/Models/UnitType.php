@@ -7,6 +7,7 @@ use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
 use Database\Factories\UnitTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -49,6 +50,24 @@ class UnitType extends Model
     public function units(): HasMany
     {
         return $this->hasMany(Unit::class);
+    }
+
+    public function scopeViablePublicOffering(Builder $query): void
+    {
+        $query
+            ->where('is_active', true)
+            ->where('is_published', true)
+            ->whereNotNull('public_slug')
+            ->where('public_slug', '<>', '')
+            ->whereHas('units', fn (Builder $query) => $query->eligibleForPublicOffering());
+    }
+
+    public function isViablePublicOffering(): bool
+    {
+        return static::query()
+            ->whereKey($this->id)
+            ->viablePublicOffering()
+            ->exists();
     }
 
     public function amenities(): BelongsToMany

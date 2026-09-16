@@ -8,8 +8,8 @@ export default function PublicListingGallery({
 }) {
     if (items.length === 0) {
         return (
-            <div className="flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed bg-muted/30 p-6 text-center text-muted-foreground">
-                <ImageOff className="size-8" aria-hidden="true" />
+            <div className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed bg-muted/30 p-4 text-center text-muted-foreground sm:min-h-36">
+                <ImageOff className="size-7" aria-hidden="true" />
                 <p className="text-sm">No photos available</p>
             </div>
         );

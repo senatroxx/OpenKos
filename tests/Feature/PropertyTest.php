@@ -319,6 +319,45 @@ describe('type', function () {
         expect($property->refresh()->rental_mode)->toBe(PropertyRentalMode::Unit);
     });
 
+    it('does not allow a hybrid property with active leases to become whole property', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create([
+            'rental_mode' => PropertyRentalMode::Hybrid,
+        ]);
+        $unit = Unit::factory()->for($property)->create();
+        Lease::factory()->create(['unit_id' => $unit->id]);
+
+        $this->actingAs($user)
+            ->put(route('properties.update', $property), [
+                'name' => $property->name,
+                'rental_mode' => PropertyRentalMode::WholeProperty->value,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('rental_mode');
+
+        expect($property->refresh()->rental_mode)->toBe(PropertyRentalMode::Hybrid);
+    });
+
+    it('allows unit inventory properties with only historical leases to become whole property', function () {
+        $user = User::factory()->owner()->create();
+
+        foreach ([PropertyRentalMode::Unit, PropertyRentalMode::Hybrid] as $mode) {
+            $property = Property::factory()->create(['rental_mode' => $mode]);
+            $unit = Unit::factory()->for($property)->create();
+            Lease::factory()->terminated()->create(['unit_id' => $unit->id]);
+
+            $this->actingAs($user)
+                ->put(route('properties.update', $property), [
+                    'name' => $property->name,
+                    'rental_mode' => PropertyRentalMode::WholeProperty->value,
+                ])
+                ->assertRedirect()
+                ->assertSessionHasNoErrors();
+
+            expect($property->refresh()->rental_mode)->toBe(PropertyRentalMode::WholeProperty);
+        }
+    });
+
     it('falls back to the raw type without lazy loading propertyType', function () {
         $property = Property::factory()->create(['type' => 'villa']);
 

@@ -11,6 +11,7 @@ use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Exceptions\LeaseRenewalException;
 use App\Models\Lease;
+use App\Models\Property;
 use App\Models\Unit;
 use App\Results\Lease\RenewLeaseResult;
 use App\Services\Payments\MoneyConverter;
@@ -31,6 +32,10 @@ class RenewLease
     {
         return $this->referenceAllocationRetry->run(function () use ($lease, $data) {
             $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
+            $property = Property::query()->lockForUpdate()->findOrFail($unit->property_id);
+
+            abort_unless($property->rental_mode->supportsUnitInventory(), 404);
+
             $lockedLease = Lease::query()
                 ->whereKey($lease->getKey())
                 ->lockForUpdate()

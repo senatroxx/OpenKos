@@ -15,7 +15,6 @@ use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,25 +22,11 @@ final class PublicListingController extends Controller
 {
     public function __construct(private MoneyConverter $money) {}
 
-    public function index(): JsonResponse
-    {
-        return $this->json([
-            'data' => $this->indexData(),
-        ]);
-    }
-
     public function pageIndex(): Response
     {
         return Inertia::render('public/listings/index', [
             'listings' => $this->indexData(),
             'canonicalUrl' => route('public.portal.index', absolute: false),
-        ]);
-    }
-
-    public function show(Property $property): JsonResponse
-    {
-        return $this->json([
-            'data' => $this->propertyData($property),
         ]);
     }
 
@@ -52,13 +37,6 @@ final class PublicListingController extends Controller
             'canonicalUrl' => route('public.portal.show', [
                 'property' => $property->public_slug,
             ], absolute: false),
-        ]);
-    }
-
-    public function unitType(Property $property, UnitType $unitType): JsonResponse
-    {
-        return $this->json([
-            'data' => $this->unitTypeData($property, $unitType),
         ]);
     }
 
@@ -89,9 +67,7 @@ final class PublicListingController extends Controller
         if ($propertiesWithUnitInventory->isNotEmpty()) {
             $propertiesWithUnitInventory->load([
                 'unitTypes' => fn ($query) => $query
-                    ->where('is_active', true)
-                    ->where('is_published', true)
-                    ->whereNotNull('public_slug')
+                    ->viablePublicOffering()
                     ->orderBy('name')
                     ->with($this->unitTypeRelations()),
             ]);
@@ -136,9 +112,7 @@ final class PublicListingController extends Controller
         abort_unless($property->rental_mode->supportsUnitInventory(), 404);
         abort_unless(
             $unitType->property_id === $property->id
-                && $unitType->is_active
-                && $unitType->is_published
-                && filled($unitType->public_slug),
+            && $unitType->isViablePublicOffering(),
             404,
         );
 
@@ -184,9 +158,7 @@ final class PublicListingController extends Controller
 
         if ($includeUnitInventory) {
             $relations['unitTypes'] = fn ($query) => $query
-                ->where('is_active', true)
-                ->where('is_published', true)
-                ->whereNotNull('public_slug')
+                ->viablePublicOffering()
                 ->orderBy('name')
                 ->with($this->unitTypeRelations());
         }
@@ -291,17 +263,19 @@ final class PublicListingController extends Controller
             fn (UnitType $unitType): array => $this->unitTypePayload($unitType, $availableCounts),
         )->values()->all();
 
-        $payload['inventory'] = [
-            'total_units' => array_sum(array_map(
-                fn (array $unitType): int => $unitType['inventory']['total_units'],
-                $unitTypes,
-            )),
-            'available_units' => array_sum(array_map(
-                fn (array $unitType): int => $unitType['inventory']['available_units'],
-                $unitTypes,
-            )),
-        ];
-        $payload['unit_types'] = $unitTypes;
+        if ($property->rental_mode === PropertyRentalMode::Unit || $unitTypes !== []) {
+            $payload['inventory'] = [
+                'total_units' => array_sum(array_map(
+                    fn (array $unitType): int => $unitType['inventory']['total_units'],
+                    $unitTypes,
+                )),
+                'available_units' => array_sum(array_map(
+                    fn (array $unitType): int => $unitType['inventory']['available_units'],
+                    $unitTypes,
+                )),
+            ];
+            $payload['unit_types'] = $unitTypes;
+        }
 
         if ($property->rental_mode === PropertyRentalMode::Hybrid) {
             $wholePropertyOffering = $this->wholePropertyOfferingPayload($property);
@@ -392,7 +366,7 @@ final class PublicListingController extends Controller
     private function gallery(Collection $media): array
     {
         return $media->map(fn (Media $item): array => [
-            'url' => route('public.listings.media', $item),
+            'url' => route('public.portal.media', $item),
             'position' => $item->position,
             'alt' => $item->metadata['alt'] ?? null,
             'caption' => $item->metadata['caption'] ?? null,
@@ -471,13 +445,5 @@ final class PublicListingController extends Controller
     private function isPublicProperty(Property $property): bool
     {
         return $property->isPubliclyVisible();
-    }
-
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    private function json(array $payload): JsonResponse
-    {
-        return response()->json($payload)->header('Cache-Control', 'no-store');
     }
 }

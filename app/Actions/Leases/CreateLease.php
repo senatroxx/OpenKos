@@ -9,6 +9,7 @@ use App\Data\Lease\CreateLeaseData;
 use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
+use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitRate;
@@ -31,6 +32,10 @@ class CreateLease
 
         return $this->referenceAllocationRetry->run(function () use ($unit, $data, $tenantIds) {
             $unit = Unit::lockForUpdate()->findOrFail($unit->id);
+            $property = Property::query()->lockForUpdate()->findOrFail($unit->property_id);
+
+            abort_unless($property->rental_mode->supportsUnitInventory(), 404);
+
             $unitRate = $data->unitRateId === null
                 ? null
                 : $unit->activeRates()->whereKey($data->unitRateId)->first();

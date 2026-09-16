@@ -88,7 +88,17 @@ function resolveAppName(): string {
 const appName = resolveAppName();
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    title: (title) => {
+        if (!title) {
+            return appName;
+        }
+
+        if (title === appName || title.startsWith(`${appName} —`)) {
+            return title;
+        }
+
+        return `${title} - ${appName}`;
+    },
     layout: (name, page) => {
         const auth = page.props as {
             auth?: {

@@ -3,6 +3,7 @@
 use App\Enums\LeaseStatus;
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
+use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use App\Events\Maintenance\MaintenanceTicketCreated;
 use App\Events\Unit\UnitStatusChanged;
@@ -226,6 +227,50 @@ it('moves tenant and blocks unit when move_tenant_to_unit_id provided', function
     expect($targetUnit->fresh()->status)->toBe(UnitStatus::Occupied);
     expect($targetUnit->leases()->where('status', LeaseStatus::Active->value)->count())->toBe(1);
     expect($lease->fresh()->unitHistories()->count())->toBe(1);
+});
+
+it('rejects maintenance occupant transfers into whole-property inventory', function () {
+    $owner = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    $sourceUnit = Unit::factory()->for($property)->create();
+    $targetUnit = Unit::factory()->for($property)->create();
+    $lease = Lease::factory()->create([
+        'unit_id' => $sourceUnit->id,
+        'status' => LeaseStatus::Active,
+    ]);
+
+    $this->actingAs($owner)
+        ->post(route('maintenance-tickets.store'), [
+            'property_id' => $property->id,
+            'unit_id' => $sourceUnit->id,
+            'title' => 'Broken ceiling',
+            'priority' => MaintenancePriority::Urgent->value,
+            'block_unit' => true,
+            'move_tenant_to_unit_id' => $targetUnit->id,
+        ])
+        ->assertNotFound();
+
+    expect(MaintenanceTicket::query()->count())->toBe(0)
+        ->and(LeaseUnitHistory::query()->count())->toBe(0)
+        ->and($lease->fresh()->unit_id)->toBe($sourceUnit->id)
+        ->and($sourceUnit->fresh()->status)->not->toBe(UnitStatus::Maintenance);
+});
+
+it('excludes whole-property units from maintenance transfer targets', function () {
+    $owner = User::factory()->owner()->create();
+    $unitProperty = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $wholeProperty = Property::factory()->create(['rental_mode' => PropertyRentalMode::WholeProperty]);
+    $unit = Unit::factory()->for($unitProperty)->create();
+    $wholeUnit = Unit::factory()->for($wholeProperty)->create();
+
+    $this->actingAs($owner)
+        ->get(route('maintenance-tickets.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('units', fn ($units) => collect($units)->pluck('id')->contains($wholeUnit->id))
+            ->where('transferUnits', fn ($units) => collect($units)->pluck('id')->all() === [$unit->id])
+        );
 });
 
 it('rolls back maintenance ticket and occupancy changes when a transfer fails', function () {
@@ -549,4 +594,42 @@ it('moves tenant back when resolving ticket with move_back flag', function () {
     expect($unit->fresh()->status)->toBe(UnitStatus::Occupied);
     expect($lease->fresh()->unit_id)->toBe($unit->id);
     expect($targetUnit->fresh()->status)->toBe(UnitStatus::Available);
+});
+
+it('rejects maintenance move-back into whole-property inventory', function () {
+    $owner = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    $unit = Unit::factory()->for($property)->create(['status' => UnitStatus::Maintenance]);
+    $targetUnit = Unit::factory()->for($property)->create(['status' => UnitStatus::Occupied]);
+    $lease = Lease::factory()->create([
+        'unit_id' => $targetUnit->id,
+        'status' => LeaseStatus::Active,
+    ]);
+
+    LeaseUnitHistory::create([
+        'lease_id' => $lease->id,
+        'from_unit_id' => $unit->id,
+        'to_unit_id' => $targetUnit->id,
+        'reason' => 'maintenance',
+        'effective_date' => now(),
+    ]);
+
+    $ticket = MaintenanceTicket::factory()->create([
+        'unit_id' => $unit->id,
+        'status' => MaintenanceStatus::InProgress->value,
+    ]);
+
+    $this->actingAs($owner)
+        ->put(route('maintenance-tickets.update', $ticket), [
+            'status' => MaintenanceStatus::Resolved->value,
+            'restore_unit' => true,
+            'move_back' => true,
+        ])
+        ->assertNotFound();
+
+    expect($ticket->fresh()->status)->toBe(MaintenanceStatus::InProgress)
+        ->and($lease->fresh()->unit_id)->toBe($targetUnit->id)
+        ->and($unit->fresh()->status)->toBe(UnitStatus::Maintenance);
 });

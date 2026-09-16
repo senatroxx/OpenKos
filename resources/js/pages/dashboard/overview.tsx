@@ -51,6 +51,7 @@ export default function Overview({
     recent_activity,
     properties,
     units,
+    transferUnits,
 }: {
     attention: AttentionData;
     finance: Finance;
@@ -58,6 +59,7 @@ export default function Overview({
     recent_activity: RecentActivityEntry[];
     properties: MaintenanceProperty[];
     units: MaintenanceUnit[];
+    transferUnits: MaintenanceUnit[];
 }) {
     const [tenantSheetOpen, setTenantSheetOpen] = useState(false);
     const [propertySheetOpen, setPropertySheetOpen] = useState(false);
@@ -295,6 +297,7 @@ export default function Overview({
                 onOpenChange={setTicketSheetOpen}
                 properties={properties}
                 units={units}
+                transferUnits={transferUnits}
             />
         </>
     );

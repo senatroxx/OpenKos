@@ -65,12 +65,14 @@ export default function TicketFormSheet({
     ticket,
     properties,
     units,
+    transferUnits,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     ticket?: MaintenanceTicket | null;
     properties: { id: number; name: string }[];
     units: UnitOption[];
+    transferUnits: UnitOption[];
 }) {
     const isEdit = Boolean(ticket);
     const formAction = isEdit
@@ -130,7 +132,7 @@ export default function TicketFormSheet({
         (selectedUnitData?.active_lease_count ?? 0) > 0;
 
     const availableMoveUnits = data.property_id
-        ? units.filter(
+        ? transferUnits.filter(
               (r) =>
                   r.property_id === Number(data.property_id) &&
                   r.id !== Number(data.unit_id) &&

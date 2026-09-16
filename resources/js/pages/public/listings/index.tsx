@@ -67,9 +67,9 @@ export default function Index({
     return (
         <>
             <PublicListingHead
-                title={t('Available properties')}
+                title={t('OpenKOS — Find Your Next Place')}
                 description={t(
-                    'Explore our published properties and available rental options.',
+                    'Discover available properties and rental options that fit your needs.',
                 )}
                 canonicalUrl={canonicalUrl}
                 imageUrl={listings[0]?.gallery[0]?.url}

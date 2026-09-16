@@ -160,6 +160,7 @@ class TenantController extends Controller
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
+            ->whereHas('property', fn (Builder $query) => $query->supportsUnitInventory())
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))
             ->orderBy('name')
             ->get();

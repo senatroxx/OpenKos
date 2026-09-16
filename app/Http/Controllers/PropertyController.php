@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Properties\CreateProperty;
 use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
+use App\Enums\PropertyRentalMode;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
@@ -144,7 +145,21 @@ class PropertyController extends Controller
     {
         $this->authorize('update', $property);
 
-        $property->update($request->validated());
+        $validated = $request->validated();
+
+        DB::transaction(function () use ($property, $validated): void {
+            $lockedProperty = Property::query()->lockForUpdate()->findOrFail($property->id);
+
+            if (isset($validated['rental_mode'])) {
+                $error = $lockedProperty->rentalModeChangeError(
+                    PropertyRentalMode::from($validated['rental_mode']),
+                );
+
+                abort_if($error !== null, 422, $error);
+            }
+
+            $lockedProperty->update($validated);
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property updated.')]);
 

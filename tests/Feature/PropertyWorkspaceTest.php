@@ -141,3 +141,26 @@ it('retains dormant inventory, rates, leases, invoices, and property rates acros
         ->and($lease->fresh()->unit_id)->toBe($unit->id)
         ->and($invoice->fresh()->lease_id)->toBe($lease->id);
 });
+
+it('keeps historical unit leases readable after switching to whole-property mode', function (): void {
+    $owner = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
+    $unit = Unit::factory()->for($property)->create();
+    $lease = Lease::factory()->for($unit)->terminated()->create();
+
+    $this->actingAs($owner)
+        ->put(route('properties.update', $property), [
+            'name' => $property->name,
+            'rental_mode' => PropertyRentalMode::WholeProperty->value,
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($owner)
+        ->get(route('properties.workspace.leases', $property))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('leases.data.0.id', $lease->id)
+            ->where('leases.data.0.unit_id', $unit->id));
+});

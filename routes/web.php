@@ -19,6 +19,7 @@ use App\Http\Controllers\PropertyMediaController;
 use App\Http\Controllers\PropertyRateController;
 use App\Http\Controllers\PropertyUnitTypeController;
 use App\Http\Controllers\PublicListingController;
+use App\Http\Controllers\PublicListingMediaController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SignedPaymentController;
@@ -38,6 +39,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/', [PublicListingController::class, 'pageIndex'])->name('public.portal.index');
     Route::redirect('/listings', '/', 308)->name('public.portal.redirect');
+    Route::get('listings/media/{media}', [PublicListingMediaController::class, 'show'])
+        ->whereNumber('media')
+        ->name('public.portal.media');
 
     Route::scopeBindings()->prefix('listings')->name('public.portal.')->group(function () {
         Route::get('{property:public_slug}', [PublicListingController::class, 'pageShow'])->name('show');

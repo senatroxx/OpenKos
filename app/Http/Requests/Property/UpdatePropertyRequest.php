@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Property;
 
-use App\Enums\LeaseStatus;
 use App\Enums\PropertyRentalMode;
 use App\Models\Property;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -52,17 +51,8 @@ class UpdatePropertyRequest extends FormRequest
                 return;
             }
 
-            if ($property->is_published) {
-                $validator->errors()->add('rental_mode', __('Unpublish the property before changing its rental model.'));
-
-                return;
-            }
-
-            if ($property->rental_mode === PropertyRentalMode::Unit
-                && $requestedMode === PropertyRentalMode::WholeProperty
-                && $property->leases()->where('leases.status', LeaseStatus::Active)->exists()
-            ) {
-                $validator->errors()->add('rental_mode', __('A property with active unit leases cannot change to Whole property.'));
+            if ($error = $property->rentalModeChangeError($requestedMode)) {
+                $validator->errors()->add('rental_mode', $error);
             }
         }];
     }

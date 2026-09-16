@@ -14,8 +14,7 @@ export default function PublicListingHead({
     imageUrl,
 }: Props) {
     const resolvedDescription =
-        description?.trim() ||
-        'Explore published properties and available rental options.';
+        description?.trim() || 'Discover this property and its rental options.';
 
     return (
         <Head title={title}>
@@ -29,6 +28,16 @@ export default function PublicListingHead({
             <meta
                 head-key="og:description"
                 property="og:description"
+                content={resolvedDescription}
+            />
+            <meta
+                head-key="twitter:title"
+                name="twitter:title"
+                content={title}
+            />
+            <meta
+                head-key="twitter:description"
+                name="twitter:description"
                 content={resolvedDescription}
             />
             <meta head-key="og:url" property="og:url" content={canonicalUrl} />

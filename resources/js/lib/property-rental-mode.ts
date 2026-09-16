@@ -15,7 +15,7 @@ export const propertyRentalModeOptions: {
         value: 'whole_property',
         label: 'Whole property',
         description:
-            'The entire property is the rentable offering. Publication support is not available yet.',
+            'The entire property is the rentable offering and can be published with an active property rate.',
     },
     {
         value: 'hybrid',

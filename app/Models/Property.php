@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\Auditable;
 use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
+use App\Enums\LeaseStatus;
 use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use App\Services\Payments\MoneyConverter;
@@ -151,11 +152,7 @@ class Property extends Model
     public function hasViableUnitTypeOffering(): bool
     {
         return $this->rental_mode->supportsUnitInventory()
-            && $this->unitTypes()
-                ->where('is_active', true)
-                ->where('is_published', true)
-                ->whereNotNull('public_slug')
-                ->exists();
+            && $this->unitTypes()->viablePublicOffering()->exists();
     }
 
     /**
@@ -166,11 +163,31 @@ class Property extends Model
     public function hasViablePublicOffering(): bool
     {
         return match ($this->rental_mode) {
-            PropertyRentalMode::Unit => true,
+            PropertyRentalMode::Unit => $this->hasViableUnitTypeOffering(),
             PropertyRentalMode::WholeProperty => $this->hasViableWholePropertyOffering(),
             PropertyRentalMode::Hybrid => $this->hasViableWholePropertyOffering()
                 || $this->hasViableUnitTypeOffering(),
         };
+    }
+
+    public function rentalModeChangeError(PropertyRentalMode $requestedMode): ?string
+    {
+        if ($requestedMode === $this->rental_mode) {
+            return null;
+        }
+
+        if ($this->is_published) {
+            return __('Unpublish the property before changing its rental model.');
+        }
+
+        if ($requestedMode === PropertyRentalMode::WholeProperty
+            && $this->rental_mode->supportsUnitInventory()
+            && $this->leases()->where('leases.status', LeaseStatus::Active)->exists()
+        ) {
+            return __('A property with active unit leases cannot change to Whole property.');
+        }
+
+        return null;
     }
 
     public function isPubliclyVisible(): bool
@@ -188,9 +205,14 @@ class Property extends Model
             ->where('properties.is_active', true)
             ->where('properties.is_published', true)
             ->whereNotNull('properties.public_slug')
+            ->where('properties.public_slug', '<>', '')
             ->where(function (Builder $query): void {
                 $query
-                    ->where('properties.rental_mode', PropertyRentalMode::Unit->value)
+                    ->where(function (Builder $query): void {
+                        $query
+                            ->where('properties.rental_mode', PropertyRentalMode::Unit->value)
+                            ->whereHas('unitTypes', fn (Builder $query) => $query->viablePublicOffering());
+                    })
                     ->orWhere(function (Builder $query): void {
                         $query
                             ->where('properties.rental_mode', PropertyRentalMode::WholeProperty->value)
@@ -202,10 +224,7 @@ class Property extends Model
                             ->where(function (Builder $query): void {
                                 $query
                                     ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true))
-                                    ->orWhereHas('unitTypes', fn (Builder $query) => $query
-                                        ->where('is_active', true)
-                                        ->where('is_published', true)
-                                        ->whereNotNull('public_slug'));
+                                    ->orWhereHas('unitTypes', fn (Builder $query) => $query->viablePublicOffering());
                             });
                     });
             });
@@ -226,6 +245,11 @@ class Property extends Model
     public function leases(): HasManyThrough
     {
         return $this->hasManyThrough(Lease::class, Unit::class);
+    }
+
+    public function scopeSupportsUnitInventory(Builder $query): void
+    {
+        $query->where('properties.rental_mode', '<>', PropertyRentalMode::WholeProperty->value);
     }
 
     /**

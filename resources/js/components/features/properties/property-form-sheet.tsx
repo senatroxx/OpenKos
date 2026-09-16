@@ -68,6 +68,10 @@ export default function PropertyFormSheet({
 
         if (!next) {
             reset();
+
+            if (!isEdit) {
+                setHasExplicitRentalMode(false);
+            }
         }
     }
 

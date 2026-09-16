@@ -131,6 +131,12 @@ class Unit extends Model
             });
     }
 
+    public function scopeEligibleForPublicOffering(Builder $query): void
+    {
+        $query->whereNotIn('status', [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value])
+            ->whereHas('rates', fn (Builder $query) => $query->where('is_active', true));
+    }
+
     public function scopeWithOccupiedCount(Builder $query): void
     {
         $query->addSelect([

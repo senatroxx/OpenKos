@@ -44,6 +44,7 @@ final class PublicListingMediaController extends Controller
         return $unitType->is_active
             && $unitType->is_published
             && filled($unitType->public_slug)
+            && $unitType->isViablePublicOffering()
             && $property instanceof Property
             && $property->rental_mode->supportsUnitInventory()
             && $this->isPublicProperty($property);

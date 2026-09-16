@@ -153,7 +153,7 @@ class OverviewController extends Controller
             ->values()
             ->toArray();
 
-        $ticketFormUnits = Unit::query()
+        $ticketFormUnitQuery = Unit::query()
             ->select(['id', 'slug', 'name', 'property_id', 'status'])
             ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)])
             ->with(['leases' => fn ($q) => $q->where('status', LeaseStatus::Active->value)->with('tenants:id,name')])
@@ -165,7 +165,11 @@ class OverviewController extends Controller
                     ->limit(1),
             ])
             ->whereIn('property_id', $accessibleProperties)
-            ->orderBy('name')
+            ->orderBy('name');
+
+        $ticketFormUnits = (clone $ticketFormUnitQuery)->get();
+        $ticketFormTransferUnits = (clone $ticketFormUnitQuery)
+            ->whereHas('property', fn (Builder $q) => $q->supportsUnitInventory())
             ->get();
 
         $ticketFormProperties = Property::query()
@@ -214,6 +218,7 @@ class OverviewController extends Controller
             'recent_activity' => $recentActivity,
             'properties' => $ticketFormProperties,
             'units' => $ticketFormUnits,
+            'transferUnits' => $ticketFormTransferUnits,
             'regions' => $regions,
             'propertyTypes' => $propertyTypes,
         ]);

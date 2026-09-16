@@ -7,6 +7,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
+use App\Models\Property;
 use App\Models\Unit;
 use Illuminate\Support\Facades\DB;
 
@@ -94,6 +95,9 @@ class ResolveTicket
         if ($targetHasLease) {
             return;
         }
+
+        $targetProperty = Property::query()->lockForUpdate()->findOrFail($unit->property_id);
+        abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
 
         LeaseUnitHistory::create([
             'lease_id' => $movedLease->id,

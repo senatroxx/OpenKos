@@ -66,6 +66,7 @@ export default function Index({
     tickets: data,
     properties,
     units,
+    transferUnits,
     users,
     can,
     table: tableMeta,
@@ -79,6 +80,15 @@ export default function Index({
     tickets: PaginatedData<MaintenanceTicket>;
     properties: { id: number; name: string }[];
     units: {
+        id: number;
+        name: string;
+        property_id: number;
+        status: string;
+        active_lease_count: number;
+        has_maintenance_transfer?: number;
+        leases?: { tenants: { id: number; name: string }[] }[];
+    }[];
+    transferUnits: {
         id: number;
         name: string;
         property_id: number;
@@ -384,6 +394,7 @@ export default function Index({
                     ticket={editingTicket}
                     properties={properties}
                     units={units}
+                    transferUnits={transferUnits}
                 />
 
                 <TicketDetailSheet

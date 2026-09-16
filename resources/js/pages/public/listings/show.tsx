@@ -33,6 +33,27 @@ function locationLabel(listing: PublicListing): string {
         .join(', ');
 }
 
+const billingUnitLabels: Record<string, string> = {
+    day: 'Daily',
+    week: 'Weekly',
+    month: 'Monthly',
+    year: 'Yearly',
+};
+
+function ratePeriodLabel({
+    billing_interval: interval,
+    billing_unit: unit,
+}: {
+    billing_interval: number;
+    billing_unit: string;
+}): string {
+    if (interval === 1) {
+        return t(billingUnitLabels[unit] ?? unit);
+    }
+
+    return `${t('Every')} ${interval} ${t(`${unit}s`)}`;
+}
+
 function UnitTypeDetails({ unitType }: { unitType: PublicUnitType }) {
     return (
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
@@ -64,84 +85,85 @@ function WholePropertyOffering({
     offering: PublicWholePropertyOffering;
 }) {
     return (
-        <section aria-labelledby="whole-property-heading" className="space-y-4">
-            <div>
-                <h2
-                    id="whole-property-heading"
-                    className="text-2xl font-semibold"
-                >
-                    {t('Entire property')}
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    {t('Rent the property as one offering.')}
-                </p>
-            </div>
+        <aside
+            aria-labelledby="whole-property-heading"
+            className="h-fit rounded-2xl border border-primary/20 bg-card p-5 shadow-sm lg:sticky lg:top-6"
+        >
+            <div className="space-y-5">
+                <div>
+                    <p className="text-xs font-medium tracking-wide text-primary uppercase">
+                        {t('Rental offering')}
+                    </p>
+                    <h2
+                        id="whole-property-heading"
+                        className="mt-1 text-xl font-semibold"
+                    >
+                        {t('Entire property')}
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {t('Rent the property as one offering.')}
+                    </p>
+                </div>
 
-            <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="flex flex-wrap items-end justify-between gap-4 px-5 py-5">
-                    <div>
-                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                            {t('Starting from')}
-                        </p>
-                        <p className="mt-1 text-2xl font-semibold">
-                            {formatPrice(
-                                offering.starting_price.amount,
-                                offering.starting_price.currency,
-                            )}{' '}
-                            <span className="text-base font-normal text-muted-foreground">
-                                {formatBillingPeriod(
-                                    offering.starting_price.billing_interval,
-                                    offering.starting_price.billing_unit,
-                                )}
-                            </span>
-                        </p>
-                    </div>
-                    <Badge variant="outline">
-                        {offering.availability === 'available_for_inquiry'
-                            ? t('Available for inquiry')
-                            : t('Unavailable')}
-                    </Badge>
-                </CardContent>
-            </Card>
+                <div className="rounded-xl bg-primary/5 px-4 py-4">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                        {t('Starting from')}
+                    </p>
+                    <p className="mt-1 text-3xl font-semibold tracking-tight">
+                        {formatPrice(
+                            offering.starting_price.amount,
+                            offering.starting_price.currency,
+                        )}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        {ratePeriodLabel(offering.starting_price)}
+                    </p>
+                </div>
 
-            <div className="space-y-3">
-                <h3 className="text-lg font-semibold">{t('Pricing')}</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                    {offering.rates.map((price) => (
-                        <Card
-                            key={`${price.currency}-${price.billing_unit}-${price.billing_interval}`}
-                        >
-                            <CardHeader className="px-5 pt-5 pb-0">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    {formatBillingPeriod(
-                                        price.billing_interval,
-                                        price.billing_unit,
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="px-5 pt-2 pb-5">
-                                <p className="text-2xl font-semibold">
+                <div className="space-y-3">
+                    <h3 className="text-sm font-semibold">
+                        {t('Pricing options')}
+                    </h3>
+                    <dl className="divide-y divide-border/70 border-y border-border/70">
+                        {offering.rates.map((price) => (
+                            <div
+                                key={`${price.currency}-${price.billing_unit}-${price.billing_interval}`}
+                                className="flex items-center justify-between gap-4 py-3"
+                            >
+                                <dt className="text-sm text-muted-foreground">
+                                    {ratePeriodLabel(price)}
+                                </dt>
+                                <dd className="text-right text-sm font-semibold tabular-nums">
                                     {formatPrice(price.amount, price.currency)}
-                                </p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {price.billing_label}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                                </dd>
+                            </div>
+                        ))}
+                    </dl>
+                </div>
+
+                <div className="space-y-3 border-t pt-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold">
+                            {t('Availability')}
+                        </span>
+                        <Badge variant="outline">
+                            {offering.availability === 'available_for_inquiry'
+                                ? t('Available for inquiry')
+                                : t('Unavailable')}
+                        </Badge>
+                    </div>
+                    <p className="flex gap-2 text-xs leading-5 text-muted-foreground">
+                        <Check
+                            className="mt-0.5 size-4 shrink-0 text-primary"
+                            aria-hidden="true"
+                        />
+                        {t(
+                            'Date-specific availability is not currently calculated.',
+                        )}
+                    </p>
                 </div>
             </div>
-
-            <p className="flex gap-2 text-xs leading-5 text-muted-foreground">
-                <Check
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                />
-                {t(
-                    'Availability is shown for inquiry purposes; date-specific availability is not currently calculated.',
-                )}
-            </p>
-        </section>
+        </aside>
     );
 }
 
@@ -166,7 +188,7 @@ export default function Show({
                 imageUrl={listing.gallery[0]?.url}
             />
 
-            <div className="mx-auto w-full max-w-6xl space-y-10 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+            <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
                 <nav aria-label="Breadcrumb" className="text-sm">
                     <Link
                         href={publicIndex()}
@@ -181,16 +203,11 @@ export default function Show({
                 <header className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="secondary">{listing.type_label}</Badge>
-                        {wholePropertyOffering && (
+                        {listing.rental_mode !== 'unit' && (
                             <Badge variant="outline">
-                                {t('Available for inquiry')}
-                            </Badge>
-                        )}
-                        {inventory && inventory.available_units > 0 && (
-                            <Badge variant="outline">
-                                {t(':count available', {
-                                    count: inventory.available_units,
-                                })}
+                                {listing.rental_mode === 'whole_property'
+                                    ? t('Entire property')
+                                    : t('Entire property + unit types')}
                             </Badge>
                         )}
                     </div>
@@ -210,7 +227,7 @@ export default function Show({
 
                 <PublicListingGallery items={listing.gallery} />
 
-                <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+                <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,1fr)_22rem]">
                     <div className="space-y-10">
                         {listing.description && (
                             <section
@@ -223,7 +240,7 @@ export default function Show({
                                 >
                                     {t('About this property')}
                                 </h2>
-                                <p className="text-base leading-7 whitespace-pre-wrap text-muted-foreground">
+                                <p className="max-w-3xl text-base leading-7 whitespace-pre-wrap text-muted-foreground">
                                     {listing.description}
                                 </p>
                             </section>
@@ -240,15 +257,15 @@ export default function Show({
                                 >
                                     {t('Amenities')}
                                 </h2>
-                                <ul className="grid gap-3 sm:grid-cols-2">
+                                <ul className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
                                     {listing.amenities.map((amenity) => (
                                         <li
                                             key={amenity.name}
-                                            className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3"
+                                            className="flex items-center gap-3 border-b border-border/60 py-3 text-sm"
                                         >
                                             <AmenityIcon
                                                 icon={amenity.icon}
-                                                className="size-5 text-primary"
+                                                className="size-5 shrink-0 text-primary"
                                                 aria-hidden="true"
                                             />
                                             <span>{amenity.name}</span>
@@ -256,12 +273,6 @@ export default function Show({
                                     ))}
                                 </ul>
                             </section>
-                        )}
-
-                        {wholePropertyOffering && (
-                            <WholePropertyOffering
-                                offering={wholePropertyOffering}
-                            />
                         )}
 
                         {listing.rental_mode !== 'whole_property' &&
@@ -419,22 +430,10 @@ export default function Show({
                             )}
                     </div>
 
-                    {listing.rental_mode === 'whole_property' ? (
-                        <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">
-                            <div className="space-y-4">
-                                <h2 className="font-semibold">
-                                    {t('Availability')}
-                                </h2>
-                                <p className="font-medium">
-                                    {t('Available for inquiry')}
-                                </p>
-                                <p className="border-t pt-4 text-xs leading-5 text-muted-foreground">
-                                    {t(
-                                        'Date-specific availability is not currently calculated.',
-                                    )}
-                                </p>
-                            </div>
-                        </aside>
+                    {wholePropertyOffering && listing.rental_mode !== 'unit' ? (
+                        <WholePropertyOffering
+                            offering={wholePropertyOffering}
+                        />
                     ) : (
                         <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">
                             <div className="space-y-4">
@@ -467,15 +466,6 @@ export default function Show({
                                         </dd>
                                     </div>
                                 </dl>
-                                <p className="flex gap-2 border-t pt-4 text-xs leading-5 text-muted-foreground">
-                                    <Check
-                                        className="mt-0.5 size-4 shrink-0 text-primary"
-                                        aria-hidden="true"
-                                    />
-                                    {t(
-                                        'Availability and pricing are shown from the latest published listing data.',
-                                    )}
-                                </p>
                             </div>
                         </aside>
                     )}

@@ -256,6 +256,7 @@ class LeaseController extends Controller
                 'property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
+            ->whereHas('property', fn (Builder $q) => $q->supportsUnitInventory())
             ->availableForAssignment()
             ->orderBy('name')
             ->get();
