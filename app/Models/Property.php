@@ -255,6 +255,11 @@ class Property extends Model
         $query->where('properties.rental_mode', '<>', PropertyRentalMode::WholeProperty->value);
     }
 
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class);
+    }
+
     /**
      * Everything the property workspace header/tabs need.
      */

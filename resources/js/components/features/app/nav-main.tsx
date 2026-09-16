@@ -60,11 +60,10 @@ export function NavMain({
                     <SidebarGroupLabel>{t(section.title)}</SidebarGroupLabel>
                     <SidebarMenu className="gap-0.5">
                         {section.items.map((item) => {
-                            const hasMultipleChildren =
-                                Boolean(item.children) &&
-                                (item.children?.length ?? 0) > 1;
+                            const hasChildren =
+                                (item.children?.length ?? 0) > 0;
 
-                            if (hasMultipleChildren && item.children) {
+                            if (hasChildren && item.children) {
                                 const hasActiveChild = isAnyChildActive(
                                     item.children,
                                 );

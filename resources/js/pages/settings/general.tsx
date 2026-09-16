@@ -1,6 +1,7 @@
 import { router, useForm, usePage } from '@inertiajs/react';
 import type { FormEvent } from 'react';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { SearchInput } from '@/components/data-table/search-input';
 import { AppearanceTabs } from '@/components/features';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
@@ -64,12 +65,24 @@ export default function General({
             hasConfiguredFavicon: boolean;
         };
     }>().props;
-    const currencyOptions = Object.keys(app.currency_scales).sort();
-    const currencyNames = new Intl.DisplayNames(['en'], { type: 'currency' });
+    const allCurrencyOptions = Object.keys(app.currency_scales).sort();
+    const currencyNames = useMemo(
+        () => new Intl.DisplayNames(['en'], { type: 'currency' }),
+        [],
+    );
 
-    function currencyLabel(currency: string): string {
-        return `${currency} — ${currencyNames.of(currency) ?? currency}`;
-    }
+    const currencyLabel = useCallback(
+        (currency: string): string =>
+            `${currency} — ${currencyNames.of(currency) ?? currency}`,
+        [currencyNames],
+    );
+    const [currencySearch, setCurrencySearch] = useState('');
+    const normalizedCurrencySearch = currencySearch.trim().toLowerCase();
+    const currencyOptions = allCurrencyOptions.filter((currency) =>
+        currencyLabel(currency)
+            .toLowerCase()
+            .includes(normalizedCurrencySearch),
+    );
     const [uploadingBranding, setUploadingBranding] =
         useState<BrandingAsset | null>(null);
     const [brandingErrors, setBrandingErrors] = useState<
@@ -422,7 +435,9 @@ export default function General({
                                 </div>
 
                                 <div className="grid max-w-md gap-2">
-                                    <Label htmlFor="currency">{t('Default currency')}</Label>
+                                    <Label htmlFor="currency">
+                                        {t('Default currency')}
+                                    </Label>
                                     <Select
                                         value={localizationForm.data.currency}
                                         onValueChange={setDefaultCurrency}
@@ -450,12 +465,33 @@ export default function General({
 
                                 <div className="grid max-w-md gap-2">
                                     <div>
-                                        <Label>{t('Supported currencies')}</Label>
+                                        <Label>
+                                            {t('Supported currencies')}
+                                        </Label>
                                         <p className="text-sm text-muted-foreground">
-                                            {t('Available for new pricing and billing rates.')} {t('Existing records keep their original currency.')}
+                                            {t(
+                                                'Available for new pricing and billing rates.',
+                                            )}{' '}
+                                            {t(
+                                                'Existing records keep their original currency.',
+                                            )}
                                         </p>
                                     </div>
+                                    <SearchInput
+                                        value={currencySearch}
+                                        onChange={setCurrencySearch}
+                                        onClear={() => setCurrencySearch('')}
+                                        id="supported-currencies-search"
+                                        aria-label={t('Search')}
+                                        placeholder="Search"
+                                        className="w-full md:max-w-none"
+                                    />
                                     <div className="grid max-h-72 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
+                                        {currencyOptions.length === 0 && (
+                                            <p className="col-span-full p-2 text-sm text-muted-foreground">
+                                                {t('No options found.')}
+                                            </p>
+                                        )}
                                         {currencyOptions.map((currency) => {
                                             const isSupported =
                                                 localizationForm.data.supported_currencies.includes(

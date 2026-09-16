@@ -56,6 +56,11 @@ export function PropertyLayout({
             href: `/properties/${property.slug}/leases`,
         },
         {
+            key: 'inspections',
+            label: 'Inspections',
+            href: properties.workspace.inspections.url(property),
+        },
+        {
             key: 'listing',
             label: 'Listing',
             href: properties.listing.url(property),
