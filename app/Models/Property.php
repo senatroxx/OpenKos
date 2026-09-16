@@ -162,12 +162,10 @@ class Property extends Model
      */
     public function hasViablePublicOffering(): bool
     {
-        return match ($this->rental_mode) {
-            PropertyRentalMode::Unit => $this->hasViableUnitTypeOffering(),
-            PropertyRentalMode::WholeProperty => $this->hasViableWholePropertyOffering(),
-            PropertyRentalMode::Hybrid => $this->hasViableWholePropertyOffering()
-                || $this->hasViableUnitTypeOffering(),
-        };
+        return static::query()
+            ->whereKey($this)
+            ->viablePublicOffering()
+            ->exists();
     }
 
     public function rentalModeChangeError(PropertyRentalMode $requestedMode): ?string
@@ -206,28 +204,33 @@ class Property extends Model
             ->where('properties.is_published', true)
             ->whereNotNull('properties.public_slug')
             ->where('properties.public_slug', '<>', '')
-            ->where(function (Builder $query): void {
-                $query
-                    ->where(function (Builder $query): void {
-                        $query
-                            ->where('properties.rental_mode', PropertyRentalMode::Unit->value)
-                            ->whereHas('unitTypes', fn (Builder $query) => $query->viablePublicOffering());
-                    })
-                    ->orWhere(function (Builder $query): void {
-                        $query
-                            ->where('properties.rental_mode', PropertyRentalMode::WholeProperty->value)
-                            ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true));
-                    })
-                    ->orWhere(function (Builder $query): void {
-                        $query
-                            ->where('properties.rental_mode', PropertyRentalMode::Hybrid->value)
-                            ->where(function (Builder $query): void {
-                                $query
-                                    ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true))
-                                    ->orWhereHas('unitTypes', fn (Builder $query) => $query->viablePublicOffering());
-                            });
-                    });
-            });
+            ->viablePublicOffering();
+    }
+
+    public function scopeViablePublicOffering(Builder $query): void
+    {
+        $query->where(function (Builder $query): void {
+            $query
+                ->where(function (Builder $query): void {
+                    $query
+                        ->where('properties.rental_mode', PropertyRentalMode::Unit->value)
+                        ->whereHas('unitTypes', fn (Builder $query) => $query->viablePublicOffering());
+                })
+                ->orWhere(function (Builder $query): void {
+                    $query
+                        ->where('properties.rental_mode', PropertyRentalMode::WholeProperty->value)
+                        ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true));
+                })
+                ->orWhere(function (Builder $query): void {
+                    $query
+                        ->where('properties.rental_mode', PropertyRentalMode::Hybrid->value)
+                        ->where(function (Builder $query): void {
+                            $query
+                                ->whereHas('propertyRates', fn (Builder $query) => $query->where('is_active', true))
+                                ->orWhereHas('unitTypes', fn (Builder $query) => $query->viablePublicOffering());
+                        });
+                });
+        });
     }
 
     public function facilities(): BelongsToMany
