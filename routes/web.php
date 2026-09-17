@@ -192,6 +192,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                 Route::prefix('units')->name('units.')->middleware('property-rental-mode:unit_inventory')->group(function () {
                     Route::get('/', [UnitController::class, 'index'])->name('index')->middleware('permission:units.view');
                     Route::post('/', [UnitController::class, 'store'])->name('store')->middleware('permission:units.create');
+                    Route::post('bulk-assign-unit-type', [UnitController::class, 'bulkAssignUnitType'])
+                        ->name('bulk-assign-unit-type')
+                        ->middleware('permission:units.update');
                     Route::get('transfer/import', [DataTransferController::class, 'importPage'])
                         ->defaults('dataset', 'units')
                         ->name('transfer.import')
