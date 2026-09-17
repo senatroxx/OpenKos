@@ -22,8 +22,42 @@ it('lists UnitTypes inside the property workspace', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('properties/unit-types/index')
-            ->has('unitTypes', 1)
-            ->where('unitTypes.0.name', 'Studio')
+            ->has('unitTypes.data', 1)
+            ->where('unitTypes.data.0.name', 'Studio')
+        );
+});
+
+it('searches, filters, paginates, and soft deletes UnitTypes', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $active = UnitType::factory()->for($property)->create(['name' => 'Deluxe Studio']);
+    UnitType::factory()->for($property)->create(['name' => 'Inactive Studio', 'is_active' => false]);
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.index', [$property, 'search' => 'deluxe']))
+        ->assertInertia(fn ($page) => $page
+            ->where('unitTypes.total', 1)
+            ->where('unitTypes.data.0.id', $active->id)
+        );
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.index', [$property, 'status' => 'inactive']))
+        ->assertInertia(fn ($page) => $page
+            ->where('unitTypes.total', 1)
+            ->where('unitTypes.data.0.name', 'Inactive Studio')
+        );
+
+    $this->actingAs($user)
+        ->delete(route('properties.unit-types.destroy', [$property, $active]))
+        ->assertRedirect(route('properties.unit-types.index', $property));
+
+    expect(UnitType::withTrashed()->find($active->id)?->deleted_at)->not->toBeNull();
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.index', [$property, 'status' => 'deleted']))
+        ->assertInertia(fn ($page) => $page
+            ->where('unitTypes.total', 1)
+            ->where('unitTypes.data.0.id', $active->id)
         );
 });
 
@@ -150,28 +184,6 @@ it('enforces property consistency at the database boundary', function () {
     ]);
 
     expect(fn () => $unit->save())->toThrow(QueryException::class);
-});
-
-it('deactivates without detaching units and blocks new assignments', function () {
-    $user = User::factory()->owner()->create();
-    $property = Property::factory()->create();
-    $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
-    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
-
-    $this->actingAs($user)
-        ->post(route('properties.unit-types.deactivate', [$property, $unitType]))
-        ->assertRedirect();
-
-    expect($unitType->refresh()->is_active)->toBeFalse()
-        ->and($unit->refresh()->unit_type_id)->toBe($unitType->id);
-
-    $this->actingAs($user)
-        ->post(route('properties.units.store', $property), [
-            'name' => 'Unit 102',
-            'capacity' => 1,
-            'unit_type_id' => $unitType->id,
-        ])
-        ->assertSessionHasErrors('unit_type_id');
 });
 
 it('allows an existing Unit to be reassigned away from an inactive UnitType', function () {

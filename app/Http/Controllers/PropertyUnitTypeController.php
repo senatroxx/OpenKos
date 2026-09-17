@@ -12,6 +12,11 @@ use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
 use App\Services\Listings\PublicSlugAllocator;
+use App\Support\DelimitedValues;
+use App\Tables\Column;
+use App\Tables\Filter;
+use App\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,13 +35,33 @@ class PropertyUnitTypeController extends Controller
         $property->unsetRelation('unitTypes');
         $property->unsetRelation('activePropertyRates');
         $property->unsetRelation('facilities');
-        $unitTypes = $property->unitTypes()
+        $statusValues = DelimitedValues::normalize($request->query('status'));
+        $includesDeleted = in_array('deleted', $statusValues, true);
+        $table = Table::make()
+            ->columns([
+                Column::make('name', 'Unit Type')->sortable()->searchable(),
+            ])
+            ->filters([
+                Filter::select('status', 'Status', ['active', 'inactive', 'deleted'])
+                    ->query(function (Builder $query, string $value): void {
+                        if ($value === 'deleted') {
+                            $query->whereNotNull('unit_types.deleted_at');
+                        } elseif ($value === 'inactive') {
+                            $query->whereNull('unit_types.deleted_at')->where('unit_types.is_active', false);
+                        } else {
+                            $query->whereNull('unit_types.deleted_at')->where('unit_types.is_active', true);
+                        }
+                    }),
+            ])
+            ->defaultSort('name');
+        $query = $property->unitTypes()
+            ->when($includesDeleted, fn (Builder $query) => $query->withTrashed())
             ->withCount('units')
-            ->with(['amenities', 'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id')])
-            ->orderBy('name')
-            ->get();
+            ->with(['amenities', 'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id')]);
+        $result = $table->paginate($query, $request, 'unitTypes');
+        $unitTypes = $result['unitTypes'];
 
-        $unitTypes->each(function (UnitType $unitType) use ($property): void {
+        $unitTypes->getCollection()->each(function (UnitType $unitType) use ($property): void {
             $unitType->setAttribute('gallery', $this->gallery($unitType, $property));
             $unitType->unsetRelation('media');
         });
@@ -58,8 +83,8 @@ class PropertyUnitTypeController extends Controller
             ->get(['id', 'name', 'slug', 'icon', 'scope', 'is_active']);
 
         return Inertia::render('properties/unit-types/index', [
+            ...$result,
             'property' => $property,
-            'unitTypes' => $unitTypes,
             'amenities' => $amenities,
             'rentalOptions' => $rentalOptions,
         ]);
@@ -143,28 +168,16 @@ class PropertyUnitTypeController extends Controller
         return back();
     }
 
-    public function deactivate(Property $property, UnitType $unitType): RedirectResponse
+    public function destroy(Property $property, UnitType $unitType): RedirectResponse
     {
-        $this->authorize('update', $unitType);
+        $this->authorize('delete', $unitType);
         abort_unless($unitType->property_id === $property->id, 404);
 
-        $unitType->update(['is_active' => false]);
+        $unitType->delete();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type deactivated.')]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type deleted.')]);
 
-        return back();
-    }
-
-    public function restore(Property $property, UnitType $unitType): RedirectResponse
-    {
-        $this->authorize('update', $unitType);
-        abort_unless($unitType->property_id === $property->id, 404);
-
-        $unitType->update(['is_active' => true]);
-
-        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type activated.')]);
-
-        return back();
+        return to_route('properties.unit-types.index', $property);
     }
 
     /**

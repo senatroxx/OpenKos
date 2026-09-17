@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'property_id',
@@ -29,7 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class UnitType extends Model
 {
     /** @use HasFactory<UnitTypeFactory> */
-    use Auditable, HasFactory, HasMedia, SerializesDatesWithTimezone;
+    use Auditable, HasFactory, HasMedia, SerializesDatesWithTimezone, SoftDeletes;
 
     protected function casts(): array
     {

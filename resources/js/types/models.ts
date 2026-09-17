@@ -272,6 +272,7 @@ export type UnitType = {
     is_published: boolean;
     public_slug: string | null;
     updated_at?: string | null;
+    deleted_at?: string | null;
     amenities?: Amenity[];
     gallery?: GalleryItem[];
     units_count?: number;
@@ -317,6 +318,7 @@ export type ListingUnitType = {
     starting_price: ListingStartingPrice | null;
     status: 'ready' | 'excluded' | 'blocked' | 'inactive';
     reason: string | null;
+    reason_label: string | null;
     action: ListingAction | null;
 };
 

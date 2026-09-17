@@ -126,6 +126,7 @@ final class ListingReadinessChecker
      *     starting_price: array{amount: string, currency: string, billing_interval: int, billing_unit: string, billing_label: string}|null,
      *     status: 'ready'|'excluded'|'blocked'|'inactive',
      *     reason: string|null,
+     *     reason_label: string|null,
      *     action: array{label: string, url: string}|null,
      * }>  $unitTypeCards
      * @return list<array{key: string, message: string, action: array{label: string, url: string}|null}>
@@ -327,26 +328,32 @@ final class ListingReadinessChecker
         if (! $unitType->is_active) {
             $status = 'inactive';
             $reason = 'This Unit Type is inactive.';
+            $reasonLabel = 'Inactive';
             $action = $this->action('Manage Unit Types', route('properties.unit-types.index', $property, absolute: false));
         } elseif ($isViable || (! $isIncluded && $isViableIfIncluded)) {
             $status = $isIncluded ? 'ready' : 'excluded';
             $reason = null;
+            $reasonLabel = null;
             $action = null;
         } elseif ($physicalUnits === 0) {
             $status = 'blocked';
             $reason = 'No Units are assigned to this Unit Type.';
+            $reasonLabel = 'No inventory';
             $action = $this->action('Open Units', route('properties.units.index', $property, absolute: false));
         } elseif ($pricedUnits === 0) {
             $status = 'blocked';
             $reason = 'No active pricing is configured for these Units.';
+            $reasonLabel = 'Pricing missing';
             $action = $this->unitRateAction($property, [$unitType->id]);
         } elseif ($eligiblePublicUnits === 0) {
             $status = 'blocked';
             $reason = 'No eligible Units can support this public offering.';
+            $reasonLabel = 'No eligible inventory';
             $action = $this->action('Open Units', route('properties.units.index', $property, absolute: false));
         } else {
             $status = 'blocked';
             $reason = 'Complete this Unit Type public setup before including it.';
+            $reasonLabel = 'Needs setup';
             $action = $this->action('Manage Unit Types', route('properties.unit-types.index', $property, absolute: false));
         }
 
@@ -362,6 +369,7 @@ final class ListingReadinessChecker
             'starting_price' => $this->startingPrice($unitType),
             'status' => $status,
             'reason' => $reason,
+            'reason_label' => $reasonLabel,
             'action' => $action,
         ];
     }

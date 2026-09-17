@@ -164,9 +164,8 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
 
                     Route::prefix('{unitType}')->group(function () {
                         Route::put('/', [PropertyUnitTypeController::class, 'update'])->name('update')->middleware('permission:properties.update');
+                        Route::delete('/', [PropertyUnitTypeController::class, 'destroy'])->name('destroy')->middleware('permission:properties.update');
                         Route::patch('publication', [PropertyUnitTypeController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
-                        Route::post('deactivate', [PropertyUnitTypeController::class, 'deactivate'])->name('deactivate')->middleware('permission:properties.update');
-                        Route::post('restore', [PropertyUnitTypeController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
 
                         Route::prefix('gallery')->name('gallery.')->group(function () {
                             Route::post('/', [UnitTypeMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');
