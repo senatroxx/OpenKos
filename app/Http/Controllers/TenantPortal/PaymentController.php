@@ -106,7 +106,7 @@ class PaymentController extends TenantPortalController
 
         $paymentQuery = Payment::query()
             ->whereHas('invoice', fn (Builder $query) => $query->where('lease_id', $lease?->id))
-            ->with('invoice.lease.unit.property');
+            ->with('invoice.lease.property', 'invoice.lease.unit');
         $pendingPayments = (clone $paymentQuery)
             ->where('status', PaymentStatus::Pending)
             ->latest('payment_date')
@@ -170,7 +170,7 @@ class PaymentController extends TenantPortalController
 
         $payments = Payment::query()
             ->whereHas('invoice', fn (Builder $query) => $query->where('lease_id', $lease?->id))
-            ->with('invoice.lease.unit.property')
+            ->with('invoice.lease.property', 'invoice.lease.unit')
             ->whereIn('status', [PaymentStatus::Confirmed, PaymentStatus::Cancelled])
             ->latest('payment_date')
             ->latest('id')
@@ -190,7 +190,7 @@ class PaymentController extends TenantPortalController
     ): Response {
         $this->ensureTenantOwnsInvoice($request, $invoice);
 
-        $invoice->load(['lease.unit.property', 'lineItems', 'payments']);
+        $invoice->load(['lease.property', 'lease.unit', 'lineItems', 'payments']);
         $gatewayAttempts = $invoice->paymentAttempts()
             ->latest('id')
             ->get([
@@ -241,8 +241,9 @@ class PaymentController extends TenantPortalController
             'onlinePaymentUnavailableReason' => $onlinePaymentUnavailableReason,
             'lease' => [
                 'reference' => $invoice->lease->reference,
+                'target_type' => $invoice->lease->target_type,
                 'unit_name' => $invoice->lease->unit?->name,
-                'property_name' => $invoice->lease->unit?->property?->name,
+                'property_name' => $invoice->lease->property?->name,
             ],
         ]);
     }
@@ -305,8 +306,9 @@ class PaymentController extends TenantPortalController
 
         $invoice->load([
             'lease.primaryTenant.user',
-            'lease.unit.property.city',
-            'lease.unit.property.region',
+            'lease.property.city',
+            'lease.property.region',
+            'lease.unit',
             'lineItems',
             'payments' => fn ($query) => $query
                 ->where('status', PaymentStatus::Confirmed)

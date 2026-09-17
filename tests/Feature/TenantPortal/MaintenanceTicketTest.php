@@ -4,6 +4,8 @@ use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Models\Lease;
 use App\Models\MaintenanceTicket;
+use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
@@ -107,6 +109,31 @@ test('tenant can submit a maintenance ticket for common area if they have an act
         ->and($ticket->property_id)->toBe($lease->unit->property_id)
         ->and($ticket->unit_id)->toBeNull()
         ->and($ticket->location)->toBe('Lobby');
+});
+
+test('tenant with a whole-property lease can submit property-scoped maintenance', function () {
+    $user = User::factory()->create();
+    $tenant = Tenant::factory()->withUser($user)->create();
+    $property = Property::factory()->create(['rental_mode' => 'whole_property']);
+    $rate = PropertyRate::factory()->for($property)->create();
+    $lease = Lease::factory()->wholeProperty($property)->create([
+        'property_rate_id' => $rate->id,
+        'primary_tenant_id' => $tenant->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('portal.maintenance-tickets.store'), [
+            'title' => 'Roof leak',
+            'location_type' => 'property',
+        ])
+        ->assertRedirect();
+
+    $ticket = MaintenanceTicket::firstOrFail();
+
+    expect($ticket->property_id)->toBe($property->id)
+        ->and($ticket->unit_id)->toBeNull()
+        ->and($ticket->location)->toBeNull()
+        ->and($lease->unit_id)->toBeNull();
 });
 
 test('tenant cannot submit a maintenance ticket without an active lease', function () {

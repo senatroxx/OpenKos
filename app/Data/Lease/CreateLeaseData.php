@@ -19,5 +19,6 @@ final readonly class CreateLeaseData
         public ?string $depositRefundedAt,
         public ?int $rentDueDay,
         public ?string $notes,
+        public ?int $propertyRateId = null,
     ) {}
 }

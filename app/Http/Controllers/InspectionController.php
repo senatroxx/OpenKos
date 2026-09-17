@@ -78,7 +78,7 @@ class InspectionController extends Controller
         $inspection->load([
             'property:id,name,slug,deleted_at',
             'unit:id,name,slug,property_id,deleted_at',
-            'lease:id,reference,unit_id,deleted_at',
+            'lease:id,reference,property_id,unit_id,deleted_at',
             'inspector:id,name',
             'completedBy:id,name',
             'items.media',
@@ -128,9 +128,8 @@ class InspectionController extends Controller
         $this->authorize('view', $lease);
         $this->authorize('create', Inspection::class);
 
-        $lease->loadMissing('unit.property');
-        abort_unless($lease->unit !== null, 422, __('The lease has no unit.'));
-        $createInspection->execute($lease->unit->property, $lease->unit, $lease, $request->validated(), $request->user());
+        $lease->loadMissing('property', 'unit');
+        $createInspection->execute($lease->property, $lease->unit, $lease, $request->validated(), $request->user());
 
         return $this->createdResponse();
     }

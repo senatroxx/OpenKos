@@ -85,7 +85,7 @@ export default function RenewLeaseSheet({
                     <SheetTitle>{t('Renew Lease')}</SheetTitle>
                     <SheetDescription>
                         {lease.primary_tenant?.name ?? t('Tenant')} ·{' '}
-                        {lease.unit?.name}
+                        {lease.unit?.name ?? t('Entire property')}
                     </SheetDescription>
                 </SheetHeader>
 

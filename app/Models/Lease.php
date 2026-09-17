@@ -26,6 +26,7 @@ use LogicException;
 
 #[Fillable([
     'primary_tenant_id',
+    'property_id',
     'unit_id',
     'start_date',
     'end_date',
@@ -36,6 +37,7 @@ use LogicException;
     'billing_strategy',
     'is_custom_price',
     'unit_rate_id',
+    'property_rate_id',
     'deposit_amount',
     'deposit_paid_at',
     'deposit_refund_amount',
@@ -79,17 +81,61 @@ class Lease extends Model
                 $currency = UnitRate::query()->whereKey($lease->unit_rate_id)->value('currency');
             }
 
+            if ($currency === null && $lease->property_rate_id !== null) {
+                $currency = PropertyRate::query()->whereKey($lease->property_rate_id)->value('currency');
+            }
+
             $lease->currency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        });
+
+        static::saving(function (Lease $lease): void {
+            if ($lease->property_id === null) {
+                throw new LogicException('Lease property lineage is required.');
+            }
+
+            if ($lease->unit_id === null) {
+                if ($lease->property_rate_id === null || $lease->unit_rate_id !== null) {
+                    throw new LogicException('Whole-property leases require a property rate and no unit rate.');
+                }
+
+                if (! PropertyRate::query()
+                    ->whereKey($lease->property_rate_id)
+                    ->where('property_id', $lease->property_id)
+                    ->exists()) {
+                    throw new LogicException('The property rate does not belong to the lease property.');
+                }
+
+                return;
+            }
+
+            if ($lease->property_rate_id !== null) {
+                throw new LogicException('Unit leases cannot reference a property rate.');
+            }
+
+            if (! Unit::query()
+                ->whereKey($lease->unit_id)
+                ->where('property_id', $lease->property_id)
+                ->exists()) {
+                throw new LogicException('The unit does not belong to the lease property.');
+            }
+
+            if ($lease->unit_rate_id !== null && ! UnitRate::query()
+                ->whereKey($lease->unit_rate_id)
+                ->where('unit_id', $lease->unit_id)
+                ->exists()) {
+                throw new LogicException('The unit rate does not belong to the lease unit.');
+            }
         });
 
         static::updating(function (Lease $lease): void {
             if ($lease->isDirty('currency')) {
                 throw new LogicException('Lease currency cannot be changed after creation.');
             }
+
         });
     }
 
-    protected $appends = ['monthly_equivalent', 'billing_label'];
+    protected $appends = ['monthly_equivalent', 'billing_label', 'target_type'];
 
     protected function casts(): array
     {
@@ -128,9 +174,19 @@ class Lease extends Model
         return $this->belongsTo(Unit::class);
     }
 
+    public function property(): BelongsTo
+    {
+        return $this->belongsTo(Property::class);
+    }
+
     public function unitRate(): BelongsTo
     {
         return $this->belongsTo(UnitRate::class);
+    }
+
+    public function propertyRate(): BelongsTo
+    {
+        return $this->belongsTo(PropertyRate::class);
     }
 
     public function invoices(): HasMany
@@ -193,6 +249,11 @@ class Lease extends Model
         return app(MoneyConverter::class)->normalizeCurrency($value);
     }
 
+    public function getTargetTypeAttribute(): string
+    {
+        return $this->unit_id === null ? 'whole_property' : 'unit';
+    }
+
     public function getBillingLabelAttribute(): string
     {
         $interval = $this->billing_interval ?? 1;
@@ -213,6 +274,21 @@ class Lease extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('status', LeaseStatus::Active->value);
+    }
+
+    public function scopeUnitTarget(Builder $query): void
+    {
+        $query->whereNotNull('unit_id');
+    }
+
+    public function scopeWholePropertyTarget(Builder $query): void
+    {
+        $query->whereNull('unit_id');
+    }
+
+    public function scopeForProperty(Builder $query, Property|int $property): void
+    {
+        $query->where('property_id', $property instanceof Property ? $property->getKey() : $property);
     }
 
     public function schedule(?int $months = 12): Collection

@@ -4,7 +4,6 @@ namespace App\Business\Dashboard;
 
 use App\Enums\ExpenseStatus;
 use App\Enums\InvoiceStatus;
-use App\Enums\LeaseStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
 use App\Models\Expense;
@@ -99,12 +98,11 @@ class FinancialDashboardCalculator
 
         return Invoice::query()
             ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->join('units', 'units.id', '=', 'leases.unit_id')
-            ->whereIn('units.property_id', $propertyIds)
+            ->whereIn('leases.property_id', $propertyIds)
             ->whereBetween('invoices.period_start', [$start->toDateString(), $end->toDateString()])
             ->whereIn('invoices.status', $this->eligibleInvoiceStatuses())
-            ->selectRaw("units.property_id, invoices.currency, {$month} as month, SUM(invoices.total) as revenue, SUM(invoices.total - invoices.amount_paid) as outstanding_amount")
-            ->groupBy('units.property_id', 'invoices.currency')
+            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total) as revenue, SUM(invoices.total - invoices.amount_paid) as outstanding_amount")
+            ->groupBy('leases.property_id', 'invoices.currency')
             ->groupByRaw($month)
             ->get();
     }
@@ -140,12 +138,11 @@ class FinancialDashboardCalculator
         return Payment::query()
             ->join('invoices', 'invoices.id', '=', 'payments.invoice_id')
             ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->join('units', 'units.id', '=', 'leases.unit_id')
-            ->whereIn('units.property_id', $propertyIds)
+            ->whereIn('leases.property_id', $propertyIds)
             ->where('payments.status', PaymentStatus::Confirmed->value)
             ->whereBetween('payments.payment_date', [$start, $end])
-            ->selectRaw("units.property_id, {$currency} as currency, {$month} as month, SUM(payments.amount) as collected")
-            ->groupBy('units.property_id')
+            ->selectRaw("leases.property_id, {$currency} as currency, {$month} as month, SUM(payments.amount) as collected")
+            ->groupBy('leases.property_id')
             ->groupByRaw($currency)
             ->groupByRaw($month)
             ->get();
@@ -161,13 +158,12 @@ class FinancialDashboardCalculator
             ->join('payments', 'payments.id', '=', 'payment_allocations.payment_id')
             ->join('invoices', 'invoices.id', '=', 'payment_allocations.invoice_id')
             ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->join('units', 'units.id', '=', 'leases.unit_id')
-            ->whereIn('units.property_id', $propertyIds)
+            ->whereIn('leases.property_id', $propertyIds)
             ->where('payments.status', PaymentStatus::Confirmed->value)
             ->whereIn('invoices.status', $this->eligibleInvoiceStatuses())
             ->whereBetween('invoices.period_start', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw('units.property_id, invoices.currency, SUM(payment_allocations.amount) as collected')
-            ->groupBy('units.property_id', 'invoices.currency')
+            ->selectRaw('leases.property_id, invoices.currency, SUM(payment_allocations.amount) as collected')
+            ->groupBy('leases.property_id', 'invoices.currency')
             ->get();
     }
 
@@ -181,12 +177,11 @@ class FinancialDashboardCalculator
 
         return Invoice::query()
             ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->join('units', 'units.id', '=', 'leases.unit_id')
-            ->whereIn('units.property_id', $propertyIds)
+            ->whereIn('leases.property_id', $propertyIds)
             ->whereIn('invoices.status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
             ->whereDate('invoices.due_date', '>=', $now->toDateString())
-            ->selectRaw("units.property_id, invoices.currency, {$month} as month, SUM(invoices.total - invoices.amount_paid) as receivable")
-            ->groupBy('units.property_id', 'invoices.currency')
+            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total - invoices.amount_paid) as receivable")
+            ->groupBy('leases.property_id', 'invoices.currency')
             ->groupByRaw($month)
             ->orderByRaw($month)
             ->get();
@@ -489,7 +484,8 @@ class FinancialDashboardCalculator
                 'units as occupied_units_count' => fn (Builder $query) => $query
                     ->where(function (Builder $query): void {
                         $query->where('status', UnitStatus::Occupied)
-                            ->orWhereHas('leases', fn (Builder $query) => $query->where('status', LeaseStatus::Active->value));
+                            ->orWhereHas('leases', fn (Builder $query) => $query->active())
+                            ->orWhereHas('property.activeWholePropertyLeases');
                     }),
             ])
             ->get(['id', 'name']);

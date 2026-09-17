@@ -11,7 +11,7 @@ class TenantPolicy
     public function view(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 
@@ -23,14 +23,14 @@ class TenantPolicy
     public function update(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 
     public function delete(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 
@@ -42,7 +42,7 @@ class TenantPolicy
     public function invite(User $user, Tenant $tenant): bool
     {
         return $tenant->leases()
-            ->whereHas('unit.property.users', fn ($q) => $q->whereKey($user->id))
+            ->whereHas('property.users', fn ($q) => $q->whereKey($user->id))
             ->exists();
     }
 

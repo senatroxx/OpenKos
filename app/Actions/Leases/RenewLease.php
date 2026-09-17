@@ -31,23 +31,27 @@ class RenewLease
     public function execute(Lease $lease, RenewLeaseData $data): RenewLeaseResult
     {
         return $this->referenceAllocationRetry->run(function () use ($lease, $data) {
-            $unit = Unit::lockForUpdate()->findOrFail($lease->unit_id);
-            $property = Property::query()->lockForUpdate()->findOrFail($unit->property_id);
-
-            abort_unless($property->rental_mode->supportsUnitInventory(), 404);
+            $property = Property::query()->lockForUpdate()->findOrFail($lease->property_id);
+            $unit = $lease->unit_id === null
+                ? null
+                : Unit::query()->lockForUpdate()->findOrFail($lease->unit_id);
 
             $lockedLease = Lease::query()
                 ->whereKey($lease->getKey())
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            abort_unless(
-                (int) $lockedLease->unit_id === $unit->id,
-                422,
-                __('Lease is no longer assigned to this unit.'),
-            );
+            abort_unless((int) $lockedLease->property_id === $property->id, 422, __('Lease is no longer assigned to this property.'));
 
-            if (in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true)) {
+            if ($unit !== null) {
+                abort_unless((int) $lockedLease->unit_id === $unit->id, 422, __('Lease is no longer assigned to this unit.'));
+                abort_unless($property->rental_mode->supportsUnitInventory(), 404);
+            } else {
+                abort_unless($lockedLease->unit_id === null, 422, __('Lease target has changed.'));
+                abort_unless($property->rental_mode->supportsWholePropertyRental(), 404);
+            }
+
+            if ($unit !== null && in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true)) {
                 return RenewLeaseResult::error('This unit is not available for lease.');
             }
 
@@ -67,13 +71,14 @@ class RenewLease
 
             $this->leaseStatusValidator->validate($lockedLease->status, LeaseStatus::Renewed);
 
-            $existingActive = $unit->leases()
-                ->where('status', LeaseStatus::Active->value)
-                ->where('id', '!=', $lockedLease->id)
-                ->exists();
+            $existingActive = $unit !== null
+                ? $unit->leases()->active()->whereKeyNot($lockedLease->id)->exists()
+                : $property->activeLeases()->whereKeyNot($lockedLease->id)->exists();
 
             if ($existingActive) {
-                return RenewLeaseResult::error('Unit already has an active lease.');
+                return RenewLeaseResult::error($unit !== null
+                    ? 'Unit already has an active lease.'
+                    : 'Property already has another active lease.');
             }
 
             if ($lockedLease->end_date === null || $data->endDate->lessThanOrEqualTo($lockedLease->end_date)) {
@@ -95,7 +100,9 @@ class RenewLease
 
             $newEndDate = $data->endDate;
 
-            $newLease = $unit->leases()->create([
+            $newLease = Lease::query()->create([
+                'property_id' => $property->id,
+                'unit_id' => $unit?->id,
                 'previous_lease_id' => $lockedLease->id,
                 'primary_tenant_id' => $lockedLease->primary_tenant_id,
                 'start_date' => $lockedLease->end_date->addDay(),
@@ -110,6 +117,7 @@ class RenewLease
                 'rent_due_day' => $lockedLease->rent_due_day,
                 'is_custom_price' => $lockedLease->is_custom_price,
                 'unit_rate_id' => $lockedLease->unit_rate_id,
+                'property_rate_id' => $lockedLease->property_rate_id,
                 'status' => LeaseStatus::Active,
             ]);
 

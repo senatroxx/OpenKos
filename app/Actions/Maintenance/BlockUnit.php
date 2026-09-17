@@ -2,12 +2,13 @@
 
 namespace App\Actions\Maintenance;
 
-use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Models\UnitRate;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BlockUnit
@@ -18,6 +19,19 @@ class BlockUnit
     public function execute(int $unitId, ?int $moveToUnitId): array
     {
         return DB::transaction(function () use ($unitId, $moveToUnitId): array {
+            $propertyIds = Unit::query()
+                ->whereKey(array_values(array_unique(array_filter([$unitId, $moveToUnitId]))))
+                ->pluck('property_id')
+                ->unique()
+                ->sort()
+                ->values();
+            $lockedProperties = Property::query()
+                ->whereKey($propertyIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
             $unitIds = array_values(array_unique(array_filter([$unitId, $moveToUnitId])));
             sort($unitIds);
 
@@ -35,11 +49,11 @@ class BlockUnit
                 ->all();
 
             $unit = $lockedUnits->get($unitId);
-            $activeLease = $unit->leases()->where('status', LeaseStatus::Active->value)->first();
+            $activeLease = $unit->leases()->active()->lockForUpdate()->first();
 
             if ($activeLease && $moveToUnitId) {
                 abort_unless($lockedUnits->has($moveToUnitId), 404);
-                $this->transferOccupants($unit, $activeLease, $lockedUnits->get($moveToUnitId));
+                $this->transferOccupants($unit, $activeLease, $lockedUnits->get($moveToUnitId), $lockedProperties);
             } else {
                 $unit->update(['status' => UnitStatus::Maintenance]);
             }
@@ -48,23 +62,41 @@ class BlockUnit
         });
     }
 
-    private function transferOccupants(Unit $unit, Lease $activeLease, Unit $targetUnit): void
+    /** @param  Collection<int, Property>  $lockedProperties */
+    private function transferOccupants(Unit $unit, Lease $activeLease, Unit $targetUnit, Collection $lockedProperties): void
     {
         abort_if(in_array($targetUnit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('Target unit is not available for lease.'));
         abort_if($targetUnit->id === $unit->id, 422, __('Cannot move to the same unit.'));
 
-        $targetProperty = Property::query()->lockForUpdate()->findOrFail($targetUnit->property_id);
+        $targetProperty = $lockedProperties->get($targetUnit->property_id);
+        abort_unless($targetProperty, 404);
         abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
 
-        $targetHasLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->exists();
+        $targetHasLease = $targetUnit->leases()->active()->exists();
         abort_if($targetHasLease, 422, __('Target unit already has an active lease.'));
+
+        $matchingRates = $targetUnit->rates()
+            ->where('is_active', true)
+            ->where('billing_interval', $activeLease->billing_interval)
+            ->where('billing_unit', $activeLease->billing_unit)
+            ->lockForUpdate()
+            ->get();
+        $matchingRate = $matchingRates->first(
+            fn (UnitRate $rate): bool => $rate->currency === $activeLease->currency,
+        );
+
+        abort_if(
+            $matchingRates->isNotEmpty() && $matchingRate === null,
+            422,
+            __('The target unit rate currency must match the existing lease currency.'),
+        );
 
         $activeLease->load('tenants');
 
         $activeTenantsCount = DB::table('lease_tenant')
             ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
             ->where('leases.unit_id', $targetUnit->id)
-            ->where('leases.status', LeaseStatus::Active->value)
+            ->whereIn('leases.id', Lease::query()->active()->select('id'))
             ->count();
 
         $incomingCount = $activeLease->tenants->count();
@@ -87,6 +119,8 @@ class BlockUnit
 
         $activeLease->update([
             'unit_id' => $targetUnit->id,
+            'property_id' => $targetProperty->id,
+            'unit_rate_id' => $matchingRate?->id,
             'notes' => $notes,
         ]);
 

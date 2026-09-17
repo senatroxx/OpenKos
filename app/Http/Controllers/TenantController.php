@@ -7,7 +7,6 @@ use App\Actions\Tenants\CreateTenant;
 use App\Actions\Tenants\DisableTenantAccess;
 use App\Actions\Tenants\InviteTenant;
 use App\Data\Lease\CreateLeaseData;
-use App\Enums\LeaseStatus;
 use App\Enums\Permission;
 use App\Enums\TenantDocumentType;
 use App\Http\Requests\Tenant\AssignUnitRequest;
@@ -36,9 +35,9 @@ class TenantController extends Controller
         $tenant->load([
             'user:id,email,email_verified_at,last_login_at,is_active,invited_at',
             'documents.media',
-            'leases' => fn ($q) => $q->where('status', 'active')
-                ->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
-        ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
+            'leases' => fn ($q) => $q->active()
+                ->with(['property', 'unit', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+        ])->loadCount(['leases as active_leases_count' => fn ($q) => $q->active()]);
 
         return Inertia::render('tenants/show', [
             'tenant' => $tenant,
@@ -68,7 +67,7 @@ class TenantController extends Controller
             ->defaultSort('-start_date');
 
         $result = $table->paginate(
-            $tenant->leases()->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            $tenant->leases()->with(['property', 'unit', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
             $request,
             'leases',
         );
@@ -105,7 +104,7 @@ class TenantController extends Controller
 
     private function workspaceTenant(Tenant $tenant): Tenant
     {
-        return $tenant->loadCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')]);
+        return $tenant->loadCount(['leases as active_leases_count' => fn ($q) => $q->active()]);
     }
 
     public function index(Request $request): Response
@@ -142,11 +141,11 @@ class TenantController extends Controller
 
         $query = Tenant::query()
             ->when($statusValues !== [] && in_array('archived', $statusValues, true), fn (Builder $q) => $q->withTrashed())
-            ->with(['user:id,email,email_verified_at,last_login_at,is_active,invited_at', 'documents.media', 'leases' => fn ($q) => $q->where('status', 'active')->with(['unit.property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
-            ->withCount(['leases as active_leases_count' => fn ($q) => $q->where('status', 'active')])
+            ->with(['user:id,email,email_verified_at,last_login_at,is_active,invited_at', 'documents.media', 'leases' => fn ($q) => $q->active()->with(['property', 'unit', 'tenants:id,name,phone', 'primaryTenant:id,name,phone'])])
+            ->withCount(['leases as active_leases_count' => fn ($q) => $q->active()])
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereHas(
                 'leases',
-                fn (Builder $q) => $q->whereHas('unit', fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds)),
+                fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds),
             ));
 
         $result = $table->paginate($query, $request, 'tenants');
@@ -155,7 +154,7 @@ class TenantController extends Controller
             ->with([
                 'property.city',
                 'activeRates',
-                'leases' => fn ($q) => $q->where('status', 'active'),
+                'leases' => fn ($q) => $q->active(),
             ])
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
@@ -329,7 +328,7 @@ class TenantController extends Controller
             // Fixing this would require CreateLease to also lock tenant rows.
             $locked = Tenant::lockForUpdate()->findOrFail($tenant->id);
 
-            if ($locked->leases()->where('status', LeaseStatus::Active)->exists()) {
+            if ($locked->leases()->active()->exists()) {
                 return false;
             }
 

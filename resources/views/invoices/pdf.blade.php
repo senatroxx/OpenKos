@@ -68,7 +68,8 @@
     $formatDateTime = static fn ($date, string $format = 'd M Y, H:i'): string => App\Support\DateTimeFormatter::inDisplayTimezone($date)?->locale($locale)->translatedFormat($format) ?? '-';
     $formatMoney = static fn (string $amount): string => app(App\Services\Payments\MoneyConverter::class)
         ->format($amount, $currency, $locale);
-    $property = $invoice->lease?->unit?->property;
+    $property = $invoice->lease?->property;
+    $target = $invoice->lease?->unit?->name ?? $translate('Entire property');
     $propertyAddress = collect([
         $property?->address,
         $property?->city?->name,
@@ -142,7 +143,7 @@
     @if ($propertyAddress !== '')
         <tr><td class="key">{{ $translate('Address') }}</td><td>{{ $propertyAddress }}</td></tr>
     @endif
-    <tr><td class="key">{{ $translate('Unit') }}</td><td class="value">{{ $invoice->lease?->unit?->name ?? '-' }}</td></tr>
+    <tr><td class="key">{{ $translate('Target') }}</td><td class="value">{{ $target }}</td></tr>
 </table>
 
 <h2>{{ $translate('Line items') }}</h2>

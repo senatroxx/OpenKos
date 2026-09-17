@@ -18,12 +18,12 @@ class LeaseController extends TenantPortalController
         return Inertia::render('tenant-portal/lease/index', [
             'currentLeases' => $tenant->leases()
                 ->active()
-                ->with('unit.property')
+                ->with(['property', 'unit'])
                 ->latest('start_date')
                 ->get(),
             'previousLeases' => $tenant->leases()
                 ->where('status', '!=', LeaseStatus::Active->value)
-                ->with('unit.property')
+                ->with(['property', 'unit'])
                 ->latest('start_date')
                 ->get(),
         ]);
@@ -35,7 +35,8 @@ class LeaseController extends TenantPortalController
         $lease = $this->tenantLease($tenant, $lease);
 
         $lease->load([
-            'unit.property',
+            'property',
+            'unit',
             'unitHistories.fromUnit:id,name',
             'unitHistories.toUnit:id,name',
         ]);

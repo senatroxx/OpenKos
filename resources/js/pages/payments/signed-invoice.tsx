@@ -19,6 +19,7 @@ type PublicInvoice = {
     outstanding: string;
     currency: string;
     context: {
+        target_type: 'unit' | 'whole_property' | null;
         property_name: string | null;
         unit_name: string | null;
         tenant_name: string | null;

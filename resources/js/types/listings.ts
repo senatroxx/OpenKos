@@ -26,7 +26,7 @@ export type PublicStartingPrice = {
 
 export type PublicWholePropertyOffering = {
     type: 'whole_property';
-    availability: 'available_for_inquiry';
+    availability: 'available_for_inquiry' | 'unavailable';
     starting_price: PublicStartingPrice;
     rates: PublicStartingPrice[];
 };

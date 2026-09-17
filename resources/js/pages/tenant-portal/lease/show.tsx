@@ -43,9 +43,12 @@ export default function LeaseWorkspace({ lease }: { lease: Lease }) {
                         <Detail
                             label={t('Unit')}
                             value={
-                                lease.unit
-                                    ? `${lease.unit.name}${lease.unit.property ? ` - ${lease.unit.property.name}` : ''}`
-                                    : '—'
+                                lease.target_type === 'whole_property'
+                                    ? (lease.property?.name ??
+                                      t('Entire property'))
+                                    : lease.unit
+                                      ? `${lease.unit.name}${lease.property ? ` - ${lease.property.name}` : ''}`
+                                      : '—'
                             }
                         />
                         <Detail

@@ -152,6 +152,7 @@ export type Property = {
     units_count?: number;
     occupied_units_count?: number;
     tenants_count?: number;
+    active_property_rates?: PropertyRate[];
     facilities?: Amenity[];
     gallery?: GalleryItem[];
 };
@@ -415,6 +416,7 @@ export type LeaseInfo = {
     end_date: string | null;
     rent_amount: string | null;
     currency: string;
+    target_type?: 'unit' | 'whole_property';
     unit_rate_id?: number | null;
     billing_interval: number;
     billing_unit: string;
@@ -443,6 +445,7 @@ export type Lease = {
     end_date: string | null;
     rent_amount: string | null;
     currency: string;
+    target_type: 'unit' | 'whole_property';
     billing_interval: number;
     billing_unit: string;
     billing_strategy?: string;
@@ -460,6 +463,13 @@ export type Lease = {
     notes: string | null;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;
+    property?: {
+        id: number;
+        name: string;
+        slug: string;
+        rental_mode?: PropertyRentalMode;
+        city?: string | { id: number; name: string } | null;
+    } | null;
     unit: UnitWithProperty | null;
     payments?: Payment[];
     unit_histories?: {
@@ -482,6 +492,7 @@ export type TenantLeaseContextLease = {
     start_date: string;
     end_date: string | null;
     status: string;
+    target_type: 'unit' | 'whole_property';
     unit_name: string | null;
     property_name: string | null;
 };
@@ -494,6 +505,8 @@ export type TenantLeaseContext = {
 export type LeaseData = {
     id: number;
     currency: string;
+    target_type?: 'unit' | 'whole_property';
+    property?: { id: number; name: string } | null;
     deposit_amount: string;
     tenants: TenantInfo[];
     primary_tenant: TenantInfo | null;

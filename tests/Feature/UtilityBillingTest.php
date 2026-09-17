@@ -8,6 +8,7 @@ use App\Enums\InvoiceStatus;
 use App\Models\InvoiceLineItem;
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -40,6 +41,33 @@ function makeUtilityLease(array $overrides = []): Lease
         'status' => 'active',
     ], $overrides));
 }
+
+it('keeps recurring rent on whole-property invoices without unit utility charges', function () {
+    $property = Property::factory()->create(['rental_mode' => 'whole_property']);
+    $rate = PropertyRate::factory()->for($property)->create([
+        'amount' => '2500000',
+        'currency' => 'IDR',
+    ]);
+    $tenant = Tenant::factory()->create();
+    $lease = Lease::factory()->wholeProperty($property)->create([
+        'property_rate_id' => $rate->id,
+        'primary_tenant_id' => $tenant->id,
+        'start_date' => CarbonImmutable::today()->startOfMonth(),
+        'rent_amount' => '2500000',
+        'rent_due_day' => 1,
+        'billing_interval' => 1,
+        'billing_unit' => 'month',
+        'status' => 'active',
+    ]);
+
+    expect(app(GenerateInvoices::class)->execute($lease))->toBeGreaterThan(0);
+
+    $invoice = $lease->invoices()->with('lineItems')->firstOrFail();
+
+    expect($invoice->lineItems)->toHaveCount(1)
+        ->and($invoice->lineItems->first()->type)->toBe('rent')
+        ->and($invoice->total)->toBe('2500000.000');
+});
 
 it('bills only eligible unit readings within partial lease boundaries', function () {
     $leaseEnd = CarbonImmutable::today()->startOfMonth()->addDays(14);

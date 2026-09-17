@@ -72,7 +72,7 @@ class LeaseInvoiceController extends Controller
 
         $this->authorize('view', $lease);
 
-        $invoice->loadMissing('lease.unit');
+        $invoice->loadMissing(['lease.property', 'lease.unit']);
         $invoice->load(['lineItems', 'payments.confirmedBy:id,name', 'payments.proofs.media']);
         $gatewayAttempts = $invoice->paymentAttempts()
             ->latest('id')
@@ -157,8 +157,9 @@ class LeaseInvoiceController extends Controller
 
         $invoice->load([
             'lease.primaryTenant.user',
-            'lease.unit.property.city',
-            'lease.unit.property.region',
+            'lease.property.city',
+            'lease.property.region',
+            'lease.unit',
             'lineItems',
             'payments' => fn ($query) => $query
                 ->where('status', PaymentStatus::Confirmed)

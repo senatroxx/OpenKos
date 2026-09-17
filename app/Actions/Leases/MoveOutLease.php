@@ -44,27 +44,62 @@ class MoveOutLease
     public function execute(Lease $lease, MoveOutLeaseData $data): MoveOutLeaseResult
     {
         return $this->referenceAllocationRetry->run(function () use ($lease, $data) {
-            $unitIds = [$lease->unit_id];
+            $targetUnit = null;
             if ($data->moveToAnotherUnit) {
                 abort_unless($data->targetUnitId !== null, 422, __('Target unit is required.'));
-                $unitIds[] = $data->targetUnitId;
+                $targetUnit = Unit::query()->findOrFail($data->targetUnitId);
             }
 
+            $propertyIds = [$lease->property_id];
+            if ($targetUnit !== null) {
+                $propertyIds[] = $targetUnit->property_id;
+            }
+
+            $lockedProperties = $this->lockProperties($propertyIds);
+            $lockedSourceProperty = $lockedProperties->get($lease->property_id);
+            $lockedTargetProperty = $targetUnit === null
+                ? $lockedSourceProperty
+                : $lockedProperties->get($targetUnit->property_id);
+            $unitIds = array_filter([$lease->unit_id, $targetUnit?->id]);
             $lockedUnits = $this->lockUnits($unitIds);
             $sourceUnit = $lockedUnits->get($lease->unit_id);
             $lockedLease = Lease::query()->lockForUpdate()->findOrFail($lease->id);
 
-            abort_unless($sourceUnit && (int) $lockedLease->unit_id === $sourceUnit->id, 422, __('Lease is no longer assigned to this unit.'));
+            abort_unless($lockedSourceProperty && (int) $lockedLease->property_id === $lockedSourceProperty->id, 422, __('Lease is no longer assigned to this property.'));
 
             if ($data->moveToAnotherUnit) {
-                $targetUnit = $lockedUnits->get($data->targetUnitId);
-                abort_unless($targetUnit, 404);
+                abort_unless($sourceUnit && $lockedLease->unit_id === $sourceUnit->id, 422, __('Lease is no longer assigned to this unit.'));
+                $targetUnit = $lockedUnits->get($targetUnit->id);
+                abort_unless($targetUnit && $lockedTargetProperty, 404);
 
-                return $this->transfer($lockedLease, $sourceUnit, $targetUnit, $data);
+                return $this->transfer($lockedLease, $sourceUnit, $targetUnit, $lockedTargetProperty, $data);
             }
+
+            abort_unless($lockedLease->unit_id === null || ($sourceUnit && $lockedLease->unit_id === $sourceUnit->id), 422, __('Lease target has changed.'));
 
             return $this->terminate($lockedLease, $sourceUnit, $data);
         }, 'leases');
+    }
+
+    /**
+     * @param  array<int, int|null>  $propertyIds
+     * @return Collection<int, Property>
+     */
+    private function lockProperties(array $propertyIds): Collection
+    {
+        $propertyIds = array_values(array_unique(array_filter($propertyIds, fn (?int $propertyId): bool => $propertyId !== null)));
+        sort($propertyIds);
+
+        $properties = Property::query()
+            ->whereKey($propertyIds)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get()
+            ->keyBy('id');
+
+        abort_unless($properties->count() === count($propertyIds), 404);
+
+        return $properties;
     }
 
     /**
@@ -88,10 +123,10 @@ class MoveOutLease
         return $units;
     }
 
-    private function terminate(Lease $lease, Unit $oldUnit, MoveOutLeaseData $data): MoveOutLeaseResult
+    private function terminate(Lease $lease, ?Unit $oldUnit, MoveOutLeaseData $data): MoveOutLeaseResult
     {
         $oldLeaseStatus = $lease->status;
-        $oldSourceStatus = $oldUnit->status;
+        $oldSourceStatus = $oldUnit?->status;
 
         $this->leaseStatusValidator->validate($oldLeaseStatus, LeaseStatus::Terminated);
 
@@ -118,7 +153,7 @@ class MoveOutLease
 
         $this->cancelFutureInvoices($lease);
 
-        if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
+        if ($oldUnit !== null && $oldUnit->leases()->active()->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
         }
 
@@ -127,16 +162,16 @@ class MoveOutLease
             sourceUnit: $oldUnit,
             oldLeaseStatus: $oldLeaseStatus,
             oldSourceStatus: $oldSourceStatus,
-            newSourceStatus: $oldUnit->status,
+            newSourceStatus: $oldUnit?->status,
         );
     }
 
-    private function transfer(Lease $lease, Unit $oldUnit, Unit $targetUnit, MoveOutLeaseData $data): MoveOutLeaseResult
+    private function transfer(Lease $lease, Unit $oldUnit, Unit $targetUnit, Property $targetProperty, MoveOutLeaseData $data): MoveOutLeaseResult
     {
         abort_if($data->depositSettlement !== null, 422, __('A deposit cannot be settled while moving to another unit.'));
 
-        $targetProperty = Property::query()->lockForUpdate()->findOrFail($targetUnit->property_id);
         abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
+        abort_if($targetProperty->hasActiveWholePropertyLease(), 422, __('The target property is covered by an active whole-property lease.'));
 
         $oldLeaseStatus = $lease->status;
         $oldSourceStatus = $oldUnit->status;
@@ -150,7 +185,7 @@ class MoveOutLease
         $lease->load('tenants');
 
         $incomingTenantIds = $lease->tenants->pluck('id')->toArray();
-        $existingLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->first();
+        $existingLease = $targetUnit->leases()->active()->lockForUpdate()->first();
 
         $incomingCount = $existingLease
             ? count(array_diff($incomingTenantIds, $existingLease->tenants()->pluck('tenants.id')->all()))
@@ -178,12 +213,12 @@ class MoveOutLease
 
         $oldUnit->unsetRelation('leases');
 
-        if ($oldUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
+        if ($oldUnit->leases()->active()->doesntExist() && $oldUnit->status !== UnitStatus::Maintenance) {
             $oldUnit->update(['status' => UnitStatus::Available]);
         }
 
         $lease->load('tenants');
-        $existingLease = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->first();
+        $existingLease = $targetUnit->leases()->active()->lockForUpdate()->first();
 
         $newLease = null;
         if ($existingLease) {
@@ -207,6 +242,7 @@ class MoveOutLease
                 ->where('is_active', true)
                 ->where('billing_interval', $lease->billing_interval)
                 ->where('billing_unit', $lease->billing_unit)
+                ->lockForUpdate()
                 ->get();
             $matchingRate = $matchingRates->first(
                 fn ($rate): bool => $rate->currency === $lease->currency,
@@ -232,7 +268,9 @@ class MoveOutLease
                 abort(422, __('The existing lease amount is invalid for its currency.'));
             }
 
-            $newLease = $targetUnit->leases()->create([
+            $newLease = Lease::query()->create([
+                'property_id' => $targetProperty->id,
+                'unit_id' => $targetUnit->id,
                 'primary_tenant_id' => $lease->primary_tenant_id,
                 'start_date' => $data->endDate,
                 'rent_amount' => $rentAmount,
@@ -242,6 +280,7 @@ class MoveOutLease
                 'billing_strategy' => $lease->billing_strategy,
                 'is_custom_price' => $lease->is_custom_price,
                 'unit_rate_id' => $matchingRate?->id,
+                'property_rate_id' => null,
                 'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $lease->deposit_paid_at,
                 'deposit_refund_amount' => $depositRefundAmount,

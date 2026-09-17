@@ -237,6 +237,7 @@ class LeaseSeeder extends Seeder
         $lease = Lease::create([
             'reference' => $assignment['reference'],
             'primary_tenant_id' => $tenantId,
+            'property_id' => $unit->property_id,
             'unit_id' => $unit->id,
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),

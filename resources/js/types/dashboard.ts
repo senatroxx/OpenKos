@@ -123,6 +123,7 @@ export type Stats = {
 export type RentDashboardEntry = {
     id: number;
     tenant_name: string;
+    target_type: 'unit' | 'whole_property';
     unit_name: string;
     property_name: string;
     rent_due_day: number;
@@ -146,6 +147,7 @@ export type NeedsAttentionInvoice = {
     lease_reference: string | null;
     primary_tenant_id: number | null;
     tenant_name: string;
+    target_type: 'unit' | 'whole_property';
     unit_name: string;
     property_name: string;
     reference: string;

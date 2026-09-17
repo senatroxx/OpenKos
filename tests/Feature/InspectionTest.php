@@ -21,11 +21,14 @@ it('creates property, unit, and lease-scoped inspections through shared flows', 
     $property = Property::factory()->create();
     $unit = Unit::factory()->for($property)->create();
     $lease = Lease::factory()->for($unit)->create();
+    $wholeLease = Lease::factory()->wholeProperty($property)->terminated()->create();
     $periodic = InspectionTemplate::factory()->create(['inspection_type' => InspectionType::Periodic]);
     $moveIn = InspectionTemplate::factory()->create(['inspection_type' => InspectionType::MoveIn]);
+    $moveOut = InspectionTemplate::factory()->create(['inspection_type' => InspectionType::MoveOut]);
     InspectionTemplateItem::factory()->for($periodic, 'template')->create(['label' => 'Property item']);
     InspectionTemplateItem::factory()->for($periodic, 'template')->create(['label' => 'Unit item']);
     InspectionTemplateItem::factory()->for($moveIn, 'template')->create(['label' => 'Move-in item']);
+    InspectionTemplateItem::factory()->for($moveOut, 'template')->create(['label' => 'Move-out item']);
 
     $this->actingAs($owner)
         ->post(route('properties.inspections.store', $property), [
@@ -51,9 +54,28 @@ it('creates property, unit, and lease-scoped inspections through shared flows', 
         ])
         ->assertRedirect();
 
+    $this->actingAs($owner)
+        ->post(route('leases.inspections.store', $wholeLease), [
+            'inspection_type' => InspectionType::MoveOut->value,
+            'inspection_template_id' => $moveOut->id,
+            'inspection_date' => '2026-09-14',
+        ])
+        ->assertRedirect();
+
     expect(Inspection::query()->whereNull('unit_id')->whereNull('lease_id')->exists())->toBeTrue()
         ->and(Inspection::query()->where('unit_id', $unit->id)->whereNull('lease_id')->exists())->toBeTrue()
-        ->and(Inspection::query()->where('lease_id', $lease->id)->where('unit_id', $unit->id)->exists())->toBeTrue();
+        ->and(Inspection::query()->where('lease_id', $lease->id)->where('unit_id', $unit->id)->exists())->toBeTrue()
+        ->and(Inspection::query()->where('lease_id', $wholeLease->id)->where('property_id', $property->id)->whereNull('unit_id')->exists())->toBeTrue();
+});
+
+it('keeps whole-property lease inspections on the property lineage', function () {
+    $property = Property::factory()->create();
+    $lease = Lease::factory()->wholeProperty($property)->terminated()->create();
+    $inspection = Inspection::factory()->forLease($lease)->create();
+
+    expect($inspection->property_id)->toBe($property->id)
+        ->and($inspection->unit_id)->toBeNull()
+        ->and($inspection->lease_id)->toBe($lease->id);
 });
 
 it('renders shared history and detail pages', function () {

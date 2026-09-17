@@ -30,6 +30,10 @@ class BillUtilityReadings
                 return 0;
             }
 
+            if ($lockedInvoice->lease->unit_id === null) {
+                return 0;
+            }
+
             $readings = UtilityReading::query()
                 ->with(['meter', 'previousReading', 'correctsReading.invoiceLineItem'])
                 ->whereHas('meter', fn ($query) => $query->where('unit_id', $lockedInvoice->lease->unit_id))

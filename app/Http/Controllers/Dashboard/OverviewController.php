@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Business\Dashboard\OverviewStatsCalculator;
-use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\UnitStatus;
@@ -42,14 +41,17 @@ class OverviewController extends Controller
                 'units as occupied_units_count' => fn (Builder $q) => $q
                     ->where(function (Builder $q) {
                         $q->where('status', UnitStatus::Occupied)
-                            ->orWhereHas('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value));
+                            ->orWhereHas('leases', fn (Builder $q) => $q->active())
+                            ->orWhereHas('property.activeWholePropertyLeases');
                     }),
                 'units as maintenance_units_count' => fn (Builder $q) => $q
                     ->where('status', UnitStatus::Maintenance)
-                    ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)),
+                    ->whereDoesntHave('leases', fn (Builder $q) => $q->active())
+                    ->whereDoesntHave('property.activeWholePropertyLeases'),
                 'units as unavailable_units_count' => fn (Builder $q) => $q
                     ->where('status', UnitStatus::Unavailable)
-                    ->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)),
+                    ->whereDoesntHave('leases', fn (Builder $q) => $q->active())
+                    ->whereDoesntHave('property.activeWholePropertyLeases'),
             ])
             ->orderBy('name')
             ->get(['id', 'name', 'slug']);
@@ -67,10 +69,10 @@ class OverviewController extends Controller
             ->pluck('id');
 
         $accessibleLeases = Lease::query()
-            ->whereHas('unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties));
+            ->whereIn('property_id', $accessibleProperties);
 
         $activeLeases = (clone $accessibleLeases)
-            ->where('status', LeaseStatus::Active->value);
+            ->active();
 
         $invoiceScope = Invoice::query()
             ->whereIn('lease_id', (clone $accessibleLeases)->select('id'));
@@ -96,7 +98,7 @@ class OverviewController extends Controller
 
         $pendingPaymentVerification = Payment::query()
             ->where('status', PaymentStatus::Pending->value)
-            ->whereHas('invoice.lease.unit.property', fn (Builder $q) => $q->whereIn('id', $accessibleProperties))
+            ->whereHas('invoice.lease', fn (Builder $q) => $q->whereIn('property_id', $accessibleProperties))
             ->count();
 
         $attention = [
@@ -155,8 +157,8 @@ class OverviewController extends Controller
 
         $ticketFormUnitQuery = Unit::query()
             ->select(['id', 'slug', 'name', 'property_id', 'status'])
-            ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)])
-            ->with(['leases' => fn ($q) => $q->where('status', LeaseStatus::Active->value)->with('tenants:id,name')])
+            ->withCount(['leases as active_lease_count' => fn (Builder $q) => $q->active()])
+            ->with(['leases' => fn ($q) => $q->active()->with('tenants:id,name')])
             ->addSelect([
                 'has_maintenance_transfer' => LeaseUnitHistory::query()
                     ->selectRaw('1')

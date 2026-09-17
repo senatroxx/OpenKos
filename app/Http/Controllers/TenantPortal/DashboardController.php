@@ -19,7 +19,7 @@ class DashboardController extends TenantPortalController
         $tenant = $this->tenant($request);
         $lease = $tenant->leases()
             ->active()
-            ->with('unit.property')
+            ->with(['property', 'unit'])
             ->latest('start_date')
             ->first();
 
@@ -49,15 +49,16 @@ class DashboardController extends TenantPortalController
             'currency' => $lease->currency,
             'billing_label' => $lease->billing_label,
             'status' => $lease->status->value,
+            'target_type' => $lease->target_type,
+            'property' => $lease->property ? [
+                'id' => $lease->property->id,
+                'name' => $lease->property->name,
+                'address' => $lease->property->address,
+            ] : null,
             'unit' => $lease->unit ? [
                 'id' => $lease->unit->id,
                 'name' => $lease->unit->name,
                 'status' => $lease->unit->status->value,
-                'property' => $lease->unit->property ? [
-                    'id' => $lease->unit->property->id,
-                    'name' => $lease->unit->property->name,
-                    'address' => $lease->unit->property->address,
-                ] : null,
             ] : null,
         ];
     }
@@ -226,8 +227,8 @@ class DashboardController extends TenantPortalController
             'amount' => null,
             'currency' => $lease->currency,
             'reference' => trim(implode(' · ', array_filter([
-                $lease->unit?->name,
-                $lease->unit?->property?->name,
+                $lease->target_type === 'whole_property' ? 'Entire property' : $lease->unit?->name,
+                $lease->property?->name,
             ]))),
         ]]);
 

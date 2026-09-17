@@ -198,16 +198,19 @@ class RentReminder extends Notification implements MailChannelNotification, Shou
         $invoiceLink = $invoiceUrl
             ? __('notifications.rent.view_invoice').': '.$invoiceUrl
             : '';
+        $target = $this->event->lease->unit?->name
+            ?? $this->event->lease->property?->name
+            ?? __('Entire property');
 
         $message = $template
             ? str_replace(
                 [':name', ':unit', ':days', ':amount', ':date', ':invoice_context', ':invoice_link'],
-                [$notifiable->name, $this->event->lease->unit?->name ?? '—', $days, $amount, $date, $invoiceContext, $invoiceLink],
+                [$notifiable->name, $target, $days, $amount, $date, $invoiceContext, $invoiceLink],
                 $template,
             )
             : __("notifications.rent.{$this->event->type->value}", [
                 'name' => $notifiable->name,
-                'unit' => $this->event->lease->unit?->name ?? '—',
+                'unit' => $target,
                 'days' => $days,
                 'amount' => $amount,
                 'date' => $date,

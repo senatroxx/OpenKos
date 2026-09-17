@@ -38,7 +38,7 @@ class SendRentReminders
         $channels = Setting::get('reminder_channels') ?? ['log'];
 
         if ($lease) {
-            $lease->load(['primaryTenant.user', 'unit']);
+            $lease->load(['primaryTenant.user', 'property', 'unit']);
 
             return $this->processLease($lease, $settings, $channels);
         }
@@ -46,7 +46,7 @@ class SendRentReminders
         $sent = 0;
 
         Lease::active()
-            ->with(['primaryTenant.user', 'unit'])
+            ->with(['primaryTenant.user', 'property', 'unit'])
             ->chunkById(
                 self::CHUNK_SIZE,
                 function (Collection $leases) use (&$sent, $settings, $channels): void {

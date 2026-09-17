@@ -16,7 +16,8 @@ final class GenerateInvoicePdf
     {
         $invoice->loadMissing([
             'lease.primaryTenant.user',
-            'lease.unit.property',
+            'lease.property',
+            'lease.unit',
             'lineItems',
             'payments' => fn ($query) => $query
                 ->where('status', 'confirmed')

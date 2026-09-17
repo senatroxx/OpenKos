@@ -26,7 +26,7 @@ class AssignUnitRequest extends FormRequest
                 ->where('is_active', true)
                 ->first()
             : $unit?->defaultActiveRate();
-        $existingLease = $unit?->leases()->where('status', 'active')->first();
+        $existingLease = $unit?->leases()->active()->first();
         $currency = $this->integer('unit_rate_id') > 0
             ? $rate?->currency
             : ($existingLease?->currency ?? $rate?->currency);

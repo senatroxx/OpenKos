@@ -20,9 +20,10 @@ type Lease = {
     rent_amount: string;
     currency: string;
     status: string;
+    target_type: 'unit' | 'whole_property';
+    property: { name: string } | null;
     unit: {
         name: string;
-        property: { name: string } | null;
     } | null;
 };
 
@@ -307,8 +308,9 @@ function ActiveStayCard({
             <CardContent className="space-y-3 px-5">
                 <div className="flex items-start justify-between gap-3">
                     <p className="font-medium">
-                        {lease.unit?.name ?? '—'} ·{' '}
-                        {lease.unit?.property?.name ?? '—'}
+                        {lease.target_type === 'whole_property'
+                            ? lease.property?.name
+                            : `${lease.unit?.name ?? '—'} · ${lease.property?.name ?? '—'}`}
                     </p>
                     <StatusBadge domain="lease" value={lease.status} />
                 </div>

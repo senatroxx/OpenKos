@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\City;
 use App\Models\Property;
@@ -217,7 +216,7 @@ class PropertyAndUnitSeeder extends Seeder
             $unit->restoreQuietly();
         }
 
-        $status = $unit->leases()->where('status', LeaseStatus::Active->value)->exists()
+        $status = $unit->leases()->active()->exists()
             ? UnitStatus::Occupied
             : UnitStatus::Available;
 

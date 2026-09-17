@@ -309,7 +309,9 @@ final class PublicListingController extends Controller
 
         return [
             'type' => PropertyRentalMode::WholeProperty->value,
-            'availability' => 'available_for_inquiry',
+            'availability' => $property->rental_mode === PropertyRentalMode::Hybrid
+                ? ($property->activeLeases()->exists() ? 'unavailable' : 'available_for_inquiry')
+                : ($property->activeWholePropertyLeases()->exists() ? 'unavailable' : 'available_for_inquiry'),
             'starting_price' => $this->propertyRatePayload($startingPrice),
             'rates' => $rates
                 ->map(fn (PropertyRate $rate): array => $this->propertyRatePayload($rate))

@@ -177,6 +177,7 @@ it('blocks occupied unit and warns about active lease', function () {
     $tenant = Tenant::factory()->create();
     $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
+        'property_id' => $unit->property_id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',
@@ -204,6 +205,7 @@ it('moves tenant and blocks unit when move_tenant_to_unit_id provided', function
     $tenant = Tenant::factory()->create();
     $lease = $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
+        'property_id' => $unit->property_id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',
@@ -407,6 +409,7 @@ it('keeps the tenant on the same unit when blocking without a move target', func
     $tenant = Tenant::factory()->create();
     $lease = $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
+        'property_id' => $unit->property_id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',
@@ -450,6 +453,7 @@ it('prevents moving into a maintenance unit', function () {
     $tenant = Tenant::factory()->create();
     $lease = $sourceUnit->leases()->create([
         'primary_tenant_id' => $tenant->id,
+        'property_id' => $sourceUnit->property_id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',
@@ -539,6 +543,7 @@ it('preserves maintenance status on lease termination', function () {
     $tenant = Tenant::factory()->create();
     $lease = $unit->leases()->create([
         'primary_tenant_id' => $tenant->id,
+        'property_id' => $unit->property_id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',
@@ -564,6 +569,7 @@ it('moves tenant back when resolving ticket with move_back flag', function () {
     $tenant = Tenant::factory()->create();
     $lease = $targetUnit->leases()->create([
         'primary_tenant_id' => $tenant->id,
+        'property_id' => $targetUnit->property_id,
         'start_date' => now(),
         'rent_amount' => 1_000_000,
         'status' => 'active',

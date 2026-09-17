@@ -30,7 +30,7 @@ class SignedPaymentController extends Controller
         PaymentGatewayManager $gateways,
     ): Response {
         $invoice = $this->invoice($request, $token, $paymentLinks);
-        $invoice->load(['lineItems', 'lease.unit.property', 'lease.primaryTenant']);
+        $invoice->load(['lineItems', 'lease.property', 'lease.unit', 'lease.primaryTenant']);
         $invoice->append(['outstanding', 'display_status']);
 
         $gatewayAttempts = $this->gatewayAttempts($invoice);
@@ -55,7 +55,8 @@ class SignedPaymentController extends Controller
                 'outstanding' => $invoice->outstanding,
                 'currency' => $invoice->currency,
                 'context' => [
-                    'property_name' => $invoice->lease?->unit?->property?->name,
+                    'target_type' => $invoice->lease?->target_type,
+                    'property_name' => $invoice->lease?->property?->name,
                     'unit_name' => $invoice->lease?->unit?->name,
                     'tenant_name' => $this->maskedTenantName($invoice->lease?->primaryTenant?->name),
                 ],

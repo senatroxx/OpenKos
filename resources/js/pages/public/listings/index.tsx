@@ -248,9 +248,20 @@ export default function Index({
                                                             <span aria-hidden="true">
                                                                 ·
                                                             </span>
-                                                            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                                                            <span
+                                                                className={cn(
+                                                                    'font-medium',
+                                                                    wholePropertyOffering.availability ===
+                                                                        'available_for_inquiry'
+                                                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                                                        : 'text-muted-foreground',
+                                                                )}
+                                                            >
                                                                 {t(
-                                                                    'Available for inquiry',
+                                                                    wholePropertyOffering.availability ===
+                                                                        'available_for_inquiry'
+                                                                        ? 'Available for inquiry'
+                                                                        : 'Currently unavailable',
                                                                 )}
                                                             </span>
                                                             {listing.rental_mode ===

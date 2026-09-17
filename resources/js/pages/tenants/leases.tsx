@@ -17,14 +17,17 @@ const columns: TableColumn<Lease>[] = [
         render: (l) => l.reference ?? `#${l.id}`,
     },
     {
-        key: '_unit',
-        label: 'Unit',
-        render: (l) => l.unit?.name ?? '—',
+        key: '_target',
+        label: 'Target',
+        render: (l) =>
+            l.target_type === 'whole_property'
+                ? 'Entire property'
+                : (l.unit?.name ?? '—'),
     },
     {
         key: '_property',
         label: 'Property',
-        render: (l) => l.unit?.property?.name ?? '—',
+        render: (l) => l.property?.name ?? '—',
     },
     {
         key: 'start_date',

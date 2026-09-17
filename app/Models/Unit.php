@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -125,15 +126,24 @@ class Unit extends Model
     {
         $query->whereNull('deleted_at')
             ->whereNotIn('status', [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value])
+            ->whereDoesntHave('property', fn (Builder $q) => $q->whereHas('activeWholePropertyLeases'))
             ->where(function (Builder $q) {
-                $q->whereDoesntHave('leases', fn (Builder $q) => $q->where('status', 'active'))
-                    ->orWhereRaw('capacity > (SELECT COALESCE(COUNT(*), 0) FROM lease_tenant WHERE lease_id IN (SELECT id FROM leases WHERE unit_id = units.id AND status = \'active\'))');
+                $q->whereDoesntHave('leases', fn (Builder $q) => $q->active())
+                    ->orWhere('capacity', '>', function (QueryBuilder $q): void {
+                        $q->from('lease_tenant')
+                            ->selectRaw('COALESCE(COUNT(*), 0)')
+                            ->whereIn('lease_id', Lease::query()
+                                ->active()
+                                ->whereColumn('unit_id', 'units.id')
+                                ->select('id'));
+                    });
             });
     }
 
     public function scopeEligibleForPublicOffering(Builder $query): void
     {
         $query->whereNotIn('status', [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value])
+            ->whereDoesntHave('property', fn (Builder $q) => $q->whereHas('activeWholePropertyLeases'))
             ->whereHas('rates', fn (Builder $query) => $query->where('is_active', true));
     }
 
@@ -142,12 +152,10 @@ class Unit extends Model
         $query->addSelect([
             'occupied_count' => DB::table('lease_tenant')
                 ->selectRaw('COALESCE(COUNT(*), 0)')
-                ->whereIn('lease_id', function (\Illuminate\Database\Query\Builder $q) {
-                    $q->select('id')
-                        ->from('leases')
-                        ->whereColumn('unit_id', 'units.id')
-                        ->where('status', 'active');
-                }),
+                ->whereIn('lease_id', Lease::query()
+                    ->active()
+                    ->whereColumn('unit_id', 'units.id')
+                    ->select('id')),
         ]);
     }
 

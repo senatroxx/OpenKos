@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Property;
+use App\Models\Tenant;
 use App\Tables\Column;
 use App\Tables\Filter;
 use App\Tables\Table;
@@ -29,7 +30,6 @@ class PropertyLeasesController extends Controller
                 Column::make('start_date', 'Start')->sortable(),
                 Column::make('end_date', 'End')->sortable(),
                 Column::make('rent_amount', 'Rent')->sortable(),
-                // leases joins units (hasManyThrough) and both have a status column
                 Column::make('status', 'Status')->sortable(fn (Builder $q, string $direction) => $q->orderBy('leases.status', $direction)),
             ])
             ->filters([
@@ -39,14 +39,17 @@ class PropertyLeasesController extends Controller
             ->defaultSort('-start_date');
 
         $result = $table->paginate(
-            $property->leases()->with(['unit:id,name,property_id', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+            $property->leases()->with(['property:id,name,slug', 'unit:id,name,property_id', 'tenants:id,name,phone', 'primaryTenant:id,name,phone']),
             $request,
             'leases',
         );
 
         return Inertia::render('properties/leases', [
             ...$result,
-            'property' => Property::withWorkspaceStats()->findOrFail($property->id),
+            'property' => Property::withWorkspaceStats()
+                ->with('activePropertyRates')
+                ->findOrFail($property->id),
+            'tenants' => Tenant::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 }

@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Concerns\Auditable;
 use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
-use App\Enums\LeaseStatus;
 use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use App\Services\Payments\MoneyConverter;
@@ -17,9 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -143,6 +140,16 @@ class Property extends Model
             : $this->activePropertyRates()->exists();
     }
 
+    public function hasActiveLease(): bool
+    {
+        return $this->leases()->active()->exists();
+    }
+
+    public function hasActiveWholePropertyLease(): bool
+    {
+        return $this->activeWholePropertyLeases()->exists();
+    }
+
     public function hasViableWholePropertyOffering(): bool
     {
         return $this->rental_mode->supportsWholePropertyRental()
@@ -180,9 +187,16 @@ class Property extends Model
 
         if ($requestedMode === PropertyRentalMode::WholeProperty
             && $this->rental_mode->supportsUnitInventory()
-            && $this->leases()->where('leases.status', LeaseStatus::Active)->exists()
+            && $this->leases()->active()->unitTarget()->exists()
         ) {
             return __('A property with active unit leases cannot change to Whole property.');
+        }
+
+        if ($requestedMode === PropertyRentalMode::Unit
+            && $this->rental_mode->supportsWholePropertyRental()
+            && $this->hasActiveWholePropertyLease()
+        ) {
+            return __('A property with an active whole-property lease cannot change to Unit inventory.');
         }
 
         return null;
@@ -245,9 +259,19 @@ class Property extends Model
         return $this->belongsToMany(User::class)->withTimestamps();
     }
 
-    public function leases(): HasManyThrough
+    public function leases(): HasMany
     {
-        return $this->hasManyThrough(Lease::class, Unit::class);
+        return $this->hasMany(Lease::class);
+    }
+
+    public function activeLeases(): HasMany
+    {
+        return $this->leases()->active();
+    }
+
+    public function activeWholePropertyLeases(): HasMany
+    {
+        return $this->activeLeases()->wholePropertyTarget();
     }
 
     public function scopeSupportsUnitInventory(Builder $query): void
@@ -275,19 +299,19 @@ class Property extends Model
     {
         $query->withCount(['units as occupied_units_count' => fn (Builder $q) => $q->where(function (Builder $q) {
             $q->where('status', UnitStatus::Occupied)
-                ->orWhereHas('leases', fn (Builder $q) => $q->where('status', 'active'));
+                ->orWhereHas('leases', fn (Builder $q) => $q->active())
+                ->orWhereHas('property', fn (Builder $q) => $q->whereHas('activeWholePropertyLeases'));
         })]);
     }
 
     public function scopeWithTenantsCount(Builder $query): void
     {
         $query->addSelect([
-            'tenants_count' => DB::table('leases')
+            'tenants_count' => Lease::query()
                 ->selectRaw('COALESCE(COUNT(DISTINCT lease_tenant.tenant_id), 0)')
                 ->join('lease_tenant', 'lease_tenant.lease_id', '=', 'leases.id')
-                ->join('units', 'units.id', '=', 'leases.unit_id')
-                ->whereColumn('units.property_id', 'properties.id')
-                ->where('leases.status', 'active'),
+                ->whereColumn('leases.property_id', 'properties.id')
+                ->active(),
         ]);
     }
 

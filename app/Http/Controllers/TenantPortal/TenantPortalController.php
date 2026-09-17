@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\TenantPortal;
 
+use App\Enums\LeaseStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Lease;
 use App\Models\Tenant;
@@ -25,7 +26,7 @@ abstract class TenantPortalController extends Controller
     protected function leaseContext(Request $request, Tenant $tenant): array
     {
         $leases = $tenant->leases()
-            ->with('unit.property')
+            ->with(['property', 'unit'])
             ->orderByDesc('status')
             ->latest('start_date')
             ->get();
@@ -33,7 +34,7 @@ abstract class TenantPortalController extends Controller
 
         $selectedLease = $leaseId
             ? $leases->firstWhere('id', $leaseId)
-            : $leases->firstWhere('status.value', 'active') ?? $leases->first();
+            : $leases->firstWhere('status', LeaseStatus::Active) ?? $leases->first();
 
         if ($leaseId) {
             abort_unless($selectedLease, 404);
@@ -67,8 +68,9 @@ abstract class TenantPortalController extends Controller
             'start_date' => $lease->start_date->toDateString(),
             'end_date' => $lease->end_date?->toDateString(),
             'status' => $lease->status->value,
+            'target_type' => $lease->target_type,
             'unit_name' => $lease->unit?->name,
-            'property_name' => $lease->unit?->property?->name,
+            'property_name' => $lease->property?->name,
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\TenantPortal;
 
+use App\Enums\LeaseStatus;
 use App\Enums\MaintenancePriority;
 use App\Enums\MaintenanceStatus;
 use App\Events\Maintenance\MaintenanceTicketCreated;
@@ -25,7 +26,9 @@ class MaintenanceTicketController extends TenantPortalController
         $tenant = $this->tenant($request);
         $leaseContext = $this->leaseContext($request, $tenant);
         $lease = $leaseContext['selectedLease'];
-        $activeLease = $tenant->leases()->active()->with('unit.property')->first();
+        $activeLease = $lease?->status === LeaseStatus::Active
+            ? $lease->loadMissing(['property', 'unit'])
+            : $tenant->leases()->active()->with(['property', 'unit'])->first();
 
         $tickets = MaintenanceTicket::query()
             ->where('created_by', $request->user()->id)
@@ -52,10 +55,11 @@ class MaintenanceTicketController extends TenantPortalController
             ),
             'activeLease' => $activeLease ? [
                 'id' => $activeLease->id,
-                'property_id' => $activeLease->unit->property_id,
-                'property_name' => $activeLease->unit->property?->name,
+                'target_type' => $activeLease->target_type,
+                'property_id' => $activeLease->property_id,
+                'property_name' => $activeLease->property?->name,
                 'unit_id' => $activeLease->unit_id,
-                'unit_name' => $activeLease->unit->name,
+                'unit_name' => $activeLease->unit?->name,
             ] : null,
         ]);
     }
@@ -63,7 +67,7 @@ class MaintenanceTicketController extends TenantPortalController
     public function store(Request $request): RedirectResponse
     {
         $tenant = $this->tenant($request);
-        $lease = $tenant->leases()->active()->with('unit')->first();
+        $lease = $tenant->leases()->active()->with(['property', 'unit'])->first();
 
         if (! $lease) {
             throw ValidationException::withMessages([
@@ -74,16 +78,22 @@ class MaintenanceTicketController extends TenantPortalController
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'location_type' => ['required', 'string', 'in:unit,area'],
+            'location_type' => ['required', 'string', 'in:unit,area,property'],
             'location' => ['nullable', 'required_if:location_type,area', 'string', 'max:255'],
         ]);
+
+        if ($lease->unit_id === null && $validated['location_type'] !== 'property') {
+            throw ValidationException::withMessages([
+                'location_type' => __('Whole-property leases must report maintenance against the property.'),
+            ]);
+        }
 
         $isUnit = $validated['location_type'] === 'unit';
 
         $ticket = $this->referenceAllocationRetry->run(fn (): MaintenanceTicket => MaintenanceTicket::create([
-            'property_id' => $lease->unit->property_id,
+            'property_id' => $lease->property_id,
             'unit_id' => $isUnit ? $lease->unit_id : null,
-            'location' => $isUnit ? null : $validated['location'],
+            'location' => $isUnit || $validated['location_type'] === 'property' ? null : $validated['location'],
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'priority' => MaintenancePriority::Medium->value,

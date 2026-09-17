@@ -47,7 +47,7 @@ class RentController extends Controller
         ];
 
         $invoiceScope = Invoice::query()
-            ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
+            ->whereHas('lease', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds));
 
         $invoiceTable = DB::getQueryGrammar()->wrap((new Invoice)->getTable());
         $paymentTable = DB::getQueryGrammar()->wrap((new Payment)->getTable());
@@ -130,7 +130,7 @@ class RentController extends Controller
         $paymentStats = Payment::query()
             ->where('status', PaymentStatus::Confirmed->value)
             ->whereHas('invoice', fn (Builder $q) => $q
-                ->whereHas('lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
+                ->whereHas('lease', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds)))
             ->selectRaw(
                 'COALESCE(currency, ?) as currency, COALESCE(SUM(amount), 0) as amount, MAX(payment_date) as last_payment_at',
                 [$money->normalizeCurrency()],
@@ -163,7 +163,8 @@ class RentController extends Controller
             ->with([
                 'lease.primaryTenant',
                 'lease.tenants',
-                'lease.unit.property',
+                'lease.property',
+                'lease.unit',
                 'lineItems',
                 'payments' => fn ($q) => $q
                     ->with(['confirmedBy:id,name', 'proofs.media'])
@@ -188,7 +189,9 @@ class RentController extends Controller
                     $q->whereHas('lease.tenants', function (Builder $q) use ($search): void {
                         $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']);
                     })->orWhereHas('lease', function (Builder $q) use ($search): void {
-                        $q->whereHas('unit', function (Builder $q) use ($search): void {
+                        $q->whereHas('property', function (Builder $q) use ($search): void {
+                            $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']);
+                        })->orWhereHas('unit', function (Builder $q) use ($search): void {
                             $q->whereRaw('lower(name) like ?', ['%'.mb_strtolower($search).'%']);
                         });
                     });
@@ -231,7 +234,7 @@ class RentController extends Controller
                         ->all();
                 })
                     ->query(fn (Builder $q, string $value) => $q->whereHas(
-                        'lease.unit',
+                        'lease',
                         fn (Builder $q) => $q->whereIn('property_id', explode(',', $value)),
                     )),
             ])
@@ -249,10 +252,10 @@ class RentController extends Controller
         // --- Recent Payments ---
 
         $recentPayments = Payment::with([
-            'invoice' => fn ($q) => $q->with(['lease.primaryTenant', 'lease.tenants', 'lease.unit.property']),
+            'invoice' => fn ($q) => $q->with(['lease.primaryTenant', 'lease.tenants', 'lease.property', 'lease.unit']),
         ])
             ->where('status', PaymentStatus::Confirmed->value)
-            ->whereHas('invoice.lease.unit', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
+            ->whereHas('invoice.lease', fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds))
             ->latest('payment_date')
             ->limit(10)
             ->get()
@@ -273,11 +276,8 @@ class RentController extends Controller
 
         $recentReminders = ReminderLog::with(['lease.primaryTenant', 'lease.tenants'])
             ->whereHas('lease', fn (Builder $q) => $q
-                ->where('status', 'active')
-                ->whereHas(
-                    'unit',
-                    fn (Builder $q) => $q->whereIn('property_id', $accessiblePropertyIds),
-                ))
+                ->active()
+                ->whereIn('property_id', $accessiblePropertyIds))
             ->latest('sent_at')
             ->limit(10)
             ->get()
@@ -336,8 +336,9 @@ class RentController extends Controller
             'lease_reference' => $lease->reference,
             'primary_tenant_id' => $lease->primary_tenant_id,
             'tenant_name' => $tenants->pluck('name')->join(', ') ?: ($lease->primaryTenant?->name ?? '—'),
+            'target_type' => $lease->target_type,
             'unit_name' => $unit?->name ?? '—',
-            'property_name' => $unit?->property?->name ?? '—',
+            'property_name' => $lease->property?->name ?? '—',
             'reference' => $invoice->reference,
             'period_start' => $invoice->period_start->toDateString(),
             'period_end' => $invoice->period_end->toDateString(),
