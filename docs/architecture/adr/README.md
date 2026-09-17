@@ -15,6 +15,7 @@ Architectural decisions with real trade-offs are recorded here as ADRs, so futur
 | [007](007-invoice-aggregate.md)           | Invoice Aggregate       | Accepted |
 | [008](008-tenant-identity.md)             | Tenant Identity         | Accepted |
 | [009](009-property-lineage-lease-targets.md) | Property-Lineage Lease Targets | Accepted |
+| [010](010-unit-type-pricing-hierarchy.md) | Unit Type Pricing Hierarchy | Accepted |
 
 Future ADR candidates: the Activity Log vs Audit Log split (`activity_logs` written by `RecordActivitySubscriber` from domain events; `audit_logs` written directly by actions like `UpdateSettings`) is a decision worth recording once it stabilizes.
 

@@ -375,6 +375,11 @@ export default function Index({
                             {canManage && (
                                 <>
                                     <DropdownMenuItem
+                                        onSelect={() => router.visit(properties.unitTypes.rates.index.url({ property, unitType }))}
+                                    >
+                                        {t('Manage pricing')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
                                         onSelect={() => {
                                             setEditingUnitType(unitType);
                                             setFormOpen(true);

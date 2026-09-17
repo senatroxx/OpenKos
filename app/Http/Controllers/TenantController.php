@@ -15,6 +15,7 @@ use App\Http\Requests\Tenant\StoreTenantRequest;
 use App\Http\Requests\Tenant\UpdateTenantRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Support\DelimitedValues;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -154,6 +155,7 @@ class TenantController extends Controller
             ->with([
                 'property.city',
                 'activeRates',
+                'unitType.activeRates',
                 'leases' => fn ($q) => $q->active(),
             ])
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
@@ -163,6 +165,14 @@ class TenantController extends Controller
             ->when($assignedPropertyIds !== null, fn (Builder $q) => $q->whereIn('property_id', $assignedPropertyIds))
             ->orderBy('name')
             ->get();
+
+        $availableUnits->each(fn (Unit $unit) => $unit->setAttribute(
+            'effective_rates',
+            app(EffectiveUnitRateResolver::class)->resolve($unit)->map(fn (array $item): array => [
+                ...$item['rate']->toArray(),
+                'source' => $item['source'],
+            ])->values(),
+        ));
 
         return Inertia::render('tenants/index', [
             ...$result,
@@ -191,6 +201,7 @@ class TenantController extends Controller
             billingUnit: $validated['billing_unit'] ?? null,
             billingStrategy: $validated['billing_strategy'] ?? null,
             unitRateId: $validated['unit_rate_id'] ?? null,
+            unitTypeRateId: $validated['unit_type_rate_id'] ?? null,
             depositAmount: $validated['deposit_amount'] ?? null,
             depositPaidAt: $validated['deposit_paid_at'] ?? null,
             depositRefundAmount: null,

@@ -288,6 +288,10 @@ export type UnitRate = {
     is_active?: boolean;
 };
 
+export type EffectiveUnitRate = UnitRate & {
+    source: 'unit' | 'unit_type';
+};
+
 export type ListingAction = {
     label: string;
     url: string;
@@ -355,6 +359,8 @@ export type PropertyRate = {
     effective_until?: string | null;
 };
 
+export type UnitTypeRate = PropertyRate;
+
 export type UtilityReading = {
     id: number;
     reading_kind: 'reading' | 'correction';
@@ -409,6 +415,7 @@ export type Unit = {
     leases?: LeaseInfo[];
     rates?: UnitRate[];
     active_rates?: UnitRate[];
+    effective_rates?: EffectiveUnitRate[];
     tenants?: TenantInfo[];
     deleted_at?: string | null;
 };
@@ -425,6 +432,7 @@ export type AvailableUnit = {
     capacity: number;
     occupied_count: number;
     active_rates?: UnitRate[];
+    effective_rates?: EffectiveUnitRate[];
     leases?: LeaseInfo[];
     property: {
         id: number;

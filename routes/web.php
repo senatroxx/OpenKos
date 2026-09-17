@@ -35,6 +35,7 @@ use App\Http\Controllers\TenantPortal\NotificationController as TenantPortalNoti
 use App\Http\Controllers\TenantPortal\PaymentController as TenantPortalPaymentController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitTypeMediaController;
+use App\Http\Controllers\UnitTypeRateController;
 use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -168,6 +169,8 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                         Route::delete('/', [PropertyUnitTypeController::class, 'destroy'])->name('destroy')->middleware('permission:properties.update');
                         Route::post('restore', [PropertyUnitTypeController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:properties.update');
                         Route::patch('publication', [PropertyUnitTypeController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
+                        Route::get('rates', [UnitTypeRateController::class, 'index'])->name('rates.index')->middleware('permission:properties.view');
+                        Route::put('rates', [UnitTypeRateController::class, 'update'])->name('rates.update')->middleware('permission:properties.update');
 
                         Route::prefix('gallery')->name('gallery.')->group(function () {
                             Route::post('/', [UnitTypeMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');

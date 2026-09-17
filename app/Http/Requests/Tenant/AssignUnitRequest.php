@@ -6,6 +6,7 @@ use App\Enums\BillingStrategy;
 use App\Enums\BillingUnit;
 use App\Models\Unit;
 use App\Models\UnitRate;
+use App\Models\UnitTypeRate;
 use App\Rules\MoneyAmount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -25,7 +26,9 @@ class AssignUnitRequest extends FormRequest
                 ->where('unit_id', $this->input('unit_id'))
                 ->where('is_active', true)
                 ->first()
-            : $unit?->defaultActiveRate();
+            : ($this->integer('unit_type_rate_id') > 0
+                ? UnitTypeRate::query()->whereKey($this->integer('unit_type_rate_id'))->whereHas('unitType', fn ($query) => $query->whereKey($unit?->unit_type_id))->where('is_active', true)->first()
+                : $unit?->defaultActiveRate());
         $existingLease = $unit?->leases()->active()->first();
         $currency = $this->integer('unit_rate_id') > 0
             ? $rate?->currency
@@ -46,6 +49,12 @@ class AssignUnitRequest extends FormRequest
                 'integer',
                 Rule::exists('unit_rates', 'id')
                     ->where('unit_id', $this->input('unit_id'))
+                    ->where('is_active', true),
+            ],
+            'unit_type_rate_id' => [
+                'nullable', 'integer', 'prohibits:unit_rate_id',
+                Rule::exists('unit_type_rates', 'id')
+                    ->where('unit_type_id', $unit?->unit_type_id)
                     ->where('is_active', true),
             ],
             'deposit_amount' => ['nullable', new MoneyAmount($currency)],

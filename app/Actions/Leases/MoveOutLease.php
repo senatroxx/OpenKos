@@ -14,6 +14,7 @@ use App\Models\Property;
 use App\Models\Unit;
 use App\Results\Lease\MoveOutLeaseResult;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\ReferenceAllocationRetry;
 use Illuminate\Support\Collection;
 
@@ -24,6 +25,7 @@ class MoveOutLease
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
+        private EffectiveUnitRateResolver $effectiveUnitRateResolver,
         private ReferenceAllocationRetry $referenceAllocationRetry,
         private SettleLeaseDeposit $settleLeaseDeposit,
     ) {}
@@ -238,18 +240,11 @@ class MoveOutLease
                 }
             }
         } else {
-            $matchingRates = $targetUnit->rates()
-                ->where('is_active', true)
-                ->where('billing_interval', $lease->billing_interval)
-                ->where('billing_unit', $lease->billing_unit)
-                ->lockForUpdate()
-                ->get();
-            $matchingRate = $matchingRates->first(
-                fn ($rate): bool => $rate->currency === $lease->currency,
-            );
+            $matching = $this->effectiveUnitRateResolver->find($targetUnit, $lease->billing_interval, $lease->billing_unit, $lease->currency);
+            $matchingRate = $matching['rate'] ?? null;
 
             abort_if(
-                $matchingRates->isNotEmpty() && $matchingRate === null,
+                $this->effectiveUnitRateResolver->resolve($targetUnit)->isNotEmpty() && $matchingRate === null,
                 422,
                 __('The target unit rate currency must match the existing lease currency.'),
             );
@@ -279,7 +274,8 @@ class MoveOutLease
                 'billing_unit' => $lease->billing_unit ?? 'month',
                 'billing_strategy' => $lease->billing_strategy,
                 'is_custom_price' => $lease->is_custom_price,
-                'unit_rate_id' => $matchingRate?->id,
+                'unit_rate_id' => ($matching['source'] ?? null) === 'unit' ? $matchingRate?->id : null,
+                'unit_type_rate_id' => ($matching['source'] ?? null) === 'unit_type' ? $matchingRate?->id : null,
                 'property_rate_id' => null,
                 'deposit_amount' => $depositAmount,
                 'deposit_paid_at' => $lease->deposit_paid_at,

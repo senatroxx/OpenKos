@@ -12,6 +12,7 @@ use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\Settings\InstallationCurrencySettings;
 use App\Support\DelimitedValues;
 use App\Tables\Column;
@@ -42,7 +43,7 @@ class UnitController extends Controller
         $this->loadWorkspaceUnit($unit);
 
         $availableUnits = $property->units()
-            ->with(['property.city', 'activeRates'])
+            ->with(['property.city', 'activeRates', 'unitType.activeRates'])
             ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
             ->withOccupiedCount()
             ->availableForAssignment()
@@ -83,11 +84,15 @@ class UnitController extends Controller
 
     private function loadWorkspaceUnit(Unit $unit): void
     {
-        $unit->load(['property.city', 'unitType', 'activeRates', 'rates'])
+        $unit->load(['property.city', 'unitType.activeRates', 'activeRates', 'rates'])
             ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->active()])
             ->load(['leases' => fn ($q) => $q->active()
                 ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
             ]);
+        $unit->setAttribute('effective_rates', app(EffectiveUnitRateResolver::class)->resolve($unit)->map(fn (array $item): array => [
+            ...$item['rate']->toArray(),
+            'source' => $item['source'],
+        ])->values());
     }
 
     public function leaseHistory(Request $request, Property $property, Unit $unit): Response
