@@ -1,6 +1,6 @@
-import { defineConfig } from 'playwright/test';
 import os from 'node:os';
 import path from 'node:path';
+import { defineConfig } from 'playwright/test';
 
 const databasePath =
     process.env.OPENKOS_E2E_DATABASE ??

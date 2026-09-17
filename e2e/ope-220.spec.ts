@@ -1,8 +1,8 @@
-import { expect, test as base } from 'playwright/test';
-import type { Locator, Page } from 'playwright/test';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { Locator, Page } from 'playwright/test';
+import { expect, test as base } from 'playwright/test';
 
 type Fixture = {
     owner: { email: string; password: string };
@@ -29,6 +29,8 @@ const test = base.extend<{ pageErrors: string[] }>({
         const errors: string[] = [];
         page.on('pageerror', (error) => errors.push(error.message));
 
+        // Playwright's fixture callback is named `use`, not a React Hook.
+        // eslint-disable-next-line react-hooks/rules-of-hooks
         await use(errors);
 
         expect(errors, `browser page errors: ${errors.join('; ')}`).toEqual([]);
