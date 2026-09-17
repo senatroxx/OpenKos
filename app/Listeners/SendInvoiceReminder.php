@@ -15,7 +15,7 @@ class SendInvoiceReminder
     {
         $notificationLocale = $this->locale->apply();
         $lease = $event->event->lease;
-        $lease->loadMissing('primaryTenant.user');
+        $lease->loadMissing(['primaryTenant.user', 'property', 'unit']);
         $tenant = $lease->primaryTenant;
 
         $channels = Setting::get('reminder_channels') ?? ['log'];

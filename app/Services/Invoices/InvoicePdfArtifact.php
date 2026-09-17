@@ -90,8 +90,9 @@ final class InvoicePdfArtifact
         $invoice = Invoice::query()->findOrFail($invoice->getKey());
         $invoice->load([
             'lease.primaryTenant.user',
-            'lease.unit.property.city',
-            'lease.unit.property.region',
+            'lease.property.city',
+            'lease.property.region',
+            'lease.unit',
             'lineItems',
             'payments' => fn ($query) => $query
                 ->where('status', 'confirmed')
@@ -112,12 +113,13 @@ final class InvoicePdfArtifact
                 'currency',
             ]),
             'lease' => $this->attributes($invoice->lease, ['id', 'reference']),
+            'target_type' => $invoice->lease?->target_type,
             'unit' => $this->attributes($invoice->lease?->unit, ['id', 'name']),
-            'property' => $this->attributes($invoice->lease?->unit?->property, [
+            'property' => $this->attributes($invoice->lease?->property, [
                 'id', 'name', 'address', 'postal_code',
             ]),
-            'city' => $this->attributes($invoice->lease?->unit?->property?->city, ['id', 'name']),
-            'region' => $this->attributes($invoice->lease?->unit?->property?->region, ['id', 'name']),
+            'city' => $this->attributes($invoice->lease?->property?->city, ['id', 'name']),
+            'region' => $this->attributes($invoice->lease?->property?->region, ['id', 'name']),
             'tenant' => $this->attributes($invoice->lease?->primaryTenant, ['id', 'name', 'phone']),
             'user' => $this->attributes($invoice->lease?->primaryTenant?->user, ['id', 'email']),
             'line_items' => $invoice->lineItems->map(fn ($item) => $this->attributes($item, [

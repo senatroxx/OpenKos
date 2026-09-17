@@ -148,28 +148,34 @@ export default function Index({
                               lease.tenants[0]?.name
                             : (lease.primary_tenant?.name ?? '\u2014')}
                     </p>
-                    {lease.unit && (
+                    {lease.target_type === 'whole_property' ? (
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                            {supportsUnitInventory(
-                                lease.unit.property?.rental_mode,
-                            ) ? (
-                                <Link
-                                    href={units.index({
-                                        property: lease.unit.property!.slug,
-                                    })}
-                                    onClick={(e: React.MouseEvent) =>
-                                        e.stopPropagation()
-                                    }
-                                    className="text-primary hover:underline"
-                                >
-                                    {lease.unit.name}
-                                </Link>
-                            ) : (
-                                lease.unit.name
-                            )}
-                            {' · '}
-                            {lease.unit.property?.name ?? '\u2014'}
+                            {lease.property?.name ?? t('Entire property')}
                         </p>
+                    ) : (
+                        lease.unit && (
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                {supportsUnitInventory(
+                                    lease.property?.rental_mode,
+                                ) ? (
+                                    <Link
+                                        href={units.index({
+                                            property: lease.property!.slug,
+                                        })}
+                                        onClick={(e: React.MouseEvent) =>
+                                            e.stopPropagation()
+                                        }
+                                        className="text-primary hover:underline"
+                                    >
+                                        {lease.unit.name}
+                                    </Link>
+                                ) : (
+                                    lease.unit.name
+                                )}
+                                {' · '}
+                                {lease.property?.name ?? '\u2014'}
+                            </p>
+                        )
                     )}
                 </div>
             ),

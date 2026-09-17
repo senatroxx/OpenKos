@@ -30,9 +30,10 @@ class RenewLeaseRequest extends FormRequest
     {
         $lease = $this->route('lease');
 
+        $extensionValue = (int) $this->extension_value;
         $extensionMonths = $this->extension_unit === 'years'
-            ? $this->extension_value * 12
-            : $this->extension_value;
+            ? $extensionValue * 12
+            : $extensionValue;
 
         $endDate = CarbonImmutable::parse($lease->end_date)->addMonthsNoOverflow($extensionMonths);
 

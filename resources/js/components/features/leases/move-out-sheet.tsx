@@ -176,7 +176,11 @@ export default function MoveOutSheet({
     const tenantName =
         lease?.primary_tenant?.name ?? lease?.tenants?.[0]?.name ?? 'Unknown';
     const tenantList = lease?.tenants ?? [];
-    const unitLabel = lease?.unit?.name ?? 'Unknown';
+    const unitLabel =
+        lease?.target_type === 'whole_property'
+            ? (lease.property?.name ?? t('Entire property'))
+            : (lease?.unit?.name ?? 'Unknown');
+    const canMoveToAnotherUnit = lease?.target_type !== 'whole_property';
     const isCurrentlyOccupied = Boolean(lease);
 
     if (!isCurrentlyOccupied) {
@@ -429,38 +433,40 @@ export default function MoveOutSheet({
                             </div>
                         )}
 
-                        <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
-                            <input
-                                type="checkbox"
-                                checked={moveToAnotherUnit}
-                                onChange={(e) => {
-                                    setMoveToAnotherUnit(e.target.checked);
+                        {canMoveToAnotherUnit && (
+                            <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={moveToAnotherUnit}
+                                    onChange={(e) => {
+                                        setMoveToAnotherUnit(e.target.checked);
 
-                                    if (e.target.checked) {
-                                        setSettlementEnabled(false);
-                                        setData('settlement', null);
-                                    }
+                                        if (e.target.checked) {
+                                            setSettlementEnabled(false);
+                                            setData('settlement', null);
+                                        }
 
-                                    if (!e.target.checked) {
-                                        setSelectedPropertyId(null);
-                                        setSelectedTargetUnitId(null);
-                                    }
-                                }}
-                                className="mt-0.5 size-4"
-                            />
-                            <div>
-                                <span className="font-medium">
-                                    {t('Moving to another unit?')}
-                                </span>
-                                <p className="text-xs text-muted-foreground">
-                                    {t(
-                                        'Terminate this lease and create a new one in a different unit. Deposit carries forward.',
-                                    )}
-                                </p>
-                            </div>
-                        </label>
+                                        if (!e.target.checked) {
+                                            setSelectedPropertyId(null);
+                                            setSelectedTargetUnitId(null);
+                                        }
+                                    }}
+                                    className="mt-0.5 size-4"
+                                />
+                                <div>
+                                    <span className="font-medium">
+                                        {t('Moving to another unit?')}
+                                    </span>
+                                    <p className="text-xs text-muted-foreground">
+                                        {t(
+                                            'Terminate this lease and create a new one in a different unit. Deposit carries forward.',
+                                        )}
+                                    </p>
+                                </div>
+                            </label>
+                        )}
 
-                        {moveToAnotherUnit && (
+                        {canMoveToAnotherUnit && moveToAnotherUnit && (
                             <div className="space-y-3 rounded-md border p-3">
                                 <div className="grid gap-2">
                                     <Label>{t('Property')}</Label>

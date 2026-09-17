@@ -16,9 +16,9 @@ import DepositSettlementSheet from './deposit-settlement-sheet';
 
 export default function LeaseOverview({ lease }: { lease: Lease }) {
     const [settlementOpen, setSettlementOpen] = useState(false);
-    const unitLabel = lease.unit?.name ?? '—';
-    const propertyName = lease.unit?.property?.name ?? '—';
-    const city = lease.unit?.property?.city;
+    const unitLabel = lease.unit?.name ?? t('Entire property');
+    const propertyName = lease.property?.name ?? '—';
+    const city = lease.property?.city;
     const propertyCity =
         city && typeof city === 'object' ? city.name : (city ?? '');
     const depositSettlement = lease.deposit_settlement;

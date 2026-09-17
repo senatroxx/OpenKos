@@ -12,9 +12,14 @@ use Illuminate\Support\Facades\DB;
 $expected = [
     // RESTRICT — historical business records, block parent force-delete
     'leases' => [
+        'property_id' => 'RESTRICT',
         'unit_id' => 'RESTRICT',
+        'unit_id,property_id' => 'RESTRICT',
         'primary_tenant_id' => 'SET NULL',
         'unit_rate_id' => 'SET NULL',
+        'unit_rate_id,unit_id' => 'RESTRICT',
+        'property_rate_id' => 'RESTRICT',
+        'property_rate_id,property_id' => 'RESTRICT',
         'previous_lease_id' => 'SET NULL',
     ],
     'lease_tenant' => ['lease_id' => 'RESTRICT', 'tenant_id' => 'RESTRICT'],

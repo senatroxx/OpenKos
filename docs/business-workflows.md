@@ -164,7 +164,8 @@ app/
 
 | Workflow            | Controller                                              | Action              | Data                | Result                | Business                                             |
 | ------------------- | ------------------------------------------------------- | ------------------- | ------------------- | --------------------- | ---------------------------------------------------- |
-| Create Lease        | `LeaseController::store()`                              | `CreateLease`       | `CreateLeaseData`   | —                     | `OccupancyCalculator`                                |
+| Create Unit Lease   | `LeaseController::store()`                              | `CreateLease`       | `CreateLeaseData`   | —                     | `OccupancyCalculator`                                |
+| Create Whole-Property Lease | `LeaseController::storeForProperty()`             | `CreateLease`       | `CreateLeaseData`   | —                     | —                                                    |
 | Renew Lease         | `LeaseController::renew()`                              | `RenewLease`        | `RenewLeaseData`    | `RenewLeaseResult`    | `RenewalEligibilityChecker`, `LeaseFinancialChecker` |
 | Move Out / Transfer | `LeaseController::moveOut()`, `LeaseController::move()` | `MoveOutLease`      | `MoveOutLeaseData`  | `MoveOutLeaseResult`  | `OccupancyCalculator`                                |
 | Record Payment      | `PaymentController::store()`                            | `RecordPayment`     | `RecordPaymentData` | `RecordPaymentResult` | —                                                    |
@@ -173,6 +174,13 @@ app/
 | Scheduled Reminders | Console Command                                      | `SendRentReminders` | —                   | —                     | `PaymentReminderScheduler`                           |
 | Invite Tenant       | `TenantController::invite()`                            | `InviteTenant`      | —                   | —                     | —                                                    |
 | Disable Tenant Access | `TenantController::disableAccess()`                   | `DisableTenantAccess` | —                 | —                     | —                                                    |
+
+`CreateLease` is the shared creation workflow for both targets. It locks the
+Property first, then the Unit when creating a Unit Lease, and applies the
+authoritative active-target conflict rule before selecting rates and creating
+the Lease. Whole-property creation uses a PropertyRate and leaves `unit_id`
+null; Unit creation preserves UnitRate and capacity/co-tenancy behavior.
+Renewal uses the same target conflict rule and locking boundary.
 
 ## Invoice-Centric Billing (ADR-007)
 

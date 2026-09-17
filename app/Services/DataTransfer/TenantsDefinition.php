@@ -164,10 +164,7 @@ final class TenantsDefinition extends DatasetDefinition
                 ->where('tenants.is_active', true))
             ->when($assignedPropertyIds !== null, fn (Builder $query) => $query->whereHas(
                 'leases',
-                fn (Builder $leases) => $leases->whereHas(
-                    'unit',
-                    fn (Builder $units) => $units->whereIn('property_id', $assignedPropertyIds),
-                ),
+                fn (Builder $leases) => $leases->whereIn('property_id', $assignedPropertyIds),
             ))
             ->when($status !== [], function (Builder $query) use ($status): void {
                 if (array_diff($status, ['active', 'inactive', 'archived']) !== []) {

@@ -23,6 +23,7 @@ use App\Http\Requests\Lease\MoveLeaseRequest;
 use App\Http\Requests\Lease\MoveOutRequest;
 use App\Http\Requests\Lease\RenewLeaseRequest;
 use App\Http\Requests\Lease\StoreLeaseRequest;
+use App\Http\Requests\Lease\StorePropertyLeaseRequest;
 use App\Http\Requests\Lease\UpdateLeaseRequest;
 use App\Models\Invoice;
 use App\Models\Lease;
@@ -57,7 +58,8 @@ class LeaseController extends Controller
         $lease->load([
             'tenants:id,name,phone',
             'primaryTenant:id,name,phone',
-            'unit.property.city',
+            'property.city',
+            'unit',
             'payments.confirmedBy:id,name',
             'payments.proofs.media',
             'payments.invoice:id,period_start,period_end,reference,status',
@@ -156,7 +158,7 @@ class LeaseController extends Controller
         $unit->load('property.city');
 
         $leases = $unit->leases()
-            ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status', 'depositSettlement.deductions'])
+            ->with(['property', 'tenants:id,name,phone', 'primaryTenant:id,name,phone', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status', 'depositSettlement.deductions'])
             ->withTrashed()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -193,7 +195,7 @@ class LeaseController extends Controller
                 Column::make('tenant_name', 'Tenant')->searchable(function (Builder $q, string $search): void {
                     $q->whereHas('tenants', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
                         ->orWhereHas('unit', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'))
-                        ->orWhereHas('unit.property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
+                        ->orWhereHas('property', fn (Builder $q) => $q->where(DB::raw('lower(name)'), 'like', '%'.mb_strtolower($search).'%'));
                 }),
                 Column::make('unit_name', 'Unit'),
                 Column::make('property_name', 'Property'),
@@ -219,15 +221,12 @@ class LeaseController extends Controller
                     'value' => (string) $p->id,
                     'label' => $p->name,
                 ])->all())
-                    ->query(fn (Builder $q, string $value) => $q->whereHas(
-                        'unit',
-                        fn (Builder $q) => $q->whereIn('property_id', explode(',', $value)),
-                    )),
+                    ->query(fn (Builder $q, string $value) => $q->whereIn('property_id', explode(',', $value))),
             ])
             ->defaultSort('status,-start_date');
 
         $query = Lease::query()
-            ->with(['primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'unit.property:id,slug,name,rental_mode', 'depositSettlement.deductions'])
+            ->with(['property:id,slug,name,rental_mode', 'primaryTenant:id,name,phone', 'tenants:id,name,phone', 'unit:id,slug,name,property_id', 'depositSettlement.deductions'])
             ->addSelect(['payment_status' => Invoice::query()
                 ->selectRaw("CASE WHEN COUNT(*) > 0 THEN 'overdue' ELSE 'paid' END")
                 ->whereColumn('lease_id', 'leases.id')
@@ -239,14 +238,14 @@ class LeaseController extends Controller
                     ->where('payments.status', PaymentStatus::Pending->value),
             ])
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
-                'unit.property.users',
+                'property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ));
 
         $result = $table->paginate($query, $request, 'leases');
 
         $leases = $result['leases'];
-        $leases->loadMissing(['unit.property.city', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status']);
+        $leases->loadMissing(['property.city', 'payments.confirmedBy:id,name', 'payments.proofs.media', 'payments.invoice:id,period_start,period_end,reference,status']);
 
         $availableUnits = Unit::query()
             ->with('property.city')
@@ -263,10 +262,10 @@ class LeaseController extends Controller
 
         $accessibleQuery = fn (Builder $q) => $request->user()->isOwner()
             ? $q
-            : $q->whereHas('unit.property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
+            : $q->whereHas('property.users', fn (Builder $q) => $q->whereKey($request->user()->id));
 
         $activeLeases = Lease::query()
-            ->where('status', LeaseStatus::Active->value)
+            ->active()
             ->when($accessibleQuery)
             ->count();
 
@@ -277,17 +276,17 @@ class LeaseController extends Controller
             ->whereNotIn('status', [PaymentStatus::Cancelled->value])
             ->whereHas('invoice', fn (Builder $q) => $q
                 ->whereBetween('period_start', [$periodStart, $periodEnd])
-                ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery)))
+                ->whereHas('lease', fn (Builder $q) => $q->active()->when($accessibleQuery)))
             ->get(['amount', 'currency']);
 
         $overdueAmount = Invoice::query()
             ->overdue()
-            ->whereHas('lease', fn (Builder $q) => $q->where('status', LeaseStatus::Active->value)->when($accessibleQuery))
+            ->whereHas('lease', fn (Builder $q) => $q->active()->when($accessibleQuery))
             ->get(['total', 'amount_paid', 'currency']);
 
         $pendingPaymentVerification = Payment::query()
             ->where('status', PaymentStatus::Pending->value)
-            ->whereHas('invoice.lease.unit.property', fn (Builder $q) => $request->user()->isOwner()
+            ->whereHas('invoice.lease.property', fn (Builder $q) => $request->user()->isOwner()
                 ? $q
                 : $q->whereHas('users', fn (Builder $q) => $q->whereKey($request->user()->id)))
             ->count();
@@ -352,6 +351,36 @@ class LeaseController extends Controller
         return back();
     }
 
+    public function storeForProperty(StorePropertyLeaseRequest $request, Property $property, CreateLease $action): RedirectResponse
+    {
+        $this->authorize('create', [Lease::class, $property]);
+
+        $lease = $action->execute($property, new CreateLeaseData(
+            tenantIds: $request->tenant_ids,
+            startDate: $request->start_date,
+            endDate: $request->end_date,
+            rentAmount: $request->rent_amount,
+            billingInterval: $request->billing_interval,
+            billingUnit: $request->billing_unit,
+            billingStrategy: $request->billing_strategy,
+            unitRateId: null,
+            depositAmount: $request->deposit_amount,
+            depositPaidAt: $request->deposit_paid_at,
+            depositRefundAmount: $request->deposit_refund_amount,
+            depositRefundedAt: $request->deposit_refunded_at,
+            rentDueDay: $request->rent_due_day,
+            notes: $request->notes,
+            propertyRateId: $request->property_rate_id,
+        ));
+
+        $lease->load('tenants:id,name,phone', 'primaryTenant:id,name,phone');
+        LeaseCreated::dispatch($lease, $lease->tenants->pluck('id')->toArray(), actorId: Auth::id());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Whole-property lease created.')]);
+
+        return back();
+    }
+
     public function update(UpdateLeaseRequest $request, Property $property, Unit $unit, Lease $lease): RedirectResponse
     {
         $this->authorize('update', $lease);
@@ -369,12 +398,13 @@ class LeaseController extends Controller
     {
         $this->authorize('delete', $lease);
 
-        $result = DB::transaction(function () use ($lease, $unit): array {
+        $result = DB::transaction(function () use ($lease, $unit, $property): array {
+            $lockedProperty = Property::query()->lockForUpdate()->findOrFail($property->id);
             $lockedUnit = Unit::query()->lockForUpdate()->findOrFail($unit->id);
             $lockedLease = Lease::query()->lockForUpdate()->findOrFail($lease->id);
             $oldStatus = $lockedLease->status;
 
-            abort_unless((int) $lockedLease->unit_id === $lockedUnit->id, 422, __('Lease is no longer assigned to this unit.'));
+            abort_unless((int) $lockedLease->property_id === $lockedProperty->id && (int) $lockedLease->unit_id === $lockedUnit->id, 422, __('Lease is no longer assigned to this property or unit.'));
             $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Terminated);
 
             $lockedLease->update([
@@ -386,7 +416,7 @@ class LeaseController extends Controller
 
             $lockedUnit->unsetRelation('leases');
 
-            if ($lockedUnit->leases()->where('status', LeaseStatus::Active->value)->doesntExist() && $lockedUnit->status !== UnitStatus::Maintenance) {
+            if ($lockedUnit->leases()->active()->doesntExist() && $lockedUnit->status !== UnitStatus::Maintenance) {
                 $oldUnitStatus = $lockedUnit->status;
                 $lockedUnit->update(['status' => UnitStatus::Available]);
 

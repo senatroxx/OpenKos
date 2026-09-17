@@ -429,6 +429,15 @@ it('publishes whole-property offerings without unit inventory', function () {
             ->where('listings.0.whole_property_offering.starting_price.amount', '15000000.000')
             ->missing('listings.0.inventory')
             ->missing('listings.0.unit_types'));
+
+    Lease::factory()->wholeProperty($property)->create([
+        'property_rate_id' => $property->activePropertyRates()->firstOrFail()->id,
+    ]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.whole_property_offering.availability', 'unavailable'));
 });
 
 it('restores whole-property visibility when an active rate is re-enabled', function () {
@@ -468,7 +477,7 @@ it('exposes hybrid offerings independently', function () {
         'public_slug' => 'studio',
         'is_published' => true,
     ]);
-    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
 
     $this->get(route('public.portal.show', $property->public_slug))
         ->assertOk()
@@ -487,6 +496,14 @@ it('exposes hybrid offerings independently', function () {
         ->assertInertia(fn ($page) => $page
             ->where('listing.whole_property_offering.type', PropertyRentalMode::WholeProperty->value)
             ->where('listing.unit_types.0.slug', $unitType->public_slug));
+
+    Lease::factory()->create(['unit_id' => $unit->id]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.whole_property_offering.availability', 'unavailable')
+            ->where('listing.unit_types.0.inventory.available_units', 0));
 
     $unitType->update(['is_published' => false]);
 

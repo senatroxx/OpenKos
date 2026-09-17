@@ -24,7 +24,7 @@ class ForceSendReminder
     public function execute(Lease $lease): string
     {
         $this->locale->apply();
-        $lease->load(['primaryTenant.user']);
+        $lease->load(['primaryTenant.user', 'property', 'unit']);
         $tenant = $lease->primaryTenant;
 
         $channels = Setting::get('reminder_channels') ?? ['log'];

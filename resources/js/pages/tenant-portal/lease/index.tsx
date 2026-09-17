@@ -66,10 +66,10 @@ function LeaseSection({
                             <div className="flex flex-wrap items-start justify-between gap-3">
                                 <div>
                                     <p className="font-medium">
-                                        {lease.unit?.name ?? t('Unit')}
-                                        {lease.unit?.property
-                                            ? ` · ${lease.unit.property.name}`
-                                            : ''}
+                                        {lease.target_type === 'whole_property'
+                                            ? (lease.property?.name ??
+                                              t('Entire property'))
+                                            : `${lease.unit?.name ?? t('Unit')} · ${lease.property?.name ?? ''}`}
                                     </p>
                                     <p className="text-sm text-muted-foreground">
                                         {formatDate(lease.start_date)} –{' '}

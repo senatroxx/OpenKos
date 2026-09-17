@@ -42,7 +42,10 @@ export default function TenantOverview({
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">
-                                {activeLease.unit?.name ?? t('Unknown Unit')}
+                                {activeLease.target_type === 'whole_property'
+                                    ? t('Entire property')
+                                    : (activeLease.unit?.name ??
+                                      t('Unknown Unit'))}
                             </span>
                             <span className="font-mono text-xs text-muted-foreground">
                                 {activeLease.reference}
@@ -50,7 +53,7 @@ export default function TenantOverview({
                         </div>
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-muted-foreground">
-                                {activeLease.unit?.property?.name ??
+                                {activeLease.property?.name ??
                                     t('Unknown Property')}
                             </span>
                         </div>

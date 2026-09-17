@@ -290,6 +290,7 @@ class LoadTestDatasetSeeder extends Seeder
         $lease->forceFill([
             'reference' => $reference,
             'primary_tenant_id' => $tenant->id,
+            'property_id' => $unit->property_id,
             'unit_id' => $unit->id,
             'start_date' => now()->subMonths(3)->startOfMonth()->addDays(($index - 1) % 10)->toDateString(),
             'end_date' => null,
@@ -343,6 +344,7 @@ class LoadTestDatasetSeeder extends Seeder
             $lease->forceFill([
                 'reference' => $reference,
                 'primary_tenant_id' => $tenant->id,
+                'property_id' => $unit->property_id,
                 'unit_id' => $unit->id,
                 'start_date' => $startDate->toDateString(),
                 'end_date' => $endDate->toDateString(),

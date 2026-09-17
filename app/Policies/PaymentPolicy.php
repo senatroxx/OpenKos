@@ -15,7 +15,7 @@ class PaymentPolicy
             return true;
         }
 
-        return $user->properties->contains($payment->invoice->lease->unit->property_id);
+        return $user->properties->contains('id', $payment->invoice->lease->property_id);
     }
 
     public function create(User $user, Lease $lease): bool
@@ -28,7 +28,7 @@ class PaymentPolicy
             return true;
         }
 
-        return $user->properties->contains($lease->unit->property_id);
+        return $user->properties->contains('id', $lease->property_id);
     }
 
     public function verify(User $user, Payment $payment): bool
@@ -41,6 +41,6 @@ class PaymentPolicy
             return false;
         }
 
-        return $user->isOwner() || $user->properties->contains($payment->invoice->lease->unit->property_id);
+        return $user->isOwner() || $user->properties->contains('id', $payment->invoice->lease->property_id);
     }
 }

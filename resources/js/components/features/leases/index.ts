@@ -4,4 +4,5 @@ export { default as DepositSettlementSheet } from './deposit-settlement-sheet';
 export { default as MoveOutSheet } from './move-out-sheet';
 export { default as MoveUnitSheet } from './move-unit-sheet';
 export { default as RenewLeaseSheet } from './renew-lease-sheet';
+export { default as WholePropertyLeaseSheet } from './whole-property-lease-sheet';
 export { default as LeaseOverview } from './lease-overview';

@@ -9,6 +9,7 @@ use App\Enums\PropertyRentalMode;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
+use App\Models\PropertyRate;
 use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -129,6 +130,68 @@ describe('CRUD', function () {
         expect($lease->deposit_amount)->toBe('1000000.000');
         expect($lease->rent_due_day)->toBe(5);
         expect($lease->status)->toBe(LeaseStatus::Active);
+    });
+
+    it('creates a whole-property lease from a property target', function () {
+        $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Hybrid]);
+        $rate = PropertyRate::factory()->create(['property_id' => $property->id]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.leases.store', $property), [
+                'tenant_ids' => [$tenant->id],
+                'property_rate_id' => $rate->id,
+                'start_date' => '2026-06-01',
+                'rent_due_day' => 5,
+            ])
+            ->assertRedirect();
+
+        $lease = Lease::query()->firstOrFail();
+
+        expect($lease->property_id)->toBe($property->id)
+            ->and($lease->unit_id)->toBeNull()
+            ->and($lease->property_rate_id)->toBe($rate->id)
+            ->and($lease->unit_rate_id)->toBeNull()
+            ->and($lease->target_type)->toBe('whole_property')
+            ->and($lease->rent_amount)->toBe((string) $rate->amount);
+    });
+
+    it('rejects a whole-property lease when the property inventory is occupied', function () {
+        $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Hybrid]);
+        $unit = Unit::factory()->create(['property_id' => $property->id]);
+        $rate = PropertyRate::factory()->create(['property_id' => $property->id]);
+        $user = User::factory()->owner()->create();
+        $tenant = Tenant::factory()->create();
+
+        Lease::factory()->create(['unit_id' => $unit->id]);
+
+        $this->actingAs($user)
+            ->post(route('properties.leases.store', $property), [
+                'tenant_ids' => [$tenant->id],
+                'property_rate_id' => $rate->id,
+                'start_date' => '2026-06-01',
+            ])
+            ->assertUnprocessable();
+    });
+
+    it('keeps whole-property lease snapshots independent from later rate changes', function () {
+        $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::WholeProperty]);
+        $rate = PropertyRate::factory()->for($property)->create([
+            'amount' => '3000000',
+            'currency' => 'IDR',
+        ]);
+        $tenant = Tenant::factory()->create();
+        $lease = Lease::factory()->wholeProperty($property)->create([
+            'property_rate_id' => $rate->id,
+            'primary_tenant_id' => $tenant->id,
+            'rent_amount' => '3000000',
+        ]);
+
+        $rate->update(['amount' => '4500000', 'is_active' => false]);
+
+        expect($lease->refresh()->rent_amount)->toBe('3000000.000')
+            ->and($lease->property_rate_id)->toBe($rate->id);
     });
 
     it('uses unit base price when rent amount is not specified', function () {
@@ -593,6 +656,24 @@ describe('move unit', function () {
             ->and($result->newSourceStatus)->toBe(UnitStatus::Available)
             ->and($result->oldTargetStatus)->toBe(UnitStatus::Available)
             ->and($result->newTargetStatus)->toBe(UnitStatus::Occupied);
+    });
+
+    it('terminates a whole-property lease without changing unit status', function () {
+        $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::WholeProperty]);
+        $unit = Unit::factory()->create(['property_id' => $property->id, 'status' => UnitStatus::Available]);
+        $rate = PropertyRate::factory()->create(['property_id' => $property->id]);
+        $lease = Lease::factory()->wholeProperty($property)->create(['property_rate_id' => $rate->id]);
+
+        $result = app(MoveOutLease::class)->execute($lease, new MoveOutLeaseData(
+            terminationDate: now()->toDateString(),
+            endDate: now()->toDateString(),
+            reason: 'Ended whole-property lease',
+        ));
+
+        expect($result->succeeded())->toBeTrue()
+            ->and($result->sourceUnit)->toBeNull()
+            ->and($lease->fresh()->status)->toBe(LeaseStatus::Terminated)
+            ->and($unit->fresh()->status)->toBe(UnitStatus::Available);
     });
 
     it('rejects moving a lease to its current unit', function () {

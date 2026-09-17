@@ -14,6 +14,7 @@ import type { GatewayPaymentAttempt, Invoice, Payment } from '@/types';
 
 type InvoiceLease = {
     reference: string | null;
+    target_type: 'unit' | 'whole_property';
     unit_name: string | null;
     property_name: string | null;
 };
@@ -76,7 +77,9 @@ export default function InvoiceDetail({
                     </p>
                     <p className="mt-3 text-sm text-muted-foreground">
                         {lease.reference ?? 'Lease'}
-                        {lease.unit_name && ` · ${lease.unit_name}`}
+                        {lease.target_type === 'whole_property'
+                            ? ` · ${t('Entire property')}`
+                            : lease.unit_name && ` · ${lease.unit_name}`}
                         {lease.property_name && ` · ${lease.property_name}`}
                     </p>
                 </header>

@@ -2,13 +2,13 @@
 
 namespace App\Actions\Maintenance;
 
-use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Models\UnitRate;
 use Illuminate\Support\Facades\DB;
 
 class ResolveTicket
@@ -19,7 +19,9 @@ class ResolveTicket
     public function execute(MaintenanceTicket $ticket, bool $moveBack): array
     {
         return DB::transaction(function () use ($ticket, $moveBack): array {
+            $property = Property::query()->lockForUpdate()->findOrFail($ticket->property_id);
             $ticket = MaintenanceTicket::query()->lockForUpdate()->findOrFail($ticket->id);
+            abort_unless((int) $ticket->property_id === $property->id, 422, __('Maintenance ticket property has changed.'));
 
             if (! $ticket->unit_id) {
                 return [];
@@ -70,7 +72,7 @@ class ResolveTicket
                 $this->moveOccupantsBack($ticket, $unit, $lockedUnits->get($transfer->to_unit_id), $transfer);
             }
 
-            $hasActiveLease = $unit->leases()->where('status', LeaseStatus::Active->value)->exists();
+            $hasActiveLease = $unit->leases()->active()->exists();
             $unit->update(['status' => $hasActiveLease ? UnitStatus::Occupied : UnitStatus::Available]);
 
             return $changes;
@@ -79,7 +81,7 @@ class ResolveTicket
 
     private function moveOccupantsBack(MaintenanceTicket $ticket, Unit $unit, Unit $targetUnit, LeaseUnitHistory $transfer): void
     {
-        $movedLease = Lease::where('status', LeaseStatus::Active->value)
+        $movedLease = Lease::query()->active()
             ->where('unit_id', $transfer->to_unit_id)
             ->first();
 
@@ -88,7 +90,7 @@ class ResolveTicket
         }
 
         $targetHasLease = $unit->leases()
-            ->where('status', LeaseStatus::Active->value)
+            ->active()
             ->whereKeyNot($movedLease->id)
             ->exists();
 
@@ -96,8 +98,25 @@ class ResolveTicket
             return;
         }
 
-        $targetProperty = Property::query()->lockForUpdate()->findOrFail($unit->property_id);
+        abort_unless($unit->property_id === $targetUnit->property_id, 422, __('Maintenance transfer crossed properties.'));
+        $targetProperty = Property::query()->whereKey($unit->property_id)->lockForUpdate()->firstOrFail();
         abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
+
+        $matchingRates = $unit->rates()
+            ->where('is_active', true)
+            ->where('billing_interval', $movedLease->billing_interval)
+            ->where('billing_unit', $movedLease->billing_unit)
+            ->lockForUpdate()
+            ->get();
+        $matchingRate = $matchingRates->first(
+            fn (UnitRate $rate): bool => $rate->currency === $movedLease->currency,
+        );
+
+        abort_if(
+            $matchingRates->isNotEmpty() && $matchingRate === null,
+            422,
+            __('The target unit rate currency must match the existing lease currency.'),
+        );
 
         LeaseUnitHistory::create([
             'lease_id' => $movedLease->id,
@@ -115,10 +134,12 @@ class ResolveTicket
 
         $movedLease->update([
             'unit_id' => $unit->id,
+            'property_id' => $targetProperty->id,
+            'unit_rate_id' => $matchingRate?->id,
             'notes' => $notes,
         ]);
 
-        $targetUnitStillOccupied = $targetUnit->leases()->where('status', LeaseStatus::Active->value)->exists();
+        $targetUnitStillOccupied = $targetUnit->leases()->active()->exists();
         $targetUnit->update(['status' => $targetUnitStillOccupied ? UnitStatus::Occupied : UnitStatus::Available]);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Business\Dashboard;
 
 use App\Enums\InvoiceStatus;
-use App\Enums\LeaseStatus;
 use App\Models\Expense;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -18,7 +17,7 @@ class OverviewStatsCalculator
     public function computeFinance(Builder $accessibleLeasesQuery): array
     {
         $activeLeasesQuery = (clone $accessibleLeasesQuery)
-            ->where('status', LeaseStatus::Active->value);
+            ->active();
 
         $monthlyPotential = $this->aggregate(
             (clone $activeLeasesQuery)->get(['rent_amount', 'currency']),

@@ -1,6 +1,6 @@
 # ADR-004: Rental Unit Abstraction
 
-**Status:** Accepted
+**Status:** Superseded by ADR-009
 **Date:** 2026-07-08
 
 ## Context

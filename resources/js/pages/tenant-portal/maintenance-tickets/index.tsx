@@ -23,6 +23,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import { store as storeTicket } from '@/routes/portal/maintenance-tickets';
 
 type Ticket = {
     id: number;
@@ -40,8 +41,9 @@ type ActiveLease = {
     id: number;
     property_id: number;
     property_name: string;
-    unit_id: number;
-    unit_name: string;
+    target_type: 'unit' | 'whole_property';
+    unit_id: number | null;
+    unit_name: string | null;
 };
 
 type Props = {
@@ -149,12 +151,16 @@ function PortalTicketFormSheet({
     onOpenChange: (open: boolean) => void;
     activeLease: ActiveLease;
 }) {
-    const [locationType, setLocationType] = useState<'unit' | 'area'>('unit');
+    const [locationType, setLocationType] = useState<
+        'unit' | 'area' | 'property'
+    >(activeLease.target_type === 'whole_property' ? 'property' : 'unit');
 
     const { data, setData, post, reset, processing, errors } = useForm({
         title: '',
         description: '',
-        location_type: 'unit' as 'unit' | 'area',
+        location_type: (activeLease.target_type === 'whole_property'
+            ? 'property'
+            : 'unit') as 'unit' | 'area' | 'property',
         location: '',
     });
 
@@ -163,13 +169,17 @@ function PortalTicketFormSheet({
 
         if (!next) {
             reset();
-            setLocationType('unit');
+            setLocationType(
+                activeLease.target_type === 'whole_property'
+                    ? 'property'
+                    : 'unit',
+            );
         }
     }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        post('/portal/maintenance-tickets', {
+        post(storeTicket.url(), {
             onSuccess: () => handleOpenChange(false),
         });
     }
@@ -199,7 +209,9 @@ function PortalTicketFormSheet({
                             <div className="flex gap-2">
                                 <Select
                                     value={locationType}
-                                    onValueChange={(v: 'unit' | 'area') => {
+                                    onValueChange={(
+                                        v: 'unit' | 'area' | 'property',
+                                    ) => {
                                         setLocationType(v);
                                         setData('location_type', v);
                                     }}
@@ -208,17 +220,32 @@ function PortalTicketFormSheet({
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="unit">
-                                            {t('Unit')}
-                                        </SelectItem>
-                                        <SelectItem value="area">
-                                            {t('Common Area')}
-                                        </SelectItem>
+                                        {activeLease.target_type === 'unit' && (
+                                            <SelectItem value="unit">
+                                                {t('Unit')}
+                                            </SelectItem>
+                                        )}
+                                        {activeLease.target_type === 'unit' && (
+                                            <SelectItem value="area">
+                                                {t('Common Area')}
+                                            </SelectItem>
+                                        )}
+                                        {activeLease.target_type ===
+                                            'whole_property' && (
+                                            <SelectItem value="property">
+                                                {t('Property')}
+                                            </SelectItem>
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 {locationType === 'unit' ? (
                                     <Input
-                                        value={activeLease.unit_name}
+                                        value={activeLease.unit_name ?? ''}
+                                        disabled
+                                    />
+                                ) : locationType === 'property' ? (
+                                    <Input
+                                        value={activeLease.property_name}
                                         disabled
                                     />
                                 ) : (

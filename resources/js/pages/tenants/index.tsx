@@ -516,6 +516,13 @@ export default function Index({
                         ? {
                               id: tenantMoveOutLease.id,
                               currency: tenantMoveOutLease.currency,
+                              target_type: tenantMoveOutLease.target_type,
+                              property: tenantMoveOutLease.property
+                                  ? {
+                                        id: tenantMoveOutLease.property.id,
+                                        name: tenantMoveOutLease.property.name,
+                                    }
+                                  : null,
                               deposit_amount: tenantMoveOutLease.deposit_amount,
                               tenants: [
                                   {

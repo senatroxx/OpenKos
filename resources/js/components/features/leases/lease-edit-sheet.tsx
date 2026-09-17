@@ -43,7 +43,7 @@ export default function LeaseEditSheet({
 
     const noDeposit = Number.parseFloat(lease?.deposit_amount ?? '0') === 0;
 
-    if (!lease || !lease.unit || !lease.unit.property) {
+    if (!lease || !lease.unit || !lease.property) {
         return null;
     }
 
@@ -51,7 +51,7 @@ export default function LeaseEditSheet({
         e.preventDefault();
         submit(
             leases.update({
-                property: lease!.unit!.property!.slug,
+                property: lease!.property!.slug,
                 unit: lease!.unit!.slug,
                 lease: lease!.id,
             }),
@@ -124,7 +124,7 @@ export default function LeaseEditSheet({
                                         {t('Property')}
                                     </span>
                                     <span className="font-medium">
-                                        {lease.unit?.property?.name ?? '—'}
+                                        {lease.property?.name ?? '—'}
                                     </span>
                                 </div>
                                 <div className="flex items-center justify-between text-sm">

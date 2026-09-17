@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Units\CreateUnit;
-use App\Enums\LeaseStatus;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
@@ -85,8 +84,8 @@ class UnitController extends Controller
     private function loadWorkspaceUnit(Unit $unit): void
     {
         $unit->load(['property.city', 'unitType', 'activeRates', 'rates'])
-            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->where('status', 'active')])
-            ->load(['leases' => fn ($q) => $q->where('status', 'active')
+            ->loadCount(['leases as active_leases' => fn (Builder $q) => $q->active()])
+            ->load(['leases' => fn ($q) => $q->active()
                 ->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
             ]);
     }
@@ -154,10 +153,10 @@ class UnitController extends Controller
         $query = $property->units()
             ->when($includesArchived, fn (Builder $q) => $q->withTrashed())
             ->withCount([
-                'leases as active_leases' => fn (Builder $q) => $q->where('status', 'active'),
+                'leases as active_leases' => fn (Builder $q) => $q->active(),
             ])
             ->with([
-                'leases' => fn ($q) => $q->where('status', 'active')->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
+                'leases' => fn ($q) => $q->active()->with(['tenants:id,name,phone', 'primaryTenant:id,name,phone']),
                 'activeRates',
                 'rates',
                 'unitType',
@@ -172,7 +171,7 @@ class UnitController extends Controller
         $tenantsList = Tenant::where('is_active', true)
             ->whereNull('deleted_at')
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
-                'leases.unit.property.users',
+                'leases.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
             ->orderBy('name')
@@ -336,7 +335,7 @@ class UnitController extends Controller
         $deleted = DB::transaction(function () use ($unit) {
             $locked = Unit::lockForUpdate()->findOrFail($unit->id);
 
-            if (Lease::where('unit_id', $locked->id)->where('status', LeaseStatus::Active)->exists()) {
+            if (Lease::where('unit_id', $locked->id)->active()->exists()) {
                 return false;
             }
 

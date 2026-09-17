@@ -104,8 +104,9 @@ class RentStatsCalculator
         return [
             'id' => $lease->id,
             'tenant_name' => $tenants->pluck('name')->join(', ') ?: ($primaryTenant?->name ?? '—'),
+            'target_type' => $lease->target_type,
             'unit_name' => $unit?->name ?? '—',
-            'property_name' => $unit?->property?->name ?? '—',
+            'property_name' => $lease->property?->name ?? '—',
             'rent_due_day' => $lease->rent_due_day,
             'days_overdue' => $daysOverdue,
             'rent_amount' => (string) $lease->rent_amount,

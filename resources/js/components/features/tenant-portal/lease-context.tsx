@@ -103,7 +103,9 @@ function LeaseContextCard({
                     {t('Current lease')}
                 </p>
                 <p className="mt-1 truncate font-medium">
-                    {lease.unit_name ?? t('Unit')}
+                    {lease.target_type === 'whole_property'
+                        ? t('Entire property')
+                        : (lease.unit_name ?? t('Unit'))}
                     {lease.property_name && ` · ${lease.property_name}`}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -185,7 +187,9 @@ function LeaseOptionGroup({
                         <Link href={hrefForLease(lease.id)}>
                             <span className="min-w-0 flex-1">
                                 <span className="block truncate text-sm font-medium">
-                                    {lease.unit_name ?? t('Unit')}
+                                    {lease.target_type === 'whole_property'
+                                        ? t('Entire property')
+                                        : (lease.unit_name ?? t('Unit'))}
                                     {lease.property_name &&
                                         ` · ${lease.property_name}`}
                                 </span>

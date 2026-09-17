@@ -4,14 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Actions\Properties\CreateProperty;
 use App\Enums\AmenityScope;
-use App\Enums\LeaseStatus;
 use App\Enums\PropertyRentalMode;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\Property\StorePropertyRequest;
 use App\Http\Requests\Property\UpdatePropertyRequest;
 use App\Models\Amenity;
 use App\Models\City;
-use App\Models\Lease;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\PropertyType;
@@ -228,16 +226,23 @@ class PropertyController extends Controller
     {
         $this->authorize('delete', $property);
 
-        if (Lease::whereHas('unit', fn ($q) => $q->withTrashed()->where('property_id', $property->id))
-            ->where('status', LeaseStatus::Active)
-            ->exists()
-        ) {
+        $hasActiveLease = DB::transaction(function () use ($property): bool {
+            $lockedProperty = Property::withTrashed()->lockForUpdate()->findOrFail($property->id);
+
+            if ($lockedProperty->activeLeases()->exists()) {
+                return true;
+            }
+
+            $lockedProperty->update(['is_active' => false]);
+
+            return false;
+        });
+
+        if ($hasActiveLease) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a property with active leases.')]);
 
             return back();
         }
-
-        Property::query()->whereKey($property->id)->update(['is_active' => false]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Property archived.')]);
 

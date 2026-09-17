@@ -71,9 +71,9 @@ export default function LeaseDetailSheet({
         );
     }
 
-    const unitLabel = lease?.unit?.name ?? '—';
-    const propertyName = lease?.unit?.property?.name ?? '—';
-    const city = lease?.unit?.property?.city;
+    const unitLabel = lease?.unit?.name ?? t('Entire property');
+    const propertyName = lease?.property?.name ?? '—';
+    const city = lease?.property?.city;
     const propertyCity =
         city && typeof city === 'object' ? city.name : (city ?? '');
 

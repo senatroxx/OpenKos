@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\LeaseStatus;
 use App\Models\Lease;
 use App\Notifications\TenantPortalNotification;
 use App\Services\Localization\ApplicationLocale;
@@ -23,7 +22,7 @@ class SendLeaseExpirationNotifications extends Command
         $locale->apply();
 
         Lease::query()
-            ->where('status', LeaseStatus::Active)
+            ->active()
             ->whereDate('end_date', today()->addDays(30))
             ->with('primaryTenant')
             ->each(function (Lease $lease) use ($locale): void {

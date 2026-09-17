@@ -117,17 +117,17 @@ New domains should follow the same pattern: pick the layers you need, place file
 ```
 Property (has a type — see below)
   ├── Regions / Cities (location)
+  ├── Whole-property Leases
+  │    ├── Tenants (pivot: lease_tenant)
+  │    └── Invoices → Payments → PaymentProofs
   └── Units
        ├── UnitRates (pricing history)
        ├── LeaseUnitHistory (unit transfer records)
        ├── MaintenanceTickets
-       └── Leases
+       └── Unit Leases
             ├── Tenants (pivot: lease_tenant)
             ├── Invoices
-            │    ├── InvoiceLineItems
-            │    └── Payments
-            │         ├── PaymentAllocations (M:N pivot: payment_id, invoice_id, amount)
-            │         └── PaymentProofs
+            │    └── Payments → PaymentProofs
             └── ReminderLogs
 
 Tenant
@@ -142,6 +142,16 @@ User (identity — backs owner, staff, and tenant accounts)
 ActivityLog (records user-triggered activity across entities)
 AuditLog (records setting changes and sensitive operations)
 ```
+
+Every Lease has direct Property lineage through `leases.property_id`. A Lease
+may additionally target one Unit through `unit_id`; a null Unit means the Lease
+targets the whole Property. See [ADR-009](architecture/adr/009-property-lineage-lease-targets.md).
+
+For hybrid inventory, an active whole-property Lease blocks Unit rental and any
+active Unit Lease blocks a whole-property Lease. Unit-versus-Unit occupancy
+continues to use the existing Unit capacity and co-tenancy rules. Availability
+uses the shared active-Lease semantics and is distinct from Unit operational
+status; whole-property occupancy does not mutate Unit statuses.
 
 ### Property Type
 

@@ -51,7 +51,7 @@ class InspectionFactory extends Factory
     public function forLease(Lease $lease): static
     {
         return $this->state([
-            'property_id' => $lease->unit->property_id,
+            'property_id' => $lease->property_id,
             'unit_id' => $lease->unit_id,
             'lease_id' => $lease->id,
         ]);

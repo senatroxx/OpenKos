@@ -35,10 +35,9 @@ final class CreateInspection
         }
 
         if ($lease !== null) {
-            $lease->loadMissing('unit');
+            $lease->loadMissing('property', 'unit');
 
-            abort_unless($lease->unit !== null, 422, __('The lease has no unit.'));
-            abort_unless($lease->unit->property_id === $property->id, 422, __('The lease does not belong to this property.'));
+            abort_unless($lease->property_id === $property->id, 422, __('The lease does not belong to this property.'));
             abort_unless($unit === null || $unit->id === $lease->unit_id, 422, __('The lease does not belong to this unit.'));
 
             $unit = $lease->unit;

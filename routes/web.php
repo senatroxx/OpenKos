@@ -144,6 +144,7 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     ->name('pricing.update')
                     ->middleware(['permission:properties.update', 'property-rental-mode:property_pricing']);
                 Route::put('/', [PropertyController::class, 'update'])->name('update')->middleware('permission:properties.update');
+                Route::post('leases', [LeaseController::class, 'storeForProperty'])->name('leases.store')->middleware('permission:leases.create');
                 Route::delete('/', [PropertyController::class, 'destroy'])->name('destroy')->middleware('permission:properties.delete');
                 Route::patch('publication', [PropertyController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
                 Route::post('restore', [PropertyController::class, 'restore'])->name('restore')->middleware('permission:properties.update');
