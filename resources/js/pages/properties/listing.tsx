@@ -27,7 +27,9 @@ import type {
     Auth,
     ListingIssue,
     ListingReadiness,
+    PropertyTypeOption,
     Property,
+    Region,
 } from '@/types';
 import { PropertyLayout } from './layout';
 
@@ -35,6 +37,8 @@ type PageProps = {
     property: Property;
     amenities: Amenity[];
     readiness: ListingReadiness;
+    regions: Region[];
+    propertyTypes: PropertyTypeOption[];
 };
 
 function issueAction(issue: ListingIssue) {
@@ -288,8 +292,7 @@ export default function Listing({ property, amenities, readiness }: PageProps) {
                                 }
                                 disabled={
                                     !readiness.is_published &&
-                                    (!readiness.can_publish ||
-                                        property.is_active === false)
+                                    !readiness.can_publish
                                 }
                                 onClick={togglePublication}
                             >

@@ -227,13 +227,19 @@ export default function Index({
             key: 'listing',
             label: 'Listing',
             className: 'align-top whitespace-nowrap',
-            render: (unitType) => (
-                <Badge
-                    variant={unitType.is_published ? 'secondary' : 'outline'}
-                >
-                    {t(unitType.is_published ? 'Listed' : 'Not listed')}
-                </Badge>
-            ),
+            render: (unitType) => {
+                const option = getOption(unitType);
+
+                return (
+                    <Badge
+                        variant={
+                            option?.is_included ? 'secondary' : 'outline'
+                        }
+                    >
+                        {t(option?.is_included ? 'Listed' : 'Not listed')}
+                    </Badge>
+                );
+            },
         },
         {
             key: 'inventory',

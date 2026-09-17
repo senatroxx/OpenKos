@@ -103,10 +103,10 @@ export default function UnitWorkspace({
                             {t('Move Unit')}
                         </DropdownMenuItem>
                     )}
-                    {canDelete && (hasCapacity || activeLease) && (
+                    {canDelete && !activeLease && canUpdate && hasCapacity && (
                         <DropdownMenuSeparator />
                     )}
-                    {canDelete && (
+                    {canDelete && !activeLease && (
                         <DropdownMenuItem
                             variant="destructive"
                             onSelect={() => setDeleteOpen(true)}
