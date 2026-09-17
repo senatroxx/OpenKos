@@ -21,7 +21,7 @@ export function EntityWorkspaceLayout({
     children: ReactNode;
 }) {
     return (
-        <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
+        <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-auto rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <Link

@@ -41,13 +41,13 @@ export function WorkspaceTabs({
         <>
             <PluginRegion name="workspace-tabs-before" />
 
-            <div className="mb-6 border-b">
-                <nav className="-mb-px flex gap-6">
+            <div className="mb-6 overflow-x-auto overflow-y-hidden border-b">
+                <nav className="-mb-px flex min-w-max gap-6">
                     {[...tabs, ...platformTabs].map((tab) => (
                         <Link
                             key={tab.key}
                             href={tab.href}
-                            className={`pb-3 text-sm font-medium transition-colors ${
+                            className={`shrink-0 pb-3 text-sm font-medium transition-colors ${
                                 activeTab === tab.key
                                     ? 'border-b-2 border-primary text-foreground'
                                     : 'text-muted-foreground hover:text-foreground'
