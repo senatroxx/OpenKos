@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Business\Listings\ListingReadinessChecker;
 use App\Enums\AmenityScope;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
@@ -20,11 +21,15 @@ use Inertia\Response;
 
 class PropertyUnitTypeController extends Controller
 {
-    public function index(Request $request, Property $property): Response
+    public function index(Request $request, Property $property, ListingReadinessChecker $readinessChecker): Response
     {
         $this->authorize('view', $property);
 
         $property = Property::withWorkspaceStats()->findOrFail($property->id);
+        $rentalOptions = $readinessChecker->analyze($property)['unit_types'];
+        $property->unsetRelation('unitTypes');
+        $property->unsetRelation('activePropertyRates');
+        $property->unsetRelation('facilities');
         $unitTypes = $property->unitTypes()
             ->withCount('units')
             ->with(['amenities', 'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id')])
@@ -56,6 +61,7 @@ class PropertyUnitTypeController extends Controller
             'property' => $property,
             'unitTypes' => $unitTypes,
             'amenities' => $amenities,
+            'rentalOptions' => $rentalOptions,
         ]);
     }
 

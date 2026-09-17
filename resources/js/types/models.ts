@@ -286,6 +286,60 @@ export type UnitRate = {
     is_active?: boolean;
 };
 
+export type ListingAction = {
+    label: string;
+    url: string;
+};
+
+export type ListingIssue = {
+    key: string;
+    message: string;
+    action: ListingAction | null;
+};
+
+export type ListingStartingPrice = {
+    amount: string;
+    currency: string;
+    billing_interval: number;
+    billing_unit: 'day' | 'week' | 'month' | 'year';
+    billing_label: string;
+};
+
+export type ListingUnitType = {
+    id: number;
+    name: string;
+    is_active: boolean;
+    is_included: boolean;
+    is_viable_if_included: boolean;
+    physical_units: number;
+    available_units: number;
+    has_active_pricing: boolean;
+    starting_price: ListingStartingPrice | null;
+    status: 'ready' | 'excluded' | 'blocked' | 'inactive';
+    reason: string | null;
+    action: ListingAction | null;
+};
+
+export type ListingWholeProperty = {
+    is_listed: boolean;
+    has_active_pricing: boolean;
+    starting_price: ListingStartingPrice | null;
+    reason: string | null;
+    action: ListingAction | null;
+};
+
+export type ListingReadiness = {
+    can_publish: boolean;
+    is_published: boolean;
+    is_publicly_visible: boolean;
+    public_url: string | null;
+    whole_property: ListingWholeProperty | null;
+    unassigned_units_count: number;
+    blockers: ListingIssue[];
+    recommendations: ListingIssue[];
+    unit_types: ListingUnitType[];
+};
+
 export type PropertyRate = {
     id?: number;
     property_id?: number;

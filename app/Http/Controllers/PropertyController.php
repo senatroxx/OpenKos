@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Properties\CreateProperty;
+use App\Business\Listings\ListingReadinessChecker;
 use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
 use App\Enums\PropertyRentalMode;
@@ -42,7 +43,7 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function listing(Property $property): Response
+    public function listing(Property $property, ListingReadinessChecker $readinessChecker): Response
     {
         $this->authorize('view', $property);
 
@@ -51,6 +52,7 @@ class PropertyController extends Controller
                 'facilities',
                 'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id'),
             ])
+            ->withCount(['units as unassigned_units_count' => fn (Builder $query) => $query->whereNull('unit_type_id')])
             ->findOrFail($property->id);
 
         $property->setAttribute('gallery', $property->media->map(fn (Media $media): array => [
@@ -62,7 +64,10 @@ class PropertyController extends Controller
             'original_name' => $media->original_name,
             'mime_type' => $media->mime_type,
         ])->values()->all());
+        $readiness = $readinessChecker->analyze($property);
         $property->unsetRelation('media');
+        $property->unsetRelation('activePropertyRates');
+        $property->unsetRelation('unitTypes');
 
         $facilityIds = $property->facilities->modelKeys();
         $amenities = Amenity::query()
@@ -73,10 +78,18 @@ class PropertyController extends Controller
             })
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'icon', 'scope', 'is_active']);
+        $countryCode = Setting::get('country_code');
+        $regions = Region::where('country_code', $countryCode)
+            ->with('cities')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('properties/listing', [
             'property' => $property,
             'amenities' => $amenities,
+            'regions' => $regions,
+            'propertyTypes' => PropertyType::active()->ordered()->get(['slug', 'label', 'default_rental_mode']),
+            'readiness' => $readiness,
         ]);
     }
 

@@ -6,6 +6,7 @@ use App\Models\UnitType;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -24,6 +25,30 @@ it('lists UnitTypes inside the property workspace', function () {
             ->has('unitTypes', 1)
             ->where('unitTypes.0.name', 'Studio')
         );
+});
+
+it('loads rental option summaries with bounded queries', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['rental_mode' => 'unit']);
+    $unitType = UnitType::factory()->for($property)->create();
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $this->actingAs($user)->get(route('properties.unit-types.index', $property))->assertOk();
+
+    $countQueries = function () use ($property): int {
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $this->get(route('properties.unit-types.index', $property))->assertOk();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
+    };
+    $singleCount = $countQueries();
+    UnitType::factory()->count(5)->sequence(fn ($sequence) => ['name' => 'Query test '.$sequence->index])->for($property)->create()->each(function (UnitType $type) use ($property): void {
+        Unit::factory()->for($property)->create(['unit_type_id' => $type->id]);
+    });
+
+    expect($countQueries())->toBe($singleCount);
 });
 
 it('creates a UnitType with nullable structured fields', function () {

@@ -20,9 +20,13 @@ import type { Amenity, Property } from '@/types';
 export default function PropertyFacilitiesEditor({
     property,
     amenities,
+    compact = false,
+    canManage = true,
 }: {
     property: Property;
     amenities: Amenity[];
+    compact?: boolean;
+    canManage?: boolean;
 }) {
     const [manageOpen, setManageOpen] = useState(false);
     const facilityForm = useForm<{ amenity_ids: number[] }>({
@@ -36,6 +40,15 @@ export default function PropertyFacilitiesEditor({
                 amenity.scope !== 'unit_type' || assignedIds.has(amenity.id),
         )
         .sort((left, right) => left.name.localeCompare(right.name));
+    const summarySource = compact
+        ? assignedAmenities.filter(
+              (amenity) =>
+                  amenity.is_active && amenity.scope !== 'unit_type',
+          )
+        : assignedAmenities;
+    const summaryAmenities = compact
+        ? summarySource.slice(0, 3)
+        : summarySource;
 
     function toggleAmenity(id: number, checked: boolean | 'indeterminate') {
         if (checked === 'indeterminate') {
@@ -69,29 +82,48 @@ export default function PropertyFacilitiesEditor({
     }
 
     return (
-        <section className="space-y-4">
+        <div className={compact ? 'space-y-3' : 'space-y-4'}>
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                    <p
+                        className={
+                            compact
+                                ? 'text-sm font-medium'
+                                : 'text-xs font-medium tracking-wider text-muted-foreground uppercase'
+                        }
+                    >
                         {t('Amenities')}
                     </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        {t('Amenities shown on the property listing.')}
-                    </p>
+                    {compact ? (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {summarySource.length}{' '}
+                            {t(
+                                summarySource.length === 1
+                                    ? 'amenity'
+                                    : 'amenities',
+                            )}
+                        </p>
+                    ) : (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            {t('Amenities shown on the property listing.')}
+                        </p>
+                    )}
                 </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setManageOpen(true)}
-                >
-                    {t('Manage')}
-                </Button>
+                {canManage && (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setManageOpen(true)}
+                    >
+                        {t('Manage')}
+                    </Button>
+                )}
             </div>
 
-            {assignedAmenities.length > 0 ? (
+            {summarySource.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                    {assignedAmenities.map((amenity) => (
+                    {summaryAmenities.map((amenity) => (
                         <Badge
                             key={amenity.id}
                             variant="outline"
@@ -112,6 +144,14 @@ export default function PropertyFacilitiesEditor({
                             {!amenity.is_active && ` · ${t('Inactive')}`}
                         </Badge>
                     ))}
+                    {compact &&
+                        summarySource.length > summaryAmenities.length && (
+                            <Badge variant="outline">
+                                +{summarySource.length -
+                                    summaryAmenities.length}{' '}
+                                {t('more')}
+                            </Badge>
+                        )}
                 </div>
             ) : (
                 <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
@@ -216,6 +256,6 @@ export default function PropertyFacilitiesEditor({
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
-        </section>
+        </div>
     );
 }

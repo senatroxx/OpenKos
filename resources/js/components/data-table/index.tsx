@@ -16,14 +16,15 @@ export type TableColumn<T> = {
 type DataTableProps<T> = {
     columns: TableColumn<T>[];
     rows: T[];
-    currentSort: string;
-    onSort: (column: string) => void;
+    currentSort?: string;
+    onSort?: (column: string) => void;
     onRowClick?: (row: T) => void;
-    paginator: PaginatedData<T>;
-    perPage: number;
-    onPageChange: (page: number) => void;
-    onPerPageChange: (perPage: number) => void;
-    noun: string;
+    isRowInteractive?: (row: T) => boolean;
+    paginator?: PaginatedData<T>;
+    perPage?: number;
+    onPageChange?: (page: number) => void;
+    onPerPageChange?: (perPage: number) => void;
+    noun?: string;
     rowKey?: (row: T) => string | number;
     empty?: {
         message: string;
@@ -35,9 +36,10 @@ type DataTableProps<T> = {
 export function DataTable<T>({
     columns,
     rows,
-    currentSort,
+    currentSort = '',
     onSort,
     onRowClick,
+    isRowInteractive,
     paginator,
     perPage,
     onPageChange,
@@ -60,7 +62,7 @@ export function DataTable<T>({
                         <thead>
                             <tr className="border-b bg-muted/50 text-left text-muted-foreground">
                                 {columns.map((col) =>
-                                    col.sortable ? (
+                                    col.sortable && onSort ? (
                                         <SortHeader
                                             key={col.key}
                                             column={col.key}
@@ -88,12 +90,30 @@ export function DataTable<T>({
                                         | number
                                         | undefined) ??
                                     i;
+                                const rowInteractive = isRowInteractive
+                                    ? isRowInteractive(row)
+                                    : Boolean(onRowClick);
 
                                 return (
                                     <tr
                                         key={id}
-                                        className={`border-b last:border-0 hover:bg-muted/30 ${onRowClick ? 'cursor-pointer' : ''}`}
-                                        onClick={() => onRowClick?.(row)}
+                                        className={`border-b last:border-0 ${rowInteractive ? 'cursor-pointer outline-none hover:bg-muted/30 focus-visible:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset' : ''}`}
+                                        tabIndex={
+                                            rowInteractive ? 0 : undefined
+                                        }
+                                        onClick={() =>
+                                            rowInteractive && onRowClick?.(row)
+                                        }
+                                        onKeyDown={(event) => {
+                                            if (
+                                                rowInteractive &&
+                                                (event.key === 'Enter' ||
+                                                    event.key === ' ')
+                                            ) {
+                                                event.preventDefault();
+                                                onRowClick?.(row);
+                                            }
+                                        }}
                                     >
                                         {columns.map((col) => (
                                             <td
@@ -118,13 +138,19 @@ export function DataTable<T>({
                         </tbody>
                     </table>
 
-                    <DataTablePagination
-                        data={paginator}
-                        perPage={perPage}
-                        onPageChange={onPageChange}
-                        onPerPageChange={onPerPageChange}
-                        noun={noun}
-                    />
+                    {paginator &&
+                        perPage !== undefined &&
+                        onPageChange &&
+                        onPerPageChange &&
+                        noun && (
+                            <DataTablePagination
+                                data={paginator}
+                                perPage={perPage}
+                                onPageChange={onPageChange}
+                                onPerPageChange={onPerPageChange}
+                                noun={noun}
+                            />
+                        )}
                 </div>
             )}
         </>

@@ -1,7 +1,6 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     EllipsisVertical,
-    Globe,
     ImageOff,
     ImageIcon,
     Pencil,
@@ -20,15 +19,23 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { AmenityIcon } from '@/lib/amenity-icons';
+import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Amenity, Property, UnitType } from '@/types';
+import type {
+    Amenity,
+    Auth,
+    ListingUnitType,
+    Property,
+    UnitType,
+} from '@/types';
 import { PropertyLayout } from '../layout';
 
 type PageProps = {
     property: Property;
     unitTypes: UnitType[];
     amenities: Amenity[];
+    rentalOptions: ListingUnitType[];
 };
 
 function furnishingLabel(value: string | number | null): string | null {
@@ -92,7 +99,15 @@ function photoCountLabel(count: number): string {
     return `${count} ${t(count === 1 ? 'photo' : 'photos')}`;
 }
 
-export default function Index({ property, unitTypes, amenities }: PageProps) {
+export default function Index({
+    property,
+    unitTypes,
+    amenities,
+    rentalOptions,
+}: PageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const canManage = auth.permissions.includes('properties.update');
+    const [publishingId, setPublishingId] = useState<number | null>(null);
     const [formOpen, setFormOpen] = useState(false);
     const [editingUnitType, setEditingUnitType] = useState<UnitType | null>(
         null,
@@ -126,15 +141,15 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
         );
     }
 
-    function togglePublication(unitType: UnitType) {
+    function togglePublication(option: ListingUnitType) {
+        setPublishingId(option.id);
         router.patch(
             properties.unitTypes.publication.update.url({
                 property: property.slug,
-                unitType: unitType.id,
+                unitType: option.id,
             }),
-            {
-                is_published: !unitType.is_published,
-            },
+            { is_published: !option.is_included },
+            { preserveScroll: true, onFinish: () => setPublishingId(null) },
         );
     }
 
@@ -162,6 +177,9 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                 ) : (
                     <div className="space-y-3">
                         {unitTypes.map((unitType) => {
+                            const option = rentalOptions.find(
+                                (item) => item.id === unitType.id,
+                            );
                             const gallery = unitType.gallery ?? [];
                             const cover =
                                 gallery.find((item) => item.position === 0) ??
@@ -194,7 +212,8 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                             return (
                                 <article
                                     key={unitType.id}
-                                    className="flex gap-3 rounded-lg border bg-card p-3 shadow-xs sm:gap-4 sm:p-4"
+                                    id={`unit-type-${unitType.id}`}
+                                    className="flex scroll-mt-6 flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:gap-4 sm:p-4"
                                 >
                                     <div className="h-24 w-28 shrink-0 overflow-hidden rounded-md bg-muted sm:h-28 sm:w-40">
                                         {cover ? (
@@ -241,9 +260,13 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                     >
                                                         {t(
                                                             unitType.is_published
-                                                                ? 'Published'
-                                                                : 'Unpublished',
+                                                                ? 'Listed'
+                                                                : 'Not listed',
                                                         )}
+                                                        {option?.is_included &&
+                                                            option.status !==
+                                                                'ready' &&
+                                                            ` · ${t('Needs attention')}`}
                                                     </Badge>
                                                     <Badge variant="outline">
                                                         {unitCountLabel(
@@ -287,24 +310,6 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
-                                                            disabled={
-                                                                !unitType.is_active &&
-                                                                !unitType.is_published
-                                                            }
-                                                            onSelect={() =>
-                                                                togglePublication(
-                                                                    unitType,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Globe className="size-4" />
-                                                            {t(
-                                                                unitType.is_published
-                                                                    ? 'Unpublish'
-                                                                    : 'Publish',
-                                                            )}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
                                                             onSelect={() =>
                                                                 toggleActive(
                                                                     unitType,
@@ -326,6 +331,112 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                                                 </DropdownMenu>
                                             </div>
                                         </div>
+
+                                        {option && (
+                                            <div className="mt-3 space-y-2 text-sm">
+                                                <p className="text-muted-foreground">
+                                                    {option.available_units}{' '}
+                                                    {t('available')}
+                                                    {' · '}
+                                                    {t(
+                                                        option.has_active_pricing
+                                                            ? 'Pricing configured'
+                                                            : 'Pricing missing',
+                                                    )}
+                                                </p>
+                                                {option.starting_price && (
+                                                    <p>
+                                                        {t('From')}{' '}
+                                                        {formatPrice(
+                                                            option
+                                                                .starting_price
+                                                                .amount,
+                                                            option
+                                                                .starting_price
+                                                                .currency,
+                                                        )}{' '}
+                                                        /{' '}
+                                                        {t(
+                                                            option
+                                                                .starting_price
+                                                                .billing_label,
+                                                        )}
+                                                    </p>
+                                                )}
+                                                {option.reason && (
+                                                    <p>{t(option.reason)}</p>
+                                                )}
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    {canManage &&
+                                                        (option.is_included ||
+                                                            option.is_viable_if_included) && (
+                                                            <Button
+                                                                size="sm"
+                                                                variant={
+                                                                    option.is_included
+                                                                        ? 'outline'
+                                                                        : 'default'
+                                                                }
+                                                                disabled={
+                                                                    publishingId !==
+                                                                    null
+                                                                }
+                                                                onClick={() =>
+                                                                    togglePublication(
+                                                                        option,
+                                                                    )
+                                                                }
+                                                            >
+                                                                {t(
+                                                                    option.is_included
+                                                                        ? 'Remove from listing'
+                                                                        : 'Publish to listing',
+                                                                )}
+                                                            </Button>
+                                                        )}
+                                                    {canManage &&
+                                                    !option.is_active ? (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                toggleActive(
+                                                                    unitType,
+                                                                )
+                                                            }
+                                                        >
+                                                            {t(
+                                                                'Activate Unit Type',
+                                                            )}
+                                                        </Button>
+                                                    ) : (
+                                                        option.action && (
+                                                            <Button
+                                                                asChild
+                                                                size="sm"
+                                                                variant="link"
+                                                                className="px-0"
+                                                            >
+                                                                <Link
+                                                                    href={
+                                                                        option
+                                                                            .action
+                                                                            .url
+                                                                    }
+                                                                >
+                                                                    {t(
+                                                                        option
+                                                                            .action
+                                                                            .label,
+                                                                    )}{' '}
+                                                                    →
+                                                                </Link>
+                                                            </Button>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                                             {details.length > 0 ? (
