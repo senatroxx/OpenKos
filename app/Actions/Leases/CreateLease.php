@@ -42,7 +42,14 @@ class CreateLease
             abort_unless($unit->property_id === $property->id, 422, __('The unit does not belong to this property.'));
 
             abort_unless($property->rental_mode->supportsUnitInventory(), 404);
-            abort_if($property->hasActiveWholePropertyLease(), 422, __('This property is already leased as a whole property.'));
+            abort_if(
+                Lease::query()
+                    ->activeConflictsForTarget($unit, false)
+                    ->lockForUpdate()
+                    ->exists(),
+                422,
+                __('This property is already leased as a whole property.'),
+            );
 
             $activeRates = $unit->activeRates()->lockForUpdate()->get();
             $unitRate = $data->unitRateId === null
@@ -103,7 +110,14 @@ class CreateLease
             $property = Property::query()->lockForUpdate()->findOrFail($property->id);
 
             abort_unless($property->rental_mode->supportsWholePropertyRental(), 404);
-            abort_if($property->activeLeases()->lockForUpdate()->exists(), 422, __('This property already has an active lease.'));
+            abort_if(
+                Lease::query()
+                    ->activeConflictsForTarget($property)
+                    ->lockForUpdate()
+                    ->exists(),
+                422,
+                __('This property already has an active lease.'),
+            );
 
             $activeRates = $property->activePropertyRates()->lockForUpdate()->get();
             $propertyRate = $data->propertyRateId === null

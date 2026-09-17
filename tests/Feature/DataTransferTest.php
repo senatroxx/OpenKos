@@ -5,6 +5,7 @@ use App\Enums\ExpenseStatus;
 use App\Enums\PropertyRentalMode;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\Lease;
 use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
@@ -693,6 +694,24 @@ it('excludes sensitive tenant identifiers unless explicitly authorized', functio
     ]));
     $sensitive->assertDownload('tenants-v1.csv');
     expect($sensitive->streamedContent())->toContain('SECRET-ID');
+});
+
+it('exports tenants whose only lease targets a whole property', function () {
+    $admin = User::factory()->admin()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Hybrid]);
+    $admin->properties()->sync([$property->id]);
+    $tenant = Tenant::factory()->create(['name' => 'Whole Property Export Tenant']);
+
+    Lease::factory()->wholeProperty($property)->create([
+        'primary_tenant_id' => $tenant->id,
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('data-transfer.export', [
+        'dataset' => 'tenants',
+    ]));
+
+    $response->assertDownload('tenants-v1.csv');
+    expect($response->streamedContent())->toContain('Whole Property Export Tenant');
 });
 
 it('excludes inactive unit rates unless explicitly requested', function () {

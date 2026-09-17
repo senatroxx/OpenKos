@@ -15,7 +15,7 @@
 
 | Event                      | Payload                                                               | Dispatched from                                                                                           |
 | -------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds, ?int $actorId`                      | `LeaseController::store`                                                                                  |
+| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds, ?int $actorId`                      | `LeaseController::store`, `LeaseController::storeForProperty`                                             |
 | `Lease\LeaseStatusChanged` | `Lease $lease, LeaseStatus $from, LeaseStatus $to, ?int $actorId`    | `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::renew`, `LeaseController::destroy` |
 
 **Payload: `LeaseCreated`**
@@ -25,6 +25,11 @@ public readonly Lease $lease;
 public readonly array $tenantIds;   // IDs of attached tenants
 public readonly ?int $actorId;      // ID of the acting user, null for system-triggered
 ```
+
+`LeaseCreated` covers both Unit-target creation (`unit_id` set) and
+whole-property creation (`unit_id` null). Consumers should use the Lease's
+direct `property_id` lineage and explicit `target_type` projection rather than
+assuming a Unit relation exists.
 
 ### Payment
 

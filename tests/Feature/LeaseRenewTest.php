@@ -201,6 +201,43 @@ describe('eligibility', function () {
 });
 
 describe('renewal', function () {
+    it('rejects unit renewal when a whole-property lease appeared', function () {
+        [$property, $unit, $lease] = createRenewableLease();
+        $property->update(['rental_mode' => PropertyRentalMode::Hybrid]);
+
+        Lease::factory()->wholeProperty($property)->create();
+
+        $result = app(RenewLease::class)->execute($lease->fresh(), new RenewLeaseData(
+            endDate: Carbon::parse('2027-06-30')->toImmutable(),
+            rentAmount: '1000000',
+            depositHandling: DepositHandling::CarryForward,
+            confirmedOutstanding: true,
+        ));
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->error)->toContain('Unit already has an active lease.')
+            ->and($lease->fresh()->status)->toBe(LeaseStatus::Active)
+            ->and(Lease::query()->where('previous_lease_id', $lease->id)->exists())->toBeFalse();
+    });
+
+    it('allows unit renewal when another unit on the property is active', function () {
+        [$property, $unit, $lease] = createRenewableLease();
+        $property->update(['rental_mode' => PropertyRentalMode::Hybrid]);
+        $otherUnit = Unit::factory()->create(['property_id' => $property->id]);
+        Lease::factory()->create(['unit_id' => $otherUnit->id]);
+
+        $result = app(RenewLease::class)->execute($lease->fresh(), new RenewLeaseData(
+            endDate: Carbon::parse('2027-06-30')->toImmutable(),
+            rentAmount: '1000000',
+            depositHandling: DepositHandling::CarryForward,
+            confirmedOutstanding: true,
+        ));
+
+        expect($result->succeeded())->toBeTrue()
+            ->and($result->newLease->unit_id)->toBe($unit->id)
+            ->and($lease->fresh()->status)->toBe(LeaseStatus::Renewed);
+    });
+
     it('renews a whole-property lease with property conflict protection', function () {
         $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::WholeProperty]);
         $rate = PropertyRate::factory()->create(['property_id' => $property->id]);

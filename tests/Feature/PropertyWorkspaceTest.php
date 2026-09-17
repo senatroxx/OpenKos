@@ -5,6 +5,7 @@ use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\PropertyRate;
+use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitType;
 use App\Models\User;
@@ -15,6 +16,35 @@ uses()->beforeEach(function (): void {
 });
 
 describe('rental-mode workspace access', function (): void {
+    it('includes whole-property tenants in staff tenant and property views', function (): void {
+        $admin = User::factory()->admin()->create();
+        $property = Property::factory()->create([
+            'rental_mode' => PropertyRentalMode::Hybrid,
+        ]);
+        $admin->properties()->sync([$property->id]);
+        $tenant = Tenant::factory()->create(['name' => 'Whole Property Tenant']);
+
+        Lease::factory()->wholeProperty($property)->create([
+            'primary_tenant_id' => $tenant->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('properties.units.index', $property))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where(
+                'tenants',
+                fn ($tenants) => collect($tenants)->pluck('id')->contains($tenant->id),
+            ));
+
+        $this->actingAs($admin)
+            ->get(route('tenants.index'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where(
+                'tenants.data',
+                fn ($tenants) => collect($tenants)->pluck('id')->contains($tenant->id),
+            ));
+    });
+
     it('hides all unit inventory routes for whole-property properties', function (): void {
         $owner = User::factory()->owner()->create();
         $property = Property::factory()->create([

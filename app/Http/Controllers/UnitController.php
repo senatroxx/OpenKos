@@ -149,7 +149,7 @@ class UnitController extends Controller
         $tenantsList = Tenant::where('is_active', true)
             ->whereNull('deleted_at')
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
-                'leases.unit.property.users',
+                'leases.property.users',
                 fn (Builder $q) => $q->whereKey($request->user()->id),
             ))
             ->orderBy('name')

@@ -291,6 +291,34 @@ class Lease extends Model
         $query->where('property_id', $property instanceof Property ? $property->getKey() : $property);
     }
 
+    /**
+     * Scope active leases that conflict with a rental target.
+     *
+     * A whole-property target conflicts with every active lease on its
+     * property. A Unit target conflicts with active whole-property leases and
+     * active leases on that same Unit; other Units retain their existing
+     * independent occupancy semantics.
+     */
+    public function scopeActiveConflictsForTarget(
+        Builder $query,
+        Property|Unit $target,
+        bool $includeSameUnitLeases = true,
+    ): void {
+        $query->active()->forProperty($target instanceof Unit ? $target->property_id : $target);
+
+        if (! $target instanceof Unit) {
+            return;
+        }
+
+        $query->where(function (Builder $query) use ($target, $includeSameUnitLeases): void {
+            $query->whereNull('unit_id');
+
+            if ($includeSameUnitLeases) {
+                $query->orWhere('unit_id', $target->getKey());
+            }
+        });
+    }
+
     public function schedule(?int $months = 12): Collection
     {
         if (! $this->rent_amount || ! $this->rent_due_day || ! $this->start_date) {

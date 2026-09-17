@@ -71,9 +71,11 @@ class RenewLease
 
             $this->leaseStatusValidator->validate($lockedLease->status, LeaseStatus::Renewed);
 
-            $existingActive = $unit !== null
-                ? $unit->leases()->active()->whereKeyNot($lockedLease->id)->exists()
-                : $property->activeLeases()->whereKeyNot($lockedLease->id)->exists();
+            $existingActive = Lease::query()
+                ->activeConflictsForTarget($unit ?? $property)
+                ->whereKeyNot($lockedLease->id)
+                ->lockForUpdate()
+                ->exists();
 
             if ($existingActive) {
                 return RenewLeaseResult::error($unit !== null

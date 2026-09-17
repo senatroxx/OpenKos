@@ -9,9 +9,17 @@ The kos (boarding house) market commonly requires shared units — multiple tena
 
 ## Implementation
 
-### Model: Shared Lease (Indonesia-First)
+### Model: Shared Unit Lease (Indonesia-First)
 
-One lease per unit, multiple tenants on that lease. This matches how kos owners think about unit pricing — a unit costs X, not a bed costs X.
+One Unit lease per Unit, with multiple tenants on that lease. This matches how
+kos owners think about unit pricing — a unit costs X, not a bed costs X.
+
+OPE-220 also permits a whole-property Lease with no Unit target. Every Lease
+still has direct Property lineage. On a hybrid Property, an active
+whole-property Lease blocks every Unit target, an active Unit Lease blocks a
+whole-property target, and Unit-versus-Unit conflicts remain subject to the
+existing capacity and co-tenancy rules. One occupied shared-capacity Unit does
+not block unrelated Units.
 
 ```
 One Lease = Unit A1 (2jt/month)
@@ -130,7 +138,9 @@ public function leases(): BelongsToMany
 
 - When last tenant leaves, terminate the lease (set `status = terminated`, `termination_date`)
 - Process deposit refund per standard flow
-- Mark unit as `available`
+- For a Unit Lease, mark the Unit as `available` when no active Unit Lease remains
+- A whole-property Lease has no Unit status to mutate; its rental availability is
+  released at the Property level
 
 ### Partial Move-In
 
