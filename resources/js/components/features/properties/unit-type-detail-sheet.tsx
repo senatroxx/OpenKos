@@ -105,7 +105,7 @@ export default function UnitTypeDetailSheet({
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem
-                                                className="text-destructive"
+                                                className="text-destructive/80 dark:text-destructive-foreground"
                                                 onSelect={onDelete}
                                             >
                                                 <Trash2 className="size-4" />

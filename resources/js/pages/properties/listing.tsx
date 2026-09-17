@@ -8,8 +8,6 @@ import {
     ImageIcon,
 } from 'lucide-react';
 import { useState } from 'react';
-import { DataTable } from '@/components/data-table';
-import type { TableColumn } from '@/components/data-table';
 import PropertyFacilitiesEditor from '@/components/features/properties/property-facilities-editor';
 import PropertyFormSheet from '@/components/features/properties/property-form-sheet';
 import { MediaGalleryManager } from '@/components/shared/media-gallery-manager';
@@ -22,7 +20,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type {
@@ -30,7 +27,6 @@ import type {
     Auth,
     ListingIssue,
     ListingReadiness,
-    ListingUnitType,
     Property,
 } from '@/types';
 import { PropertyLayout } from './layout';
@@ -40,14 +36,6 @@ type PageProps = {
     amenities: Amenity[];
     readiness: ListingReadiness;
 };
-
-function unitCountLabel(
-    count: number,
-    singular: string,
-    plural = singular + 's',
-): string {
-    return String(count) + ' ' + t(count === 1 ? singular : plural);
-}
 
 function issueAction(issue: ListingIssue) {
     if (!issue.action) {
@@ -95,19 +83,13 @@ function IssueList({
     );
 }
 
-function unitTypeVisibility(unitType: ListingUnitType): {
-    label: string;
-    variant: 'default' | 'outline' | 'destructive';
-} {
-    if (!unitType.is_included) {
-        return { label: 'Not listed', variant: 'outline' };
-    }
-
-    if (unitType.status === 'ready') {
-        return { label: 'Listed', variant: 'default' };
-    }
-
-    return { label: 'Listed · Needs attention', variant: 'destructive' };
+function SummaryMetric({ label, value }: { label: string; value: number }) {
+    return (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:block sm:space-y-1">
+            <p className="text-sm text-muted-foreground">{t(label)}</p>
+            <p className="text-lg font-semibold tabular-nums">{value}</p>
+        </div>
+    );
 }
 
 export default function Listing({ property, amenities, readiness }: PageProps) {
@@ -121,130 +103,116 @@ export default function Listing({ property, amenities, readiness }: PageProps) {
     const coverPhoto = gallery[0];
     const rentalMode = property.rental_mode ?? 'unit';
 
-    const rentalOptions = [
-        ...(readiness.whole_property
-            ? [
-                  {
-                      key: 'whole-property',
-                      name: t('Entire property'),
-                      visibility: {
-                          label: readiness.whole_property.is_listed
-                              ? 'Listed'
-                              : 'Not listed',
-                          variant: readiness.whole_property.is_listed
-                              ? ('default' as const)
-                              : ('outline' as const),
-                      },
-                      inventory: null,
-                      status: readiness.whole_property.has_active_pricing
-                          ? 'Ready'
-                          : 'Needs attention',
-                      price: readiness.whole_property.starting_price,
-                      reason: readiness.whole_property.reason,
-                      href: null,
-                  },
-              ]
-            : []),
-        ...(rentalMode !== 'whole_property'
-            ? readiness.unit_types.map((unitType) => ({
-                  key: String(unitType.id),
-                  name: unitType.name,
-                  visibility: unitTypeVisibility(unitType),
-                  inventory: {
-                      physical: unitType.physical_units,
-                      available: unitType.available_units,
-                  },
-                  status:
-                      unitType.status === 'ready' ? 'Ready' : 'Needs attention',
-                  price: unitType.starting_price,
-                  reason: unitType.reason,
-                  href:
-                      properties.unitTypes.index.url(property) +
-                      '#unit-type-' +
-                      unitType.id,
-              }))
-            : []),
-    ];
+    const unitTypeCount = readiness.unit_types.length;
+    const listedUnitTypeCount = readiness.unit_types.filter(
+        (unitType) => unitType.is_included,
+    ).length;
+    const needsAttentionUnitTypeCount = readiness.unit_types.filter(
+        (unitType) =>
+            unitType.status === 'blocked' || unitType.status === 'inactive',
+    ).length;
+    const notListedUnitTypeCount = unitTypeCount - listedUnitTypeCount;
 
-    const rentalColumns: TableColumn<(typeof rentalOptions)[number]>[] = [
-        {
-            key: 'name',
-            label: 'Rental option',
-            className: 'align-top font-medium',
-        },
-        {
-            key: 'visibility',
-            label: 'Listing state',
-            className: 'align-top',
-            render: (option) => (
-                <Badge variant={option.visibility.variant}>
-                    {t(option.visibility.label)}
-                </Badge>
-            ),
-        },
-        {
-            key: 'inventory',
-            label: 'Inventory',
-            className: 'align-top whitespace-nowrap',
-            render: (option) =>
-                option.inventory ? (
-                    <>
-                        <p>
-                            {unitCountLabel(option.inventory.physical, 'unit')}
+    function renderUnitTypeSummary() {
+        if (unitTypeCount === 0) {
+            return (
+                <div className="space-y-3 rounded-lg border border-dashed p-4">
+                    <p className="text-sm text-muted-foreground">
+                        {t('No Unit Types configured.')}
+                    </p>
+                    <Button asChild variant="outline" size="sm">
+                        <Link href={properties.unitTypes.index.url(property)}>
+                            {t('Set up Unit Types')}
+                        </Link>
+                    </Button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-4 rounded-lg border bg-card p-4 sm:p-5">
+                <p className="text-base font-medium">
+                    {unitTypeCount}{' '}
+                    {t(unitTypeCount === 1 ? 'Unit Type' : 'Unit Types')}
+                </p>
+                <div className="grid grid-cols-1 divide-y rounded-md border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                    <SummaryMetric label="Listed" value={listedUnitTypeCount} />
+                    <SummaryMetric
+                        label="Not listed"
+                        value={notListedUnitTypeCount}
+                    />
+                    <SummaryMetric
+                        label="Needs attention"
+                        value={needsAttentionUnitTypeCount}
+                    />
+                </div>
+                {needsAttentionUnitTypeCount > 0 && (
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                        {t(
+                            ':attention of :total Unit Types need attention before they can be listed.',
+                            {
+                                attention: needsAttentionUnitTypeCount,
+                                total: unitTypeCount,
+                            },
+                        )}
+                    </p>
+                )}
+                <Button asChild variant="outline" size="sm">
+                    <Link href={properties.unitTypes.index.url(property)}>
+                        {t('View all Unit Types')}
+                        <span aria-hidden="true">→</span>
+                    </Link>
+                </Button>
+            </div>
+        );
+    }
+
+    function renderWholePropertySummary() {
+        const wholeProperty = readiness.whole_property;
+
+        if (!wholeProperty) {
+            return null;
+        }
+
+        const ready = wholeProperty.has_active_pricing;
+
+        return (
+            <div className="space-y-4 rounded-lg border bg-card p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="font-medium">{t('Entire property')}</p>
+                        <p className="text-sm text-muted-foreground">
+                            {t('Whole-property rental offering')}
                         </p>
-                        <p className="text-muted-foreground">
-                            {unitCountLabel(
-                                option.inventory.available,
-                                'available',
-                                'available',
-                            )}
-                        </p>
-                    </>
-                ) : (
-                    <span className="text-muted-foreground">
-                        {t('Entire property')}
-                    </span>
-                ),
-        },
-        {
-            key: 'price',
-            label: 'Starting price',
-            className: 'align-top whitespace-nowrap',
-            render: (option) =>
-                option.price ? (
-                    <>
-                        <p>
-                            {formatPrice(
-                                option.price.amount,
-                                option.price.currency,
-                            )}
-                        </p>
-                        <p className="text-muted-foreground">
-                            {option.price.billing_label}
-                        </p>
-                    </>
-                ) : (
-                    <span className="text-muted-foreground">
-                        {t('Pricing missing')}
-                    </span>
-                ),
-        },
-        {
-            key: 'status',
-            label: 'Status',
-            className: 'min-w-48 max-w-xs align-top',
-            render: (option) => (
-                <>
-                    <p className="font-medium">{t(option.status)}</p>
-                    {option.reason && (
-                        <p className="mt-1 text-amber-700 dark:text-amber-300">
-                            {t(option.reason)}
+                    </div>
+                    <Badge
+                        variant={
+                            wholeProperty.is_listed ? 'default' : 'outline'
+                        }
+                    >
+                        {t(wholeProperty.is_listed ? 'Listed' : 'Not listed')}
+                    </Badge>
+                </div>
+                <div>
+                    <p className="font-medium">
+                        {t(ready ? 'Ready' : 'Needs attention')}
+                    </p>
+                    {!ready && wholeProperty.reason && (
+                        <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                            {t(wholeProperty.reason)}
                         </p>
                     )}
-                </>
-            ),
-        },
-    ];
+                </div>
+                {wholeProperty.action && (
+                    <Button asChild variant="outline" size="sm">
+                        <Link href={wholeProperty.action.url}>
+                            {t(wholeProperty.action.label)}
+                        </Link>
+                    </Button>
+                )}
+            </div>
+        );
+    }
 
     function togglePublication() {
         router.patch(properties.publication.update.url(property), {
@@ -487,37 +455,24 @@ export default function Listing({ property, amenities, readiness }: PageProps) {
                         </h2>
                         <p className="mt-1 text-sm text-muted-foreground">
                             {t(
-                                'These are the rental options currently configured for your public listing.',
+                                rentalMode === 'unit'
+                                    ? 'Unit Types available for your public listing.'
+                                    : rentalMode === 'hybrid'
+                                      ? 'Entire property and Unit Types available for your public listing.'
+                                      : 'Entire property offering available for your public listing.',
                             )}
                         </p>
                     </div>
-                    <DataTable
-                        columns={rentalColumns}
-                        rows={rentalOptions}
-                        rowKey={(option) => option.key}
-                        isRowInteractive={(option) => option.href !== null}
-                        onRowClick={(option) => {
-                            if (option.href) {
-                                router.visit(option.href);
-                            }
-                        }}
-                        empty={{
-                            message: t(
-                                'No rental options have been configured yet.',
-                            ),
-                            ...(canManage
-                                ? {
-                                      createLabel: t('Manage Unit Types'),
-                                      onCreate: () =>
-                                          router.visit(
-                                              properties.unitTypes.index.url(
-                                                  property,
-                                              ),
-                                          ),
-                                  }
-                                : {}),
-                        }}
-                    />
+                    {rentalMode === 'whole_property' ? (
+                        renderWholePropertySummary()
+                    ) : rentalMode === 'hybrid' ? (
+                        <div className="space-y-4">
+                            {renderWholePropertySummary()}
+                            {renderUnitTypeSummary()}
+                        </div>
+                    ) : (
+                        renderUnitTypeSummary()
+                    )}
                 </section>
             </div>
 
