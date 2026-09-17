@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Properties\CreateProperty;
-use App\Business\Listings\ListingReadinessChecker;
 use App\Enums\AmenityScope;
 use App\Enums\LeaseStatus;
 use App\Enums\PropertyRentalMode;
@@ -18,6 +17,7 @@ use App\Models\Property;
 use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
+use App\Services\Listings\ListingReadinessService;
 use App\Services\Listings\PublicSlugAllocator;
 use App\Tables\Column;
 use App\Tables\Filter;
@@ -50,7 +50,7 @@ class PropertyController extends Controller
         ]);
     }
 
-    public function listing(Property $property, ListingReadinessChecker $readinessChecker): Response
+    public function listing(Property $property, ListingReadinessService $readinessService): Response
     {
         $this->authorize('view', $property);
 
@@ -71,7 +71,7 @@ class PropertyController extends Controller
             'original_name' => $media->original_name,
             'mime_type' => $media->mime_type,
         ])->values()->all());
-        $readiness = $readinessChecker->analyze($property);
+        $readiness = $readinessService->analyze($property);
         $property->unsetRelation('media');
         $property->unsetRelation('activePropertyRates');
         $property->unsetRelation('unitTypes');

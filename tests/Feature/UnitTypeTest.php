@@ -61,6 +61,30 @@ it('searches, filters, paginates, and soft deletes UnitTypes', function () {
         );
 });
 
+it('restores a soft-deleted UnitType', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $unitType = UnitType::factory()->for($property)->create();
+    $unitType->delete();
+
+    $this->actingAs($user)
+        ->post(route('properties.unit-types.restore', [$property, $unitType]))
+        ->assertRedirect();
+
+    expect($unitType->refresh()->deleted_at)->toBeNull();
+});
+
+it('denies restoring a UnitType without property update permission', function () {
+    $user = User::factory()->create();
+    $property = Property::factory()->create();
+    $unitType = UnitType::factory()->for($property)->create();
+    $unitType->delete();
+
+    $this->actingAs($user)
+        ->post(route('properties.unit-types.restore', [$property, $unitType]))
+        ->assertForbidden();
+});
+
 it('loads rental option summaries with bounded queries', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create(['rental_mode' => 'unit']);

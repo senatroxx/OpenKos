@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Business\Listings;
+namespace App\Services\Listings;
 
 use App\Enums\AmenityScope;
 use App\Enums\BillingUnit;
@@ -14,7 +14,7 @@ use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
-final class ListingReadinessChecker
+final class ListingReadinessService
 {
     public function __construct(private MoneyConverter $money) {}
 
@@ -60,8 +60,11 @@ final class ListingReadinessChecker
         $unitTypes = $property->rental_mode->supportsUnitInventory()
             ? $property->unitTypes
             : new Collection;
+        $configuredUnitTypeIds = $property->rental_mode->supportsUnitInventory()
+            ? $property->unitTypes()->configuredForPublicOffering()->pluck('id')->all()
+            : [];
         $unitTypeCards = $unitTypes
-            ->map(fn (UnitType $unitType): array => $this->unitTypePayload($property, $unitType))
+            ->map(fn (UnitType $unitType): array => $this->unitTypePayload($property, $unitType, $configuredUnitTypeIds))
             ->values()
             ->all();
         $unassignedUnitsCount = $this->unassignedUnitsCount($property);
@@ -298,6 +301,7 @@ final class ListingReadinessChecker
     }
 
     /**
+     * @param  list<int>  $configuredUnitTypeIds
      * @return array{
      *     id: int,
      *     name: string,
@@ -313,16 +317,14 @@ final class ListingReadinessChecker
      *     action: array{label: string, url: string}|null,
      * }
      */
-    private function unitTypePayload(Property $property, UnitType $unitType): array
+    private function unitTypePayload(Property $property, UnitType $unitType, array $configuredUnitTypeIds): array
     {
         $physicalUnits = (int) ($unitType->units_count ?? 0);
         $availableUnits = (int) ($unitType->available_units_count ?? 0);
         $pricedUnits = (int) ($unitType->priced_units_count ?? 0);
         $eligiblePublicUnits = (int) ($unitType->eligible_public_units_count ?? 0);
         $isIncluded = (bool) $unitType->is_published;
-        $isViableIfIncluded = $unitType->is_active
-            && $pricedUnits > 0
-            && $eligiblePublicUnits > 0;
+        $isViableIfIncluded = in_array($unitType->id, $configuredUnitTypeIds, true);
         $isViable = $isIncluded && filled($unitType->public_slug) && $isViableIfIncluded;
 
         if (! $unitType->is_active) {

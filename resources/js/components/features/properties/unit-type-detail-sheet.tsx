@@ -18,7 +18,7 @@ import {
 import { AmenityIcon } from '@/lib/amenity-icons';
 import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
-import type { ListingUnitType, UnitType } from '@/types';
+import type { UnitTypeDetailSheetProps } from '@/types';
 
 export default function UnitTypeDetailSheet({
     unitType,
@@ -30,17 +30,7 @@ export default function UnitTypeDetailSheet({
     onEdit,
     onTogglePublication,
     onDelete,
-}: {
-    unitType?: UnitType | null;
-    option?: ListingUnitType | null;
-    open: boolean;
-    canManage: boolean;
-    publishing: boolean;
-    onOpenChange: (open: boolean) => void;
-    onEdit: () => void;
-    onTogglePublication: () => void;
-    onDelete: () => void;
-}) {
+}: UnitTypeDetailSheetProps) {
     const gallery = unitType?.gallery ?? [];
     const amenities = unitType?.amenities ?? [];
     const canPublish = Boolean(

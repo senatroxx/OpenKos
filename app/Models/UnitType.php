@@ -56,10 +56,16 @@ class UnitType extends Model
     public function scopeViablePublicOffering(Builder $query): void
     {
         $query
-            ->where('is_active', true)
+            ->configuredForPublicOffering()
             ->where('is_published', true)
             ->whereNotNull('public_slug')
-            ->where('public_slug', '<>', '')
+            ->where('public_slug', '<>', '');
+    }
+
+    public function scopeConfiguredForPublicOffering(Builder $query): void
+    {
+        $query
+            ->where('is_active', true)
             ->whereHas('units', fn (Builder $query) => $query->eligibleForPublicOffering());
     }
 

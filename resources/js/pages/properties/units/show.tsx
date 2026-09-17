@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Auth, Property, Unit, UnitType } from '@/types';
+import type { Auth, UnitWorkspaceProps } from '@/types';
 import { UnitLayout } from './layout';
 
 export default function UnitWorkspace({
@@ -33,17 +33,7 @@ export default function UnitWorkspace({
     unit,
     availableUnits,
     unitTypes,
-}: {
-    property: Property;
-    unit: Unit;
-    availableUnits: {
-        id: number;
-        name: string;
-        capacity: number;
-        occupied_count?: number;
-    }[];
-    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
-}) {
+}: UnitWorkspaceProps) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const canUpdate = auth.permissions.includes('units.update');
     const canDelete = auth.permissions.includes('units.delete');
@@ -103,7 +93,7 @@ export default function UnitWorkspace({
                             {t('Move Unit')}
                         </DropdownMenuItem>
                     )}
-                    {canDelete && !activeLease && canUpdate && hasCapacity && (
+                    {canDelete && !activeLease && (
                         <DropdownMenuSeparator />
                     )}
                     {canDelete && !activeLease && (

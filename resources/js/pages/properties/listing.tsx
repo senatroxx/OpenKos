@@ -23,23 +23,11 @@ import {
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type {
-    Amenity,
     Auth,
     ListingIssue,
-    ListingReadiness,
-    PropertyTypeOption,
-    Property,
-    Region,
+    ListingPageProps,
 } from '@/types';
 import { PropertyLayout } from './layout';
-
-type PageProps = {
-    property: Property;
-    amenities: Amenity[];
-    readiness: ListingReadiness;
-    regions: Region[];
-    propertyTypes: PropertyTypeOption[];
-};
 
 function issueAction(issue: ListingIssue) {
     if (!issue.action) {
@@ -96,7 +84,7 @@ function SummaryMetric({ label, value }: { label: string; value: number }) {
     );
 }
 
-export default function Listing({ property, amenities, readiness }: PageProps) {
+export default function Listing({ property, amenities, readiness }: ListingPageProps) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [photosOpen, setPhotosOpen] = useState(false);

@@ -1,5 +1,12 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { EllipsisVertical, Eye, EyeOff, Pencil, Trash2 } from 'lucide-react';
+import {
+    EllipsisVertical,
+    Eye,
+    EyeOff,
+    Pencil,
+    RotateCcw,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
@@ -29,27 +36,12 @@ import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type {
-    Amenity,
     Auth,
     ListingUnitType,
-    PaginatedData,
-    Property,
-    TableMeta,
+    UnitTypesPageProps,
     UnitType,
 } from '@/types';
 import { PropertyLayout } from '../layout';
-
-type PageProps = {
-    property: Property;
-    unitTypes: PaginatedData<UnitType>;
-    amenities: Amenity[];
-    rentalOptions: ListingUnitType[];
-    sort?: string;
-    search?: string;
-    status?: string;
-    per_page?: number;
-    table: TableMeta;
-};
 
 function unitCountLabel(
     count: number,
@@ -75,7 +67,7 @@ export default function Index({
     status: currentStatus = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
-}: PageProps) {
+}: UnitTypesPageProps) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const canManage = auth.permissions.includes('properties.update');
     const [detailOpen, setDetailOpen] = useState(false);
@@ -200,6 +192,17 @@ export default function Index({
         );
     }
 
+    function restoreUnitType(unitType: UnitType): void {
+        router.post(
+            properties.unitTypes.restore.url({
+                property: property.slug,
+                unitType: unitType.id,
+            }),
+            {},
+            { preserveScroll: true },
+        );
+    }
+
     function getOption(unitType: UnitType): ListingUnitType | null {
         return (
             rentalOptions.find((option) => option.id === unitType.id) ?? null
@@ -302,7 +305,37 @@ export default function Index({
             className: 'w-12 text-right',
             render: (unitType) => {
                 if (unitType.deleted_at) {
-                    return null;
+                    return canManage ? (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                asChild
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
+                                    aria-label={t('Unit Type actions')}
+                                >
+                                    <EllipsisVertical
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <DropdownMenuItem
+                                    onSelect={() => restoreUnitType(unitType)}
+                                >
+                                    <RotateCcw className="size-4" />
+                                    {t('Restore')}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    ) : null;
                 }
 
                 const option = getOption(unitType);

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Business\Listings\ListingReadinessChecker;
 use App\Enums\AmenityScope;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
@@ -11,6 +10,7 @@ use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\UnitType;
+use App\Services\Listings\ListingReadinessService;
 use App\Services\Listings\PublicSlugAllocator;
 use App\Support\DelimitedValues;
 use App\Tables\Column;
@@ -26,12 +26,12 @@ use Inertia\Response;
 
 class PropertyUnitTypeController extends Controller
 {
-    public function index(Request $request, Property $property, ListingReadinessChecker $readinessChecker): Response
+    public function index(Request $request, Property $property, ListingReadinessService $readinessService): Response
     {
         $this->authorize('view', $property);
 
         $property = Property::withWorkspaceStats()->findOrFail($property->id);
-        $rentalOptions = $readinessChecker->analyze($property)['unit_types'];
+        $rentalOptions = $readinessService->analyze($property)['unit_types'];
         $property->unsetRelation('unitTypes');
         $property->unsetRelation('activePropertyRates');
         $property->unsetRelation('facilities');
@@ -178,6 +178,18 @@ class PropertyUnitTypeController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type deleted.')]);
 
         return to_route('properties.unit-types.index', $property);
+    }
+
+    public function restore(Property $property, UnitType $unitType): RedirectResponse
+    {
+        $this->authorize('restore', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $unitType->restore();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Unit Type restored.')]);
+
+        return back();
     }
 
     /**
