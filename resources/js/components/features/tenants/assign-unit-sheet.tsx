@@ -159,7 +159,12 @@ export default function AssignUnitSheet({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data.unit_id]);
 
-    const selectedRate = rates.find((r) => r.id === (data.unit_type_rate_id ?? data.unit_rate_id)) ?? null;
+    const selectedRate = rates.find(
+        (rate) =>
+            rate.id === (data.unit_type_rate_id ?? data.unit_rate_id) &&
+            rate.source ===
+                (data.unit_type_rate_id !== null ? 'unit_type' : 'unit'),
+    ) ?? null;
     const currency =
         activeLease?.currency ?? selectedRate?.currency ?? displayCurrency;
     const monthlyCurrency = String(currency);

@@ -135,7 +135,12 @@ export default function AssignTenantSheet({
             (rate.currency ?? setting.currency).toUpperCase() ===
             displayCurrency.toUpperCase(),
     );
-    const selectedRate = rates.find((r) => r.id === (data.unit_type_rate_id ?? data.unit_rate_id)) ?? null;
+    const selectedRate = rates.find(
+        (rate) =>
+            rate.id === (data.unit_type_rate_id ?? data.unit_rate_id) &&
+            rate.source ===
+                (data.unit_type_rate_id !== null ? 'unit_type' : 'unit'),
+    ) ?? null;
     const currency =
         activeLease?.currency ?? selectedRate?.currency ?? displayCurrency;
 
