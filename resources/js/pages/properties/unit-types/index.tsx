@@ -1,407 +1,493 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     EllipsisVertical,
-    Globe,
-    ImageOff,
-    ImageIcon,
+    Eye,
+    EyeOff,
     Pencil,
     RotateCcw,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
+import { DataTable } from '@/components/data-table';
+import type { TableColumn } from '@/components/data-table';
+import { FilterBar } from '@/components/data-table/filter-bar';
+import { SearchInput } from '@/components/data-table/search-input';
+import UnitTypeDetailSheet from '@/components/features/properties/unit-type-detail-sheet';
 import UnitTypeFormSheet from '@/components/features/properties/unit-type-form-sheet';
-import { StatusBadge } from '@/components/shared/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { AmenityIcon } from '@/lib/amenity-icons';
+import { useTable } from '@/hooks/use-table';
+import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Amenity, Property, UnitType } from '@/types';
+import type {
+    Auth,
+    ListingUnitType,
+    UnitTypesPageProps,
+    UnitType,
+} from '@/types';
 import { PropertyLayout } from '../layout';
 
-type PageProps = {
-    property: Property;
-    unitTypes: UnitType[];
-    amenities: Amenity[];
-};
-
-function furnishingLabel(value: string | number | null): string | null {
-    if (value === null) {
-        return null;
-    }
-
-    const normalized = String(value).trim().toLowerCase();
-
-    if (normalized === '' || normalized === '0') {
-        return null;
-    }
-
-    const labels: Record<string, string> = {
-        furnished: 'Furnished',
-        'semi-furnished': 'Semi-furnished',
-        unfurnished: 'Unfurnished',
-    };
-
-    if (labels[normalized]) {
-        return t(labels[normalized]);
-    }
-
-    return String(value)
-        .trim()
-        .replace(/[_-]+/g, ' ')
-        .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function formattedNumber(value: number | string): string {
-    const numericValue = Number(value);
-
-    return Number.isFinite(numericValue) ? String(numericValue) : String(value);
-}
-
-function metricLabel(
-    value: number | string | null,
+function unitCountLabel(
+    count: number,
     singular: string,
-    plural: string,
-): string | null {
-    if (value === null || value === '') {
-        return null;
-    }
-
-    return `${formattedNumber(value)} ${t(Number(value) === 1 ? singular : plural)}`;
+    plural = `${singular}s`,
+): string {
+    return `${count} ${t(count === 1 ? singular : plural)}`;
 }
 
-function sizeLabel(value: string | null): string | null {
-    if (value === null || value === '') {
-        return null;
-    }
-
-    return `${formattedNumber(value)} ${t('m²')}`;
+function readinessLabel(option: ListingUnitType): string {
+    return option.status === 'ready' || option.status === 'excluded'
+        ? 'Ready'
+        : 'Needs attention';
 }
 
-function unitCountLabel(count: number): string {
-    return `${count} ${t(count === 1 ? 'unit' : 'units')}`;
-}
-
-function photoCountLabel(count: number): string {
-    return `${count} ${t(count === 1 ? 'photo' : 'photos')}`;
-}
-
-export default function Index({ property, unitTypes, amenities }: PageProps) {
-    const [formOpen, setFormOpen] = useState(false);
+export default function Index({
+    property,
+    unitTypes: data,
+    amenities,
+    rentalOptions,
+    sort: currentSort = 'name',
+    search: currentSearch = '',
+    status: currentStatus = '',
+    per_page: currentPerPage = 15,
+    table: tableMeta,
+}: UnitTypesPageProps) {
+    const { auth } = usePage<{ auth: Auth }>().props;
+    const canManage = auth.permissions.includes('properties.update');
+    const [detailOpen, setDetailOpen] = useState(false);
+    const [viewingUnitTypeId, setViewingUnitTypeId] = useState<number | null>(
+        null,
+    );
     const [editingUnitType, setEditingUnitType] = useState<UnitType | null>(
         null,
     );
+    const [formOpen, setFormOpen] = useState(false);
+    const [publishingId, setPublishingId] = useState<number | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [unitTypeToDelete, setUnitTypeToDelete] = useState<UnitType | null>(
+        null,
+    );
+
+    const table = useTable({
+        routeFn: () => ({ url: properties.unitTypes.index.url(property) }),
+        params: {
+            sort: currentSort,
+            search: currentSearch,
+            per_page: String(currentPerPage),
+            status: currentStatus,
+        },
+        defaults: { sort: 'name', per_page: '15' },
+    });
+
+    const viewingUnitType = viewingUnitTypeId
+        ? (data.data.find((unitType) => unitType.id === viewingUnitTypeId) ??
+          null)
+        : null;
+    const viewingOption = viewingUnitType
+        ? (rentalOptions.find((option) => option.id === viewingUnitType.id) ??
+          null)
+        : null;
     const currentEditingUnitType = editingUnitType
-        ? (unitTypes.find((unitType) => unitType.id === editingUnitType.id) ??
+        ? (data.data.find((unitType) => unitType.id === editingUnitType.id) ??
           editingUnitType)
         : null;
 
-    function openCreate() {
+    function openCreate(): void {
         setEditingUnitType(null);
         setFormOpen(true);
     }
 
-    function openEdit(unitType: UnitType) {
-        setEditingUnitType(unitType);
+    function openDetail(unitType: UnitType): void {
+        if (unitType.deleted_at) {
+            return;
+        }
+
+        setViewingUnitTypeId(unitType.id);
+        setDetailOpen(true);
+    }
+
+    function editFromDetail(): void {
+        if (!viewingUnitType) {
+            return;
+        }
+
+        setEditingUnitType(viewingUnitType);
+        setDetailOpen(false);
         setFormOpen(true);
     }
 
-    function toggleActive(unitType: UnitType) {
-        router.post(
-            unitType.is_active
-                ? properties.unitTypes.deactivate.url({
-                      property: property.slug,
-                      unitType: unitType.id,
-                  })
-                : properties.unitTypes.restore.url({
-                      property: property.slug,
-                      unitType: unitType.id,
-                  }),
-        );
+    function togglePublication(): void {
+        if (!viewingOption) {
+            return;
+        }
+
+        publishUnitType(viewingUnitType ?? undefined);
     }
 
-    function togglePublication(unitType: UnitType) {
+    function publishUnitType(unitType?: UnitType): void {
+        if (!unitType) {
+            return;
+        }
+
+        const option = getOption(unitType);
+
+        if (!option || (!option.is_included && !option.is_viable_if_included)) {
+            return;
+        }
+
+        setPublishingId(option.id);
         router.patch(
             properties.unitTypes.publication.update.url({
                 property: property.slug,
-                unitType: unitType.id,
+                unitType: option.id,
+            }),
+            { is_published: !option.is_included },
+            { preserveScroll: true, onFinish: () => setPublishingId(null) },
+        );
+    }
+
+    function confirmDelete(unitType = viewingUnitType): void {
+        if (!unitType) {
+            return;
+        }
+
+        setUnitTypeToDelete(unitType);
+        setDeleteDialogOpen(true);
+    }
+
+    function destroy(): void {
+        if (!unitTypeToDelete) {
+            return;
+        }
+
+        router.delete(
+            properties.unitTypes.destroy.url({
+                property: property.slug,
+                unitType: unitTypeToDelete.id,
             }),
             {
-                is_published: !unitType.is_published,
+                onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                    setDetailOpen(false);
+                    setViewingUnitTypeId(null);
+                    setUnitTypeToDelete(null);
+                },
             },
         );
     }
+
+    function restoreUnitType(unitType: UnitType): void {
+        router.post(
+            properties.unitTypes.restore.url({
+                property: property.slug,
+                unitType: unitType.id,
+            }),
+            {},
+            { preserveScroll: true },
+        );
+    }
+
+    function getOption(unitType: UnitType): ListingUnitType | null {
+        return (
+            rentalOptions.find((option) => option.id === unitType.id) ?? null
+        );
+    }
+
+    const columns: TableColumn<UnitType>[] = [
+        {
+            key: 'name',
+            label: 'Unit Type',
+            className: 'min-w-48 align-top font-medium',
+            render: (unitType) => (
+                <div className="flex items-center gap-2">
+                    <span>{unitType.name}</span>
+                    {unitType.deleted_at && (
+                        <Badge variant="outline">{t('Deleted')}</Badge>
+                    )}
+                    {!unitType.deleted_at && !unitType.is_active && (
+                        <Badge variant="outline">{t('Inactive')}</Badge>
+                    )}
+                </div>
+            ),
+        },
+        {
+            key: 'listing',
+            label: 'Listing',
+            className: 'align-top whitespace-nowrap',
+            render: (unitType) => {
+                const option = getOption(unitType);
+
+                return (
+                    <Badge
+                        variant={
+                            option?.is_included ? 'secondary' : 'outline'
+                        }
+                    >
+                        {t(option?.is_included ? 'Listed' : 'Not listed')}
+                    </Badge>
+                );
+            },
+        },
+        {
+            key: 'inventory',
+            label: 'Inventory',
+            className: 'align-top whitespace-nowrap',
+            render: (unitType) => {
+                if (unitType.deleted_at) {
+                    return '—';
+                }
+
+                const option = getOption(unitType);
+
+                return `${unitCountLabel(unitType.units_count ?? 0, 'unit')} · ${unitCountLabel(option?.available_units ?? 0, 'available', 'available')}`;
+            },
+        },
+        {
+            key: 'starting_price',
+            label: 'Starting price',
+            className: 'align-top whitespace-nowrap',
+            render: (unitType) => {
+                if (unitType.deleted_at) {
+                    return '—';
+                }
+
+                const price = getOption(unitType)?.starting_price;
+
+                return price
+                    ? `${formatPrice(price.amount, price.currency)} ${price.billing_label}`
+                    : '—';
+            },
+        },
+        {
+            key: 'readiness',
+            label: 'Readiness',
+            className: 'min-w-44 max-w-xs align-top',
+            render: (unitType) => {
+                if (unitType.deleted_at) {
+                    return <span className="text-muted-foreground">—</span>;
+                }
+
+                const option = getOption(unitType);
+
+                return option ? (
+                    <div>
+                        <p className="font-medium">
+                            {t(readinessLabel(option))}
+                        </p>
+                        {option.reason_label && (
+                            <p className="mt-1 text-amber-700 dark:text-amber-300">
+                                {t(option.reason_label)}
+                            </p>
+                        )}
+                    </div>
+                ) : null;
+            },
+        },
+        {
+            key: '_actions',
+            label: '',
+            className: 'w-12 text-right',
+            render: (unitType) => {
+                if (unitType.deleted_at) {
+                    return canManage ? (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger
+                                asChild
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
+                                    aria-label={t('Unit Type actions')}
+                                >
+                                    <EllipsisVertical
+                                        className="size-4"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <DropdownMenuItem
+                                    onSelect={() => restoreUnitType(unitType)}
+                                >
+                                    <RotateCcw className="size-4" />
+                                    {t('Restore')}
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    ) : null;
+                }
+
+                const option = getOption(unitType);
+                const canPublish = Boolean(
+                    option &&
+                    (option.is_included || option.is_viable_if_included),
+                );
+
+                return (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger
+                            asChild
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                aria-label={t('Unit Type actions')}
+                            >
+                                <EllipsisVertical
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align="end"
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <DropdownMenuItem
+                                onSelect={() => openDetail(unitType)}
+                            >
+                                <Eye className="size-4" />
+                                {t('View')}
+                            </DropdownMenuItem>
+                            {canManage && (
+                                <>
+                                    <DropdownMenuItem
+                                        onSelect={() => {
+                                            setEditingUnitType(unitType);
+                                            setFormOpen(true);
+                                        }}
+                                    >
+                                        <Pencil className="size-4" />
+                                        {t('Edit')}
+                                    </DropdownMenuItem>
+                                    {canPublish && (
+                                        <DropdownMenuItem
+                                            disabled={
+                                                publishingId === unitType.id
+                                            }
+                                            onSelect={() =>
+                                                publishUnitType(unitType)
+                                            }
+                                        >
+                                            {option?.is_included ? (
+                                                <EyeOff className="size-4" />
+                                            ) : (
+                                                <Eye className="size-4" />
+                                            )}
+                                            {t(
+                                                option?.is_included
+                                                    ? 'Unpublish'
+                                                    : 'Publish',
+                                            )}
+                                        </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                        variant="destructive"
+                                        onSelect={() => confirmDelete(unitType)}
+                                    >
+                                        <Trash2 className="size-4" />
+                                        {t('Delete')}
+                                    </DropdownMenuItem>
+                                </>
+                            )}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                );
+            },
+        },
+    ];
 
     return (
         <PropertyLayout property={property} activeTab="unit-types">
             <Head title={`${t('Unit Types')} - ${property.name}`} />
 
             <div className="space-y-6">
-                <div className="flex items-center justify-end">
-                    <Button onClick={openCreate}>{t('New Unit Type')}</Button>
-                </div>
-
-                {unitTypes.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-8 text-center">
-                        <p className="font-medium">{t('No Unit Types yet.')}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {t(
-                                'Create a reusable type before assigning it to units.',
-                            )}
-                        </p>
-                        <Button className="mt-4" onClick={openCreate}>
-                            {t('Create your first Unit Type')}
+                {canManage && (
+                    <div className="flex items-center justify-end">
+                        <Button onClick={openCreate}>
+                            {t('New Unit Type')}
                         </Button>
                     </div>
-                ) : (
-                    <div className="space-y-3">
-                        {unitTypes.map((unitType) => {
-                            const gallery = unitType.gallery ?? [];
-                            const cover =
-                                gallery.find((item) => item.position === 0) ??
-                                gallery[0];
-                            const visibleAmenities = (
-                                unitType.amenities ?? []
-                            ).slice(0, 3);
-                            const additionalAmenities = Math.max(
-                                (unitType.amenities?.length ?? 0) -
-                                    visibleAmenities.length,
-                                0,
-                            );
-                            const details = [
-                                metricLabel(
-                                    unitType.bedrooms,
-                                    'bedroom',
-                                    'bedrooms',
-                                ),
-                                metricLabel(
-                                    unitType.bathrooms,
-                                    'bathroom',
-                                    'bathrooms',
-                                ),
-                                sizeLabel(unitType.size_sqm),
-                                furnishingLabel(unitType.furnishing),
-                            ].filter(
-                                (value): value is string => value !== null,
-                            );
-
-                            return (
-                                <article
-                                    key={unitType.id}
-                                    className="flex gap-3 rounded-lg border bg-card p-3 shadow-xs sm:gap-4 sm:p-4"
-                                >
-                                    <div className="h-24 w-28 shrink-0 overflow-hidden rounded-md bg-muted sm:h-28 sm:w-40">
-                                        {cover ? (
-                                            <img
-                                                src={cover.url}
-                                                alt={cover.alt ?? unitType.name}
-                                                loading="lazy"
-                                                className="size-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                                                <ImageOff
-                                                    className="size-5"
-                                                    aria-hidden="true"
-                                                />
-                                                <span className="text-xs">
-                                                    {t('No photos')}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex flex-wrap items-start justify-between gap-3">
-                                            <div className="min-w-0">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <h2 className="truncate font-semibold">
-                                                        {unitType.name}
-                                                    </h2>
-                                                    <StatusBadge
-                                                        domain="property"
-                                                        value={
-                                                            unitType.is_active
-                                                                ? 'active'
-                                                                : 'inactive'
-                                                        }
-                                                    />
-                                                    <Badge
-                                                        variant={
-                                                            unitType.is_published
-                                                                ? 'secondary'
-                                                                : 'outline'
-                                                        }
-                                                    >
-                                                        {t(
-                                                            unitType.is_published
-                                                                ? 'Published'
-                                                                : 'Unpublished',
-                                                        )}
-                                                    </Badge>
-                                                    <Badge variant="outline">
-                                                        {unitCountLabel(
-                                                            unitType.units_count ??
-                                                                0,
-                                                        )}
-                                                    </Badge>
-                                                </div>
-                                                {unitType.description && (
-                                                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                                        {unitType.description}
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            <div className="flex shrink-0 items-center gap-1">
-                                                <Button
-                                                    onClick={() =>
-                                                        openEdit(unitType)
-                                                    }
-                                                >
-                                                    <Pencil className="size-4" />
-                                                    {t('Edit')}
-                                                </Button>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                        >
-                                                            <span className="sr-only">
-                                                                {t('Actions')}
-                                                            </span>
-                                                            <EllipsisVertical
-                                                                className="size-4"
-                                                                aria-hidden="true"
-                                                            />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            disabled={
-                                                                !unitType.is_active &&
-                                                                !unitType.is_published
-                                                            }
-                                                            onSelect={() =>
-                                                                togglePublication(
-                                                                    unitType,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Globe className="size-4" />
-                                                            {t(
-                                                                unitType.is_published
-                                                                    ? 'Unpublish'
-                                                                    : 'Publish',
-                                                            )}
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onSelect={() =>
-                                                                toggleActive(
-                                                                    unitType,
-                                                                )
-                                                            }
-                                                        >
-                                                            {unitType.is_active ? (
-                                                                <Trash2 className="size-4" />
-                                                            ) : (
-                                                                <RotateCcw className="size-4" />
-                                                            )}
-                                                            {t(
-                                                                unitType.is_active
-                                                                    ? 'Deactivate'
-                                                                    : 'Activate',
-                                                            )}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                                            {details.length > 0 ? (
-                                                details.map((detail, index) => (
-                                                    <span key={detail}>
-                                                        {index > 0 && (
-                                                            <span
-                                                                className="mr-2"
-                                                                aria-hidden="true"
-                                                            >
-                                                                ·
-                                                            </span>
-                                                        )}
-                                                        {detail}
-                                                    </span>
-                                                ))
-                                            ) : (
-                                                <span className="text-muted-foreground">
-                                                    {t('No unit details')}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-                                            {visibleAmenities.length > 0 ? (
-                                                visibleAmenities.map(
-                                                    (amenity) => (
-                                                        <Badge
-                                                            key={amenity.id}
-                                                            variant={
-                                                                amenity.is_active
-                                                                    ? 'secondary'
-                                                                    : 'outline'
-                                                            }
-                                                        >
-                                                            <span className="flex items-center gap-1.5">
-                                                                <AmenityIcon
-                                                                    icon={
-                                                                        amenity.icon
-                                                                    }
-                                                                    className="size-3.5"
-                                                                    aria-hidden="true"
-                                                                />
-                                                                {amenity.name}
-                                                            </span>
-                                                            {!amenity.is_active &&
-                                                                ` (${t('inactive')})`}
-                                                        </Badge>
-                                                    ),
-                                                )
-                                            ) : (
-                                                <span className="text-xs">
-                                                    {t('No amenities')}
-                                                </span>
-                                            )}
-                                            {additionalAmenities > 0 && (
-                                                <Badge variant="outline">
-                                                    +{additionalAmenities}
-                                                </Badge>
-                                            )}
-                                        </div>
-
-                                        <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                                            <ImageIcon
-                                                className="size-3.5"
-                                                aria-hidden="true"
-                                            />
-                                            {photoCountLabel(gallery.length)}
-                                        </div>
-                                    </div>
-                                </article>
-                            );
-                        })}
-                    </div>
                 )}
+
+                <FilterBar
+                    filters={tableMeta.filters}
+                    activeFilters={table.activeFilters}
+                    activeFilterCount={table.activeFilterCount}
+                    onToggleOption={table.toggleFilterOption}
+                    onClearAll={table.clearAllFilters}
+                    searchInput={
+                        <SearchInput
+                            value={table.searchValue}
+                            onChange={table.onSearchChange}
+                            onClear={table.clearSearch}
+                            placeholder={t('Search Unit Types...')}
+                        />
+                    }
+                />
+
+                <DataTable
+                    columns={columns}
+                    rows={data.data}
+                    rowKey={(unitType) => unitType.id}
+                    onRowClick={openDetail}
+                    isRowInteractive={(unitType) => !unitType.deleted_at}
+                    currentSort={currentSort}
+                    onSort={table.toggleSort}
+                    paginator={data}
+                    perPage={currentPerPage}
+                    onPageChange={table.goToPage}
+                    onPerPageChange={table.setPerPage}
+                    noun={t('Unit Types')}
+                    empty={{
+                        message: t(
+                            'No Unit Types yet. Create a reusable type before assigning it to units.',
+                        ),
+                        ...(canManage
+                            ? {
+                                  createLabel: t('Create your first Unit Type'),
+                                  onCreate: openCreate,
+                              }
+                            : {}),
+                    }}
+                />
             </div>
+
+            <UnitTypeDetailSheet
+                unitType={viewingUnitType}
+                option={viewingOption}
+                open={detailOpen}
+                canManage={canManage}
+                publishing={publishingId !== null}
+                onOpenChange={setDetailOpen}
+                onEdit={editFromDetail}
+                onTogglePublication={togglePublication}
+                onDelete={confirmDelete}
+            />
 
             <UnitTypeFormSheet
                 key={`${currentEditingUnitType?.id ?? 'new'}-${currentEditingUnitType?.updated_at ?? ''}`}
@@ -411,6 +497,32 @@ export default function Index({ property, unitTypes, amenities }: PageProps) {
                 open={formOpen}
                 onOpenChange={setFormOpen}
             />
+
+            <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{t('Delete Unit Type')}</DialogTitle>
+                        <DialogDescription>
+                            {t('Are you sure you want to delete')}{' '}
+                            <span className="font-medium">
+                                {unitTypeToDelete?.name}
+                            </span>
+                            ?
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialogOpen(false)}
+                        >
+                            {t('Cancel')}
+                        </Button>
+                        <Button variant="destructive" onClick={destroy}>
+                            {t('Delete')}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </PropertyLayout>
     );
 }

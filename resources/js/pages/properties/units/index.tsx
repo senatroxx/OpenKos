@@ -3,7 +3,6 @@ import {
     DoorOpen,
     EllipsisVertical,
     ExternalLink,
-    Eye,
     Move,
     Pencil,
     RotateCcw,
@@ -16,9 +15,7 @@ import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
     AssignTenantSheet,
-    MoveOutSheet,
     MoveUnitSheet,
-    UnitDetailSheet,
     UnitFormSheet,
 } from '@/components/features';
 import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
@@ -93,38 +90,12 @@ export default function Index({
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
-    const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingUnit, setViewingUnit] = useState<Unit | null>(null);
-
     const [leaseFormOpen, setLeaseFormOpen] = useState(false);
     const [assignUnit, setAssignUnit] = useState<Unit | null>(null);
 
     const [moveOpen, setMoveOpen] = useState(false);
     const [moveLease, setMoveLease] = useState<LeaseInfo | null>(null);
     const [moveFromUnit, setMoveFromUnit] = useState<Unit | null>(null);
-
-    const [moveOutLeaseData, setMoveOutLeaseData] = useState<{
-        id: number;
-        currency: string;
-        deposit_amount: string;
-        tenants: { id: number; name: string; phone: string | null }[];
-        primary_tenant: {
-            id: number;
-            name: string;
-            phone: string | null;
-        } | null;
-        unit: {
-            id: number;
-            name: string;
-            property_id: number;
-            property: {
-                id: number;
-                name: string;
-                city: { name: string } | null;
-            } | null;
-        } | null;
-    } | null>(null);
-    const [moveOutOpen, setMoveOutOpen] = useState(false);
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
@@ -157,79 +128,14 @@ export default function Index({
         setDialogOpen(true);
     }
 
-    function openDetail(unit: Unit) {
-        setViewingUnit(unit);
-        setDetailOpen(true);
-    }
-
-    function editFromDetail() {
-        if (!viewingUnit) {
-            return;
-        }
-
-        setEditingUnit(viewingUnit);
-        setDetailOpen(false);
-        setDialogOpen(true);
-    }
-
-    function openAssignTenant() {
-        if (!viewingUnit) {
-            return;
-        }
-
-        setAssignUnit(viewingUnit);
-        setDetailOpen(false);
-        setLeaseFormOpen(true);
-    }
-
-    function openMoveUnit() {
-        if (!viewingUnit) {
-            return;
-        }
-
-        const lease = viewingUnit.leases?.[0];
+    function openMoveUnit(unit: Unit) {
+        const lease = unit.leases?.[0];
 
         if (lease) {
-            setMoveFromUnit(viewingUnit);
+            setMoveFromUnit(unit);
             setMoveLease(lease);
-            setDetailOpen(false);
             setMoveOpen(true);
         }
-    }
-
-    function openMoveOut() {
-        if (!viewingUnit) {
-            return;
-        }
-
-        const lease = viewingUnit.leases?.[0];
-
-        if (!lease) {
-            return;
-        }
-
-        setMoveOutLeaseData({
-            id: lease.id,
-            currency: lease.currency,
-            deposit_amount: lease.deposit_amount,
-            tenants: lease.tenants ?? [],
-            primary_tenant: lease.primary_tenant ?? null,
-            unit: {
-                id: viewingUnit.id,
-                name: viewingUnit.name,
-                property_id: property.id,
-                property: {
-                    id: property.id,
-                    name: property.name,
-                    city:
-                        property.city && typeof property.city === 'string'
-                            ? { name: property.city }
-                            : null,
-                },
-            },
-        });
-        setDetailOpen(false);
-        setMoveOutOpen(true);
     }
 
     function confirmDelete(unit: Unit) {
@@ -395,12 +301,6 @@ export default function Index({
                                     {t('Open Workspace')}
                                 </DropdownMenuItem>
                             )}
-                            {!r.deleted_at && (
-                                <DropdownMenuItem onClick={() => openDetail(r)}>
-                                    <Eye className="size-4" />
-                                    {t('View')}
-                                </DropdownMenuItem>
-                            )}
                             {!r.deleted_at && r.capacity > occupants.length && (
                                 <DropdownMenuItem
                                     onClick={() => {
@@ -416,15 +316,7 @@ export default function Index({
                             {!r.deleted_at && hasActiveLease && (
                                 <DropdownMenuItem
                                     onClick={() => {
-                                        setViewingUnit(r);
-                                        setDetailOpen(false);
-                                        const lease = r.leases?.[0];
-
-                                        if (lease) {
-                                            setMoveFromUnit(r);
-                                            setMoveLease(lease);
-                                            setMoveOpen(true);
-                                        }
+                                        openMoveUnit(r);
                                     }}
                                 >
                                     <Move className="size-4" />
@@ -518,7 +410,15 @@ export default function Index({
                     rows={data.data}
                     currentSort={currentSort}
                     onSort={table.toggleSort}
-                    onRowClick={openDetail}
+                    onRowClick={(unit) =>
+                        router.get(
+                            properties.units.show.url({
+                                property: property.slug,
+                                unit: unit.slug,
+                            }),
+                        )
+                    }
+                    isRowInteractive={(unit) => !unit.deleted_at}
                     paginator={data}
                     perPage={currentPerPage}
                     onPageChange={table.goToPage}
@@ -531,17 +431,6 @@ export default function Index({
                     }}
                 />
             </div>
-
-            <UnitDetailSheet
-                unit={viewingUnit}
-                property={property}
-                open={detailOpen}
-                onOpenChange={setDetailOpen}
-                onEdit={editFromDetail}
-                onAssignTenant={openAssignTenant}
-                onMoveOut={openMoveOut}
-                onMoveUnit={openMoveUnit}
-            />
 
             <UnitFormSheet
                 key={`${currentEditingUnit?.id ?? 'new'}-${currentEditingUnit?.updated_at ?? ''}`}
@@ -572,13 +461,6 @@ export default function Index({
                     onOpenChange={setMoveOpen}
                 />
             )}
-
-            <MoveOutSheet
-                lease={moveOutLeaseData}
-                availableUnits={_availableUnits}
-                open={moveOutOpen}
-                onOpenChange={setMoveOutOpen}
-            />
 
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <DialogContent>

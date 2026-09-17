@@ -2,7 +2,6 @@ import { Head, router, usePage } from '@inertiajs/react';
 import {
     EllipsisVertical,
     ExternalLink,
-    Eye,
     Pencil,
     RotateCcw,
     Trash2,
@@ -12,7 +11,7 @@ import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import { PropertyDetailSheet, PropertyFormSheet } from '@/components/features';
+import { PropertyFormSheet } from '@/components/features';
 import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { Heading } from '@/components/shared';
 import { StatusBadge } from '@/components/shared/status-badge';
@@ -69,9 +68,6 @@ export default function Index({
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingProperty, setEditingProperty] =
         useState<ManagedProperty | null>(null);
-    const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingProperty, setViewingProperty] =
-        useState<ManagedProperty | null>(null);
     const [archiveConfirm, setArchiveConfirm] =
         useState<ManagedProperty | null>(null);
 
@@ -97,21 +93,6 @@ export default function Index({
 
     function openEdit(property: ManagedProperty) {
         setEditingProperty(property);
-        setDialogOpen(true);
-    }
-
-    function openDetail(property: ManagedProperty) {
-        setViewingProperty(property);
-        setDetailOpen(true);
-    }
-
-    function editFromDetail() {
-        if (!viewingProperty) {
-            return;
-        }
-
-        setEditingProperty(viewingProperty);
-        setDetailOpen(false);
         setDialogOpen(true);
     }
 
@@ -231,10 +212,6 @@ export default function Index({
                             <ExternalLink className="size-4" />
                             {t('Open Workspace')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openDetail(p)}>
-                            <Eye className="size-4" />
-                            {t('View')}
-                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => openEdit(p)}>
                             <Pencil className="size-4" />
                             {t('Edit')}
@@ -317,9 +294,12 @@ export default function Index({
                 <DataTable
                     columns={columns}
                     rows={data.data}
+                    onRowClick={(property) =>
+                        router.get(properties.show.url(property))
+                    }
+                    isRowInteractive={(property) => property.is_active}
                     currentSort={currentSort}
                     onSort={table.toggleSort}
-                    onRowClick={openDetail}
                     paginator={data}
                     perPage={currentPerPage}
                     onPageChange={table.goToPage}
@@ -332,14 +312,6 @@ export default function Index({
                     }}
                 />
             </div>
-
-            <PropertyDetailSheet
-                key={`detail-${viewingProperty?.id ?? 'new'}`}
-                property={viewingProperty}
-                open={detailOpen}
-                onOpenChange={setDetailOpen}
-                onEdit={editFromDetail}
-            />
 
             <PropertyFormSheet
                 key={`form-${editingProperty?.id ?? 'new'}`}

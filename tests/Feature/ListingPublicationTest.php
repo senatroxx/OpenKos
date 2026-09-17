@@ -670,6 +670,233 @@ it('keeps storefront metadata distinct from entity detail metadata', function ()
     expect($unitTypeDetail)->toContain('title={`${unitType.name} - ${listing.property.name}`}');
 });
 
+it('keeps listing recommendations non-blocking for a viable offering', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+        'description' => null,
+        'address' => null,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'is_published' => true,
+        'public_slug' => 'studio',
+    ]);
+
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    Unit::factory()->for($property)->create(['unit_type_id' => null]);
+
+    $response = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk();
+
+    $readiness = $response->inertiaProps('readiness');
+
+    expect($readiness['can_publish'])->toBeTrue()
+        ->and($readiness['is_published'])->toBeFalse()
+        ->and($readiness['is_publicly_visible'])->toBeFalse()
+        ->and($readiness['public_url'])->toBeNull()
+        ->and($readiness['blockers'])->toBeEmpty()
+        ->and(collect($readiness['recommendations'])->pluck('key')->all())
+        ->toContain('description', 'photos', 'amenities', 'unassigned_units', 'property_information');
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertRedirect();
+
+    expect($property->refresh()->is_published)->toBeTrue();
+});
+
+it('separates published state from current public visibility', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+        'public_slug' => 'temporarily-hidden-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'is_published' => true,
+        'public_slug' => 'studio',
+    ]);
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $unit->rates()->update(['is_active' => false]);
+
+    $response = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk();
+
+    $readiness = $response->inertiaProps('readiness');
+
+    expect($readiness['can_publish'])->toBeFalse()
+        ->and($readiness['is_published'])->toBeTrue()
+        ->and($readiness['is_publicly_visible'])->toBeFalse()
+        ->and($readiness['public_url'])->toBeNull()
+        ->and(collect($readiness['blockers'])->pluck('key')->all())
+        ->toContain('unit_rate_required')
+        ->and($readiness['unit_types'][0]['status'])->toBe('blocked');
+});
+
+it('does not treat zero current availability as listing failure', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'is_published' => true,
+        'public_slug' => 'occupied-studio',
+    ]);
+    $unit = Unit::factory()->for($property)->create([
+        'unit_type_id' => $unitType->id,
+        'status' => 'occupied',
+    ]);
+    Lease::factory()->create(['unit_id' => $unit->id]);
+
+    $response = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk();
+
+    $readiness = $response->inertiaProps('readiness');
+
+    expect($readiness['can_publish'])->toBeTrue()
+        ->and($readiness['blockers'])->toBeEmpty()
+        ->and($readiness['unit_types'][0]['available_units'])->toBe(0)
+        ->and($readiness['unit_types'][0]['status'])->toBe('ready');
+});
+
+it('exposes whole-property rental options without changing publication rules', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::WholeProperty,
+    ]);
+    PropertyRate::factory()->for($property)->create([
+        'amount' => '1500000',
+        'currency' => 'IDR',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk();
+
+    $readiness = $response->inertiaProps('readiness');
+
+    expect($readiness['can_publish'])->toBeTrue()
+        ->and($readiness['whole_property']['is_listed'])->toBeFalse()
+        ->and($readiness['whole_property']['has_active_pricing'])->toBeTrue()
+        ->and($readiness['whole_property']['starting_price']['amount'])->toBe('1500000.000')
+        ->and($readiness['unit_types'])->toBeEmpty();
+
+    $this->actingAs($user)
+        ->patch(route('properties.publication.update', $property), ['is_published' => true])
+        ->assertRedirect();
+
+    $readiness = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->inertiaProps('readiness');
+
+    expect($readiness['is_published'])->toBeTrue()
+        ->and($readiness['is_publicly_visible'])->toBeTrue()
+        ->and($readiness['whole_property']['is_listed'])->toBeTrue();
+});
+
+it('keeps listed unit type inclusion separate from current viability', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'is_published' => true,
+        'public_slug' => 'studio',
+    ]);
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $unit->rates()->update(['is_active' => false]);
+
+    $readiness = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk()
+        ->inertiaProps('readiness');
+
+    expect($readiness['unit_types'][0]['is_included'])->toBeTrue()
+        ->and($readiness['unit_types'][0]['status'])->toBe('blocked')
+        ->and($readiness['unit_types'][0]['reason'])->toBe('No active pricing is configured for these Units.');
+});
+
+it('shows whole-property and unit rental options independently for hybrid properties', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+    ]);
+    PropertyRate::factory()->for($property)->create();
+    $unitType = UnitType::factory()->for($property)->create([
+        'is_published' => true,
+        'public_slug' => 'studio',
+    ]);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $readiness = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk()
+        ->inertiaProps('readiness');
+
+    expect($readiness['whole_property'])->not->toBeNull()
+        ->and($readiness['whole_property']['has_active_pricing'])->toBeTrue()
+        ->and($readiness['unit_types'])->toHaveCount(1)
+        ->and($readiness['unit_types'][0]['is_included'])->toBeTrue();
+});
+
+it('presents eligible excluded types without misleading setup warnings', function (string $route, string $key) {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create(['is_published' => false, 'public_slug' => null]);
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $options = $this->actingAs($user)->get(route($route, $property))->assertOk()->inertiaProps($key);
+
+    expect($options[0]['is_included'])->toBeFalse()
+        ->and($options[0]['is_viable_if_included'])->toBeTrue()
+        ->and($options[0]['status'])->toBe('excluded')
+        ->and($options[0]['reason'])->toBeNull()
+        ->and($options[0]['physical_units'])->toBe(1)
+        ->and($options[0]['available_units'])->toBe(1)
+        ->and($options[0]['starting_price'])->not->toBeNull();
+
+    $this->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => true])->assertRedirect();
+    $unit->rates()->update(['is_active' => false]);
+
+    $options = $this->get(route($route, $property))->assertOk()->inertiaProps($key);
+    expect($options[0]['is_included'])->toBeTrue()
+        ->and($options[0]['status'])->toBe('blocked')
+        ->and($options[0]['has_active_pricing'])->toBeFalse();
+
+    $unitType->update(['is_active' => false]);
+    $options = $this->get(route($route, $property))->assertOk()->inertiaProps($key);
+    expect($options[0]['is_included'])->toBeTrue()->and($options[0]['status'])->toBe('inactive');
+
+    $this->patch(route('properties.unit-types.publication.update', [$property, $unitType]), ['is_published' => false])->assertRedirect();
+    expect($unitType->refresh()->is_published)->toBeFalse();
+})->with([
+    ['properties.listing', 'readiness.unit_types'],
+    ['properties.unit-types.index', 'rentalOptions'],
+]);
+
+it('explains why an excluded incomplete unit type cannot be included', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Unit,
+    ]);
+    UnitType::factory()->for($property)->create([
+        'is_published' => false,
+        'public_slug' => null,
+    ]);
+
+    $readiness = $this->actingAs($user)
+        ->get(route('properties.listing', $property))
+        ->assertOk()
+        ->inertiaProps('readiness');
+
+    expect($readiness['unit_types'][0]['is_included'])->toBeFalse()
+        ->and($readiness['unit_types'][0]['is_viable_if_included'])->toBeFalse()
+        ->and($readiness['unit_types'][0]['status'])->toBe('blocked')
+        ->and($readiness['unit_types'][0]['reason'])->toBe('No Units are assigned to this Unit Type.')
+        ->and($readiness['unit_types'][0]['action']['label'])->toBe('Open Units');
+});
+
 it('renders public property and unit type pages from the safe listing projection', function () {
     config(['inertia.ssr.enabled' => false]);
 

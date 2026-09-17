@@ -3,6 +3,7 @@ export type * from './dashboard';
 export type * from './models';
 export type * from './listings';
 export type * from './navigation';
+export type * from './properties';
 export type * from './roles';
 export type * from './settings';
 export type * from './table';
