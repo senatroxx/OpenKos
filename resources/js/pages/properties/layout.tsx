@@ -12,10 +12,12 @@ import type { Property } from '@/types';
 export function PropertyLayout({
     property,
     activeTab,
+    actions,
     children,
 }: {
     property: Property;
     activeTab: string;
+    actions?: ReactNode;
     children: ReactNode;
 }) {
     const hasUnitInventory = supportsUnitInventory(property.rental_mode);
@@ -78,6 +80,7 @@ export function PropertyLayout({
             subtitle={property.address ?? undefined}
             backRoute="/properties"
             backLabel="All properties"
+            actions={actions}
         >
             <Head title={`${property.name} — Property`} />
 

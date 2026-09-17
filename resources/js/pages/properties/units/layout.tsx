@@ -10,11 +10,13 @@ export function UnitLayout({
     property,
     unit,
     activeTab,
+    actions,
     children,
 }: {
     property: WorkspaceProperty;
     unit: WorkspaceUnit;
     activeTab: string;
+    actions?: ReactNode;
     children: ReactNode;
 }) {
     const base = `/properties/${property.slug}/units/${unit.slug}`;
@@ -25,6 +27,7 @@ export function UnitLayout({
             subtitle={`${property.name} — Floor ${unit.floor ?? '—'}`}
             backRoute={`/properties/${property.slug}/units`}
             backLabel={`${property.name} units`}
+            actions={actions}
         >
             <Head title={`${unit.name} — Unit`} />
 

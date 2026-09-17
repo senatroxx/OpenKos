@@ -42,9 +42,31 @@ class UnitController extends Controller
 
         $this->loadWorkspaceUnit($unit);
 
+        $availableUnits = $property->units()
+            ->with(['property.city', 'activeRates'])
+            ->select(['id', 'slug', 'name', 'property_id', 'capacity'])
+            ->withOccupiedCount()
+            ->availableForAssignment()
+            ->orderBy('name')
+            ->get();
+
+        $tenants = Tenant::where('is_active', true)
+            ->whereNull('deleted_at')
+            ->when(! request()->user()->isOwner(), fn (Builder $query) => $query->whereHas(
+                'leases.unit.property.users',
+                fn (Builder $query) => $query->whereKey(request()->user()->id),
+            ))
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone']);
+
         return Inertia::render('properties/units/show', [
             'property' => $property,
             'unit' => $unit,
+            'availableUnits' => $availableUnits,
+            'tenants' => $tenants,
+            'unitTypes' => $property->unitTypes()
+                ->orderBy('name')
+                ->get(['id', 'property_id', 'name', 'is_active']),
         ]);
     }
 

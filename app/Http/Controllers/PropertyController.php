@@ -38,8 +38,15 @@ class PropertyController extends Controller
         $property = Property::withWorkspaceStats()
             ->findOrFail($property->id);
 
+        $countryCode = Setting::get('country_code');
+
         return Inertia::render('properties/overview', [
             'property' => $property,
+            'regions' => Region::where('country_code', $countryCode)
+                ->with('cities')
+                ->orderBy('name')
+                ->get(),
+            'propertyTypes' => PropertyType::active()->ordered()->get(['slug', 'label', 'default_rental_mode']),
         ]);
     }
 
