@@ -41,7 +41,7 @@ test('navigates the Unit Type workspace tabs', async ({ page }) => {
 
     await page.getByRole('link', { name: /^(Pricing|Harga)$/i }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+\/rates$/);
-    await expect(page.getByText('These rates are inherited')).toBeVisible();
+    await expect(page.locator('tbody tr').filter({ hasText: 'IDR' }).first()).toBeVisible();
 
     await page.getByRole('link', { name: /^Listing$/i }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+\/listing$/);
@@ -58,9 +58,9 @@ test('manages inherited pricing and exposes effective rates in assignment', asyn
     await unitTypeRow.getByRole('button', { name: 'Unit Type actions' }).click();
     await page.getByRole('menuitem', { name: 'Manage pricing' }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+\/rates$/);
-    await expect(page.getByText('These rates are inherited')).toBeVisible();
-    await expect(page.locator('input[value^="1000000"]')).toBeVisible();
-    await expect(page.locator('input[value^="2700000"]')).toBeVisible();
+    await expect(page.locator('tbody tr').filter({ hasText: 'IDR' }).first()).toBeVisible();
+    await expect(page.getByText(/1[.,]000[.,]000/)).toBeVisible();
+    await expect(page.getByText(/2[.,]700[.,]000/)).toBeVisible();
 
     await page.goto(`/properties/${fixture.property}/units/${fixture.unit}`);
     await page.getByRole('button', { name: 'Unit actions' }).click();

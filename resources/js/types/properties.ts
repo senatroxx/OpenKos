@@ -43,6 +43,14 @@ export type UnitTypeRatesFormData = {
     updated_at: string | null;
 };
 
+export type NewUnitTypeRateData = {
+    amount: string;
+    currency: string;
+    billing_interval: number;
+    billing_unit: UnitTypeRate['billing_unit'];
+    is_active: boolean;
+};
+
 export type UnitTypeWorkspaceListing = ListingUnitType | null;
 
 export type UnitTypeWorkspaceProps = {
@@ -96,7 +104,11 @@ export type UnitsPageProps = {
         property_id: number;
         capacity: number;
         occupied_count: number;
-        property: { id: number; name: string; city: { name: string } | null } | null;
+        property: {
+            id: number;
+            name: string;
+            city: { name: string } | null;
+        } | null;
     }[];
     unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
     unitTypeWorkspace?: UnitType;
