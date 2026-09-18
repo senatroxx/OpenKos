@@ -15,12 +15,14 @@ import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
     AssignTenantSheet,
+    BulkAssignUnitTypeDialog,
     MoveUnitSheet,
     UnitFormSheet,
 } from '@/components/features';
 import { EntityTransferMenu } from '@/components/features/data-transfer/transfer-actions';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -57,6 +59,7 @@ export default function Index({
     sort: currentSort = 'name',
     search: currentSearch = '',
     status: currentStatus = '',
+    assignment: currentAssignment = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
     unitTypeWorkspace,
@@ -74,6 +77,8 @@ export default function Index({
 
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+    const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+    const [bulkAssignmentOpen, setBulkAssignmentOpen] = useState(false);
 
     const table = useTable({
         routeFn: () => (unitTypeWorkspace
@@ -84,12 +89,52 @@ export default function Index({
             search: currentSearch,
             per_page: String(currentPerPage),
             status: currentStatus,
+            assignment: currentAssignment,
         },
         defaults: {
             sort: 'name',
             per_page: '15',
         },
     });
+
+    function clearSelection() {
+        setSelectedIds(new Set());
+    }
+
+    function handleSearchChange(value: string) {
+        clearSelection();
+        table.onSearchChange(value);
+    }
+
+    function handleSearchClear() {
+        clearSelection();
+        table.clearSearch();
+    }
+
+    function handleFilterToggle(key: string, value: string) {
+        clearSelection();
+        table.toggleFilterOption(key, value);
+    }
+
+    function handleClearFilters() {
+        clearSelection();
+        table.clearAllFilters();
+    }
+
+    function handleSort(column: string) {
+        clearSelection();
+        table.toggleSort(column);
+    }
+
+    function handlePageChange(page: number) {
+        clearSelection();
+        table.goToPage(page);
+    }
+
+    function handlePerPageChange(perPage: number) {
+        clearSelection();
+        table.setPerPage(perPage);
+    }
 
     const currentEditingUnit = editingUnit
         ? (data.data.find((item) => item.id === editingUnit.id) ?? editingUnit)
@@ -149,7 +194,70 @@ export default function Index({
         return _availableUnits.filter((r) => r.id !== currentUnitId);
     }
 
+    const selectableUnits = data.data.filter((unit) => !unit.deleted_at);
+    const selectedUnits = selectableUnits.filter((unit) =>
+        selectedIds.has(unit.id),
+    );
+    const allVisibleSelected =
+        selectableUnits.length > 0 &&
+        selectableUnits.every((unit) => selectedIds.has(unit.id));
+
+    function toggleUnit(unitId: number) {
+        setSelectedIds((previous) => {
+            const next = new Set(previous);
+
+            if (next.has(unitId)) {
+                next.delete(unitId);
+            } else {
+                next.add(unitId);
+            }
+
+            return next;
+        });
+    }
+
+    function toggleVisibleUnits() {
+        setSelectedIds((previous) => {
+            const next = new Set(previous);
+
+            if (allVisibleSelected) {
+                selectableUnits.forEach((unit) => next.delete(unit.id));
+            } else {
+                selectableUnits.forEach((unit) => next.add(unit.id));
+            }
+
+            return next;
+        });
+    }
+
     const columns: TableColumn<Unit>[] = [
+        {
+            key: 'select',
+            label: '',
+            header: (
+                <Checkbox
+                    checked={
+                        allVisibleSelected
+                            ? true
+                            : selectedUnits.length > 0
+                              ? 'indeterminate'
+                              : false
+                    }
+                    onCheckedChange={toggleVisibleUnits}
+                    aria-label={t('Select all visible Units')}
+                    disabled={selectableUnits.length === 0}
+                />
+            ),
+            render: (unit) => (
+                <Checkbox
+                    checked={selectedIds.has(unit.id)}
+                    onCheckedChange={() => toggleUnit(unit.id)}
+                    onClick={(event) => event.stopPropagation()}
+                    aria-label={t('Select :name', { name: unit.name })}
+                    disabled={Boolean(unit.deleted_at)}
+                />
+            ),
+        },
         {
             key: 'name',
             label: 'Name',
@@ -370,23 +478,50 @@ export default function Index({
                     filters={tableMeta.filters}
                     activeFilters={table.activeFilters}
                     activeFilterCount={table.activeFilterCount}
-                    onToggleOption={table.toggleFilterOption}
-                    onClearAll={table.clearAllFilters}
+                    onToggleOption={handleFilterToggle}
+                    onClearAll={handleClearFilters}
                     searchInput={
                         <SearchInput
                             value={table.searchValue}
-                            onChange={table.onSearchChange}
-                            onClear={table.clearSearch}
+                            onChange={handleSearchChange}
+                            onClear={handleSearchClear}
                             placeholder={t('Search by name or floor...')}
                         />
                     }
                 />
 
+                {selectedUnits.length > 0 && (
+                    <div
+                        role="toolbar"
+                        aria-label={t('Bulk Unit actions')}
+                        className="fixed inset-x-3 bottom-4 z-40 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-full border bg-card px-5 py-2 text-xs shadow-lg sm:inset-x-auto sm:left-1/2 sm:max-w-[calc(100vw-2rem)] sm:-translate-x-1/2"
+                    >
+                        <span className="font-medium tabular-nums">
+                            {selectedUnits.length} {t('selected')}
+                        </span>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => setBulkAssignmentOpen(true)}
+                        >
+                            {t('Assign Unit Type')}
+                        </Button>
+                        <button
+                            type="button"
+                            onClick={clearSelection}
+                            className="ml-auto text-muted-foreground hover:text-foreground"
+                        >
+                            {t('Clear selection')}
+                        </button>
+                    </div>
+                )}
+
                 <DataTable
                     columns={columns}
                     rows={data.data}
                     currentSort={currentSort}
-                    onSort={table.toggleSort}
+                    onSort={handleSort}
                     onRowClick={(unit) =>
                         router.get(
                             properties.units.show.url({
@@ -398,8 +533,8 @@ export default function Index({
                     isRowInteractive={(unit) => !unit.deleted_at}
                     paginator={data}
                     perPage={currentPerPage}
-                    onPageChange={table.goToPage}
-                    onPerPageChange={table.setPerPage}
+                    onPageChange={handlePageChange}
+                    onPerPageChange={handlePerPageChange}
                     noun={t('units')}
                     empty={{
                         message: t('No units yet.'),
@@ -416,6 +551,15 @@ export default function Index({
                 unitTypes={unitTypes}
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
+            />
+
+            <BulkAssignUnitTypeDialog
+                key={selectedUnits.map((unit) => unit.id).join('-')}
+                property={property}
+                units={selectedUnits}
+                unitTypes={unitTypes}
+                open={bulkAssignmentOpen}
+                onOpenChange={setBulkAssignmentOpen}
             />
 
             {assignUnit && (

@@ -716,6 +716,9 @@ it('keeps listing recommendations non-blocking for a viable offering', function 
         ->and(collect($readiness['recommendations'])->pluck('key')->all())
         ->toContain('description', 'photos', 'amenities', 'unassigned_units', 'property_information');
 
+    expect(collect($readiness['recommendations'])->firstWhere('key', 'unassigned_units')['action']['url'])
+        ->toContain('assignment=unassigned');
+
     $this->actingAs($user)
         ->patch(route('properties.publication.update', $property), ['is_published' => true])
         ->assertRedirect();

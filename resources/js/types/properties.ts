@@ -29,6 +29,7 @@ export type UnitTypesPageProps = {
     sort?: string;
     search?: string;
     status?: string;
+    assignment?: string;
     per_page?: number;
     table: TableMeta;
 };
@@ -87,6 +88,33 @@ export type AvailableUnitOption = {
     occupied_count?: number;
 };
 
+export type UnitIndexPageProps = {
+    property: Property;
+    units: PaginatedData<Unit>;
+    tenants: { id: number; name: string; phone: string }[];
+    availableUnits: AvailableUnitOption[];
+    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
+    sort?: string;
+    search?: string;
+    status?: string;
+    assignment?: string;
+    per_page?: number;
+    table: TableMeta;
+};
+
+export type BulkAssignUnitTypeDialogProps = {
+    property: Property;
+    units: Unit[];
+    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+};
+
+export type BulkAssignUnitTypeFormData = {
+    unit_ids: number[];
+    unit_type_id: string;
+};
+
 export type UnitWorkspaceProps = {
     property: Property;
     unit: Unit;
@@ -115,6 +143,7 @@ export type UnitsPageProps = {
     sort?: string;
     search?: string;
     status?: string;
+    assignment?: string;
     per_page?: number;
     table: TableMeta;
 };
