@@ -32,7 +32,9 @@ test('navigates the Unit Type workspace tabs', async ({ page }) => {
     await page.goto(`/properties/${fixture.property}/unit-types`);
     await page.locator('tr').filter({ hasText: 'OPE-223 Studio' }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+$/);
-    await expect(page.getByText('Property: OPE-223 Pricing Property')).toBeVisible();
+    await expect(
+        page.getByText('Property: OPE-223 Pricing Property'),
+    ).toBeVisible();
     await expect(page.getByText('Pricing').last()).toBeVisible();
 
     await page.getByRole('link', { name: /^(Units|Unit)$/i }).click();
@@ -41,7 +43,9 @@ test('navigates the Unit Type workspace tabs', async ({ page }) => {
 
     await page.getByRole('link', { name: /^(Pricing|Harga)$/i }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+\/rates$/);
-    await expect(page.locator('tbody tr').filter({ hasText: 'IDR' }).first()).toBeVisible();
+    await expect(
+        page.locator('tbody tr').filter({ hasText: 'IDR' }).first(),
+    ).toBeVisible();
 
     await page.getByRole('link', { name: /^Listing$/i }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+\/listing$/);
@@ -54,11 +58,17 @@ test('manages inherited pricing and exposes effective rates in assignment', asyn
     await login(page);
 
     await page.goto(`/properties/${fixture.property}/unit-types`);
-    const unitTypeRow = page.locator('tr').filter({ hasText: 'OPE-223 Studio' });
-    await unitTypeRow.getByRole('button', { name: 'Unit Type actions' }).click();
+    const unitTypeRow = page
+        .locator('tr')
+        .filter({ hasText: 'OPE-223 Studio' });
+    await unitTypeRow
+        .getByRole('button', { name: 'Unit Type actions' })
+        .click();
     await page.getByRole('menuitem', { name: 'Manage pricing' }).click();
     await expect(page).toHaveURL(/\/unit-types\/\d+\/rates$/);
-    await expect(page.locator('tbody tr').filter({ hasText: 'IDR' }).first()).toBeVisible();
+    await expect(
+        page.locator('tbody tr').filter({ hasText: 'IDR' }).first(),
+    ).toBeVisible();
     await expect(page.getByText(/1[.,]000[.,]000/)).toBeVisible();
     await expect(page.getByText(/2[.,]700[.,]000/)).toBeVisible();
 
@@ -83,13 +93,19 @@ test('manages inherited pricing and exposes effective rates in assignment', asyn
     ).toBeVisible();
 
     await page.getByRole('button', { name: 'Unit actions' }).click();
-    await page.getByRole('menuitem', { name: /Move Unit|Pindahkan unit/i }).click();
+    await page
+        .getByRole('menuitem', { name: /Move Unit|Pindahkan unit/i })
+        .click();
     const moveSheet = page.getByRole('dialog').last();
     await moveSheet.getByRole('combobox').click();
     await page.getByText('OPE-223 Unit 2').last().click();
-    await moveSheet.getByRole('button', { name: /Move Tenant|Pindahkan penyewa/i }).click();
+    await moveSheet
+        .getByRole('button', { name: /Move Tenant|Pindahkan penyewa/i })
+        .click();
     await expect(
-        page.getByText(/Tenant moved to new unit|Penyewa dipindahkan ke unit baru/i),
+        page.getByText(
+            /Tenant moved to new unit|Penyewa dipindahkan ke unit baru/i,
+        ),
     ).toBeVisible();
 });
 
@@ -105,4 +121,61 @@ test('shows effective public starting prices and listing readiness', async ({
     await page.goto(`/listings/${fixture.property}`);
     await expect(page.getByText('OPE-223 Studio')).toBeVisible();
     await expect(page.getByText(/(?:Rp|IDR)/)).toBeVisible();
+});
+
+test('manages Unit Type pricing CRUD', async ({ page }) => {
+    await login(page);
+
+    await page.goto(
+        `/properties/${fixture.property}/unit-types/${fixture.unit_type}/rates`,
+    );
+    await page.getByRole('button', { name: /Add Rate|Tambah tarif/i }).click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.locator('#new-rate-amount').fill('333000');
+    await dialog.locator('input[type="number"]').nth(1).fill('4');
+    await dialog
+        .getByRole('button', { name: /Add Rate|Tambah tarif/i })
+        .click();
+
+    const rateRow = page.locator('tbody tr').filter({ hasText: '333' }).first();
+    await expect(rateRow).toContainText(/333[.,]000/);
+    await expect(rateRow).toContainText(/Active|Aktif/);
+
+    await rateRow.getByRole('button').click();
+    await page
+        .getByRole('menuitem', { name: /Edit amount|Edit jumlah/i })
+        .click();
+    const editRow = page
+        .locator('tbody tr')
+        .filter({ has: page.locator('input[type="number"]') })
+        .last();
+    await editRow.locator('input[type="number"]').fill('444000');
+    await editRow.getByRole('button', { name: /Save|Simpan/i }).click();
+    await expect(
+        page.locator('tbody tr').filter({ hasText: '444' }).first(),
+    ).toContainText(/444[.,]000/);
+
+    const updatedRow = page
+        .locator('tbody tr')
+        .filter({ hasText: '444' })
+        .first();
+    await updatedRow.getByRole('button').click();
+    await page
+        .getByRole('menuitem', { name: /Deactivate|Nonaktifkan/i })
+        .click();
+
+    await page.getByRole('combobox').nth(1).click();
+    await page
+        .getByRole('option', { name: /All statuses|Semua status/i })
+        .click();
+    const inactiveRow = page
+        .locator('tbody tr')
+        .filter({ hasText: '444' })
+        .first();
+    await expect(inactiveRow).toContainText(/Inactive|Nonaktif|Tidak aktif/);
+
+    await inactiveRow.getByRole('button').click();
+    await page.getByRole('menuitem', { name: /Reactivate|Aktifkan/i }).click();
+    await expect(updatedRow).toContainText(/Active|Aktif/);
 });
