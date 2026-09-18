@@ -5,27 +5,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BILLING_UNITS } from '@/lib/constants';
 import properties from '@/routes/properties';
-import type { Property, UnitType, UnitTypeRate } from '@/types';
+import type {
+    UnitTypeRatesFormData,
+    UnitTypeRatesPageProps,
+    UnitTypeRate,
+} from '@/types';
 import { PropertyLayout } from '../layout';
 
 export default function UnitTypeRates({
     property,
     unitType,
-}: {
-    property: Property;
-    unitType: UnitType & { rates: UnitTypeRate[] };
-}) {
-    const { setting } = usePage<{
-        setting: { currency: string; supported_currencies: string[] };
-    }>().props;
-    const form = useForm({
+}: UnitTypeRatesPageProps) {
+    const { setting } = usePage().props;
+    const form = useForm<UnitTypeRatesFormData>({
         rates: unitType.rates,
         updated_at: unitType.updated_at ?? null,
     });
 
     function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        form.put(properties.unitTypes.rates.update.url({ property, unitType }), {
+        form.submit(properties.unitTypes.rates.update({ property, unitType }), {
             preserveScroll: true,
         });
     }

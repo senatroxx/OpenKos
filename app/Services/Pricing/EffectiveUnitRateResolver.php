@@ -2,6 +2,8 @@
 
 namespace App\Services\Pricing;
 
+use App\Business\Pricing\EffectiveRateResolver;
+use App\Data\Pricing\RateData;
 use App\Enums\BillingUnit;
 use App\Models\Unit;
 use App\Models\UnitRate;
@@ -10,6 +12,8 @@ use Illuminate\Support\Collection;
 
 final class EffectiveUnitRateResolver
 {
+    public function __construct(private EffectiveRateResolver $resolver) {}
+
     /**
      * @return Collection<int, array{rate: UnitRate|UnitTypeRate, source: 'unit'|'unit_type'}>
      */
@@ -24,23 +28,19 @@ final class EffectiveUnitRateResolver
                 ? $unit->unitType->activeRates
                 : $unit->unitType->activeRates()->get());
 
-        $effective = $unitTypeRates->mapWithKeys(fn (UnitTypeRate $rate): array => [
-            $this->identity($rate) => ['rate' => $rate, 'source' => 'unit_type'],
-        ]);
+        $models = $unitRates->mapWithKeys(fn (UnitRate $rate): array => ['unit|'.$rate->id => $rate]);
 
-        foreach ($unitRates as $rate) {
-            /** @var UnitRate $rate */
-            $effective[$this->identity($rate)] = ['rate' => $rate, 'source' => 'unit'];
+        foreach ($unitTypeRates as $rate) {
+            $models->put('unit_type|'.$rate->id, $rate);
         }
 
-        return $effective
-            ->sortBy(fn (array $item): array => [
-                $this->billingOrder($item['rate']->billing_unit->value),
-                $item['rate']->billing_interval,
-                $item['rate']->currency,
-                $item['rate']->id,
-            ])
-            ->values();
+        return collect($this->resolver->resolve(
+            $unitRates->map(fn (UnitRate $rate): RateData => $this->toData($rate, 'unit'))->all(),
+            $unitTypeRates->map(fn (UnitTypeRate $rate): RateData => $this->toData($rate, 'unit_type'))->all(),
+        ))->map(fn (RateData $rate): array => [
+            'rate' => $models->get($rate->source.'|'.$rate->id),
+            'source' => $rate->source,
+        ])->values();
     }
 
     /**
@@ -56,13 +56,15 @@ final class EffectiveUnitRateResolver
         );
     }
 
-    private function identity(UnitRate|UnitTypeRate $rate): string
+    private function toData(UnitRate|UnitTypeRate $rate, string $source): RateData
     {
-        return implode('|', [$rate->billing_interval, $rate->billing_unit->value, $rate->currency]);
-    }
-
-    private function billingOrder(string $unit): int
-    {
-        return ['day' => 1, 'week' => 2, 'month' => 3, 'year' => 4][$unit] ?? 5;
+        return new RateData(
+            id: $rate->id,
+            billingInterval: $rate->billing_interval,
+            billingUnit: $rate->billing_unit->value,
+            amount: (string) $rate->amount,
+            currency: $rate->currency,
+            source: $source,
+        );
     }
 }

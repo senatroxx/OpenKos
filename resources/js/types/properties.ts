@@ -7,6 +7,7 @@ import type {
     Region,
     Unit,
     UnitType,
+    UnitTypeRate,
 } from './models';
 import type { PaginatedData, TableMeta } from './table';
 
@@ -28,6 +29,16 @@ export type UnitTypesPageProps = {
     status?: string;
     per_page?: number;
     table: TableMeta;
+};
+
+export type UnitTypeRatesPageProps = {
+    property: Property;
+    unitType: UnitType & { rates: UnitTypeRate[] };
+};
+
+export type UnitTypeRatesFormData = {
+    rates: UnitTypeRate[];
+    updated_at: string | null;
 };
 
 export type AvailableUnitOption = {
