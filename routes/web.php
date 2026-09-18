@@ -165,6 +165,9 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::post('/', [PropertyUnitTypeController::class, 'store'])->name('store')->middleware('permission:properties.update');
 
                     Route::prefix('{unitType}')->group(function () {
+                        Route::get('/', [PropertyUnitTypeController::class, 'show'])->name('show')->middleware('permission:properties.view');
+                        Route::get('units', [UnitController::class, 'indexForUnitType'])->name('units')->middleware('permission:units.view');
+                        Route::get('listing', [PropertyUnitTypeController::class, 'listing'])->name('listing')->middleware('permission:properties.view');
                         Route::put('/', [PropertyUnitTypeController::class, 'update'])->name('update')->middleware('permission:properties.update');
                         Route::delete('/', [PropertyUnitTypeController::class, 'destroy'])->name('destroy')->middleware('permission:properties.update');
                         Route::post('restore', [PropertyUnitTypeController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:properties.update');

@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+import type { Auth } from './auth';
 import type {
     Amenity,
     ListingReadiness,
@@ -41,6 +43,35 @@ export type UnitTypeRatesFormData = {
     updated_at: string | null;
 };
 
+export type UnitTypeWorkspaceListing = ListingUnitType | null;
+
+export type UnitTypeWorkspaceProps = {
+    property: Property;
+    unitType: UnitType;
+    listing: UnitTypeWorkspaceListing;
+};
+
+export type UnitTypeLayoutProps = {
+    property: Property;
+    unitType: UnitType;
+    activeTab: string;
+    actions?: ReactNode;
+    children: ReactNode;
+};
+
+export type UnitTypeOverviewPageProps = UnitTypeWorkspaceProps;
+
+export type UnitTypeListingPageProps = UnitTypeWorkspaceProps;
+
+export type UnitTypeDetailValueProps = {
+    label: string;
+    value: string | number;
+};
+
+export type AuthPageProps = {
+    auth: Auth;
+};
+
 export type AvailableUnitOption = {
     id: number;
     name: string;
@@ -53,6 +84,27 @@ export type UnitWorkspaceProps = {
     unit: Unit;
     availableUnits: AvailableUnitOption[];
     unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
+};
+
+export type UnitsPageProps = {
+    property: Property;
+    units: PaginatedData<Unit>;
+    tenants: { id: number; name: string; phone: string }[];
+    availableUnits: {
+        id: number;
+        name: string;
+        property_id: number;
+        capacity: number;
+        occupied_count: number;
+        property: { id: number; name: string; city: { name: string } | null } | null;
+    }[];
+    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
+    unitTypeWorkspace?: UnitType;
+    sort?: string;
+    search?: string;
+    status?: string;
+    per_page?: number;
+    table: TableMeta;
 };
 
 export type UnitTypeDetailSheetProps = {

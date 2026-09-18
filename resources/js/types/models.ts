@@ -277,6 +277,9 @@ export type UnitType = {
     amenities?: Amenity[];
     gallery?: GalleryItem[];
     units_count?: number;
+    available_units_count?: number;
+    rates?: UnitTypeRate[];
+    active_rates?: UnitTypeRate[];
 };
 
 export type UnitRate = {

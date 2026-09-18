@@ -10,6 +10,8 @@ export function EntityWorkspaceLayout({
     subtitle,
     backRoute,
     backLabel,
+    breadcrumbs,
+    badges,
     actions,
     children,
 }: {
@@ -17,6 +19,8 @@ export function EntityWorkspaceLayout({
     subtitle?: string;
     backRoute: string;
     backLabel: string;
+    breadcrumbs?: ReactNode;
+    badges?: ReactNode;
     actions?: ReactNode;
     children: ReactNode;
 }) {
@@ -24,6 +28,7 @@ export function EntityWorkspaceLayout({
         <div className="workspace-enter flex h-full flex-1 flex-col gap-6 overflow-auto rounded-xl p-4">
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
+                    {breadcrumbs}
                     <Link
                         href={backRoute}
                         className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
@@ -31,8 +36,9 @@ export function EntityWorkspaceLayout({
                         <ChevronLeft className="size-3" />
                         {t(backLabel)}
                     </Link>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         <Heading title={title} description={subtitle} />
+                        {badges}
                         <PluginRegion name="workspace-header-badge" />
                     </div>
                 </div>

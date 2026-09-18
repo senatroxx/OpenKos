@@ -40,40 +40,14 @@ import { useTable } from '@/hooks/use-table';
 import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import { PropertyLayout } from '@/pages/properties/layout';
+import { UnitTypeLayout } from '@/pages/properties/unit-types/layout';
 import properties from '@/routes/properties';
 import type {
-    Auth,
+    AuthPageProps,
     LeaseInfo,
-    PaginatedData,
-    Property,
     Unit,
-    UnitType,
-    TableMeta,
+    UnitsPageProps,
 } from '@/types';
-
-type PageProps = {
-    property: Property;
-    units: PaginatedData<Unit>;
-    tenants: { id: number; name: string; phone: string }[];
-    availableUnits: {
-        id: number;
-        name: string;
-        property_id: number;
-        capacity: number;
-        occupied_count: number;
-        property: {
-            id: number;
-            name: string;
-            city: { name: string } | null;
-        } | null;
-    }[];
-    unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];
-    sort?: string;
-    search?: string;
-    status?: string;
-    per_page?: number;
-    table: TableMeta;
-};
 
 export default function Index({
     property,
@@ -85,8 +59,9 @@ export default function Index({
     status: currentStatus = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
-}: PageProps) {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    unitTypeWorkspace,
+}: UnitsPageProps) {
+    const { auth } = usePage<AuthPageProps>().props;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
@@ -101,7 +76,9 @@ export default function Index({
     const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
 
     const table = useTable({
-        routeFn: () => ({ url: properties.units.index.url(property) }),
+        routeFn: () => (unitTypeWorkspace
+            ? { url: properties.unitTypes.units.url({ property, unitType: unitTypeWorkspace }) }
+            : { url: properties.units.index.url(property) }),
         params: {
             sort: currentSort,
             search: currentSearch,
@@ -357,8 +334,8 @@ export default function Index({
         },
     ];
 
-    return (
-        <PropertyLayout property={property} activeTab="units">
+    const content = (
+        <>
             <Head title={`${t('Units')} - ${property.name}`} />
 
             <div className="flex flex-col gap-4">
@@ -487,6 +464,14 @@ export default function Index({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </PropertyLayout>
+        </>
+    );
+
+    return unitTypeWorkspace ? (
+        <UnitTypeLayout property={property} unitType={unitTypeWorkspace} activeTab="units">
+            {content}
+        </UnitTypeLayout>
+    ) : (
+        <PropertyLayout property={property} activeTab="units">{content}</PropertyLayout>
     );
 }

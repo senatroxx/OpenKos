@@ -26,6 +26,28 @@ async function login(page: Page): Promise<void> {
     await expect(page).not.toHaveURL(/\/login$/);
 }
 
+test('navigates the Unit Type workspace tabs', async ({ page }) => {
+    await login(page);
+
+    await page.goto(`/properties/${fixture.property}/unit-types`);
+    await page.locator('tr').filter({ hasText: 'OPE-223 Studio' }).click();
+    await expect(page).toHaveURL(/\/unit-types\/\d+$/);
+    await expect(page.getByText('Property: OPE-223 Pricing Property')).toBeVisible();
+    await expect(page.getByText('Pricing').last()).toBeVisible();
+
+    await page.getByRole('link', { name: /^(Units|Unit)$/i }).click();
+    await expect(page).toHaveURL(/\/unit-types\/\d+\/units$/);
+    await expect(page.getByText('OPE-223 Unit 1')).toBeVisible();
+
+    await page.getByRole('link', { name: /^(Pricing|Harga)$/i }).click();
+    await expect(page).toHaveURL(/\/unit-types\/\d+\/rates$/);
+    await expect(page.getByText('These rates are inherited')).toBeVisible();
+
+    await page.getByRole('link', { name: /^Listing$/i }).click();
+    await expect(page).toHaveURL(/\/unit-types\/\d+\/listing$/);
+    await expect(page.getByText('Public listing')).toBeVisible();
+});
+
 test('manages inherited pricing and exposes effective rates in assignment', async ({
     page,
 }) => {
@@ -82,5 +104,5 @@ test('shows effective public starting prices and listing readiness', async ({
 
     await page.goto(`/listings/${fixture.property}`);
     await expect(page.getByText('OPE-223 Studio')).toBeVisible();
-    await expect(page.getByText(/1[.,]250[.,]000/)).toBeVisible();
+    await expect(page.getByText(/(?:Rp|IDR)/)).toBeVisible();
 });

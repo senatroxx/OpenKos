@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { useForm, usePage } from '@inertiajs/react';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import type {
     UnitTypeRatesPageProps,
     UnitTypeRate,
 } from '@/types';
-import { PropertyLayout } from '../layout';
+import { UnitTypeLayout } from './layout';
 
 export default function UnitTypeRates({
     property,
@@ -43,8 +43,7 @@ export default function UnitTypeRates({
     }
 
     return (
-        <PropertyLayout property={property} activeTab="unit-types">
-            <Head title={`${unitType.name} pricing`} />
+        <UnitTypeLayout property={property} unitType={unitType} activeTab="pricing">
             <form onSubmit={submit} className="space-y-6 p-6">
                 <div>
                     <h1 className="text-xl font-semibold">{unitType.name} pricing</h1>
@@ -86,6 +85,6 @@ export default function UnitTypeRates({
                     <Button type="submit" disabled={form.processing}>Save pricing</Button>
                 </div>
             </form>
-        </PropertyLayout>
+        </UnitTypeLayout>
     );
 }

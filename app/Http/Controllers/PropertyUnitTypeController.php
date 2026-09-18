@@ -26,6 +26,52 @@ use Inertia\Response;
 
 class PropertyUnitTypeController extends Controller
 {
+    public function show(Property $property, UnitType $unitType, ListingReadinessService $readinessService): Response
+    {
+        $this->authorize('view', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $property = $property->load(['city', 'region', 'propertyType']);
+        $unitType->load([
+            'amenities',
+            'rates',
+            'activeRates',
+            'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id'),
+        ])->loadCount([
+            'units',
+            'units as available_units_count' => fn (Builder $query) => $query->availableForAssignment(),
+        ]);
+        $unitType->setAttribute('gallery', $this->gallery($unitType, $property));
+        $unitType->unsetRelation('media');
+
+        $readiness = $readinessService->analyze($property);
+        $listing = collect($readiness['unit_types'])->firstWhere('id', $unitType->id);
+
+        return Inertia::render('properties/unit-types/show', [
+            'property' => $property,
+            'unitType' => $unitType,
+            'listing' => $listing,
+        ]);
+    }
+
+    public function listing(Property $property, UnitType $unitType, ListingReadinessService $readinessService): Response
+    {
+        $this->authorize('view', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $property = $property->load(['city', 'region', 'propertyType']);
+        $unitType->load(['amenities', 'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id')]);
+        $unitType->setAttribute('gallery', $this->gallery($unitType, $property));
+        $unitType->unsetRelation('media');
+        $readiness = $readinessService->analyze($property);
+
+        return Inertia::render('properties/unit-types/listing', [
+            'property' => $property,
+            'unitType' => $unitType,
+            'listing' => collect($readiness['unit_types'])->firstWhere('id', $unitType->id),
+        ]);
+    }
+
     public function index(Request $request, Property $property, ListingReadinessService $readinessService): Response
     {
         $this->authorize('view', $property);

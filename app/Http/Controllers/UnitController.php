@@ -11,6 +11,7 @@ use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\Settings\InstallationCurrencySettings;
@@ -134,6 +135,21 @@ class UnitController extends Controller
     {
         $this->authorize('viewAny', [Unit::class, $property]);
 
+        return $this->indexForWorkspace($request, $property);
+    }
+
+    public function indexForUnitType(Request $request, Property $property, UnitType $unitType): Response|JsonResponse
+    {
+        $this->authorize('view', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        return $this->indexForWorkspace($request, $property, $unitType);
+    }
+
+    private function indexForWorkspace(Request $request, Property $property, ?UnitType $unitType = null): Response|JsonResponse
+    {
+        $this->authorize('viewAny', [Unit::class, $property]);
+
         $property = Property::withWorkspaceStats()->findOrFail($property->id);
 
         $statusValues = DelimitedValues::normalize($request->query('status'));
@@ -156,6 +172,7 @@ class UnitController extends Controller
             ->defaultSort('name');
 
         $query = $property->units()
+            ->when($unitType, fn (Builder $q) => $q->where('unit_type_id', $unitType->id))
             ->when($includesArchived, fn (Builder $q) => $q->withTrashed())
             ->withCount([
                 'leases as active_leases' => fn (Builder $q) => $q->active(),
@@ -198,6 +215,7 @@ class UnitController extends Controller
             'unitTypes' => $property->unitTypes()
                 ->orderBy('name')
                 ->get(['id', 'property_id', 'name', 'is_active']),
+            'unitTypeWorkspace' => $unitType,
         ]);
     }
 

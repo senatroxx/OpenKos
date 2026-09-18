@@ -3,6 +3,7 @@
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\UnitType;
+use App\Models\UnitTypeRate;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\QueryException;
@@ -24,6 +25,78 @@ it('lists UnitTypes inside the property workspace', function () {
             ->component('properties/unit-types/index')
             ->has('unitTypes.data', 1)
             ->where('unitTypes.data.0.name', 'Studio')
+        );
+});
+
+it('opens the Unit Type workspace with overview data and direct tabs', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create(['name' => 'Kos Anggrek Residence']);
+    $unitType = UnitType::factory()->for($property)->create(['name' => 'Studio']);
+    UnitTypeRate::factory()->for($unitType)->create(['amount' => '1500000']);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.show', [$property, $unitType]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('properties/unit-types/show')
+            ->where('unitType.id', $unitType->id)
+            ->where('unitType.units_count', 1)
+            ->where('unitType.active_rates.0.amount', '1500000.000')
+            ->where('listing.id', $unitType->id)
+        );
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.rates.index', [$property, $unitType]))
+        ->assertInertia(fn ($page) => $page->component('properties/unit-types/rates'));
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.listing', [$property, $unitType]))
+        ->assertInertia(fn ($page) => $page->component('properties/unit-types/listing'));
+});
+
+it('rejects a Unit Type workspace from another property', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $otherProperty = Property::factory()->create();
+    $unitType = UnitType::factory()->for($otherProperty)->create();
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.show', [$property, $unitType]))
+        ->assertNotFound();
+});
+
+it('keeps inactive Unit Types readable but hides deleted workspaces', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $inactive = UnitType::factory()->for($property)->create(['name' => 'Inactive Studio', 'is_active' => false]);
+    $deleted = UnitType::factory()->for($property)->create(['name' => 'Deleted Studio']);
+    $deleted->delete();
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.show', [$property, $inactive]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('unitType.is_active', false));
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.show', [$property, $deleted]))
+        ->assertNotFound();
+});
+
+it('scopes the existing Units workspace table to a Unit Type', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $unitType = UnitType::factory()->for($property)->create();
+    $included = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    Unit::factory()->for($property)->create();
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.units', [$property, $unitType]))
+        ->assertInertia(fn ($page) => $page
+            ->component('properties/units/index')
+            ->where('unitTypeWorkspace.id', $unitType->id)
+            ->where('units.total', 1)
+            ->where('units.data.0.id', $included->id)
         );
 });
 
