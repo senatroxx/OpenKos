@@ -62,8 +62,8 @@ export default function UnitTypeRates({
 }: UnitTypeRatesPageProps) {
     const { setting } = usePage().props;
     const defaultCurrency = setting.currency.toUpperCase();
-    const supportedCurrencies = setting.supported_currencies.includes(
-        defaultCurrency,
+    const supportedCurrencies = setting.supported_currencies.some(
+        (currency) => currency.toUpperCase() === defaultCurrency,
     )
         ? setting.supported_currencies
         : [defaultCurrency, ...setting.supported_currencies];
@@ -518,21 +518,31 @@ export default function UnitTypeRates({
                                     onChange={(event) =>
                                         setNewRate((rate) => ({
                                             ...rate,
-                                            billing_interval:
+                                            billing_interval: Math.max(
+                                                1,
                                                 Number.parseInt(
                                                     event.target.value,
                                                 ) || 1,
+                                            ),
                                         }))
                                     }
                                 />
                                 <Select
                                     value={newRate.billing_unit}
                                     onValueChange={(value) =>
-                                        setNewRate((rate) => ({
-                                            ...rate,
-                                            billing_unit:
-                                                value as UnitTypeRate['billing_unit'],
-                                        }))
+                                        setNewRate((rate) => {
+                                            const billingUnit =
+                                                BILLING_UNITS.find(
+                                                    (unit) => unit === value,
+                                                );
+
+                                            return billingUnit
+                                                ? {
+                                                      ...rate,
+                                                      billing_unit: billingUnit,
+                                                  }
+                                                : rate;
+                                        })
                                     }
                                 >
                                     <SelectTrigger

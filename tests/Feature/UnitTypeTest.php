@@ -101,6 +101,28 @@ it('activates and deactivates a Unit Type from its workspace', function () {
     expect($unitType->refresh()->is_active)->toBeTrue();
 });
 
+it('rejects a Unit Type rate id owned by another Unit Type', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $firstType = UnitType::factory()->for($property)->create(['name' => 'First Type']);
+    $secondType = UnitType::factory()->for($property)->create(['name' => 'Second Type']);
+    $foreignRate = UnitTypeRate::factory()->for($secondType)->create();
+
+    $this->actingAs($user)
+        ->put(route('properties.unit-types.rates.update', [$property, $firstType]), [
+            'updated_at' => $firstType->updated_at->toISOString(),
+            'rates' => [[
+                'id' => $foreignRate->id,
+                'billing_interval' => $foreignRate->billing_interval,
+                'billing_unit' => $foreignRate->billing_unit->value,
+                'amount' => $foreignRate->amount,
+                'currency' => $foreignRate->currency,
+                'is_active' => true,
+            ]],
+        ])
+        ->assertSessionHasErrors('rates.0.id');
+});
+
 it('loads Unit Type overview data with bounded queries', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();

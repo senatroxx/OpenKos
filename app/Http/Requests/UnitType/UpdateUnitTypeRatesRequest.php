@@ -62,7 +62,11 @@ class UpdateUnitTypeRatesRequest extends FormRequest
                     continue;
                 }
 
-                $stored = isset($rate['id']) ? UnitTypeRate::find($rate['id']) : null;
+                $stored = isset($rate['id'])
+                    ? UnitTypeRate::query()
+                        ->where('unit_type_id', $this->route('unitType')->id)
+                        ->find($rate['id'])
+                    : null;
                 $currency = strtoupper((string) ($stored?->currency ?? $rate['currency'] ?? ''));
                 $key = implode('|', [$rate['billing_interval'] ?? '', $rate['billing_unit'] ?? '', $currency]);
                 if (isset($seen[$key]) && $seen[$key] !== ($rate['id'] ?? -($index + 1))) {
