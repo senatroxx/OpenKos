@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Units\AssignUnitTypeToUnits;
 use App\Actions\Units\CreateUnit;
+use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\BulkAssignUnitTypeRequest;
 use App\Http\Requests\Unit\StoreUnitRequest;
@@ -208,13 +209,22 @@ class UnitController extends Controller
         AssignUnitTypeToUnits $assignUnitTypeToUnits,
     ): RedirectResponse {
         $validated = $request->validated();
-        $unitIds = array_map('intval', $validated['unit_ids']);
+        $data = new BulkAssignUnitTypeData(
+            unitIds: array_map('intval', $validated['unit_ids']),
+            unitTypeId: (int) $validated['unit_type_id'],
+        );
 
-        foreach ($property->units()->whereKey($unitIds)->get() as $unit) {
+        foreach ($property->units()->whereKey($data->unitIds)->get() as $unit) {
             $this->authorize('update', $unit);
         }
 
-        $assignUnitTypeToUnits->execute($property, $unitIds, (int) $validated['unit_type_id']);
+        $result = $assignUnitTypeToUnits->execute($property, $data);
+
+        if ($result->failed()) {
+            throw ValidationException::withMessages([
+                $result->errorField => $result->error,
+            ]);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Units updated.')]);
 

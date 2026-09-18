@@ -2,43 +2,43 @@
 
 namespace App\Actions\Units;
 
+use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\UnitType;
+use App\Results\Unit\BulkAssignUnitTypeResult;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class AssignUnitTypeToUnits
 {
-    /**
-     * @param  list<int>  $unitIds
-     */
-    public function execute(Property $property, array $unitIds, int $unitTypeId): void
+    public function execute(Property $property, BulkAssignUnitTypeData $data): BulkAssignUnitTypeResult
     {
-        DB::transaction(function () use ($property, $unitIds, $unitTypeId): void {
+        return DB::transaction(function () use ($property, $data): BulkAssignUnitTypeResult {
             $unitType = UnitType::query()
                 ->where('property_id', $property->id)
                 ->where('is_active', true)
                 ->lockForUpdate()
-                ->find($unitTypeId);
+                ->find($data->unitTypeId);
 
             if ($unitType === null) {
-                throw ValidationException::withMessages([
-                    'unit_type_id' => __('The selected Unit Type is no longer available.'),
-                ]);
+                return BulkAssignUnitTypeResult::error(
+                    __('The selected Unit Type is no longer available.'),
+                    'unit_type_id',
+                );
             }
 
             $units = $property->units()
-                ->whereKey($unitIds)
+                ->whereKey($data->unitIds)
                 ->whereNull('deleted_at')
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
 
-            if ($units->count() !== count($unitIds)) {
-                throw ValidationException::withMessages([
-                    'unit_ids' => __('One or more selected Units are no longer available.'),
-                ]);
+            if ($units->count() !== count($data->unitIds)) {
+                return BulkAssignUnitTypeResult::error(
+                    __('One or more selected Units are no longer available.'),
+                    'unit_ids',
+                );
             }
 
             Unit::query()
@@ -47,6 +47,8 @@ class AssignUnitTypeToUnits
                     'unit_type_id' => $unitType->id,
                     'updated_at' => now(),
                 ]);
+
+            return BulkAssignUnitTypeResult::success();
         });
     }
 }

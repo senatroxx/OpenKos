@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Units\AssignUnitTypeToUnits;
+use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Setting;
@@ -113,6 +115,38 @@ describe('CRUD', function () {
 
         expect($units->fresh()->pluck('unit_type_id')->all())
             ->toBe([$targetType->id, $targetType->id]);
+    });
+
+    it('returns a failure result and leaves Units unchanged when a selection becomes stale', function () {
+        $property = Property::factory()->create();
+        $targetType = UnitType::factory()->for($property)->create();
+        $units = Unit::factory()->for($property)->count(2)->create();
+        $units->last()->delete();
+
+        $result = app(AssignUnitTypeToUnits::class)->execute($property, new BulkAssignUnitTypeData(
+            unitIds: $units->modelKeys(),
+            unitTypeId: $targetType->id,
+        ));
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->errorField)->toBe('unit_ids')
+            ->and($units->first()->fresh()->unit_type_id)->toBeNull()
+            ->and($units->last()->fresh()->unit_type_id)->toBeNull();
+    });
+
+    it('returns a failure result when the target Unit Type is inactive', function () {
+        $property = Property::factory()->create();
+        $inactiveType = UnitType::factory()->for($property)->create(['is_active' => false]);
+        $unit = Unit::factory()->for($property)->create();
+
+        $result = app(AssignUnitTypeToUnits::class)->execute($property, new BulkAssignUnitTypeData(
+            unitIds: [$unit->id],
+            unitTypeId: $inactiveType->id,
+        ));
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->errorField)->toBe('unit_type_id')
+            ->and($unit->fresh()->unit_type_id)->toBeNull();
     });
 
     it('rejects a bulk assignment across property boundaries without changing Units', function () {

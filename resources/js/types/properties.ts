@@ -52,7 +52,7 @@ export type UnitIndexPageProps = {
     table: TableMeta;
 };
 
-export type BulkAssignUnitTypeSheetProps = {
+export type BulkAssignUnitTypeDialogProps = {
     property: Property;
     units: Unit[];
     unitTypes: Pick<UnitType, 'id' | 'property_id' | 'name' | 'is_active'>[];

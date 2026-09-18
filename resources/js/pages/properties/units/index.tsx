@@ -15,7 +15,7 @@ import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
 import {
     AssignTenantSheet,
-    BulkAssignUnitTypeSheet,
+    BulkAssignUnitTypeDialog,
     MoveUnitSheet,
     UnitFormSheet,
 } from '@/components/features';
@@ -549,7 +549,7 @@ export default function Index({
                 onOpenChange={setDialogOpen}
             />
 
-            <BulkAssignUnitTypeSheet
+            <BulkAssignUnitTypeDialog
                 key={selectedUnits.map((unit) => unit.id).join('-')}
                 property={property}
                 units={selectedUnits}

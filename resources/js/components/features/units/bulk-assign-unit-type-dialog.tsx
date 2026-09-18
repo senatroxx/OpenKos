@@ -19,18 +19,18 @@ import {
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type {
+    BulkAssignUnitTypeDialogProps,
     BulkAssignUnitTypeFormData,
-    BulkAssignUnitTypeSheetProps,
 } from '@/types';
 
-export default function BulkAssignUnitTypeSheet({
+export default function BulkAssignUnitTypeDialog({
     property,
     units,
     unitTypes,
     open,
     onOpenChange,
-}: BulkAssignUnitTypeSheetProps) {
-    const { data, setData, post, reset, processing, errors } =
+}: BulkAssignUnitTypeDialogProps) {
+    const { data, setData, submit, reset, processing, errors } =
         useForm<BulkAssignUnitTypeFormData>({
             unit_ids: units.map((unit) => unit.id),
             unit_type_id: '',
@@ -44,9 +44,9 @@ export default function BulkAssignUnitTypeSheet({
         }
     }
 
-    function submit(event: React.FormEvent) {
+    function handleSubmit(event: React.FormEvent) {
         event.preventDefault();
-        post(properties.units.bulkAssignUnitType.url(property), {
+        submit(properties.units.bulkAssignUnitType(property), {
             onSuccess: () => handleOpenChange(false),
         });
     }
@@ -63,10 +63,7 @@ export default function BulkAssignUnitTypeSheet({
                     </DialogDescription>
                 </DialogHeader>
 
-                <form
-                    onSubmit={submit}
-                    className="space-y-6"
-                >
+                <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-6">
                         <div className="rounded-md border p-3">
                             <p className="mb-2 text-sm font-medium">
