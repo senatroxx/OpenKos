@@ -42,12 +42,13 @@ import { useTable } from '@/hooks/use-table';
 import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import { PropertyLayout } from '@/pages/properties/layout';
+import { UnitTypeLayout } from '@/pages/properties/unit-types/layout';
 import properties from '@/routes/properties';
 import type {
-    Auth,
+    AuthPageProps,
     LeaseInfo,
     Unit,
-    UnitIndexPageProps,
+    UnitsPageProps,
 } from '@/types';
 
 export default function Index({
@@ -61,8 +62,9 @@ export default function Index({
     assignment: currentAssignment = '',
     per_page: currentPerPage = 15,
     table: tableMeta,
-}: UnitIndexPageProps) {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    unitTypeWorkspace,
+}: UnitsPageProps) {
+    const { auth } = usePage<AuthPageProps>().props;
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
@@ -79,7 +81,9 @@ export default function Index({
     const [bulkAssignmentOpen, setBulkAssignmentOpen] = useState(false);
 
     const table = useTable({
-        routeFn: () => ({ url: properties.units.index.url(property) }),
+        routeFn: () => (unitTypeWorkspace
+            ? { url: properties.unitTypes.units.url({ property, unitType: unitTypeWorkspace }) }
+            : { url: properties.units.index.url(property) }),
         params: {
             sort: currentSort,
             search: currentSearch,
@@ -438,8 +442,8 @@ export default function Index({
         },
     ];
 
-    return (
-        <PropertyLayout property={property} activeTab="units">
+    const content = (
+        <>
             <Head title={`${t('Units')} - ${property.name}`} />
 
             <div className="flex flex-col gap-4">
@@ -604,6 +608,14 @@ export default function Index({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </PropertyLayout>
+        </>
+    );
+
+    return unitTypeWorkspace ? (
+        <UnitTypeLayout property={property} unitType={unitTypeWorkspace} activeTab="units">
+            {content}
+        </UnitTypeLayout>
+    ) : (
+        <PropertyLayout property={property} activeTab="units">{content}</PropertyLayout>
     );
 }

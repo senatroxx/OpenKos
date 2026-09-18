@@ -293,7 +293,7 @@ it('projects availability and independent rate variants without operational deta
             'billing_unit' => 'month',
             'billing_label' => '/month',
         ],
-    ])->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(13);
+    ])->and(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(15);
 
     DB::connection()->flushQueryLog();
 
@@ -303,7 +303,7 @@ it('projects availability and independent rate variants without operational deta
             ->component('public/listings/index')
             ->where('listings.0.inventory.available_units', 2));
 
-    expect(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(12);
+    expect(count(DB::connection()->getQueryLog()))->toBeLessThanOrEqual(14);
 });
 
 it('requires an active property rate before whole-property publication', function () {

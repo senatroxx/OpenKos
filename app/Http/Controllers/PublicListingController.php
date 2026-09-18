@@ -13,6 +13,7 @@ use App\Models\PropertyRate;
 use App\Models\Unit;
 use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Inertia\Inertia;
@@ -20,7 +21,10 @@ use Inertia\Response;
 
 final class PublicListingController extends Controller
 {
-    public function __construct(private MoneyConverter $money) {}
+    public function __construct(
+        private MoneyConverter $money,
+        private EffectiveUnitRateResolver $effectiveUnitRateResolver,
+    ) {}
 
     public function pageIndex(): Response
     {
@@ -182,7 +186,7 @@ final class PublicListingController extends Controller
                 ->orderBy('id'),
             'units' => fn ($query) => $query
                 ->select(['units.id', 'units.unit_type_id'])
-                ->with('activeRates'),
+                ->with(['activeRates', 'unitType.activeRates']),
         ];
     }
 
@@ -395,7 +399,8 @@ final class PublicListingController extends Controller
         $prices = [];
 
         foreach ($unitType->units as $unit) {
-            foreach ($unit->activeRates as $rate) {
+            foreach ($this->effectiveUnitRateResolver->resolve($unit) as $item) {
+                $rate = $item['rate'];
                 $billingUnit = $rate->billing_unit->value;
                 $key = implode('|', [$rate->currency, $rate->billing_interval, $billingUnit]);
                 $amount = (string) $rate->amount;

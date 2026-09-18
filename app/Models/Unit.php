@@ -144,7 +144,10 @@ class Unit extends Model
     {
         $query->whereNotIn('status', [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value])
             ->whereDoesntHave('property', fn (Builder $q) => $q->whereHas('activeWholePropertyLeases'))
-            ->whereHas('rates', fn (Builder $query) => $query->where('is_active', true));
+            ->where(function (Builder $query): void {
+                $query->whereHas('rates', fn (Builder $query) => $query->where('is_active', true))
+                    ->orWhereHas('unitType', fn (Builder $query) => $query->whereHas('rates', fn (Builder $query) => $query->where('is_active', true)));
+            });
     }
 
     public function scopeWithOccupiedCount(Builder $query): void

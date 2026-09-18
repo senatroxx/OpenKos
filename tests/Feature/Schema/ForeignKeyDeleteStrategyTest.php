@@ -18,6 +18,7 @@ $expected = [
         'primary_tenant_id' => 'SET NULL',
         'unit_rate_id' => 'SET NULL',
         'unit_rate_id,unit_id' => 'RESTRICT',
+        'unit_type_rate_id' => 'SET NULL',
         'property_rate_id' => 'RESTRICT',
         'property_rate_id,property_id' => 'RESTRICT',
         'previous_lease_id' => 'SET NULL',

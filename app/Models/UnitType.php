@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Concerns\Auditable;
 use App\Concerns\HasMedia;
 use App\Concerns\SerializesDatesWithTimezone;
+use App\Services\Payments\MoneyConverter;
 use Database\Factories\UnitTypeFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,6 +52,29 @@ class UnitType extends Model
     public function units(): HasMany
     {
         return $this->hasMany(Unit::class);
+    }
+
+    public function rates(): HasMany
+    {
+        return $this->hasMany(UnitTypeRate::class);
+    }
+
+    public function activeRates(): HasMany
+    {
+        return $this->hasMany(UnitTypeRate::class)
+            ->where('is_active', true)
+            ->orderByRaw("case billing_unit when 'day' then 1 when 'week' then 2 when 'month' then 3 when 'year' then 4 else 5 end")
+            ->orderBy('billing_interval')
+            ->orderBy('id');
+    }
+
+    public function defaultActiveRate(?string $currency = null): ?UnitTypeRate
+    {
+        $preferredCurrency = app(MoneyConverter::class)->normalizeCurrency($currency);
+        $rates = $this->relationLoaded('activeRates') ? $this->activeRates : $this->activeRates()->get();
+
+        return $rates->first(fn (UnitTypeRate $rate): bool => $rate->currency === $preferredCurrency)
+            ?? $rates->first();
     }
 
     public function scopeViablePublicOffering(Builder $query): void

@@ -7,16 +7,18 @@ use App\Enums\BillingUnit;
 use App\Models\Amenity;
 use App\Models\Property;
 use App\Models\PropertyRate;
-use App\Models\Unit;
-use App\Models\UnitRate;
 use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 final class ListingReadinessService
 {
-    public function __construct(private MoneyConverter $money) {}
+    public function __construct(
+        private MoneyConverter $money,
+        private EffectiveUnitRateResolver $effectiveUnitRateResolver,
+    ) {}
 
     /**
      * @return array{
@@ -103,13 +105,13 @@ final class ListingReadinessService
                         ->withCount([
                             'units',
                             'units as available_units_count' => fn (Builder $query) => $query->availableForAssignment(),
-                            'units as priced_units_count' => fn (Builder $query) => $query->whereHas(
-                                'rates',
-                                fn (Builder $query) => $query->where('is_active', true),
-                            ),
+                            'units as priced_units_count' => fn (Builder $query) => $query->where(function (Builder $query): void {
+                                $query->whereHas('rates', fn (Builder $query) => $query->where('is_active', true))
+                                    ->orWhereHas('unitType', fn (Builder $query) => $query->whereHas('rates', fn (Builder $query) => $query->where('is_active', true)));
+                            }),
                             'units as eligible_public_units_count' => fn (Builder $query) => $query->eligibleForPublicOffering(),
                         ])
-                        ->with(['units' => fn ($query) => $query->with('activeRates')])
+                        ->with(['units' => fn ($query) => $query->with(['activeRates', 'unitType.activeRates'])])
                         ->orderBy('name');
                 },
             ]);
@@ -429,13 +431,12 @@ final class ListingReadinessService
     {
         $unitTypeId = collect($unitTypeIds)->first();
         $unitType = $property->unitTypes->firstWhere('id', $unitTypeId);
-        $unit = $unitType?->units->first(fn (Unit $unit): bool => $unit->activeRates->isEmpty())
-            ?? $unitType?->units->first();
+        $unit = $unitType?->units->first();
 
-        if ($unit !== null) {
+        if ($unit !== null && $this->effectiveUnitRateResolver->resolve($unit)->isEmpty()) {
             return $this->action(
                 'Manage pricing',
-                route('properties.units.rates', [$property, $unit], absolute: false),
+                route('properties.unit-types.rates.index', [$property, $unitType], absolute: false),
             );
         }
 
@@ -450,8 +451,8 @@ final class ListingReadinessService
         $prices = [];
 
         foreach ($unitType->units as $unit) {
-            foreach ($unit->activeRates as $rate) {
-                /** @var UnitRate $rate */
+            foreach ($this->effectiveUnitRateResolver->resolve($unit) as $item) {
+                $rate = $item['rate'];
                 $billingUnit = $rate->billing_unit->value;
                 $key = implode('|', [$rate->currency, $rate->billing_interval, $billingUnit]);
                 $amount = (string) $rate->amount;

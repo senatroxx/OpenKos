@@ -34,7 +34,7 @@ import {
 } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
-import type { Property, Unit, UnitRate } from '@/types';
+import type { EffectiveUnitRate, Property, Unit } from '@/types';
 
 export default function AssignTenantSheet({
     unit,
@@ -56,12 +56,12 @@ export default function AssignTenantSheet({
     const dueDayInitialized = useRef(false);
 
     const defaultRate =
-        unit?.active_rates?.find(
+        unit?.effective_rates?.find(
             (rate) =>
                 (rate.currency ?? setting.currency).toUpperCase() ===
                 setting.currency.toUpperCase(),
         ) ??
-        unit?.active_rates?.[0] ??
+        unit?.effective_rates?.[0] ??
         null;
     const activeLease = unit?.leases?.[0] ?? null;
 
@@ -69,7 +69,8 @@ export default function AssignTenantSheet({
         useForm({
             tenant_ids: [] as number[],
             start_date: activeLease?.start_date ?? todayISO(),
-            unit_rate_id: activeLease ? null : (defaultRate?.id ?? null),
+            unit_rate_id: activeLease || defaultRate?.source !== 'unit' ? null : (defaultRate?.id ?? null),
+            unit_type_rate_id: activeLease || defaultRate?.source !== 'unit_type' ? null : (defaultRate?.id ?? null),
             rent_amount: activeLease
                 ? (activeLease.rent_amount ?? '')
                 : (defaultRate?.amount ?? ''),
@@ -105,8 +106,8 @@ export default function AssignTenantSheet({
     }
 
     const capacity = unit?.capacity ?? 1;
-    const hasRates = (unit?.active_rates?.length ?? 0) > 0;
-    const rates = useMemo(() => unit?.active_rates ?? [], [unit]);
+    const hasRates = (unit?.effective_rates?.length ?? 0) > 0;
+    const rates = useMemo(() => unit?.effective_rates ?? [], [unit]);
     const [selectedCurrency, setSelectedCurrency] = useState(
         (
             activeLease?.currency ??
@@ -134,7 +135,12 @@ export default function AssignTenantSheet({
             (rate.currency ?? setting.currency).toUpperCase() ===
             displayCurrency.toUpperCase(),
     );
-    const selectedRate = rates.find((r) => r.id === data.unit_rate_id) ?? null;
+    const selectedRate = rates.find(
+        (rate) =>
+            rate.id === (data.unit_type_rate_id ?? data.unit_rate_id) &&
+            rate.source ===
+                (data.unit_type_rate_id !== null ? 'unit_type' : 'unit'),
+    ) ?? null;
     const currency =
         activeLease?.currency ?? selectedRate?.currency ?? displayCurrency;
 
@@ -178,11 +184,12 @@ export default function AssignTenantSheet({
         );
     }
 
-    function handleRateSelect(rate: UnitRate) {
+    function handleRateSelect(rate: EffectiveUnitRate) {
         setSelectedCurrency((rate.currency ?? setting.currency).toUpperCase());
         setData((prev) => ({
             ...prev,
-            unit_rate_id: rate.id ?? null,
+            unit_rate_id: rate.source === 'unit' ? (rate.id ?? null) : null,
+            unit_type_rate_id: rate.source === 'unit_type' ? (rate.id ?? null) : null,
             rent_amount: rate.amount,
             billing_interval: String(rate.billing_interval),
             billing_unit: rate.billing_unit,
@@ -358,8 +365,8 @@ export default function AssignTenantSheet({
                                         )}
                                     </p>
                                 </div>
-                            ) : unit?.active_rates &&
-                              unit.active_rates.length > 0 ? (
+                            ) : unit?.effective_rates &&
+                              unit.effective_rates.length > 0 ? (
                                 <div className="mt-4 grid gap-2">
                                     <div className="flex items-center justify-between gap-3">
                                         <Label>{t('Unit Rate Options')}</Label>
@@ -418,7 +425,7 @@ export default function AssignTenantSheet({
                                             <label
                                                 key={rate.id}
                                                 className={`flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors ${
-                                                    data.unit_rate_id ===
+                                                    (data.unit_type_rate_id ?? data.unit_rate_id) ===
                                                     rate.id
                                                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
                                                         : 'hover:bg-muted/50'
@@ -427,7 +434,7 @@ export default function AssignTenantSheet({
                                                 <input
                                                     type="radio"
                                                     checked={
-                                                        data.unit_rate_id ===
+                                                        (data.unit_type_rate_id ?? data.unit_rate_id) ===
                                                         rate.id
                                                     }
                                                     onChange={() =>

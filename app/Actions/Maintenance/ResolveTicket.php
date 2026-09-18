@@ -8,11 +8,13 @@ use App\Models\LeaseUnitHistory;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Unit;
-use App\Models\UnitRate;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use Illuminate\Support\Facades\DB;
 
 class ResolveTicket
 {
+    public function __construct(private EffectiveUnitRateResolver $effectiveUnitRateResolver) {}
+
     /**
      * @return array<int, array{unit: Unit, from: UnitStatus}>
      */
@@ -102,18 +104,11 @@ class ResolveTicket
         $targetProperty = Property::query()->whereKey($unit->property_id)->lockForUpdate()->firstOrFail();
         abort_unless($targetProperty->rental_mode->supportsUnitInventory(), 404);
 
-        $matchingRates = $unit->rates()
-            ->where('is_active', true)
-            ->where('billing_interval', $movedLease->billing_interval)
-            ->where('billing_unit', $movedLease->billing_unit)
-            ->lockForUpdate()
-            ->get();
-        $matchingRate = $matchingRates->first(
-            fn (UnitRate $rate): bool => $rate->currency === $movedLease->currency,
-        );
+        $matching = $this->effectiveUnitRateResolver->find($unit, $movedLease->billing_interval, $movedLease->billing_unit, $movedLease->currency);
+        $matchingRate = $matching['rate'] ?? null;
 
         abort_if(
-            $matchingRates->isNotEmpty() && $matchingRate === null,
+            $this->effectiveUnitRateResolver->resolve($unit)->isNotEmpty() && $matchingRate === null,
             422,
             __('The target unit rate currency must match the existing lease currency.'),
         );
@@ -135,7 +130,8 @@ class ResolveTicket
         $movedLease->update([
             'unit_id' => $unit->id,
             'property_id' => $targetProperty->id,
-            'unit_rate_id' => $matchingRate?->id,
+            'unit_rate_id' => ($matching['source'] ?? null) === 'unit' ? $matchingRate?->id : null,
+            'unit_type_rate_id' => ($matching['source'] ?? null) === 'unit_type' ? $matchingRate?->id : null,
             'notes' => $notes,
         ]);
 

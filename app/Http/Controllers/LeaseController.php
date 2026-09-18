@@ -318,6 +318,7 @@ class LeaseController extends Controller
             billingUnit: $request->billing_unit,
             billingStrategy: $request->billing_strategy,
             unitRateId: $request->unit_rate_id,
+            unitTypeRateId: $request->unit_type_rate_id,
             depositAmount: $request->deposit_amount,
             depositPaidAt: $request->deposit_paid_at,
             depositRefundAmount: $request->deposit_refund_amount,

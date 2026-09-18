@@ -37,6 +37,7 @@ use LogicException;
     'billing_strategy',
     'is_custom_price',
     'unit_rate_id',
+    'unit_type_rate_id',
     'property_rate_id',
     'deposit_amount',
     'deposit_paid_at',
@@ -85,6 +86,10 @@ class Lease extends Model
                 $currency = PropertyRate::query()->whereKey($lease->property_rate_id)->value('currency');
             }
 
+            if ($currency === null && $lease->unit_type_rate_id !== null) {
+                $currency = UnitTypeRate::query()->whereKey($lease->unit_type_rate_id)->value('currency');
+            }
+
             $lease->currency = app(MoneyConverter::class)->normalizeCurrency($currency);
         });
 
@@ -94,7 +99,7 @@ class Lease extends Model
             }
 
             if ($lease->unit_id === null) {
-                if ($lease->property_rate_id === null || $lease->unit_rate_id !== null) {
+                if ($lease->property_rate_id === null || $lease->unit_rate_id !== null || $lease->unit_type_rate_id !== null) {
                     throw new LogicException('Whole-property leases require a property rate and no unit rate.');
                 }
 
@@ -108,7 +113,7 @@ class Lease extends Model
                 return;
             }
 
-            if ($lease->property_rate_id !== null) {
+            if ($lease->property_rate_id !== null || ($lease->unit_rate_id !== null && $lease->unit_type_rate_id !== null)) {
                 throw new LogicException('Unit leases cannot reference a property rate.');
             }
 
@@ -124,6 +129,13 @@ class Lease extends Model
                 ->where('unit_id', $lease->unit_id)
                 ->exists()) {
                 throw new LogicException('The unit rate does not belong to the lease unit.');
+            }
+
+            if ($lease->unit_type_rate_id !== null && ! UnitTypeRate::query()
+                ->whereKey($lease->unit_type_rate_id)
+                ->whereHas('unitType', fn ($query) => $query->whereIn('id', Unit::query()->whereKey($lease->unit_id)->select('unit_type_id')))
+                ->exists()) {
+                throw new LogicException('The unit type rate does not belong to the lease unit type.');
             }
         });
 
@@ -187,6 +199,11 @@ class Lease extends Model
     public function propertyRate(): BelongsTo
     {
         return $this->belongsTo(PropertyRate::class);
+    }
+
+    public function unitTypeRate(): BelongsTo
+    {
+        return $this->belongsTo(UnitTypeRate::class);
     }
 
     public function invoices(): HasMany

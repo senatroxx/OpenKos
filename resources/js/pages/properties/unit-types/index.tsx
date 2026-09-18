@@ -3,6 +3,7 @@ import {
     EllipsisVertical,
     Eye,
     EyeOff,
+    ExternalLink,
     Pencil,
     RotateCcw,
     Trash2,
@@ -12,7 +13,6 @@ import { DataTable } from '@/components/data-table';
 import type { TableColumn } from '@/components/data-table';
 import { FilterBar } from '@/components/data-table/filter-bar';
 import { SearchInput } from '@/components/data-table/search-input';
-import UnitTypeDetailSheet from '@/components/features/properties/unit-type-detail-sheet';
 import UnitTypeFormSheet from '@/components/features/properties/unit-type-form-sheet';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,7 @@ import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type {
-    Auth,
+    AuthPageProps,
     ListingUnitType,
     UnitTypesPageProps,
     UnitType,
@@ -68,12 +68,8 @@ export default function Index({
     per_page: currentPerPage = 15,
     table: tableMeta,
 }: UnitTypesPageProps) {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    const { auth } = usePage<AuthPageProps>().props;
     const canManage = auth.permissions.includes('properties.update');
-    const [detailOpen, setDetailOpen] = useState(false);
-    const [viewingUnitTypeId, setViewingUnitTypeId] = useState<number | null>(
-        null,
-    );
     const [editingUnitType, setEditingUnitType] = useState<UnitType | null>(
         null,
     );
@@ -95,14 +91,6 @@ export default function Index({
         defaults: { sort: 'name', per_page: '15' },
     });
 
-    const viewingUnitType = viewingUnitTypeId
-        ? (data.data.find((unitType) => unitType.id === viewingUnitTypeId) ??
-          null)
-        : null;
-    const viewingOption = viewingUnitType
-        ? (rentalOptions.find((option) => option.id === viewingUnitType.id) ??
-          null)
-        : null;
     const currentEditingUnitType = editingUnitType
         ? (data.data.find((unitType) => unitType.id === editingUnitType.id) ??
           editingUnitType)
@@ -111,33 +99,6 @@ export default function Index({
     function openCreate(): void {
         setEditingUnitType(null);
         setFormOpen(true);
-    }
-
-    function openDetail(unitType: UnitType): void {
-        if (unitType.deleted_at) {
-            return;
-        }
-
-        setViewingUnitTypeId(unitType.id);
-        setDetailOpen(true);
-    }
-
-    function editFromDetail(): void {
-        if (!viewingUnitType) {
-            return;
-        }
-
-        setEditingUnitType(viewingUnitType);
-        setDetailOpen(false);
-        setFormOpen(true);
-    }
-
-    function togglePublication(): void {
-        if (!viewingOption) {
-            return;
-        }
-
-        publishUnitType(viewingUnitType ?? undefined);
     }
 
     function publishUnitType(unitType?: UnitType): void {
@@ -153,7 +114,7 @@ export default function Index({
 
         setPublishingId(option.id);
         router.patch(
-            properties.unitTypes.publication.update.url({
+            properties.unitTypes.publication.update({
                 property: property.slug,
                 unitType: option.id,
             }),
@@ -162,7 +123,7 @@ export default function Index({
         );
     }
 
-    function confirmDelete(unitType = viewingUnitType): void {
+    function confirmDelete(unitType?: UnitType): void {
         if (!unitType) {
             return;
         }
@@ -177,15 +138,13 @@ export default function Index({
         }
 
         router.delete(
-            properties.unitTypes.destroy.url({
+            properties.unitTypes.destroy({
                 property: property.slug,
                 unitType: unitTypeToDelete.id,
             }),
             {
                 onSuccess: () => {
                     setDeleteDialogOpen(false);
-                    setDetailOpen(false);
-                    setViewingUnitTypeId(null);
                     setUnitTypeToDelete(null);
                 },
             },
@@ -194,7 +153,7 @@ export default function Index({
 
     function restoreUnitType(unitType: UnitType): void {
         router.post(
-            properties.unitTypes.restore.url({
+            properties.unitTypes.restore({
                 property: property.slug,
                 unitType: unitType.id,
             }),
@@ -367,13 +326,18 @@ export default function Index({
                             onClick={(event) => event.stopPropagation()}
                         >
                             <DropdownMenuItem
-                                onSelect={() => openDetail(unitType)}
+                                onSelect={() => router.visit(properties.unitTypes.show.url({ property, unitType }))}
                             >
-                                <Eye className="size-4" />
-                                {t('View')}
+                                <ExternalLink className="size-4" />
+                                {t('Open workspace')}
                             </DropdownMenuItem>
                             {canManage && (
                                 <>
+                                    <DropdownMenuItem
+                                        onSelect={() => router.visit(properties.unitTypes.rates.index.url({ property, unitType }))}
+                                    >
+                                        {t('Manage pricing')}
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onSelect={() => {
                                             setEditingUnitType(unitType);
@@ -454,7 +418,7 @@ export default function Index({
                     columns={columns}
                     rows={data.data}
                     rowKey={(unitType) => unitType.id}
-                    onRowClick={openDetail}
+            onRowClick={(unitType) => router.visit(properties.unitTypes.show.url({ property, unitType }))}
                     isRowInteractive={(unitType) => !unitType.deleted_at}
                     currentSort={currentSort}
                     onSort={table.toggleSort}
@@ -476,18 +440,6 @@ export default function Index({
                     }}
                 />
             </div>
-
-            <UnitTypeDetailSheet
-                unitType={viewingUnitType}
-                option={viewingOption}
-                open={detailOpen}
-                canManage={canManage}
-                publishing={publishingId !== null}
-                onOpenChange={setDetailOpen}
-                onEdit={editFromDetail}
-                onTogglePublication={togglePublication}
-                onDelete={confirmDelete}
-            />
 
             <UnitTypeFormSheet
                 key={`${currentEditingUnitType?.id ?? 'new'}-${currentEditingUnitType?.updated_at ?? ''}`}

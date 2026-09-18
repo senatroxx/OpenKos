@@ -122,6 +122,7 @@ Property (has a type — see below)
   │    └── Invoices → Payments → PaymentProofs
   └── Units
        ├── UnitRates (pricing history)
+       ├── UnitTypeRates (shared defaults; UnitRates override by exact identity)
        ├── LeaseUnitHistory (unit transfer records)
        ├── MaintenanceTickets
        └── Unit Leases

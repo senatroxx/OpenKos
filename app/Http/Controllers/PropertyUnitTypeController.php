@@ -6,6 +6,7 @@ use App\Enums\AmenityScope;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
 use App\Http\Requests\UnitType\UpdateUnitTypeRequest;
+use App\Http\Requests\UnitType\UpdateUnitTypeStatusRequest;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
@@ -26,6 +27,52 @@ use Inertia\Response;
 
 class PropertyUnitTypeController extends Controller
 {
+    public function show(Property $property, UnitType $unitType, ListingReadinessService $readinessService): Response
+    {
+        $this->authorize('view', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $property = $property->load(['city', 'region', 'propertyType']);
+        $unitType->load([
+            'amenities',
+            'rates',
+            'activeRates',
+            'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id'),
+        ])->loadCount([
+            'units',
+            'units as available_units_count' => fn (Builder $query) => $query->availableForAssignment(),
+        ]);
+        $unitType->setAttribute('gallery', $this->gallery($unitType, $property));
+        $unitType->unsetRelation('media');
+
+        $readiness = $readinessService->analyze($property);
+        $listing = collect($readiness['unit_types'])->firstWhere('id', $unitType->id);
+
+        return Inertia::render('properties/unit-types/show', [
+            'property' => $property,
+            'unitType' => $unitType,
+            'listing' => $listing,
+        ]);
+    }
+
+    public function listing(Property $property, UnitType $unitType, ListingReadinessService $readinessService): Response
+    {
+        $this->authorize('view', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $property = $property->load(['city', 'region', 'propertyType']);
+        $unitType->load(['amenities', 'media' => fn ($query) => $query->where('collection', 'photos')->orderBy('position')->orderBy('id')]);
+        $unitType->setAttribute('gallery', $this->gallery($unitType, $property));
+        $unitType->unsetRelation('media');
+        $readiness = $readinessService->analyze($property);
+
+        return Inertia::render('properties/unit-types/listing', [
+            'property' => $property,
+            'unitType' => $unitType,
+            'listing' => collect($readiness['unit_types'])->firstWhere('id', $unitType->id),
+        ]);
+    }
+
     public function index(Request $request, Property $property, ListingReadinessService $readinessService): Response
     {
         $this->authorize('view', $property);
@@ -163,6 +210,24 @@ class PropertyUnitTypeController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __($isPublished ? 'Unit Type published.' : 'Unit Type unpublished.'),
+        ]);
+
+        return back();
+    }
+
+    public function updateStatus(
+        UpdateUnitTypeStatusRequest $request,
+        Property $property,
+        UnitType $unitType,
+    ): RedirectResponse {
+        $this->authorize('update', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $unitType->update(['is_active' => $request->boolean('is_active')]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __($unitType->is_active ? 'Unit Type activated.' : 'Unit Type deactivated.'),
         ]);
 
         return back();

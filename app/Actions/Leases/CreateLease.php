@@ -14,7 +14,9 @@ use App\Models\PropertyRate;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitRate;
+use App\Models\UnitTypeRate;
 use App\Services\Payments\MoneyConverter;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\ReferenceAllocationRetry;
 
 class CreateLease
@@ -24,6 +26,7 @@ class CreateLease
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
+        private EffectiveUnitRateResolver $effectiveUnitRateResolver,
         private ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
@@ -52,19 +55,35 @@ class CreateLease
             );
 
             $activeRates = $unit->activeRates()->lockForUpdate()->get();
+            $unit->setRelation('activeRates', $activeRates);
+            $unitType = $unit->unitType;
+            if ($unitType !== null) {
+                $unitType->setRelation('activeRates', $unitType->activeRates()->lockForUpdate()->get());
+            }
+            $effectiveRates = $this->effectiveUnitRateResolver->resolve($unit);
             $unitRate = $data->unitRateId === null
                 ? null
                 : $activeRates->firstWhere('id', $data->unitRateId);
+            $unitTypeRate = $data->unitTypeRateId === null
+                ? null
+                : $unitType?->activeRates->firstWhere('id', $data->unitTypeRateId);
             $preferredCurrency = $this->money->normalizeCurrency();
-            $effectiveRate = $unitRate ?? ($activeRates->first(
-                fn (UnitRate $rate): bool => $rate->currency === $preferredCurrency,
-            ) ?? $activeRates->first());
-
+            $selectedRate = $unitRate ?? $unitTypeRate;
+            $effectiveItem = $effectiveRates->first(
+                fn (array $item): bool => $item['rate']->currency === $preferredCurrency,
+            ) ?? $effectiveRates->first();
+            $effectiveRate = $selectedRate ?? $effectiveItem['rate'] ?? null;
             abort_if(
-                $data->unitRateId !== null && $unitRate === null,
+                ($data->unitRateId !== null && $unitRate === null)
+                    || ($data->unitTypeRateId !== null && $unitTypeRate === null),
                 422,
                 __('The selected rate does not belong to this unit.'),
             );
+
+            if ($selectedRate === null && $effectiveItem !== null) {
+                $unitRate = $effectiveItem['source'] === 'unit' ? $effectiveItem['rate'] : null;
+                $unitTypeRate = $effectiveItem['source'] === 'unit_type' ? $effectiveItem['rate'] : null;
+            }
 
             Tenant::query()->whereKey($tenantIds)->lockForUpdate()->get();
 
@@ -72,7 +91,7 @@ class CreateLease
 
             $existingLease = $unit->leases()->active()->lockForUpdate()->first();
             if ($existingLease) {
-                $this->ensureExistingLeaseTermsMatch($existingLease, $unitRate, $data);
+                $this->ensureExistingLeaseTermsMatch($existingLease, $selectedRate, $data);
 
                 $existingTenantIds = $existingLease->tenants()->pluck('tenants.id');
                 $newTenantIds = array_diff($tenantIds, $existingTenantIds->all());
@@ -94,7 +113,7 @@ class CreateLease
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
-            $lease = $this->createLease($property->id, $unit->id, $effectiveRate, null, $data, $tenantIds);
+            $lease = $this->createLease($property->id, $unit->id, $unitRate, $unitTypeRate, null, $effectiveRate, $data, $tenantIds);
 
             $unit->update(['status' => UnitStatus::Occupied]);
 
@@ -139,7 +158,7 @@ class CreateLease
             Tenant::query()->whereKey($tenantIds)->lockForUpdate()->get();
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
-            return $this->createLease($property->id, null, null, $propertyRate, $data, $tenantIds);
+            return $this->createLease($property->id, null, null, null, $propertyRate, $propertyRate, $data, $tenantIds);
         }, 'leases');
     }
 
@@ -150,12 +169,13 @@ class CreateLease
         int $propertyId,
         ?int $unitId,
         ?UnitRate $unitRate,
+        ?UnitTypeRate $unitTypeRate,
         ?PropertyRate $propertyRate,
+        UnitRate|UnitTypeRate|PropertyRate|null $rate,
         CreateLeaseData $data,
         array $tenantIds,
     ): Lease {
         try {
-            $rate = $unitRate ?? $propertyRate;
             $rentAmount = $data->rentAmount ?? $rate?->amount;
             $currency = $rate?->currency ?? $this->money->normalizeCurrency();
             $rentAmount = $rentAmount === null
@@ -188,6 +208,7 @@ class CreateLease
             'billing_strategy' => $data->billingStrategy ?? 'advance',
             'is_custom_price' => $isCustomPrice,
             'unit_rate_id' => $unitRate?->id,
+            'unit_type_rate_id' => $unitTypeRate?->id,
             'property_rate_id' => $propertyRate?->id,
             'deposit_amount' => $depositAmount,
             'deposit_paid_at' => $data->depositPaidAt,
@@ -207,16 +228,16 @@ class CreateLease
         return $lease;
     }
 
-    private function ensureExistingLeaseTermsMatch(Lease $lease, ?UnitRate $unitRate, CreateLeaseData $data): void
+    private function ensureExistingLeaseTermsMatch(Lease $lease, UnitRate|UnitTypeRate|null $rate, CreateLeaseData $data): void
     {
-        if ($data->unitRateId !== null) {
+        if ($data->unitRateId !== null || $data->unitTypeRateId !== null) {
             abort_if(
-                $lease->unit_rate_id !== $data->unitRateId,
+                $lease->unit_rate_id !== $data->unitRateId || $lease->unit_type_rate_id !== $data->unitTypeRateId,
                 422,
                 __('The existing lease terms cannot be changed while adding a tenant.'),
             );
             abort_if(
-                $unitRate?->currency !== $lease->currency,
+                $rate?->currency !== $lease->currency,
                 422,
                 __('The selected rate currency does not match the existing lease.'),
             );

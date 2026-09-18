@@ -20,5 +20,6 @@ final readonly class CreateLeaseData
         public ?int $rentDueDay,
         public ?string $notes,
         public ?int $propertyRateId = null,
+        public ?int $unitTypeRateId = null,
     ) {}
 }

@@ -35,6 +35,7 @@ use App\Http\Controllers\TenantPortal\NotificationController as TenantPortalNoti
 use App\Http\Controllers\TenantPortal\PaymentController as TenantPortalPaymentController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UnitTypeMediaController;
+use App\Http\Controllers\UnitTypeRateController;
 use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -164,10 +165,16 @@ Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(func
                     Route::post('/', [PropertyUnitTypeController::class, 'store'])->name('store')->middleware('permission:properties.update');
 
                     Route::prefix('{unitType}')->group(function () {
+                        Route::get('/', [PropertyUnitTypeController::class, 'show'])->name('show')->middleware('permission:properties.view');
+                        Route::get('units', [UnitController::class, 'indexForUnitType'])->name('units')->middleware('permission:units.view');
+                        Route::get('listing', [PropertyUnitTypeController::class, 'listing'])->name('listing')->middleware('permission:properties.view');
+                        Route::patch('status', [PropertyUnitTypeController::class, 'updateStatus'])->name('status.update')->middleware('permission:properties.update');
                         Route::put('/', [PropertyUnitTypeController::class, 'update'])->name('update')->middleware('permission:properties.update');
                         Route::delete('/', [PropertyUnitTypeController::class, 'destroy'])->name('destroy')->middleware('permission:properties.update');
                         Route::post('restore', [PropertyUnitTypeController::class, 'restore'])->name('restore')->withTrashed()->middleware('permission:properties.update');
                         Route::patch('publication', [PropertyUnitTypeController::class, 'updatePublication'])->name('publication.update')->middleware('permission:properties.update');
+                        Route::get('rates', [UnitTypeRateController::class, 'index'])->name('rates.index')->middleware('permission:properties.view');
+                        Route::put('rates', [UnitTypeRateController::class, 'update'])->name('rates.update')->middleware('permission:properties.update');
 
                         Route::prefix('gallery')->name('gallery.')->group(function () {
                             Route::post('/', [UnitTypeMediaController::class, 'store'])->name('store')->middleware('permission:properties.update');

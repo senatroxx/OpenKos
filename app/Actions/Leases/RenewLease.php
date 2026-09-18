@@ -119,6 +119,7 @@ class RenewLease
                 'rent_due_day' => $lockedLease->rent_due_day,
                 'is_custom_price' => $lockedLease->is_custom_price,
                 'unit_rate_id' => $lockedLease->unit_rate_id,
+                'unit_type_rate_id' => $lockedLease->unit_type_rate_id,
                 'property_rate_id' => $lockedLease->property_rate_id,
                 'status' => LeaseStatus::Active,
             ]);
