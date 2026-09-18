@@ -256,7 +256,10 @@ final class ListingReadinessService
                     $unassignedUnitsCount,
                     ['count' => $unassignedUnitsCount],
                 ),
-                $this->action('Open Units', route('properties.units.index', $property, absolute: false)),
+                $this->action('Open Units', route('properties.units.index', [
+                    'property' => $property,
+                    'assignment' => 'unassigned',
+                ], absolute: false)),
             );
         }
 

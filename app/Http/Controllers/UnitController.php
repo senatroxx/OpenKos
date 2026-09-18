@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Units\AssignUnitTypeToUnits;
 use App\Actions\Units\CreateUnit;
+use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Enums\MaintenanceStatus;
+use App\Http\Requests\Unit\BulkAssignUnitTypeRequest;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
 use App\Models\Lease;
@@ -147,6 +150,10 @@ class UnitController extends Controller
             ->filters([
                 Filter::select('status', 'Status', ['available', 'occupied', 'maintenance', 'unavailable', 'archived'])
                     ->query(fn (Builder $q, string $value) => $q->statusFilter($value)),
+                Filter::select('assignment', 'Assignment', ['assigned', 'unassigned'])
+                    ->query(fn (Builder $q, string $value) => $value === 'unassigned'
+                        ? $q->whereNull('unit_type_id')
+                        : $q->whereNotNull('unit_type_id')),
             ])
             ->defaultSort('name');
 
@@ -194,6 +201,34 @@ class UnitController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'property_id', 'name', 'is_active']),
         ]);
+    }
+
+    public function bulkAssignUnitType(
+        BulkAssignUnitTypeRequest $request,
+        Property $property,
+        AssignUnitTypeToUnits $assignUnitTypeToUnits,
+    ): RedirectResponse {
+        $validated = $request->validated();
+        $data = new BulkAssignUnitTypeData(
+            unitIds: array_map('intval', $validated['unit_ids']),
+            unitTypeId: (int) $validated['unit_type_id'],
+        );
+
+        foreach ($property->units()->whereKey($data->unitIds)->get() as $unit) {
+            $this->authorize('update', $unit);
+        }
+
+        $result = $assignUnitTypeToUnits->execute($property, $data);
+
+        if ($result->failed()) {
+            throw ValidationException::withMessages([
+                $result->errorField => $result->error,
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Units updated.')]);
+
+        return back();
     }
 
     public function store(StoreUnitRequest $request, Property $property, CreateUnit $createUnit): RedirectResponse

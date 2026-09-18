@@ -1,10 +1,13 @@
 <?php
 
+use App\Actions\Units\AssignUnitTypeToUnits;
+use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Setting;
 use App\Models\Unit;
 use App\Models\UnitRate;
+use App\Models\UnitType;
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Database\QueryException;
@@ -96,6 +99,114 @@ describe('authorization', function () {
 });
 
 describe('CRUD', function () {
+    it('assigns one Unit Type to multiple Units atomically', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $targetType = UnitType::factory()->for($property)->create();
+        $units = Unit::factory()->for($property)->count(2)->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.bulk-assign-unit-type', $property), [
+                'unit_ids' => $units->modelKeys(),
+                'unit_type_id' => $targetType->id,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        expect($units->fresh()->pluck('unit_type_id')->all())
+            ->toBe([$targetType->id, $targetType->id]);
+    });
+
+    it('returns a failure result and leaves Units unchanged when a selection becomes stale', function () {
+        $property = Property::factory()->create();
+        $targetType = UnitType::factory()->for($property)->create();
+        $units = Unit::factory()->for($property)->count(2)->create();
+        $units->last()->delete();
+
+        $result = app(AssignUnitTypeToUnits::class)->execute($property, new BulkAssignUnitTypeData(
+            unitIds: $units->modelKeys(),
+            unitTypeId: $targetType->id,
+        ));
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->errorField)->toBe('unit_ids')
+            ->and($units->first()->fresh()->unit_type_id)->toBeNull()
+            ->and($units->last()->fresh()->unit_type_id)->toBeNull();
+    });
+
+    it('returns a failure result when the target Unit Type is inactive', function () {
+        $property = Property::factory()->create();
+        $inactiveType = UnitType::factory()->for($property)->create(['is_active' => false]);
+        $unit = Unit::factory()->for($property)->create();
+
+        $result = app(AssignUnitTypeToUnits::class)->execute($property, new BulkAssignUnitTypeData(
+            unitIds: [$unit->id],
+            unitTypeId: $inactiveType->id,
+        ));
+
+        expect($result->failed())->toBeTrue()
+            ->and($result->errorField)->toBe('unit_type_id')
+            ->and($unit->fresh()->unit_type_id)->toBeNull();
+    });
+
+    it('rejects a bulk assignment across property boundaries without changing Units', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $otherProperty = Property::factory()->create();
+        $targetType = UnitType::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
+        $otherUnit = Unit::factory()->for($otherProperty)->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.bulk-assign-unit-type', $property), [
+                'unit_ids' => [$unit->id, $otherUnit->id],
+                'unit_type_id' => $targetType->id,
+            ])
+            ->assertSessionHasErrors('unit_ids.1');
+
+        expect($unit->fresh()->unit_type_id)->toBeNull()
+            ->and($otherUnit->fresh()->unit_type_id)->toBeNull();
+    });
+
+    it('denies an admin from bulk assigning Units in an unassigned property', function () {
+        $admin = User::factory()->admin()->create();
+        $property = Property::factory()->create();
+        $targetType = UnitType::factory()->for($property)->create();
+        $unit = Unit::factory()->for($property)->create();
+
+        $this->actingAs($admin)
+            ->post(route('properties.units.bulk-assign-unit-type', $property), [
+                'unit_ids' => [$unit->id],
+                'unit_type_id' => $targetType->id,
+            ])
+            ->assertForbidden();
+    });
+
+    it('rejects inactive and cross-property Unit Type targets', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $otherProperty = Property::factory()->create();
+        $inactiveType = UnitType::factory()->for($property)->create(['is_active' => false]);
+        $otherType = UnitType::factory()->for($otherProperty)->create();
+        $unit = Unit::factory()->for($property)->create();
+
+        $this->actingAs($user)
+            ->post(route('properties.units.bulk-assign-unit-type', $property), [
+                'unit_ids' => [$unit->id],
+                'unit_type_id' => $inactiveType->id,
+            ])
+            ->assertSessionHasErrors('unit_type_id');
+
+        $this->actingAs($user)
+            ->post(route('properties.units.bulk-assign-unit-type', $property), [
+                'unit_ids' => [$unit->id],
+                'unit_type_id' => $otherType->id,
+            ])
+            ->assertSessionHasErrors('unit_type_id');
+
+        expect($unit->fresh()->unit_type_id)->toBeNull();
+    });
+
     it('lists units on the index page', function () {
         $user = User::factory()->owner()->create();
         $property = Property::factory()->create();
@@ -376,6 +487,22 @@ describe('CRUD', function () {
             ->has('units.data', 1)
             ->where('status', 'occupied')
         );
+    });
+
+    it('filters Units by Unit Type assignment state', function () {
+        $user = User::factory()->owner()->create();
+        $property = Property::factory()->create();
+        $unitType = UnitType::factory()->for($property)->create();
+        Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+        Unit::factory()->for($property)->create(['unit_type_id' => null]);
+
+        $this->actingAs($user)
+            ->get(route('properties.units.index', [$property, 'assignment' => 'unassigned']))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->has('units.data', 1)
+                ->where('assignment', 'unassigned')
+            );
     });
 
     it('applies multiple unit status filters', function () {

@@ -8,6 +8,7 @@ import type { PaginatedData } from '@/types';
 export type TableColumn<T> = {
     key: string;
     label: string;
+    header?: ReactNode;
     sortable?: boolean;
     className?: string;
     render?: (row: T) => ReactNode;
@@ -62,7 +63,14 @@ export function DataTable<T>({
                         <thead>
                             <tr className="border-b bg-muted/50 text-left text-muted-foreground">
                                 {columns.map((col) =>
-                                    col.sortable && onSort ? (
+                                    col.header ? (
+                                        <th
+                                            key={col.key}
+                                            className={`px-4 py-3 font-medium ${col.className ?? ''}`}
+                                        >
+                                            {col.header}
+                                        </th>
+                                    ) : col.sortable && onSort ? (
                                         <SortHeader
                                             key={col.key}
                                             column={col.key}
