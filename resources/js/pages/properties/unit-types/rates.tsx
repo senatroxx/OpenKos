@@ -33,7 +33,6 @@ import { formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
 import type {
-    AuthPageProps,
     NewUnitTypeRateData,
     UnitTypeRate,
     UnitTypeRatesFormData,
@@ -61,11 +60,7 @@ export default function UnitTypeRates({
     property,
     unitType,
 }: UnitTypeRatesPageProps) {
-    const { setting } = usePage<
-        AuthPageProps & {
-            setting: { currency: string; supported_currencies: string[] };
-        }
-    >().props;
+    const { setting } = usePage().props;
     const defaultCurrency = setting.currency.toUpperCase();
     const supportedCurrencies = setting.supported_currencies.includes(
         defaultCurrency,

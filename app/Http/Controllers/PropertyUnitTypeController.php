@@ -6,6 +6,7 @@ use App\Enums\AmenityScope;
 use App\Http\Requests\Listing\UpdateListingPublicationRequest;
 use App\Http\Requests\UnitType\StoreUnitTypeRequest;
 use App\Http\Requests\UnitType\UpdateUnitTypeRequest;
+use App\Http\Requests\UnitType\UpdateUnitTypeStatusRequest;
 use App\Models\Amenity;
 use App\Models\Media;
 use App\Models\Property;
@@ -209,6 +210,24 @@ class PropertyUnitTypeController extends Controller
         Inertia::flash('toast', [
             'type' => 'success',
             'message' => __($isPublished ? 'Unit Type published.' : 'Unit Type unpublished.'),
+        ]);
+
+        return back();
+    }
+
+    public function updateStatus(
+        UpdateUnitTypeStatusRequest $request,
+        Property $property,
+        UnitType $unitType,
+    ): RedirectResponse {
+        $this->authorize('update', $unitType);
+        abort_unless($unitType->property_id === $property->id, 404);
+
+        $unitType->update(['is_active' => $request->boolean('is_active')]);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => __($unitType->is_active ? 'Unit Type activated.' : 'Unit Type deactivated.'),
         ]);
 
         return back();

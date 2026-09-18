@@ -83,6 +83,56 @@ it('keeps inactive Unit Types readable but hides deleted workspaces', function (
         ->assertNotFound();
 });
 
+it('activates and deactivates a Unit Type from its workspace', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $unitType = UnitType::factory()->for($property)->create(['is_active' => true]);
+
+    $this->actingAs($user)
+        ->patch(route('properties.unit-types.status.update', [$property, $unitType]), ['is_active' => false])
+        ->assertRedirect();
+
+    expect($unitType->refresh()->is_active)->toBeFalse();
+
+    $this->actingAs($user)
+        ->patch(route('properties.unit-types.status.update', [$property, $unitType]), ['is_active' => true])
+        ->assertRedirect();
+
+    expect($unitType->refresh()->is_active)->toBeTrue();
+});
+
+it('loads Unit Type overview data with bounded queries', function () {
+    $user = User::factory()->owner()->create();
+    $property = Property::factory()->create();
+    $unitType = UnitType::factory()->for($property)->create(['name' => 'Primary Studio']);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+
+    $this->actingAs($user)
+        ->get(route('properties.unit-types.show', [$property, $unitType]))
+        ->assertOk();
+
+    $countQueries = function () use ($user, $property, $unitType): int {
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+
+        $this->actingAs($user)
+            ->get(route('properties.unit-types.show', [$property, $unitType]))
+            ->assertOk();
+
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
+    };
+    $singleCount = $countQueries();
+
+    UnitType::factory()->count(5)->sequence(fn ($sequence) => ['name' => 'Additional Studio '.$sequence->index])->for($property)->create()->each(function (UnitType $type) use ($property): void {
+        Unit::factory()->for($property)->create(['unit_type_id' => $type->id]);
+    });
+
+    expect($countQueries())->toBe($singleCount);
+});
+
 it('scopes the existing Units workspace table to a Unit Type', function () {
     $user = User::factory()->owner()->create();
     $property = Property::factory()->create();
