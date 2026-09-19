@@ -15,10 +15,10 @@ OpenKOS must be extensible (navigation, dashboards, workspace tabs, settings pag
 
 We will treat plugins as **trusted, in-process extensions registering into typed platform registries** — the trust boundary is installation, not a runtime sandbox.
 
-- A plugin extends `OpenKOS\Platform\Plugin\Plugin`, declares a `PluginManifest` (id, version, `coreVersion` constraint, dependencies), and registers into container-singleton registries via the `OpenKOSManager`. In-repo plugins are listed explicitly in `config/platform.php`; trusted Composer plugins may be discovered by the host.
+- A plugin extends `OpenKOS\Platform\Plugin\Plugin`, declares a `PluginManifest` (id, version, dependencies), and declares `openkos/platform` and PHP requirements in Composer. Plugins register into container-singleton registries via the `OpenKOSManager`. In-repo plugins are listed explicitly in `config/platform.php`; trusted Composer plugins may be discovered by the host.
 - Extension is **additive only**: plugins own their tables via their own migrations, declare their own permissions, and must not alter core schema or behavior.
 - Plugins react to core through **platform-level domain events** (`OpenKOS\Core\Events`, see [docs/domain-events.md](../../domain-events.md)) — the stable plugin API — never by patching core code. Application events remain a compatibility surface for host-only subscribers.
-- The loader fail-fasts on incompatible core versions, missing dependencies, and cycles; a broken plugin never half-boots.
+- Composer validation owns platform compatibility; the loader fail-fasts on missing dependencies and cycles, so a broken plugin never half-boots.
 - Dormant seams are interface-only until a real consumer forces their shape (e.g. `PaymentGateway` waits for the first real gateway).
 
 Full mechanics: [docs/platform.md](../../platform.md).
