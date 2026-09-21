@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Actions\Units\AssignUnitTypeToUnits;
 use App\Actions\Units\CreateUnit;
+use App\Actions\Units\DeleteUnit;
 use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Enums\MaintenanceStatus;
 use App\Http\Requests\Unit\BulkAssignUnitTypeRequest;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
-use App\Models\Lease;
 use App\Models\MaintenanceTicket;
 use App\Models\Property;
 use App\Models\Tenant;
@@ -386,23 +386,13 @@ class UnitController extends Controller
         return back();
     }
 
-    public function destroy(Property $property, Unit $unit): RedirectResponse
+    public function destroy(Property $property, Unit $unit, DeleteUnit $action): RedirectResponse
     {
         $this->authorize('delete', $unit);
 
-        $deleted = DB::transaction(function () use ($unit) {
-            $locked = Unit::lockForUpdate()->findOrFail($unit->id);
+        $result = $action->execute($unit);
 
-            if (Lease::where('unit_id', $locked->id)->active()->exists()) {
-                return false;
-            }
-
-            $locked->delete();
-
-            return true;
-        });
-
-        if (! $deleted) {
+        if ($result->failed()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot delete a unit with active leases.')]);
 
             return back();
