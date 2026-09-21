@@ -6,15 +6,15 @@ use App\Actions\Leases\CreateLease;
 use App\Actions\Leases\MoveOutLease;
 use App\Actions\Leases\RenewLease;
 use App\Actions\Leases\SettleLeaseDeposit;
+use App\Actions\Leases\TerminateLease;
 use App\Actions\Reminders\ForceSendReminder;
-use App\Business\Leases\LeaseStatusValidator;
 use App\Data\Lease\CreateLeaseData;
 use App\Data\Lease\MoveOutLeaseData;
+use App\Data\Lease\TerminateLeaseData;
 use App\Enums\InvoiceStatus;
 use App\Enums\LeaseStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
-use App\Enums\UnitStatus;
 use App\Events\Lease\LeaseCreated;
 use App\Events\Lease\LeaseStatusChanged;
 use App\Events\Unit\UnitStatusChanged;
@@ -47,10 +47,6 @@ use Inertia\Response;
 
 class LeaseController extends Controller
 {
-    public function __construct(
-        private LeaseStatusValidator $leaseStatusValidator,
-    ) {}
-
     public function show(Lease $lease): Response
     {
         $this->authorize('view', $lease);
@@ -395,44 +391,20 @@ class LeaseController extends Controller
         return back();
     }
 
-    public function destroy(Property $property, Unit $unit, Lease $lease): RedirectResponse
+    public function destroy(Request $request, Property $property, Unit $unit, Lease $lease, TerminateLease $action): RedirectResponse
     {
         $this->authorize('delete', $lease);
 
-        $result = DB::transaction(function () use ($lease, $unit, $property): array {
-            $lockedProperty = Property::query()->lockForUpdate()->findOrFail($property->id);
-            $lockedUnit = Unit::query()->lockForUpdate()->findOrFail($unit->id);
-            $lockedLease = Lease::query()->lockForUpdate()->findOrFail($lease->id);
-            $oldStatus = $lockedLease->status;
+        $result = $action->execute($property, $unit, $lease, new TerminateLeaseData($request->input('reason')));
 
-            abort_unless((int) $lockedLease->property_id === $lockedProperty->id && (int) $lockedLease->unit_id === $lockedUnit->id, 422, __('Lease is no longer assigned to this property or unit.'));
-            $this->leaseStatusValidator->validate($oldStatus, LeaseStatus::Terminated);
+        if ($result->failed()) {
+            abort(422, $result->error);
+        }
 
-            $lockedLease->update([
-                'end_date' => now(),
-                'status' => LeaseStatus::Terminated,
-                'termination_date' => now(),
-                'termination_reason' => request('reason'),
-            ]);
-
-            $lockedUnit->unsetRelation('leases');
-
-            if ($lockedUnit->leases()->active()->doesntExist() && $lockedUnit->status !== UnitStatus::Maintenance) {
-                $oldUnitStatus = $lockedUnit->status;
-                $lockedUnit->update(['status' => UnitStatus::Available]);
-
-                if ($oldUnitStatus !== $lockedUnit->status) {
-                    UnitStatusChanged::dispatch($lockedUnit, $oldUnitStatus, $lockedUnit->status, actorId: Auth::id());
-                }
-            }
-
-            return [
-                'lease' => $lockedLease,
-                'old_status' => $oldStatus,
-            ];
-        });
-
-        LeaseStatusChanged::dispatch($result['lease'], $result['old_status'], LeaseStatus::Terminated, actorId: Auth::id());
+        LeaseStatusChanged::dispatch($result->lease, $result->oldLeaseStatus, LeaseStatus::Terminated, actorId: Auth::id());
+        if ($result->oldUnitStatus !== $result->newUnitStatus) {
+            UnitStatusChanged::dispatch($result->unit, $result->oldUnitStatus, $result->newUnitStatus, actorId: Auth::id());
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Lease terminated.')]);
 
