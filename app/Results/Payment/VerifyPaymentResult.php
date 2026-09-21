@@ -7,7 +7,7 @@ use App\Models\Payment;
 
 final readonly class VerifyPaymentResult
 {
-    public function __construct(
+    private function __construct(
         public ?Payment $payment = null,
         public ?PaymentStatus $oldStatus = null,
         public ?PaymentStatus $newStatus = null,

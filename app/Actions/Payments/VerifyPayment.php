@@ -26,12 +26,12 @@ final class VerifyPayment
         $oldStatus = $payment->status;
         $this->paymentStatusValidator->validate($oldStatus, $data->status);
 
-        $verifiedPayment = DB::transaction(function () use ($payment, $data): Payment|string {
+        return DB::transaction(function () use ($payment, $data, $oldStatus): VerifyPaymentResult {
             $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
             $lockedPayment = Payment::lockForUpdate()->findOrFail($payment->id);
 
             if ($lockedPayment->status !== PaymentStatus::Pending) {
-                return __('Payment has already been verified.');
+                return VerifyPaymentResult::error(__('Payment has already been verified.'));
             }
 
             if ($data->status === PaymentStatus::Confirmed) {
@@ -43,7 +43,7 @@ final class VerifyPayment
                     BigDecimal::of($confirmedSum)->plus((string) $lockedPayment->amount)->toString(),
                     (string) $invoice->total,
                 ) > 0) {
-                    return __('Confirming this payment would exceed the invoice total.');
+                    return VerifyPaymentResult::error(__('Confirming this payment would exceed the invoice total.'));
                 }
 
                 $lockedPayment->update([
@@ -76,13 +76,7 @@ final class VerifyPayment
                 Invoice::recalculateStatuses($affectedInvoices);
             }
 
-            return $lockedPayment->refresh();
+            return VerifyPaymentResult::success($lockedPayment->refresh(), $oldStatus, $data->status);
         });
-
-        if (is_string($verifiedPayment)) {
-            return VerifyPaymentResult::error($verifiedPayment);
-        }
-
-        return VerifyPaymentResult::success($verifiedPayment, $oldStatus, $data->status);
     }
 }
