@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Expenses\RecordExpense;
+use App\Data\Expense\RecordExpenseData;
 use App\Enums\ExpenseStatus;
 use App\Http\Requests\Expense\IndexExpenseRequest;
 use App\Http\Requests\Expense\StoreExpenseRequest;
@@ -227,21 +229,13 @@ class ExpenseController extends Controller
             ->all();
     }
 
-    public function store(StoreExpenseRequest $request, MediaManager $mediaManager): RedirectResponse
+    public function store(StoreExpenseRequest $request, RecordExpense $action): RedirectResponse
     {
         $data = $request->validated();
         $receipt = $request->file('receipt');
         unset($data['receipt']);
 
-        $expense = DB::transaction(function () use ($data, $receipt, $mediaManager): Expense {
-            $expense = Expense::create($data);
-
-            if ($receipt !== null) {
-                $mediaManager->store($expense, 'receipts', $receipt);
-            }
-
-            return $expense;
-        });
+        $action->execute(new RecordExpenseData($data, $receipt));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Expense recorded.')]);
 
