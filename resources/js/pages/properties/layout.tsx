@@ -27,14 +27,14 @@ export function PropertyLayout({
         {
             key: 'overview',
             label: 'Overview',
-            href: `/properties/${property.slug}`,
+            href: properties.show.url(property),
         },
         ...(hasUnitInventory
             ? [
                   {
                       key: 'units',
                       label: 'Units',
-                      href: `/properties/${property.slug}/units`,
+                      href: properties.units.index.url(property),
                   },
                   {
                       key: 'unit-types',
@@ -55,7 +55,7 @@ export function PropertyLayout({
         {
             key: 'leases',
             label: 'Leases',
-            href: `/properties/${property.slug}/leases`,
+            href: properties.workspace.leases.url(property),
         },
         {
             key: 'inspections',
@@ -70,7 +70,7 @@ export function PropertyLayout({
         {
             key: 'documents',
             label: 'Documents',
-            href: `/properties/${property.slug}/documents`,
+            href: properties.workspace.documents.url(property),
         },
     ];
 
@@ -78,7 +78,7 @@ export function PropertyLayout({
         <EntityWorkspaceLayout
             title={property.name}
             subtitle={property.address ?? undefined}
-            backRoute="/properties"
+            backRoute={properties.index.url()}
             backLabel="All properties"
             actions={actions}
         >

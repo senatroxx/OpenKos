@@ -34,6 +34,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { t } from '@/lib/i18n';
 import { dashboard } from '@/routes';
+import dashboardRoutes from '@/routes/dashboard';
+import propertyRoutes from '@/routes/properties';
+import tenants from '@/routes/tenants';
 import type {
     AttentionData,
     Finance,
@@ -100,7 +103,7 @@ export default function Overview({
                             asChild
                             className="gap-2 bg-card shadow-xs"
                         >
-                            <Link href="/dashboard/rent">
+                            <Link href={dashboardRoutes.rent.url()}>
                                 <Banknote className="size-4 text-muted-foreground" />
                                 {t('Collect Rent')}
                             </Link>
@@ -130,7 +133,7 @@ export default function Overview({
                                     {t('Add Property')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                    <Link href="/tenants">
+                                    <Link href={tenants.index.url()}>
                                         <UserCheck className="mr-2 size-4 text-muted-foreground" />
                                         {t('Assign Tenant')}
                                     </Link>
@@ -215,7 +218,7 @@ export default function Overview({
                             </h2>
                             {stats.properties.length > 0 && (
                                 <Link
-                                    href="/properties"
+                                    href={propertyRoutes.index.url()}
                                     className="inline-flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:underline"
                                 >
                                     {t('View All Properties')} (

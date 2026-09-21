@@ -17,6 +17,7 @@ import { useClipboard } from '@/hooks/use-clipboard';
 import { PAYMENT_METHOD_LABELS } from '@/lib/constants/billing';
 import { formatDate, formatPeriod, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import leaseRoutes from '@/routes/leases/workspace';
 import invoiceRoutes from '@/routes/leases/workspace/invoices';
 import paymentRoutes from '@/routes/payments';
 import type {
@@ -115,7 +116,7 @@ export default function InvoiceDetail({
             />
 
             <Link
-                href={`/leases/${lease.id}/invoices`}
+                href={leaseRoutes.invoices.url(lease)}
                 className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />
