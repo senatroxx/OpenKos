@@ -2,30 +2,20 @@
 
 namespace App\Business\Dashboard;
 
-use App\Enums\ExpenseStatus;
-use App\Enums\InvoiceStatus;
-use App\Enums\PaymentStatus;
-use App\Enums\UnitStatus;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\Payment;
-use App\Models\PaymentAllocation;
-use App\Models\Property;
+use App\Data\Dashboard\FinancialDashboardData;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class FinancialDashboardCalculator
 {
     /**
-     * @param  Collection<int, Property>  $accessibleProperties
+     * @param  Collection<int, array{id: int, name: string}>  $accessibleProperties
      * @return array<string, mixed>
      */
-    public function calculate(Collection $accessibleProperties, ?int $selectedPropertyId, string $period): array
+    public function calculate(Collection $accessibleProperties, FinancialDashboardData $data, ?int $selectedPropertyId, string $period, CarbonInterface $now): array
     {
         $propertyIds = $accessibleProperties->pluck('id');
 
@@ -33,18 +23,17 @@ class FinancialDashboardCalculator
             $propertyIds = collect([$selectedPropertyId]);
         }
 
-        $now = now();
         $periodStart = $period === 'ytd'
             ? $now->copy()->startOfYear()
             : $now->copy()->startOfMonth();
         $periodEnd = $now->copy()->endOfDay();
         $trendStart = $now->copy()->startOfMonth()->subMonthsNoOverflow(11);
 
-        $invoiceRows = $this->invoiceAggregates($propertyIds, $trendStart, $now);
-        $expenseRows = $this->expenseAggregates($propertyIds, $trendStart, $now);
-        $paymentRows = $this->paymentAggregates($propertyIds, $trendStart, $now);
-        $allocationRows = $this->allocationAggregates($propertyIds, $periodStart, $periodEnd);
-        $upcomingRows = $this->upcomingReceivableAggregates($propertyIds, $now);
+        $invoiceRows = $data->invoiceRows;
+        $expenseRows = $data->expenseRows;
+        $paymentRows = $data->paymentRows;
+        $allocationRows = $data->allocationRows;
+        $upcomingRows = $data->upcomingRows;
 
         $selectedInvoices = $this->rowsInPeriod($invoiceRows, $periodStart, $periodEnd);
         $selectedExpenses = $this->rowsInPeriod($expenseRows, $periodStart, $periodEnd);
@@ -54,7 +43,7 @@ class FinancialDashboardCalculator
         $billed = $revenue;
         $collected = $this->completeAmountGroups($this->amountGroups($allocationRows, 'collected'), $billed);
         $outstanding = $this->amountGroups($selectedInvoices, 'outstanding_amount');
-        $occupancy = $this->occupancy($propertyIds);
+        $occupancy = $this->occupancy($data->occupancyProperties);
 
         return [
             'period' => $period,
@@ -86,128 +75,6 @@ class FinancialDashboardCalculator
             'expense_breakdown' => $this->expenseBreakdown($selectedExpenses),
             'upcoming_receivables' => $this->monthlyAmountGroups($upcomingRows, 'receivable', $now),
         ];
-    }
-
-    /**
-     * @param  Collection<int, int>  $propertyIds
-     * @return Collection<int, object>
-     */
-    private function invoiceAggregates(Collection $propertyIds, CarbonInterface $start, CarbonInterface $end): Collection
-    {
-        $month = $this->monthExpression('invoices.period_start');
-
-        return Invoice::query()
-            ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->whereIn('leases.property_id', $propertyIds)
-            ->whereBetween('invoices.period_start', [$start->toDateString(), $end->toDateString()])
-            ->whereIn('invoices.status', $this->eligibleInvoiceStatuses())
-            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total) as revenue, SUM(invoices.total - invoices.amount_paid) as outstanding_amount")
-            ->groupBy('leases.property_id', 'invoices.currency')
-            ->groupByRaw($month)
-            ->get();
-    }
-
-    /**
-     * @param  Collection<int, int>  $propertyIds
-     * @return Collection<int, object>
-     */
-    private function expenseAggregates(Collection $propertyIds, CarbonInterface $start, CarbonInterface $end): Collection
-    {
-        $month = $this->monthExpression('expenses.expense_date');
-
-        return Expense::query()
-            ->join('expense_categories', 'expense_categories.id', '=', 'expenses.expense_category_id')
-            ->whereIn('expenses.property_id', $propertyIds)
-            ->where('expenses.status', ExpenseStatus::Active->value)
-            ->whereBetween('expenses.expense_date', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw("expenses.property_id, expenses.expense_category_id as category_id, expense_categories.label as category_label, expenses.currency, {$month} as month, SUM(expenses.amount) as expenses")
-            ->groupBy('expenses.property_id', 'expenses.expense_category_id', 'expense_categories.label', 'expenses.currency')
-            ->groupByRaw($month)
-            ->get();
-    }
-
-    /**
-     * @param  Collection<int, int>  $propertyIds
-     * @return Collection<int, object>
-     */
-    private function paymentAggregates(Collection $propertyIds, CarbonInterface $start, CarbonInterface $end): Collection
-    {
-        $month = $this->monthExpression('payments.payment_date');
-        $currency = 'COALESCE(payments.currency, invoices.currency)';
-
-        return Payment::query()
-            ->join('invoices', 'invoices.id', '=', 'payments.invoice_id')
-            ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->whereIn('leases.property_id', $propertyIds)
-            ->where('payments.status', PaymentStatus::Confirmed->value)
-            ->whereBetween('payments.payment_date', [$start, $end])
-            ->selectRaw("leases.property_id, {$currency} as currency, {$month} as month, SUM(payments.amount) as collected")
-            ->groupBy('leases.property_id')
-            ->groupByRaw($currency)
-            ->groupByRaw($month)
-            ->get();
-    }
-
-    /**
-     * @param  Collection<int, int>  $propertyIds
-     * @return Collection<int, object>
-     */
-    private function allocationAggregates(Collection $propertyIds, CarbonInterface $start, CarbonInterface $end): Collection
-    {
-        return PaymentAllocation::query()
-            ->join('payments', 'payments.id', '=', 'payment_allocations.payment_id')
-            ->join('invoices', 'invoices.id', '=', 'payment_allocations.invoice_id')
-            ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->whereIn('leases.property_id', $propertyIds)
-            ->where('payments.status', PaymentStatus::Confirmed->value)
-            ->whereIn('invoices.status', $this->eligibleInvoiceStatuses())
-            ->whereBetween('invoices.period_start', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw('leases.property_id, invoices.currency, SUM(payment_allocations.amount) as collected')
-            ->groupBy('leases.property_id', 'invoices.currency')
-            ->get();
-    }
-
-    /**
-     * @param  Collection<int, int>  $propertyIds
-     * @return Collection<int, object>
-     */
-    private function upcomingReceivableAggregates(Collection $propertyIds, CarbonInterface $now): Collection
-    {
-        $month = $this->monthExpression('invoices.due_date');
-
-        return Invoice::query()
-            ->join('leases', 'leases.id', '=', 'invoices.lease_id')
-            ->whereIn('leases.property_id', $propertyIds)
-            ->whereIn('invoices.status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
-            ->whereDate('invoices.due_date', '>=', $now->toDateString())
-            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total - invoices.amount_paid) as receivable")
-            ->groupBy('leases.property_id', 'invoices.currency')
-            ->groupByRaw($month)
-            ->orderByRaw($month)
-            ->get();
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function eligibleInvoiceStatuses(): array
-    {
-        return [
-            InvoiceStatus::Pending->value,
-            InvoiceStatus::Partial->value,
-            InvoiceStatus::Paid->value,
-        ];
-    }
-
-    private function monthExpression(string $column): string
-    {
-        return match (DB::connection()->getDriverName()) {
-            'sqlite' => "strftime('%Y-%m-01', {$column})",
-            'mysql', 'mariadb' => "DATE_FORMAT({$column}, '%Y-%m-01')",
-            'pgsql' => "DATE_TRUNC('month', {$column})::date",
-            'sqlsrv' => "DATEFROMPARTS(YEAR({$column}), MONTH({$column}), 1)",
-            default => throw new \RuntimeException('Unsupported database driver for financial month grouping.'),
-        };
     }
 
     /**
@@ -401,7 +268,7 @@ class FinancialDashboardCalculator
     }
 
     /**
-     * @param  Collection<int, Property>  $accessibleProperties
+     * @param  Collection<int, array{id: int, name: string}>  $accessibleProperties
      * @param  Collection<int, int>  $propertyIds
      * @param  Collection<int, object>  $invoiceRows
      * @param  Collection<int, object>  $expenseRows
@@ -417,7 +284,7 @@ class FinancialDashboardCalculator
         Collection $allocationRows,
         array $occupancyProperties,
     ): array {
-        $properties = $accessibleProperties->whereIn('id', $propertyIds);
+        $properties = $accessibleProperties->filter(fn (array $property): bool => $propertyIds->contains($property['id']));
         $invoiceAmounts = $this->propertyAmountMap($invoiceRows, 'revenue');
         $expenseAmounts = $this->propertyAmountMap($expenseRows, 'expenses');
         $collectedAmounts = $this->propertyAmountMap($allocationRows, 'collected');
@@ -425,16 +292,16 @@ class FinancialDashboardCalculator
 
         $occupancyByProperty = collect($occupancyProperties)->keyBy('id');
 
-        return $properties->map(function (Property $property) use ($invoiceAmounts, $expenseAmounts, $collectedAmounts, $outstandingAmounts, $occupancyByProperty): array {
-            $revenue = $this->mapToGroups($invoiceAmounts[$property->id] ?? []);
-            $expenses = $this->mapToGroups($expenseAmounts[$property->id] ?? []);
+        return $properties->map(function (array $property) use ($invoiceAmounts, $expenseAmounts, $collectedAmounts, $outstandingAmounts, $occupancyByProperty): array {
+            $revenue = $this->mapToGroups($invoiceAmounts[$property['id']] ?? []);
+            $expenses = $this->mapToGroups($expenseAmounts[$property['id']] ?? []);
             $noi = $this->subtractGroups($revenue, $expenses);
-            $collected = $this->completeAmountGroups($this->mapToGroups($collectedAmounts[$property->id] ?? []), $revenue);
-            $outstanding = $this->mapToGroups($outstandingAmounts[$property->id] ?? []);
+            $collected = $this->completeAmountGroups($this->mapToGroups($collectedAmounts[$property['id']] ?? []), $revenue);
+            $outstanding = $this->mapToGroups($outstandingAmounts[$property['id']] ?? []);
 
             return [
-                'id' => $property->id,
-                'name' => $property->name,
+                'id' => $property['id'],
+                'name' => $property['name'],
                 'revenue' => $revenue,
                 'expenses' => $expenses,
                 'noi' => $noi,
@@ -443,7 +310,7 @@ class FinancialDashboardCalculator
                 'collected' => $collected,
                 'outstanding' => $outstanding,
                 'collection_rate' => $this->percentageGroups($collected, $revenue),
-                'occupancy' => $occupancyByProperty->get($property->id, [
+                'occupancy' => $occupancyByProperty->get($property['id'], [
                     'total_units' => 0,
                     'occupied_units' => 0,
                     'occupancy_percentage' => 0,
@@ -471,41 +338,17 @@ class FinancialDashboardCalculator
         return $map;
     }
 
-    /**
-     * @param  Collection<int, int>  $propertyIds
-     * @return array<string, mixed>
-     */
-    private function occupancy(Collection $propertyIds): array
+    /** @param array<int, array{id: int, name: string, total_units: int, occupied_units: int, occupancy_percentage: int}> $properties */
+    private function occupancy(array $properties): array
     {
-        $properties = Property::query()
-            ->whereIn('id', $propertyIds)
-            ->withCount([
-                'units',
-                'units as occupied_units_count' => fn (Builder $query) => $query
-                    ->where(function (Builder $query): void {
-                        $query->where('status', UnitStatus::Occupied)
-                            ->orWhereHas('leases', fn (Builder $query) => $query->active())
-                            ->orWhereHas('property.activeWholePropertyLeases');
-                    }),
-            ])
-            ->get(['id', 'name']);
-
-        $totalUnits = $properties->sum('units_count');
-        $occupiedUnits = $properties->sum('occupied_units_count');
+        $totalUnits = array_sum(array_column($properties, 'total_units'));
+        $occupiedUnits = array_sum(array_column($properties, 'occupied_units'));
 
         return [
             'total_units' => $totalUnits,
             'occupied_units' => $occupiedUnits,
             'occupancy_percentage' => $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0,
-            'properties' => $properties->map(fn (Property $property): array => [
-                'id' => $property->id,
-                'name' => $property->name,
-                'total_units' => $property->units_count,
-                'occupied_units' => $property->occupied_units_count,
-                'occupancy_percentage' => $property->units_count > 0
-                    ? round(($property->occupied_units_count / $property->units_count) * 100)
-                    : 0,
-            ])->values()->all(),
+            'properties' => $properties,
         ];
     }
 

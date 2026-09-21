@@ -18,6 +18,7 @@ use App\Models\PropertyType;
 use App\Models\Region;
 use App\Models\Setting;
 use App\Models\Unit;
+use App\Repositories\DashboardRepository;
 use App\Support\DateTimeFormatter;
 use Brick\Math\BigDecimal;
 use Carbon\Carbon;
@@ -29,7 +30,7 @@ use Inertia\Response;
 
 class OverviewController extends Controller
 {
-    public function __invoke(Request $request, OverviewStatsCalculator $finance): Response
+    public function __invoke(Request $request, OverviewStatsCalculator $finance, DashboardRepository $repository): Response
     {
         $properties = Property::query()
             ->when(! $request->user()->isOwner(), fn (Builder $q) => $q->whereHas(
@@ -186,9 +187,11 @@ class OverviewController extends Controller
 
         $propertyTypes = PropertyType::active()->ordered()->get(['slug', 'label', 'default_rental_mode']);
 
+        $now = now();
+        $financeData = $repository->overviewFinance($accessibleProperties, $now);
         $financeResult = [
-            ...$finance->computeFinance($accessibleLeases),
-            'expenses' => $finance->computeExpenses($accessibleProperties),
+            ...$finance->computeFinance($financeData, $now),
+            'expenses' => $finance->computeExpenses($financeData['expenses'], $now),
         ];
 
         return Inertia::render('dashboard/overview', [
