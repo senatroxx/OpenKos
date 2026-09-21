@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Invoices\AllocatePayment;
 use App\Actions\Payments\RecordPayment;
-use App\Business\Payments\PaymentStatusValidator;
+use App\Actions\Payments\VerifyPayment;
 use App\Data\Payment\RecordPaymentData;
+use App\Data\Payment\VerifyPaymentData;
 use App\Enums\PaymentStatus;
 use App\Events\Payment\PaymentRecorded;
 use App\Events\Payment\PaymentStatusChanged;
@@ -16,12 +16,9 @@ use App\Models\Lease;
 use App\Models\Media;
 use App\Models\Payment;
 use App\Models\PaymentProof;
-use App\Services\Payments\MoneyConverter;
-use Brick\Math\BigDecimal;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use OpenKOS\Core\Events\PaymentRecorded as PlatformPaymentRecorded;
@@ -112,8 +109,7 @@ class PaymentController extends Controller
     }
 
     public function __construct(
-        private PaymentStatusValidator $paymentStatusValidator,
-        private AllocatePayment $allocatePayment,
+        private VerifyPayment $verifyPayment,
     ) {}
 
     public function verify(Request $request, Payment $payment): RedirectResponse
@@ -125,70 +121,13 @@ class PaymentController extends Controller
         ]);
 
         $newStatus = $request->action === 'confirm' ? PaymentStatus::Confirmed : PaymentStatus::Cancelled;
-        $oldStatus = $payment->status;
+        $result = $this->verifyPayment->execute($payment, new VerifyPaymentData($newStatus, $request->user()->id));
 
-        $this->paymentStatusValidator->validate($oldStatus, $newStatus);
+        if ($result->failed()) {
+            abort(422, $result->error);
+        }
 
-        // Both paths run under lock so a concurrent confirm cannot be silently
-        // overwritten by a reject (or vice versa).
-        DB::transaction(function () use ($payment, $request, $newStatus) {
-            // Lock Invoice first (consistent with RecordPayment order) to
-            // prevent deadlocks when both paths run concurrently.
-            $invoice = Invoice::lockForUpdate()->findOrFail($payment->invoice_id);
-            $lockedPayment = Payment::lockForUpdate()->findOrFail($payment->id);
-
-            if ($lockedPayment->status !== PaymentStatus::Pending) {
-                abort(422, __('Payment has already been verified.'));
-            }
-
-            if ($newStatus === PaymentStatus::Confirmed) {
-
-                $confirmedSum = (string) $invoice->payments()
-                    ->where('status', PaymentStatus::Confirmed->value)
-                    ->sum('amount');
-
-                if (app(MoneyConverter::class)->compare(
-                    BigDecimal::of($confirmedSum)->plus((string) $lockedPayment->amount)->toString(),
-                    (string) $invoice->total,
-                ) > 0) {
-                    abort(422, 'Confirming this payment would exceed the invoice total.');
-                }
-
-                $lockedPayment->update([
-                    'status' => $newStatus,
-                    'confirmed_by' => $request->user()->id,
-                    'verified_by' => $request->user()->id,
-                    'verified_at' => now(),
-                ]);
-
-                $this->allocatePayment->execute($lockedPayment);
-            } else {
-                $affectedInvoiceIds = $lockedPayment->allocations()
-                    ->pluck('invoice_id')
-                    ->push($lockedPayment->invoice_id)
-                    ->unique()
-                    ->values();
-
-                $lockedPayment->allocations()->delete();
-
-                $lockedPayment->update([
-                    'status' => $newStatus,
-                    'confirmed_by' => null,
-                    'verified_by' => $request->user()->id,
-                    'verified_at' => now(),
-                ]);
-
-                $affectedInvoices = Invoice::whereIn('id', $affectedInvoiceIds)
-                    ->lockForUpdate()
-                    ->get();
-
-                Invoice::recalculateStatuses($affectedInvoices);
-            }
-        });
-
-        $payment->refresh();
-
-        PaymentStatusChanged::dispatch($payment, $oldStatus, $newStatus, actorId: Auth::id());
+        PaymentStatusChanged::dispatch($result->payment, $result->oldStatus, $result->newStatus, actorId: Auth::id());
 
         $message = $request->action === 'confirm'
             ? __('Payment verified successfully.')
