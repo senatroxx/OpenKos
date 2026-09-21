@@ -29,12 +29,8 @@ import { useInitials } from '@/hooks/use-initials';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem, NavItem } from '@/types';
+import type { AppHeaderProps, NavItem } from '@/types';
 import type { Auth } from '@/types/auth';
-
-type Props = {
-    breadcrumbs?: BreadcrumbItem[];
-};
 
 const mainNavItems: NavItem[] = [
     {
@@ -47,7 +43,7 @@ const mainNavItems: NavItem[] = [
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
-export function AppHeader({ breadcrumbs = [] }: Props) {
+export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
     const { auth } = usePage<{
         auth: Auth;
     }>().props;
