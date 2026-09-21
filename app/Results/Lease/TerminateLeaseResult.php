@@ -28,7 +28,7 @@ final readonly class TerminateLeaseResult
         return $this->error !== null;
     }
 
-    public static function success(Lease $lease, LeaseStatus $oldLeaseStatus, ?Unit $unit, ?UnitStatus $oldUnitStatus, ?UnitStatus $newUnitStatus): self
+    public static function success(Lease $lease, LeaseStatus $oldLeaseStatus, Unit $unit, UnitStatus $oldUnitStatus, UnitStatus $newUnitStatus): self
     {
         return new self($lease, $unit, $oldLeaseStatus, $oldUnitStatus, $newUnitStatus);
     }
