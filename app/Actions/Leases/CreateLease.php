@@ -15,6 +15,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitRate;
 use App\Models\UnitTypeRate;
+use App\Repositories\OccupancyRepository;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\ReferenceAllocationRetry;
@@ -23,6 +24,7 @@ class CreateLease
 {
     public function __construct(
         private OccupancyCalculator $occupancy,
+        private OccupancyRepository $occupancyRepository,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
@@ -90,6 +92,7 @@ class CreateLease
             abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('This unit is not available for lease.'));
 
             $existingLease = $unit->leases()->active()->lockForUpdate()->first();
+            $activeOccupantCount = $this->occupancyRepository->activeOccupantCount($unit);
             if ($existingLease) {
                 $this->ensureExistingLeaseTermsMatch($existingLease, $selectedRate, $data);
 
@@ -98,7 +101,7 @@ class CreateLease
 
                 $this->ensureTenantsDoNotHaveActiveLease($newTenantIds);
 
-                abort_if(! $this->occupancy->canAccommodate($unit, count($newTenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+                abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount, count($newTenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
                 foreach ($newTenantIds as $tenantId) {
                     $existingLease->tenants()->attach($tenantId, ['is_primary' => false]);
@@ -109,7 +112,7 @@ class CreateLease
                 return $existingLease;
             }
 
-            abort_if(! $this->occupancy->canAccommodate($unit, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+            abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
