@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Leases\CreateLease;
 use App\Actions\Tenants\CreateTenant;
+use App\Actions\Tenants\DeleteTenant;
 use App\Actions\Tenants\DisableTenantAccess;
 use App\Actions\Tenants\InviteTenant;
 use App\Data\Lease\CreateLeaseData;
@@ -327,28 +328,13 @@ class TenantController extends Controller
         return back();
     }
 
-    public function destroy(Tenant $tenant): RedirectResponse
+    public function destroy(Tenant $tenant, DeleteTenant $action): RedirectResponse
     {
         $this->authorize('delete', $tenant);
 
-        $deleted = DB::transaction(function () use ($tenant) {
-            // ponytail: locking the tenant row serializes with other tenant-row
-            // locks but not with CreateLease::execute, which locks the unit.
-            // A concurrent lease assignment between the exists() check and
-            // delete() could leave an archived tenant on an active lease.
-            // Fixing this would require CreateLease to also lock tenant rows.
-            $locked = Tenant::lockForUpdate()->findOrFail($tenant->id);
+        $result = $action->execute($tenant);
 
-            if ($locked->leases()->active()->exists()) {
-                return false;
-            }
-
-            $locked->delete();
-
-            return true;
-        });
-
-        if (! $deleted) {
+        if ($result->failed()) {
             Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a tenant with an active lease.')]);
 
             return back();
