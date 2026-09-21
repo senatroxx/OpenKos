@@ -2,47 +2,30 @@
 
 namespace App\Business\Dashboard;
 
-use App\Enums\InvoiceStatus;
-use App\Models\Expense;
-use App\Models\Invoice;
-use App\Models\Payment;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
 
 class OverviewStatsCalculator
 {
-    public function computeFinance(Builder $accessibleLeasesQuery): array
+    /** @param array{active_leases: Collection<int, object>, payments: Collection<int, object>, invoices: Collection<int, object>} $data */
+    public function computeFinance(array $data, CarbonInterface $now): array
     {
-        $activeLeasesQuery = (clone $accessibleLeasesQuery)
-            ->active();
-
         $monthlyPotential = $this->aggregate(
-            (clone $activeLeasesQuery)->get(['rent_amount', 'currency']),
+            $data['active_leases'],
             fn ($row): string => (string) $row->rent_amount,
         );
 
-        $now = now();
         $currentMonth = (int) $now->month;
         $currentYear = (int) $now->year;
-
-        $authorizedLeaseIds = (clone $accessibleLeasesQuery)->select('leases.id');
 
         $periodStart = Carbon::create($currentYear, $currentMonth, 1)->toDateString();
         $periodEnd = Carbon::create($currentYear, $currentMonth, 1)->endOfMonth()->toDateString();
 
-        $revenueThisMonth = Payment::where('status', 'confirmed')
-            ->whereHas('invoice', fn (Builder $q) => $q
-                ->whereBetween('period_start', [$periodStart, $periodEnd])
-                ->whereIn('lease_id', clone $authorizedLeaseIds))
-            ->get(['amount', 'currency']);
-
-        $outstanding = Invoice::whereIn('lease_id', clone $authorizedLeaseIds)
-            ->whereBetween('period_start', [$periodStart, $periodEnd])
-            ->whereIn('status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
-            ->get(['total', 'amount_paid', 'currency']);
+        $revenueThisMonth = $data['payments'];
+        $outstanding = $data['invoices'];
         $revenueThisMonth = $this->aggregate($revenueThisMonth, fn ($row): string => (string) $row->amount);
         $outstanding = $this->aggregate(
             $outstanding,
@@ -87,28 +70,21 @@ class OverviewStatsCalculator
      * @param  Collection<int, int>  $accessiblePropertyIds
      * @return array{this_month: array<int, array{currency: string, amount: string}>, last_month: array<int, array{currency: string, amount: string}>, change_vs_last_month: array<int, array{currency: string, amount: string}>}
      */
-    public function computeExpenses(Collection $accessiblePropertyIds): array
+    /** @param Collection<int, object> $expenses */
+    public function computeExpenses(Collection $expenses, CarbonInterface $now): array
     {
-        $thisMonthStart = now()->startOfMonth();
+        $thisMonthStart = $now->copy()->startOfMonth();
         $lastMonthStart = $thisMonthStart->copy()->subMonthNoOverflow();
-        $expenses = Expense::query()
-            ->active()
-            ->whereIn('property_id', $accessiblePropertyIds)
-            ->whereBetween('expense_date', [
-                $lastMonthStart->toDateString(),
-                $thisMonthStart->copy()->endOfMonth()->toDateString(),
-            ])
-            ->get(['amount', 'currency', 'expense_date']);
 
         $thisMonth = $this->aggregate(
-            $expenses->filter(fn (Expense $expense): bool => $expense->expense_date->betweenIncluded($thisMonthStart, $thisMonthStart->copy()->endOfMonth())
+            $expenses->filter(fn (object $expense): bool => Carbon::parse($expense->expense_date)->betweenIncluded($thisMonthStart, $thisMonthStart->copy()->endOfMonth())
             ),
-            fn (Expense $expense): string => (string) $expense->amount,
+            fn (object $expense): string => (string) $expense->amount,
         );
         $lastMonth = $this->aggregate(
-            $expenses->filter(fn (Expense $expense): bool => $expense->expense_date->betweenIncluded($lastMonthStart, $thisMonthStart->copy()->subDay())
+            $expenses->filter(fn (object $expense): bool => Carbon::parse($expense->expense_date)->betweenIncluded($lastMonthStart, $thisMonthStart->copy()->subDay())
             ),
-            fn (Expense $expense): string => (string) $expense->amount,
+            fn (object $expense): string => (string) $expense->amount,
         );
 
         $currencies = collect([...$thisMonth, ...$lastMonth])
