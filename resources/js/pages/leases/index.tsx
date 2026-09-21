@@ -39,30 +39,10 @@ import { supportsUnitInventory } from '@/lib/property-rental-mode';
 import leases from '@/routes/leases';
 import units from '@/routes/properties/units';
 import type {
-    AvailableUnit,
     Lease,
+    LeaseIndexPageProps,
     MoneyAggregate,
-    PaginatedData,
-    TableMeta,
 } from '@/types';
-
-type PageProps = {
-    leases: PaginatedData<Lease>;
-    availableUnits: AvailableUnit[];
-    sort?: string;
-    search?: string;
-    status?: string;
-    properties?: string;
-    per_page?: number;
-    payment_status?: string;
-    table: TableMeta;
-    stats?: {
-        active_leases: number;
-        collected_this_month: MoneyAggregate[];
-        overdue_amount: MoneyAggregate[];
-        pending_payment_verification: number;
-    };
-};
 
 function formatMoneyGroups(groups: MoneyAggregate[]): string {
     return (
@@ -83,7 +63,7 @@ export default function Index({
     per_page: currentPerPage = 15,
     table: tableMeta,
     stats,
-}: PageProps) {
+}: LeaseIndexPageProps) {
     const [detailLease, setDetailLease] = useState<Lease | null>(null);
     const [detailOpen, setDetailOpen] = useState(false);
     // const [editOpen, setEditOpen] = useState(false);

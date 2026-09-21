@@ -50,36 +50,12 @@ import users, {
     store,
     update,
 } from '@/routes/users';
-import type { PaginatedData, TableMeta } from '@/types';
-
-type Property = { id: number; name: string };
-type RoleOption = { value: string; label: string };
-type UserRole = { name: string; label: string };
-type ManagedUser = {
-    id: number;
-    name: string;
-    email: string;
-    roles: UserRole[];
-    role: string | null;
-    properties: Property[];
-    is_active: boolean;
-    status: 'active' | 'invited' | 'disabled';
-    invited_at: string | null;
-    email_verified_at: string | null;
-    last_login_at: string | null;
-};
-
-type PageProps = {
-    users: PaginatedData<ManagedUser>;
-    properties: Property[];
-    roles: RoleOption[];
-    search?: string;
-    role?: string;
-    status?: string;
-    sort?: string;
-    per_page?: number;
-    table: TableMeta;
-};
+import type {
+    ManagedUser,
+    RoleOption,
+    UserPropertyOption,
+    UsersPageProps,
+} from '@/types';
 
 function StatusBadge({ user }: { user: ManagedUser }) {
     return <SharedStatusBadge domain="user" value={user.status} />;
@@ -103,7 +79,7 @@ export default function Index({
     sort: currentSort = 'name',
     per_page: currentPerPage = 15,
     table: tableMeta,
-}: PageProps) {
+}: UsersPageProps) {
     const [formOpen, setFormOpen] = useState(false);
     const [detailOpen, setDetailOpen] = useState(false);
     const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
@@ -435,7 +411,7 @@ function UserFormSheet({
     open: boolean;
     onOpenChange: (open: boolean) => void;
     roles: RoleOption[];
-    properties: Property[];
+    properties: UserPropertyOption[];
 }) {
     const isEdit = Boolean(user);
     const canEditRole = user?.role !== 'owner';

@@ -9,3 +9,4 @@ export type * from './roles';
 export type * from './settings';
 export type * from './table';
 export type * from './ui';
+export type * from './users';

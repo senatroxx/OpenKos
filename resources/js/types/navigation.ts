@@ -18,3 +18,7 @@ export type NavSection = {
     title: string;
     items: NavItem[];
 };
+
+export type AppHeaderProps = {
+    breadcrumbs?: BreadcrumbItem[];
+};
