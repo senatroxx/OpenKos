@@ -104,7 +104,7 @@ final class DashboardRepository
             ->whereIn('leases.property_id', $propertyIds)
             ->whereBetween('invoices.period_start', [$start->toDateString(), $end->toDateString()])
             ->whereIn('invoices.status', $this->eligibleInvoiceStatuses())
-            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total) as revenue, SUM(invoices.total - invoices.amount_paid) as outstanding_amount")
+            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total) as revenue, SUM(invoices.total - COALESCE(invoices.amount_paid, 0)) as outstanding_amount")
             ->groupBy('leases.property_id', 'invoices.currency')
             ->groupByRaw($month)
             ->get();
@@ -171,7 +171,7 @@ final class DashboardRepository
             ->whereIn('leases.property_id', $propertyIds)
             ->whereIn('invoices.status', [InvoiceStatus::Pending->value, InvoiceStatus::Partial->value])
             ->whereDate('invoices.due_date', '>=', $now->toDateString())
-            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total - invoices.amount_paid) as receivable")
+            ->selectRaw("leases.property_id, invoices.currency, {$month} as month, SUM(invoices.total - COALESCE(invoices.amount_paid, 0)) as receivable")
             ->groupBy('leases.property_id', 'invoices.currency')
             ->groupByRaw($month)
             ->orderByRaw($month)

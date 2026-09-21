@@ -29,7 +29,9 @@ class OverviewStatsCalculator
         $revenueThisMonth = $this->aggregate($revenueThisMonth, fn ($row): string => (string) $row->amount);
         $outstanding = $this->aggregate(
             $outstanding,
-            fn ($row): string => BigDecimal::of((string) $row->total)->minus((string) $row->amount_paid)->toString(),
+            fn ($row): string => BigDecimal::of((string) ($row->total ?? '0'))
+                ->minus((string) ($row->amount_paid ?? '0'))
+                ->toString(),
         );
 
         $currencies = collect([
