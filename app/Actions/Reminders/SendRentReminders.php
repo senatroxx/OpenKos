@@ -3,8 +3,10 @@
 namespace App\Actions\Reminders;
 
 use App\Business\Reminders\PaymentReminderScheduler;
+use App\Data\Reminder\ReminderInvoiceData;
 use App\Data\Reminder\ReminderSettings;
 use App\Events\Reminder\InvoiceReminderDispatched;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Repositories\ReminderRepository;
@@ -65,7 +67,12 @@ class SendRentReminders
         }
 
         return $this->recordEvents(
-            $this->scheduler->pendingFor($lease, $settings),
+            $this->scheduler->pendingFor(
+                $lease,
+                $this->reminderInvoicesFor($lease),
+                $settings,
+                today(),
+            ),
             $channels,
         );
     }
@@ -81,17 +88,36 @@ class SendRentReminders
             return 0;
         }
 
-        $eventsByLease = $this->scheduler->pendingForMany($eligibleLeases, $settings);
+        $invoicesByLease = $this->repository
+            ->payableInvoicesForMany($eligibleLeases)
+            ->groupBy('lease_id')
+            ->map(fn (Collection $invoices): array => $invoices->map(
+                fn (Invoice $invoice): ReminderInvoiceData => ReminderInvoiceData::fromInvoice($invoice),
+            )->all());
         $sent = 0;
 
         foreach ($eligibleLeases as $lease) {
             $sent += $this->recordEvents(
-                $eventsByLease[$lease->getKey()] ?? [],
+                $this->scheduler->pendingFor(
+                    $lease,
+                    $invoicesByLease->get($lease->getKey(), []),
+                    $settings,
+                    today(),
+                ),
                 $channels,
             );
         }
 
         return $sent;
+    }
+
+    /** @return array<int, ReminderInvoiceData> */
+    private function reminderInvoicesFor(Lease $lease): array
+    {
+        return $this->repository
+            ->payableInvoicesFor($lease)
+            ->map(fn (Invoice $invoice): ReminderInvoiceData => ReminderInvoiceData::fromInvoice($invoice))
+            ->all();
     }
 
     private function recordEvents(iterable $events, array $channels): int

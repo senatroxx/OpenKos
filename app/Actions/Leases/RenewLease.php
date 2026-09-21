@@ -10,6 +10,7 @@ use App\Data\Lease\RenewLeaseData;
 use App\Enums\LeaseStatus;
 use App\Enums\UnitStatus;
 use App\Exceptions\LeaseRenewalException;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Unit;
@@ -61,7 +62,12 @@ class RenewLease
                 return RenewLeaseResult::error($e->getMessage());
             }
 
-            $outstanding = $this->financial->outstandingCheck($lockedLease);
+            $outstanding = $this->financial->outstandingCheck(
+                $lockedLease->invoices()
+                    ->overdue()
+                    ->get()
+                    ->map(fn (Invoice $invoice): string => $invoice->outstanding),
+            );
 
             if ($outstanding['hasOutstanding'] && ! $data->confirmedOutstanding) {
                 return RenewLeaseResult::error(

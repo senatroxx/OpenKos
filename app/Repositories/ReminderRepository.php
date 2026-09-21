@@ -3,11 +3,40 @@
 namespace App\Repositories;
 
 use App\Data\Reminder\ReminderEvent;
+use App\Models\Invoice;
+use App\Models\Lease;
 use App\Models\ReminderLog;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
 
 class ReminderRepository
 {
+    /** @return Collection<int, Invoice> */
+    public function payableInvoicesFor(Lease $lease): Collection
+    {
+        return $lease->invoices()
+            ->payable()
+            ->orderBy('period_start')
+            ->get();
+    }
+
+    /**
+     * @param  Collection<int, Lease>  $leases
+     * @return Collection<int, Invoice>
+     */
+    public function payableInvoicesForMany(Collection $leases): Collection
+    {
+        if ($leases->isEmpty()) {
+            return new Collection;
+        }
+
+        return Invoice::query()
+            ->whereIn('lease_id', $leases->modelKeys())
+            ->payable()
+            ->orderBy('period_start')
+            ->get();
+    }
+
     public function recordIfAbsent(ReminderEvent $event, array $channels = ['whatsapp']): ?ReminderLog
     {
         try {

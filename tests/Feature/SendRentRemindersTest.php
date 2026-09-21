@@ -4,6 +4,7 @@ use App\Actions\Invoices\GenerateInvoices;
 use App\Actions\Reminders\SendRentReminders;
 use App\Business\Reminders\PaymentReminderScheduler;
 use App\Data\Reminder\ReminderEvent;
+use App\Data\Reminder\ReminderInvoiceData;
 use App\Data\Reminder\ReminderSettings;
 use App\Enums\InvoiceStatus;
 use App\Enums\ReminderType;
@@ -81,13 +82,22 @@ function reminderEventFor(Lease $lease, ReminderType $type, ?int $overdueDays = 
     );
 }
 
+function scheduledReminderEvents(Lease $lease, ReminderSettings $settings): array
+{
+    $invoices = app(ReminderRepository::class)
+        ->payableInvoicesFor($lease)
+        ->map(fn (Invoice $invoice): ReminderInvoiceData => ReminderInvoiceData::fromInvoice($invoice));
+
+    return (new PaymentReminderScheduler)->pendingFor($lease, $invoices->all(), $settings, today());
+}
+
 describe('PaymentReminderScheduler', function () {
     it('returns upcoming event when days match', function () {
         Carbon::setTestNow(Carbon::parse('2026-06-28'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
         $settings = new ReminderSettings(true, 3, []);
 
-        $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
+        $events = scheduledReminderEvents($lease, $settings);
 
         expect($events)->toHaveCount(1);
         expect($events[0]->type->value)->toBe('upcoming');
@@ -103,7 +113,7 @@ describe('PaymentReminderScheduler', function () {
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
         $settings = new ReminderSettings(true, 3, []);
 
-        $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
+        $events = scheduledReminderEvents($lease, $settings);
 
         expect($events)->toHaveCount(1);
         expect($events[0]->type->value)->toBe('due_today');
@@ -120,7 +130,7 @@ describe('PaymentReminderScheduler', function () {
         ]);
         $settings = new ReminderSettings(true, 3, []);
 
-        $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
+        $events = scheduledReminderEvents($lease, $settings);
 
         expect($events)->toHaveCount(1);
         expect($events[0]->amount)->toBe('0.290');
@@ -133,7 +143,7 @@ describe('PaymentReminderScheduler', function () {
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-07-01']);
         $settings = new ReminderSettings(true, 3, [1, 3, 7]);
 
-        $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
+        $events = scheduledReminderEvents($lease, $settings);
 
         expect($events)->toHaveCount(1);
         expect($events[0]->type->value)->toBe('overdue');
@@ -147,7 +157,7 @@ describe('PaymentReminderScheduler', function () {
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2024-01-01']);
         $settings = new ReminderSettings(true, 3, [7]);
 
-        $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
+        $events = scheduledReminderEvents($lease, $settings);
 
         $overdueEvents = array_filter($events, fn ($e) => $e->type->value === 'overdue');
         expect($overdueEvents)->not->toBeEmpty();
@@ -167,7 +177,7 @@ describe('PaymentReminderScheduler', function () {
         ]);
 
         $settings = new ReminderSettings(true, 3, []);
-        $events = (new PaymentReminderScheduler)->pendingFor($lease, $settings);
+        $events = scheduledReminderEvents($lease, $settings);
 
         expect($events)->toBeEmpty();
 
@@ -178,7 +188,7 @@ describe('PaymentReminderScheduler', function () {
         Carbon::setTestNow(Carbon::parse('2026-07-01'));
         $lease = createLeaseWithTenant(['rent_due_day' => 1, 'start_date' => '2026-06-01']);
         $settings = new ReminderSettings(true, 3, []);
-        $event = (new PaymentReminderScheduler)->pendingFor($lease, $settings)[0];
+        $event = scheduledReminderEvents($lease, $settings)[0];
         $queuedReminder = unserialize(serialize(new RentReminder($event)));
 
         expect($queuedReminder->shouldSend($lease->primaryTenant, 'mail'))->toBeTrue();

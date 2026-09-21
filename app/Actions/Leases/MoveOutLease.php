@@ -12,6 +12,7 @@ use App\Enums\UnitStatus;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Repositories\OccupancyRepository;
 use App\Results\Lease\MoveOutLeaseResult;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
@@ -22,6 +23,7 @@ class MoveOutLease
 {
     public function __construct(
         private OccupancyCalculator $occupancy,
+        private OccupancyRepository $occupancyRepository,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
@@ -193,7 +195,11 @@ class MoveOutLease
             ? count(array_diff($incomingTenantIds, $existingLease->tenants()->pluck('tenants.id')->all()))
             : count($incomingTenantIds);
 
-        if (! $this->occupancy->canAccommodate($targetUnit, $incomingCount)) {
+        if (! $this->occupancy->canAccommodate(
+            $targetUnit->capacity,
+            $this->occupancyRepository->activeOccupantCount($targetUnit),
+            $incomingCount,
+        )) {
             abort(422, __('Unit capacity exceeded. Target unit can only hold :capacity occupants.', ['capacity' => $targetUnit->capacity]));
         }
 

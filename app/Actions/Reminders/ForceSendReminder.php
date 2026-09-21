@@ -4,14 +4,15 @@ namespace App\Actions\Reminders;
 
 use App\Business\Reminders\PaymentReminderScheduler;
 use App\Data\Reminder\ReminderEvent;
+use App\Data\Reminder\ReminderInvoiceData;
 use App\Data\Reminder\ReminderSettings;
 use App\Enums\ReminderType;
 use App\Events\Reminder\InvoiceReminderDispatched;
+use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Repositories\ReminderRepository;
 use App\Services\Localization\ApplicationLocale;
-use Carbon\Carbon;
 
 class ForceSendReminder
 {
@@ -40,7 +41,10 @@ class ForceSendReminder
         );
 
         // Try scheduled events first — send the first one not already logged.
-        foreach ($this->scheduler->pendingFor($lease, $settings) as $event) {
+        $invoices = $this->repository->payableInvoicesFor($lease)
+            ->map(fn (Invoice $invoice): ReminderInvoiceData => ReminderInvoiceData::fromInvoice($invoice));
+
+        foreach ($this->scheduler->pendingFor($lease, $invoices->all(), $settings, today()) as $event) {
             $log = $this->repository->recordIfAbsent($event, $channels);
 
             if ($log) {
@@ -53,14 +57,14 @@ class ForceSendReminder
         // ponytail: fallback when no event is scheduled (e.g. invoice due
         // outside daysBefore window). Build a reminder for the first payable
         // invoice so manual "Send Reminder" always works.
-        $invoice = $lease->invoices()->payable()->orderBy('period_start')->first();
+        $invoice = $invoices->first();
 
         if (! $invoice) {
             return 'all_paid';
         }
 
-        $today = now()->startOfDay();
-        $dueDate = Carbon::parse($invoice->due_date)->startOfDay();
+        $today = today();
+        $dueDate = $invoice->dueDate;
         $overdueDays = $dueDate->lessThan($today) ? (int) $dueDate->diffInDays($today) : null;
 
         $type = match (true) {
@@ -72,13 +76,13 @@ class ForceSendReminder
         $event = new ReminderEvent(
             lease: $lease,
             type: $type,
-            periodStart: $invoice->period_start->toDateString(),
-            periodEnd: $invoice->period_end->toDateString(),
-            dueDate: $invoice->due_date->toDateString(),
-            amount: $invoice->outstanding,
+            periodStart: $invoice->periodStart,
+            periodEnd: $invoice->periodEnd,
+            dueDate: $invoice->dueDate->toDateString(),
+            amount: $invoice->amount,
             currency: $invoice->currency,
             overdueDays: $overdueDays,
-            invoice: $invoice,
+            invoice: $invoice->invoice,
         );
 
         $log = $this->repository->recordIfAbsent($event, $channels);
