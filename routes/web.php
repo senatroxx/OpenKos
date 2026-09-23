@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\Dashboard\FinancialController;
 use App\Http\Controllers\Dashboard\OverviewController;
 use App\Http\Controllers\Dashboard\RentController;
@@ -52,6 +53,15 @@ Route::middleware('throttle:60,1')->group(function () {
         Route::get('{property:public_slug}/unit-types/{unitType:public_slug}', [PublicListingController::class, 'pageUnitType'])
             ->name('unit-types.show');
     });
+});
+
+Route::middleware(['auth', 'verified'])->prefix('applications')->name('applications.')->group(function () {
+    Route::get('/', [ApplicationController::class, 'index'])->name('index');
+    Route::get('create', [ApplicationController::class, 'create'])->name('create');
+    Route::get('{application}', [ApplicationController::class, 'show'])->name('show');
+    Route::post('/', [ApplicationController::class, 'store'])->middleware('throttle:10,1')->name('store');
+    Route::patch('{application}/status', [ApplicationController::class, 'transition'])->name('transition');
+    Route::post('{application}/convert', [ApplicationController::class, 'convert'])->name('convert');
 });
 
 Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->group(function () {

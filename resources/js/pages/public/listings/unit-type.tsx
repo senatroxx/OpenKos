@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AmenityIcon } from '@/lib/amenity-icons';
 import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import { create as applicationCreate } from '@/routes/applications';
 import { show as propertyShow } from '@/routes/public/portal';
 import type { PublicUnitTypePage } from '@/types';
 
@@ -46,6 +47,18 @@ export default function UnitType({
                     <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
                         {unitType.name}
                     </h1>
+                    <Link
+                        href={applicationCreate({
+                            query: {
+                                target_type: 'unit_type',
+                                property_slug: listing.property.slug,
+                                unit_type_slug: unitType.slug,
+                            },
+                        })}
+                        className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        {t('Apply for this unit type')}
+                    </Link>
                     <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
                         {unitType.bedrooms !== null && (
                             <span className="inline-flex items-center gap-1.5">

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
@@ -19,6 +20,41 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
+    $response->assertRedirect(route('applications.index', absolute: false));
+});
+
+test('tenant-only users are sent to the tenant portal', function () {
+    $user = User::factory()->create();
+    Tenant::factory()->withUser($user)->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertRedirect(route('portal.dashboard', absolute: false));
+});
+
+test('staff and applicants retain the staff destination', function () {
+    $user = User::factory()->staff()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('staff tenants and applicants retain the staff destination', function () {
+    $user = User::factory()->staff()->create();
+    Tenant::factory()->withUser($user)->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 

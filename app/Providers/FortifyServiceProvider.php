@@ -33,11 +33,15 @@ class FortifyServiceProvider extends ServiceProvider
                     return response()->json(['two_factor' => false]);
                 }
 
+                if ($request->user()->isOwner() || $request->user()->can('dashboard.view')) {
+                    return redirect()->route('dashboard');
+                }
+
                 if ($request->user()->hasTenantProfile()) {
                     return redirect()->route('portal.dashboard');
                 }
 
-                return redirect()->intended(Fortify::redirects('login'));
+                return redirect()->intended(route('applications.index'));
             }
         });
     }
@@ -79,6 +83,10 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'status' => $request->session()->get('status'),
+        ]));
+
+        Fortify::registerView(fn () => Inertia::render('auth/register', [
+            'passwordRules' => Password::defaults()->toPasswordRulesString(),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [

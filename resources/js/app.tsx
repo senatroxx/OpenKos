@@ -16,6 +16,7 @@ import {
 } from '@/lib/formatters';
 import { setTranslations } from '@/lib/i18n';
 import '@/plugins';
+import type { Auth } from '@/types';
 
 type PageWithTimezone = {
     props?: {
@@ -101,9 +102,7 @@ createInertiaApp({
     },
     layout: (name, page) => {
         const auth = page.props as {
-            auth?: {
-                tenant?: unknown;
-            };
+            auth?: Pick<Auth, 'tenant' | 'permissions' | 'roles'>;
         };
 
         switch (true) {
@@ -121,6 +120,15 @@ createInertiaApp({
                 return [AppLayout, SettingsLayout];
             case name.startsWith('tenant-portal/'):
                 return TenantPortalLayout;
+            case name.startsWith('applications/'):
+                if (
+                    auth.auth?.permissions?.includes('dashboard.view') ||
+                    auth.auth?.roles?.includes('owner')
+                ) {
+                    return AppLayout;
+                }
+
+                return PublicListingLayout;
             default:
                 return AppLayout;
         }

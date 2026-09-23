@@ -47,6 +47,25 @@ const STATUS_CONFIGS: Record<string, Record<string, StatusConfig>> = {
                 'bg-surface-blue/70 text-surface-blue-foreground border-surface-blue-border/80',
         },
     },
+    application: {
+        new: {
+            label: 'New',
+            className:
+                'bg-surface-blue/70 text-surface-blue-foreground border-surface-blue-border/80',
+        },
+        reviewing: {
+            label: 'Reviewing',
+            className:
+                'bg-surface-amber/70 text-surface-amber-foreground border-surface-amber-border/80',
+        },
+        accepted: {
+            label: 'Accepted',
+            className:
+                'bg-surface-green/70 text-surface-green-foreground border-surface-green-border/80',
+        },
+        rejected: { label: 'Rejected', variant: 'destructive' },
+        withdrawn: { label: 'Withdrawn', variant: 'secondary' },
+    },
     rent: {
         paid: {
             label: 'Paid',

@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AmenityIcon } from '@/lib/amenity-icons';
 import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import { create as applicationCreate } from '@/routes/applications';
 import { index as publicIndex } from '@/routes/public/portal';
 import { show as unitTypeShow } from '@/routes/public/portal/unit-types';
 import type {
@@ -81,8 +82,10 @@ function UnitTypeDetails({ unitType }: { unitType: PublicUnitType }) {
 
 function WholePropertyOffering({
     offering,
+    propertyId,
 }: {
     offering: PublicWholePropertyOffering;
+    propertyId: string;
 }) {
     return (
         <aside
@@ -162,6 +165,17 @@ function WholePropertyOffering({
                         )}
                     </p>
                 </div>
+                <Link
+                    href={applicationCreate({
+                        query: {
+                            target_type: 'whole_property',
+                            property_slug: propertyId,
+                        },
+                    })}
+                    className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                    {t('Apply for this property')}
+                </Link>
             </div>
         </aside>
     );
@@ -433,6 +447,7 @@ export default function Show({
                     {wholePropertyOffering && listing.rental_mode !== 'unit' ? (
                         <WholePropertyOffering
                             offering={wholePropertyOffering}
+                            propertyId={listing.slug}
                         />
                     ) : (
                         <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">

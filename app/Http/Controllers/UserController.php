@@ -102,7 +102,7 @@ class UserController extends Controller
 
         $query = User::query()
             ->with(['roles:id,name,label', 'properties:id,name'])
-            ->whereDoesntHave('tenant');
+            ->whereHas('roles');
 
         $result = $table->paginate($query, $request, 'users');
 
@@ -276,7 +276,7 @@ class UserController extends Controller
 
     private function ensureNotTenant(User $user): void
     {
-        abort_if($user->hasTenantProfile(), 404);
+        abort_if($user->hasTenantProfile() && $user->roles()->doesntExist(), 404);
     }
 
     private function createInvitationToken(User $user): string
