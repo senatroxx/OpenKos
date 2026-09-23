@@ -9,7 +9,11 @@ import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { show as propertyShow } from '@/routes/public/portal';
-import type { PublicListing, PublicStartingPrice } from '@/types';
+import type {
+    PublicListing,
+    PublicPortalListingPageProps,
+    PublicStartingPrice,
+} from '@/types';
 
 function locationLabel(listing: PublicListing): string {
     return [
@@ -37,11 +41,8 @@ function propertyCountLabel(count: number): string {
 
 export default function Index({
     listings,
-    canonicalUrl,
-}: {
-    listings: PublicListing[];
-    canonicalUrl: string;
-}) {
+    metadata,
+}: PublicPortalListingPageProps) {
     const [search, setSearch] = useState('');
     const normalizedSearch = search.trim().toLocaleLowerCase();
     const filteredListings = useMemo(
@@ -67,12 +68,7 @@ export default function Index({
     return (
         <>
             <PublicListingHead
-                title={t('OpenKOS — Find Your Next Place')}
-                description={t(
-                    'Discover available properties and rental options that fit your needs.',
-                )}
-                canonicalUrl={canonicalUrl}
-                imageUrl={listings[0]?.gallery[0]?.url}
+                metadata={metadata}
             />
 
             <div className="mx-auto w-full max-w-[1360px] px-4 py-8 sm:px-6 sm:py-12 lg:px-8">

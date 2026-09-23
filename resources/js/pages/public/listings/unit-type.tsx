@@ -8,24 +8,18 @@ import { AmenityIcon } from '@/lib/amenity-icons';
 import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import { show as propertyShow } from '@/routes/public/portal';
-import type { PublicUnitTypePage } from '@/types';
+import type { PublicPortalUnitTypePageProps } from '@/types';
 
 export default function UnitType({
     listing,
-    canonicalUrl,
-}: {
-    listing: PublicUnitTypePage;
-    canonicalUrl: string;
-}) {
+    metadata,
+}: PublicPortalUnitTypePageProps) {
     const unitType = listing.unit_type;
 
     return (
         <>
             <PublicListingHead
-                title={`${unitType.name} - ${listing.property.name}`}
-                description={unitType.description}
-                canonicalUrl={canonicalUrl}
-                imageUrl={unitType.gallery[0]?.url}
+                metadata={metadata}
             />
 
             <div className="mx-auto w-full max-w-6xl space-y-10 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
