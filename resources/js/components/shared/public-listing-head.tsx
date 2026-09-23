@@ -19,6 +19,11 @@ export default function PublicListingHead({
                 content={metadata.openGraph.description}
             />
             <meta
+                head-key="og:site_name"
+                property="og:site_name"
+                content={metadata.openGraph.siteName}
+            />
+            <meta
                 head-key="twitter:title"
                 name="twitter:title"
                 content={metadata.twitter.title}

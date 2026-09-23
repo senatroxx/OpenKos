@@ -37,6 +37,7 @@ it('allows owners to configure public portal metadata without changing the admin
             ->where('metadata.siteName', 'Public Name')
             ->where('metadata.title', 'Welcome to Public Name')
             ->where('metadata.description', 'A public description.')
+            ->where('metadata.openGraph.siteName', 'Public Name')
             ->where('metadata.openGraph.title', 'Welcome to Public Name')
             ->where('metadata.twitter.description', 'A public description.')
             ->missing('setting.public_og_image_path'));
@@ -98,6 +99,7 @@ it('clears the social image without exposing its storage path', function () {
         ->assertRedirect();
 
     $path = Setting::get('public_og_image_path');
+    $imageUrl = route('branding.asset', ['asset' => 'og-image', 'v' => sha1($path)]);
 
     expect($path)->toStartWith('branding/');
     Storage::disk('local')->assertExists($path);
@@ -109,7 +111,7 @@ it('clears the social image without exposing its storage path', function () {
 
     $this->get(route('public.portal.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('metadata.image', route('branding.asset', ['asset' => 'og-image']))
+            ->where('metadata.image', $imageUrl)
             ->missing('metadata.public_og_image_path'));
 
     $this->actingAs($owner)
@@ -121,6 +123,34 @@ it('clears the social image without exposing its storage path', function () {
 
     $this->get(route('public.portal.index'))
         ->assertInertia(fn (Assert $page) => $page->where('metadata.image', null));
+});
+
+it('changes the social image URL when the configured file is replaced', function () {
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->post(route('settings.public-portal.social-image.update'), [
+            'file' => UploadedFile::fake()->create('first.png', 100, 'image/png'),
+        ])
+        ->assertRedirect();
+
+    $firstPath = Setting::get('public_og_image_path');
+
+    $this->actingAs($owner)
+        ->post(route('settings.public-portal.social-image.update'), [
+            'file' => UploadedFile::fake()->create('second.png', 100, 'image/png'),
+        ])
+        ->assertRedirect();
+
+    $secondPath = Setting::get('public_og_image_path');
+
+    expect($secondPath)->not->toBe($firstPath);
+
+    $this->get(route('public.portal.index'))
+        ->assertInertia(fn (Assert $page) => $page->where(
+            'metadata.image',
+            route('branding.asset', ['asset' => 'og-image', 'v' => sha1($secondPath)]),
+        ));
 });
 
 it('validates social image uploads', function () {

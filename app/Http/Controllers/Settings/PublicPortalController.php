@@ -33,7 +33,7 @@ final class PublicPortalController extends Controller
                 'public_homepage_title',
                 'public_homepage_description',
             ]),
-            'socialImageUrl' => $hasSocialImage ? route('branding.asset', ['asset' => 'og-image']) : null,
+            'socialImageUrl' => $hasSocialImage ? $this->socialImageUrl() : null,
             'hasSocialImage' => $hasSocialImage,
         ]);
     }
@@ -82,5 +82,13 @@ final class PublicPortalController extends Controller
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    private function socialImageUrl(): string
+    {
+        return route('branding.asset', [
+            'asset' => 'og-image',
+            'v' => sha1((string) Setting::get('public_og_image_path')),
+        ]);
     }
 }

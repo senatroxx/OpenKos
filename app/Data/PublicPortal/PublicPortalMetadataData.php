@@ -10,7 +10,7 @@ final readonly class PublicPortalMetadataData
         public string $canonical,
         public string $siteName,
         public ?string $image,
-        /** @var array{title: string, description: string, url: string, type: string, image: ?string} */
+        /** @var array{title: string, description: string, siteName: string, url: string, type: string, image: ?string} */
         public array $openGraph,
         /** @var array{card: string, title: string, description: string, image: ?string} */
         public array $twitter,

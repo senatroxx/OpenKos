@@ -9,6 +9,7 @@ export type PublicPortalMetadata = {
     openGraph: {
         title: string;
         description: string;
+        siteName: string;
         url: string;
         type: string;
         image: string | null;

@@ -28,6 +28,7 @@ it('composes one consistent metadata contract for social tags', function () {
         'openGraph' => [
             'title' => 'Homepage',
             'description' => 'Description',
+            'siteName' => 'Public Name',
             'url' => '/',
             'type' => 'website',
             'image' => null,

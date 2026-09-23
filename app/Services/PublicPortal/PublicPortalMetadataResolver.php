@@ -113,7 +113,10 @@ final class PublicPortalMetadataResolver
                 $disk = Storage::disk((string) config('filesystems.default', 'local'));
 
                 if ($disk->exists($configuredPath) && in_array($disk->mimeType($configuredPath), self::SOCIAL_IMAGE_MIMES, true)) {
-                    return route('branding.asset', ['asset' => 'og-image']);
+                    return route('branding.asset', [
+                        'asset' => 'og-image',
+                        'v' => sha1($configuredPath),
+                    ]);
                 }
             } catch (\Throwable) {
                 // Fall through to the public listing image.

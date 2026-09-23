@@ -30,6 +30,7 @@ final class PublicPortalMetadataComposer
             openGraph: [
                 'title' => $title,
                 'description' => $resolvedDescription,
+                'siteName' => $siteName,
                 'url' => $canonical,
                 'type' => 'website',
                 'image' => $image,
