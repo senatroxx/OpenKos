@@ -20,10 +20,10 @@ test('users can authenticate using the login screen', function () {
     ]);
 
     $this->assertAuthenticated();
-    $response->assertRedirect(route('applications.index', absolute: false));
+    $response->assertRedirect(route('portal.dashboard', absolute: false));
 });
 
-test('tenant-only users are sent to the tenant portal', function () {
+test('tenant-only users are sent to their account', function () {
     $user = User::factory()->create();
     Tenant::factory()->withUser($user)->create();
 

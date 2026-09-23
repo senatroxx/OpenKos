@@ -1,8 +1,15 @@
 export type ApplicationTarget = 'whole_property' | 'unit_type';
 
+export type ApplicationStatus =
+    | 'new'
+    | 'reviewing'
+    | 'accepted'
+    | 'rejected'
+    | 'withdrawn';
+
 export type ApplicantApplication = {
     id: number;
-    status: string;
+    status: ApplicationStatus;
     target_type: ApplicationTarget;
     property: { id: number; name: string; public_slug: string } | null;
     unit_type: { id: number; name: string; public_slug: string } | null;
@@ -40,4 +47,29 @@ export type ApplicationCreateProps = {
 export type ApplicationShowProps = {
     application: ApplicantApplication | OperatorApplication;
     operator: boolean;
+};
+
+export type ApplicationIndexPageProps = {
+    flash?: { status?: string };
+};
+
+export type ApplicationTransitionFormData = {
+    status: ApplicationStatus;
+    operator_notes: string;
+    applicant_feedback: string;
+};
+
+export type ApplicationWithdrawalFormData = {
+    status: 'withdrawn';
+};
+
+export type ApplicationActionErrors = {
+    application?: string;
+};
+
+export type AccountApplicationSummary = {
+    id: number;
+    status: ApplicationStatus;
+    property_name: string | null;
+    unit_type_name: string | null;
 };

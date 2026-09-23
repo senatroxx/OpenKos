@@ -13,9 +13,12 @@ Architectural decisions with real trade-offs are recorded here as ADRs, so futur
 | [005](005-plugin-philosophy.md)           | Plugin Philosophy       | Accepted |
 | [006](006-api-strategy.md)                | API Strategy            | Accepted |
 | [007](007-invoice-aggregate.md)           | Invoice Aggregate       | Accepted |
-| [008](008-tenant-identity.md)             | Tenant Identity         | Accepted |
+| [008](008-tenant-identity.md)             | Tenant Identity         | Superseded by ADR-011 |
 | [009](009-property-lineage-lease-targets.md) | Property-Lineage Lease Targets | Accepted |
 | [010](010-unit-type-pricing-hierarchy.md) | Unit Type Pricing Hierarchy | Accepted |
+| [011](011-dual-persona-identity.md)      | Dual-Persona User Identity | Accepted |
+| [012](012-unified-customer-account.md)   | Unified Customer Account Surface | Superseded by ADR-013 |
+| [013](013-tenant-portal-renter-surface.md) | Tenant Portal as Renter Surface | Accepted |
 
 Future ADR candidates: the Activity Log vs Audit Log split (`activity_logs` written by `RecordActivitySubscriber` from domain events; `audit_logs` written directly by actions like `UpdateSettings`) is a decision worth recording once it stabilizes.
 

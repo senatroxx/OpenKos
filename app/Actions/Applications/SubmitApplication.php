@@ -3,6 +3,7 @@
 namespace App\Actions\Applications;
 
 use App\Data\Application\SubmitApplicationData;
+use App\Enums\ApplicationTargetType;
 use App\Models\Application;
 use App\Models\Property;
 use App\Models\UnitType;
@@ -19,11 +20,11 @@ final class SubmitApplication
             return ApplicationResult::error(__('This listing is no longer available for applications.'));
         }
 
-        if ($data->targetType === 'whole_property') {
+        if ($data->targetType === ApplicationTargetType::WholeProperty) {
             if ($data->unitTypeSlug !== null || ! $property->rental_mode->supportsWholePropertyRental()) {
                 return ApplicationResult::error(__('Choose a valid whole-property offering.'));
             }
-        } elseif ($data->unitTypeSlug === null || ! $property->rental_mode->supportsUnitInventory()) {
+        } elseif ($data->targetType !== ApplicationTargetType::UnitType || $data->unitTypeSlug === null || ! $property->rental_mode->supportsUnitInventory()) {
             return ApplicationResult::error(__('Choose a valid unit type offering.'));
         }
 
@@ -33,13 +34,13 @@ final class SubmitApplication
             ->viablePublicOffering()
             ->first();
 
-        if ($data->targetType === 'unit_type' && $unitType === null) {
+        if ($data->targetType === ApplicationTargetType::UnitType && $unitType === null) {
             return ApplicationResult::error(__('This unit type is no longer available for applications.'));
         }
 
         return DB::transaction(function () use ($user, $data, $property, $unitType): ApplicationResult {
             $user = User::query()->lockForUpdate()->findOrFail($user->id);
-            $key = implode('|', [$user->id, $data->targetType, $property->id, $unitType?->id ?? 'property']);
+            $key = implode('|', [$user->id, $data->targetType->value, $property->id, $unitType?->id ?? 'property']);
             if (Application::query()->where('open_application_key', $key)->lockForUpdate()->exists()) {
                 return ApplicationResult::error(__('You already have an open application for this offering.'));
             }

@@ -6,14 +6,18 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { t } from '@/lib/i18n';
 import { store } from '@/routes/register';
+import type { RegisterPageProps } from '@/types/auth';
 
-export default function Register() {
+export default function Register({ redirect }: RegisterPageProps) {
     return (
         <>
             <Head title={t('Create an account')} />
             <Form {...store.form()} className="flex flex-col gap-6">
                 {({ processing, errors }) => (
                     <div className="grid gap-5">
+                        {redirect && (
+                            <input type="hidden" name="redirect" value={redirect} />
+                        )}
                         <div className="grid gap-2">
                             <Label htmlFor="name">{t('Name')}</Label>
                             <Input

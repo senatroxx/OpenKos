@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\ApplicationStatus;
+use App\Enums\ApplicationTargetType;
 use App\Enums\PropertyRentalMode;
 use App\Models\Application;
 use App\Models\Property;
@@ -31,8 +32,21 @@ test('a verified user can submit one application for a published whole property'
     ])->assertRedirect(route('applications.index'));
 
     expect(Application::query()->count())->toBe(1)
-        ->and(Application::first()->target_type)->toBe('whole_property')
+        ->and(Application::first()->target_type)->toBe(ApplicationTargetType::WholeProperty)
         ->and(Application::first()->user_id)->toBe($user->id);
+});
+
+test('application target type accepts only the backed offering values', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('applications.store'), [
+        'target_type' => 'unknown',
+        'property_slug' => 'ignored',
+    ])->assertSessionHasErrors('target_type');
+
+    expect(ApplicationTargetType::cases())->toHaveCount(2)
+        ->and(ApplicationTargetType::WholeProperty->value)->toBe('whole_property')
+        ->and(ApplicationTargetType::UnitType->value)->toBe('unit_type');
 });
 
 test('duplicate open applications are rejected but terminal applications allow reapplication', function () {

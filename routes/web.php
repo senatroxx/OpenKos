@@ -39,6 +39,7 @@ use App\Http\Controllers\UnitTypeMediaController;
 use App\Http\Controllers\UnitTypeRateController;
 use App\Http\Controllers\UnitUtilityController;
 use App\Http\Controllers\UserController;
+use App\Models\Application;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:60,1')->group(function () {
@@ -55,13 +56,19 @@ Route::middleware('throttle:60,1')->group(function () {
     });
 });
 
-Route::middleware(['auth', 'verified'])->prefix('applications')->name('applications.')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('portal/applications')->name('applications.')->group(function () {
     Route::get('/', [ApplicationController::class, 'index'])->name('index');
     Route::get('create', [ApplicationController::class, 'create'])->name('create');
     Route::get('{application}', [ApplicationController::class, 'show'])->name('show');
     Route::post('/', [ApplicationController::class, 'store'])->middleware('throttle:10,1')->name('store');
     Route::patch('{application}/status', [ApplicationController::class, 'transition'])->name('transition');
     Route::post('{application}/convert', [ApplicationController::class, 'convert'])->name('convert');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('applications')->group(function () {
+    Route::get('/', fn () => redirect()->route('applications.index', status: 308));
+    Route::get('create', fn () => redirect()->route('applications.create', status: 308));
+    Route::get('{application}', fn (Application $application) => redirect()->route('applications.show', $application, status: 308));
 });
 
 Route::prefix('invitations')->name('users.invitations.')->middleware('guest')->group(function () {
@@ -83,7 +90,7 @@ Route::prefix('pay/invoices/{token}')
     });
 
 Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->group(function () {
-    Route::redirect('/', '/portal/dashboard');
+    Route::get('/', fn () => redirect()->route('portal.dashboard', status: 308));
     Route::get('dashboard', TenantPortalDashboardController::class)->name('dashboard');
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/', [TenantPortalNotificationController::class, 'index'])->name('index');
@@ -101,7 +108,7 @@ Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->grou
         Route::get('invoices/{invoice}/download', [TenantPortalPaymentController::class, 'download'])->name('invoices.download');
     });
 
-    Route::prefix('lease')->name('lease.')->group(function () {
+    Route::prefix('leases')->name('lease.')->group(function () {
         Route::get('/', [TenantPortalLeaseController::class, 'index'])->name('index');
         Route::prefix('{lease}')->whereNumber('lease')->group(function () {
             Route::get('/', [TenantPortalLeaseController::class, 'show'])->name('show');
@@ -113,6 +120,11 @@ Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->grou
         Route::post('/', [App\Http\Controllers\TenantPortal\MaintenanceTicketController::class, 'store'])->name('store');
         Route::get('{ticket}', [App\Http\Controllers\TenantPortal\MaintenanceTicketController::class, 'show'])->name('show');
     });
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('portal/lease', fn () => redirect()->route('portal.lease.index', status: 308));
+    Route::get('portal/maintenance', fn () => redirect()->route('portal.maintenance-tickets.index', status: 308));
 });
 
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {

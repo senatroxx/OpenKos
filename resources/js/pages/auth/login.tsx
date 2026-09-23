@@ -9,13 +9,9 @@ import { Spinner } from '@/components/ui/spinner';
 import { t } from '@/lib/i18n';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
+import type { LoginPageProps } from '@/types/auth';
 
-type Props = {
-    status?: string;
-    canResetPassword: boolean;
-};
-
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({ status, canResetPassword, redirect }: LoginPageProps) {
     return (
         <>
             <Head title={t('Log in')} />
@@ -29,6 +25,9 @@ export default function Login({ status, canResetPassword }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
+                        {redirect && (
+                            <input type="hidden" name="redirect" value={redirect} />
+                        )}
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="email">

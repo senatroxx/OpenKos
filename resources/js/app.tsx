@@ -113,7 +113,10 @@ createInertiaApp({
             case name.startsWith('public/'):
                 return PublicListingLayout;
             case name.startsWith('settings/'):
-                if (auth.auth?.tenant) {
+                if (
+                    !auth.auth?.permissions?.includes('dashboard.view') &&
+                    !auth.auth?.roles?.includes('owner')
+                ) {
                     return [TenantPortalLayout, SettingsLayout];
                 }
 
@@ -128,7 +131,7 @@ createInertiaApp({
                     return AppLayout;
                 }
 
-                return PublicListingLayout;
+                return TenantPortalLayout;
             default:
                 return AppLayout;
         }

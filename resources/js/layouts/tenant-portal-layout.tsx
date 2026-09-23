@@ -19,25 +19,36 @@ import {
 } from '@/components/ui/sheet';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { cn } from '@/lib/utils';
+import { dashboard as staffDashboard } from '@/routes';
+import { index as applications } from '@/routes/applications';
 import { dashboard } from '@/routes/portal';
 import { index as billing } from '@/routes/portal/billing';
 import { index as leases } from '@/routes/portal/lease';
+import { index as maintenance } from '@/routes/portal/maintenance-tickets';
 import { index as notifications } from '@/routes/portal/notifications';
 import type { Auth } from '@/types/auth';
 import type { AppLayoutProps } from '@/types/ui';
-
-const navigationItems = [
-    { title: 'Dashboard', href: dashboard(), exact: true },
-    { title: 'Leases', href: leases() },
-    { title: 'Billing', href: billing() },
-    { title: 'Maintenance', href: '/portal/maintenance-tickets' },
-    { title: 'Notifications', href: notifications() },
-];
 
 export default function TenantPortalLayout({ children }: AppLayoutProps) {
     const { auth } = usePage<{ auth: Auth }>().props;
     const { isCurrentOrParentUrl, isCurrentUrl } = useCurrentUrl();
     const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+    const canUseTenantFeatures = Boolean(auth.tenant);
+    const canUseStaffDashboard =
+        auth.roles.includes('owner') ||
+        auth.permissions.includes('dashboard.view');
+    const navigationItems = [
+        { title: 'Dashboard', href: dashboard(), exact: true },
+        { title: 'Applications', href: applications() },
+        ...(canUseTenantFeatures
+            ? [
+                  { title: 'Leases', href: leases() },
+                  { title: 'Billing', href: billing() },
+                  { title: 'Maintenance', href: maintenance() },
+                  { title: 'Notifications', href: notifications() },
+              ]
+            : []),
+    ];
 
     return (
         <div className="flex min-h-svh flex-col bg-background">
@@ -122,12 +133,20 @@ export default function TenantPortalLayout({ children }: AppLayoutProps) {
                         <AppLogo />
                     </Link>
 
+                    {canUseStaffDashboard && (
+                        <Link
+                            href={staffDashboard()}
+                            className="ml-auto hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:inline-flex"
+                        >
+                            Staff Dashboard
+                        </Link>
+                    )}
                     {auth.user && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="ml-auto hidden h-10 max-w-64 gap-2 px-2 md:flex"
+                                    className={`${canUseStaffDashboard ? '' : 'ml-auto '}hidden h-10 max-w-64 gap-2 px-2 md:flex`}
                                     aria-label="Open account menu"
                                 >
                                     <UserInfo user={auth.user} />

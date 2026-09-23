@@ -2,10 +2,12 @@
 
 namespace App\Data\Application;
 
+use App\Enums\ApplicationTargetType;
+
 final readonly class SubmitApplicationData
 {
     public function __construct(
-        public string $targetType,
+        public ApplicationTargetType $targetType,
         public string $propertySlug,
         public ?string $unitTypeSlug,
         public ?string $intendedMoveInDate,

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ApplicationTargetType;
 use App\Models\Application;
 use App\Models\Property;
 use App\Models\User;
@@ -22,7 +23,7 @@ class ApplicationFactory extends Factory
         return [
             'user_id' => User::factory(),
             'property_id' => Property::factory(),
-            'target_type' => 'whole_property',
+            'target_type' => ApplicationTargetType::WholeProperty,
             'status' => 'new',
             'applicant_name' => fake()->name(),
             'applicant_email' => fake()->safeEmail(),

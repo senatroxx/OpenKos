@@ -3,8 +3,10 @@
 namespace App\Http\Requests\Application;
 
 use App\Data\Application\SubmitApplicationData;
+use App\Enums\ApplicationTargetType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class StoreApplicationRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class StoreApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'target_type' => ['required', 'string', 'in:whole_property,unit_type'],
+            'target_type' => ['required', new Enum(ApplicationTargetType::class)],
             'property_slug' => ['required', 'string', 'max:255'],
             'unit_type_slug' => ['nullable', 'string', 'max:255'],
             'intended_move_in_date' => ['nullable', 'date'],
@@ -37,7 +39,7 @@ class StoreApplicationRequest extends FormRequest
     public function toData(): SubmitApplicationData
     {
         return new SubmitApplicationData(
-            $this->string('target_type')->toString(),
+            ApplicationTargetType::from($this->string('target_type')->toString()),
             $this->string('property_slug')->toString(),
             $this->input('unit_type_slug'),
             $this->input('intended_move_in_date'),

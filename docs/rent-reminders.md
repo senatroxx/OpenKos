@@ -94,7 +94,7 @@ Reminders are sent to the lease's primary tenant only (not all tenants on the le
 
 **Rationale:** Kos convention — one tenant is responsible for payment. Simplifies implementation for MVP. Easily extended to all tenants later if needed.
 
-> **Contact path note (post [ADR-008](architecture/adr/008-tenant-identity.md)):** mail contact now resolves via `tenant->user?->email`, not a `tenants.email` column (which was dropped). A tenant has an email contact only when a linked user exists; `ForceSendReminder` and `SendRentReminders` null-check `tenant->user` before adding `mail` to the dispatchable channels.
+> **Contact path note (post [ADR-011](architecture/adr/011-dual-persona-identity.md)):** mail contact now resolves via `tenant->user?->email`, not a `tenants.email` column (which was dropped). A tenant has an email contact only when a linked user exists; `ForceSendReminder` and `SendRentReminders` null-check `tenant->user` before adding `mail` to the dispatchable channels.
 
 ## Architecture
 

@@ -73,3 +73,21 @@ export type PublicUnitTypePage = {
     };
     unit_type: PublicUnitType;
 };
+
+export type PublicUnitTypePageProps = {
+    listing: PublicUnitTypePage;
+    canonicalUrl: string;
+};
+
+export type PublicUnitTypeAttributesProps = {
+    unitType: PublicUnitType;
+};
+
+export type PublicPricingOptionsProps = {
+    prices: PublicStartingPrice[];
+};
+
+export type PublicRentalSummaryProps = {
+    unitType: PublicUnitType;
+    propertySlug: string;
+};

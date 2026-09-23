@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Applications\ConvertApplicationToTenant;
 use App\Actions\Applications\SubmitApplication;
 use App\Actions\Applications\TransitionApplication;
+use App\Enums\ApplicationTargetType;
 use App\Http\Requests\Application\StoreApplicationRequest;
 use App\Http\Requests\Application\TransitionApplicationRequest;
 use App\Models\Application;
@@ -36,6 +37,8 @@ final class ApplicationController extends Controller
     public function create(Request $request): Response
     {
         $this->authorize('create', Application::class);
+        $targetType = ApplicationTargetType::tryFrom($request->string('target_type')->toString());
+        abort_if($targetType === null, 404);
         $property = Property::query()->where('public_slug', $request->string('property_slug'))->firstOrFail();
         $unitType = $request->filled('unit_type_slug') ? UnitType::query()
             ->where('public_slug', $request->string('unit_type_slug'))
@@ -44,14 +47,14 @@ final class ApplicationController extends Controller
 
         abort_unless($property->isPubliclyVisible(), 404);
         abort_unless(
-            ($request->input('target_type') === 'whole_property' && $property->rental_mode->supportsWholePropertyRental() && $unitType === null)
-            || ($request->input('target_type') === 'unit_type' && $unitType?->isViablePublicOffering()),
+            ($targetType === ApplicationTargetType::WholeProperty && $property->rental_mode->supportsWholePropertyRental() && $unitType === null)
+            || ($targetType === ApplicationTargetType::UnitType && $unitType?->isViablePublicOffering()),
             404,
         );
 
         return Inertia::render('applications/create', [
             'target' => [
-                'target_type' => $request->input('target_type'),
+                'target_type' => $targetType->value,
                 'property_slug' => $property->public_slug,
                 'property_name' => $property->name,
                 'unit_type_slug' => $unitType?->public_slug,
@@ -111,7 +114,7 @@ final class ApplicationController extends Controller
         return [
             'id' => $application->id,
             'status' => $application->status->value,
-            'target_type' => $application->target_type,
+            'target_type' => $application->target_type->value,
             'property' => $application->property?->only(['id', 'name', 'public_slug']),
             'unit_type' => $application->unitType?->only(['id', 'name', 'public_slug']),
             'intended_move_in_date' => $application->intended_move_in_date?->toDateString(),

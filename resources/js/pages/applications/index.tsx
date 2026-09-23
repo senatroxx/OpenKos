@@ -3,16 +3,16 @@ import { EmptyState, StatusBadge } from '@/components/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { t } from '@/lib/i18n';
 import { show } from '@/routes/applications';
-import type { ApplicationsIndexProps } from '@/types';
+import type {
+    ApplicationIndexPageProps,
+    ApplicationsIndexProps,
+} from '@/types';
 
 export default function ApplicationsIndex({
     applications,
     operator,
 }: ApplicationsIndexProps) {
-    const { props } = usePage<{
-        errors?: { application?: string };
-        flash?: { status?: string };
-    }>();
+    const { props } = usePage<ApplicationIndexPageProps>();
 
     return (
         <>

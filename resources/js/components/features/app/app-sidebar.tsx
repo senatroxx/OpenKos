@@ -18,7 +18,6 @@ import {
     Wrench,
 } from 'lucide-react';
 import AppLogo from '@/components/features/app/app-logo';
-import { NavFooter } from '@/components/features/app/nav-footer';
 import { NavMain } from '@/components/features/app/nav-main';
 import { NavUser } from '@/components/features/app/nav-user';
 import {
@@ -30,7 +29,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { platformNavItems, platformPageNavItems } from '@/lib/platform';
+import { t } from '@/lib/i18n';
+import { platformPageNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
 import {
     financial as dashboardFinancial,
@@ -59,7 +59,11 @@ export function AppSidebar() {
         .props;
     const permissions = auth.permissions;
     const isOwner = auth.role === 'owner';
-    const home = auth.tenant ? portalDashboard() : dashboard();
+    const isStaff =
+        isOwner ||
+        permissions.includes('dashboard.view') ||
+        permissions.includes('financials.view');
+    const home = dashboard();
     const settingsNavItems: NavItem[] = [
         ...platformPageNavItems(
             platform.settings.filter((page) => page.key !== 'about'),
@@ -71,7 +75,7 @@ export function AppSidebar() {
         ),
     ];
 
-    const navSections: NavSection[] = auth.tenant
+    const navSections: NavSection[] = auth.tenant && !isStaff
         ? [
               {
                   title: 'OVERVIEW',
@@ -361,10 +365,6 @@ export function AppSidebar() {
         (section) => section.items.length > 0,
     );
 
-    const footerNavItems: NavItem[] = [
-        ...platformNavItems(platform.navigation.footer, auth),
-    ];
-
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -384,7 +384,6 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

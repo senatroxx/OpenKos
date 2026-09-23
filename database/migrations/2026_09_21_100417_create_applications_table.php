@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApplicationTargetType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -38,8 +39,8 @@ return new class extends Migration
         });
 
         if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            DB::statement("alter table applications add constraint applications_target_type_check check (target_type in ('whole_property', 'unit_type'))");
-            DB::statement("alter table applications add constraint applications_target_columns_check check ((target_type = 'whole_property' and unit_type_id is null) or (target_type = 'unit_type' and unit_type_id is not null))");
+            DB::statement("alter table applications add constraint applications_target_type_check check (target_type in ('".ApplicationTargetType::WholeProperty->value."', '".ApplicationTargetType::UnitType->value."'))");
+            DB::statement("alter table applications add constraint applications_target_columns_check check ((target_type = '".ApplicationTargetType::WholeProperty->value."' and unit_type_id is null) or (target_type = '".ApplicationTargetType::UnitType->value."' and unit_type_id is not null))");
         }
     }
 

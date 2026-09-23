@@ -20,6 +20,16 @@ export type Auth = {
     permissions: string[];
 };
 
+export type LoginPageProps = {
+    status?: string;
+    canResetPassword: boolean;
+    redirect?: string;
+};
+
+export type RegisterPageProps = {
+    redirect?: string;
+};
+
 /* @chisel-passkeys */
 export type Passkey = {
     id: number;

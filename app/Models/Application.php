@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ApplicationStatus;
+use App\Enums\ApplicationTargetType;
 use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +26,7 @@ class Application extends Model
     {
         return [
             'status' => ApplicationStatus::class,
+            'target_type' => ApplicationTargetType::class,
             'intended_move_in_date' => 'date',
             'reviewed_at' => 'datetime',
             'converted_at' => 'datetime',
