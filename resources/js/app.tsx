@@ -125,7 +125,7 @@ createInertiaApp({
                 return TenantPortalLayout;
             case name.startsWith('applications/'):
                 if (
-                    auth.auth?.permissions?.includes('dashboard.view') ||
+                    auth.auth?.permissions?.includes('tenants.view') ||
                     auth.auth?.roles?.includes('owner')
                 ) {
                     return AppLayout;
