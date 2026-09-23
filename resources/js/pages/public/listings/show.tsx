@@ -32,9 +32,14 @@ import type {
     PublicUnitType,
     PublicApplicationFormTarget,
     PublicPropertyPageProps,
+    PublicPortalMetadata,
     PublicWholePropertyOfferingProps,
 } from '@/types';
 import type { Auth } from '@/types/auth';
+
+type PropertyPageProps = PublicPropertyPageProps & {
+    metadata: PublicPortalMetadata;
+};
 
 function locationLabel(listing: PublicListing): string {
     return [
@@ -177,7 +182,8 @@ export default function Show({
     listing,
     canonicalUrl,
     open_application: existingApplication,
-}: PublicPropertyPageProps) {
+    metadata,
+}: PropertyPageProps) {
     const { auth } = usePage<{ auth?: Auth }>().props;
     const [applicationFormVisible, setApplicationFormVisible] = useState(false);
     const location = locationLabel(listing);
@@ -203,10 +209,7 @@ export default function Show({
     return (
         <>
             <PublicListingHead
-                title={listing.name}
-                description={listing.description}
-                canonicalUrl={canonicalUrl}
-                imageUrl={listing.gallery[0]?.url}
+                metadata={metadata}
             />
 
             <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">

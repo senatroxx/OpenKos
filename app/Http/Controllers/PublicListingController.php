@@ -17,6 +17,7 @@ use App\Models\Unit;
 use App\Models\UnitType;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
+use App\Services\PublicPortal\PublicPortalMetadataResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -28,20 +29,34 @@ final class PublicListingController extends Controller
     public function __construct(
         private MoneyConverter $money,
         private EffectiveUnitRateResolver $effectiveUnitRateResolver,
+        private PublicPortalMetadataResolver $metadata,
     ) {}
 
     public function pageIndex(): Response
     {
+        $listings = $this->indexData();
+
         return Inertia::render('public/listings/index', [
-            'listings' => $this->indexData(),
-            'canonicalUrl' => route('public.portal.index', absolute: false),
+            'listings' => $listings,
+            'metadata' => $this->metadata->homepage(
+                route('public.portal.index', absolute: false),
+                $listings[0]['gallery'][0]['url'] ?? null,
+            )->toArray(),
         ]);
     }
 
     public function pageShow(Request $request, Property $property): Response
     {
+        $listing = $this->propertyData($property);
+
         return Inertia::render('public/listings/show', [
-            'listing' => $this->propertyData($property),
+            'listing' => $listing,
+            'metadata' => $this->metadata->property(
+                $listing['name'],
+                $listing['description'],
+                route('public.portal.show', ['property' => $property->public_slug], absolute: false),
+                $listing['gallery'][0]['url'] ?? null,
+            )->toArray(),
             'canonicalUrl' => route('public.portal.show', [
                 'property' => $property->public_slug,
             ], absolute: false),
@@ -51,8 +66,20 @@ final class PublicListingController extends Controller
 
     public function pageUnitType(Request $request, Property $property, UnitType $unitType): Response
     {
+        $listing = $this->unitTypeData($property, $unitType);
+
         return Inertia::render('public/listings/unit-type', [
-            'listing' => $this->unitTypeData($property, $unitType),
+            'listing' => $listing,
+            'metadata' => $this->metadata->unitType(
+                $listing['unit_type']['name'],
+                $listing['property']['name'],
+                $listing['unit_type']['description'],
+                route('public.portal.unit-types.show', [
+                    'property' => $property->public_slug,
+                    'unitType' => $unitType->public_slug,
+                ], absolute: false),
+                $listing['unit_type']['gallery'][0]['url'] ?? null,
+            )->toArray(),
             'canonicalUrl' => route('public.portal.unit-types.show', [
                 'property' => $property->public_slug,
                 'unitType' => $unitType->public_slug,

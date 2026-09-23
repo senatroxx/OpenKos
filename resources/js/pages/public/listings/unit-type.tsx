@@ -18,8 +18,13 @@ import type {
     PublicApplicationFormTarget,
     PublicUnitTypeAttributesProps,
     PublicUnitTypePageProps,
+    PublicPortalMetadata,
 } from '@/types';
 import type { Auth } from '@/types/auth';
+
+type UnitTypePageProps = PublicUnitTypePageProps & {
+    metadata: PublicPortalMetadata;
+};
 
 function displayNumber(value: number | string): string {
     return String(Number(value));
@@ -152,7 +157,8 @@ export default function UnitType({
     listing,
     canonicalUrl,
     open_application: existingApplication,
-}: PublicUnitTypePageProps) {
+    metadata,
+}: UnitTypePageProps) {
     const { auth } = usePage<{ auth?: Auth }>().props;
     const [applicationFormVisible, setApplicationFormVisible] = useState(false);
     const unitType = listing.unit_type;
@@ -180,10 +186,7 @@ export default function UnitType({
     return (
         <>
             <PublicListingHead
-                title={`${unitType.name} - ${listing.property.name}`}
-                description={unitType.description}
-                canonicalUrl={canonicalUrl}
-                imageUrl={unitType.gallery[0]?.url}
+                metadata={metadata}
             />
 
             <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">

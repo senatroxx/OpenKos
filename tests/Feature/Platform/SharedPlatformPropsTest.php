@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use Database\Seeders\RoleAndPermissionSeeder;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia;
 
 it('shares platform registry data with every Inertia page', function () {
@@ -31,5 +32,7 @@ it('shares platform registry data with every Inertia page', function () {
             ->where('platform.settings.6.key', 'security')
             ->where('platform.settings.6.group', 'Account')
             ->where('platform.settings.7.key', 'plugins')
-            ->where('platform.settings.7.group', null));
+            ->where('platform.settings.7.group', null)
+            ->where('platform.settings', fn (Collection $settings): bool => $settings
+                ->doesntContain(fn (array $page): bool => $page['key'] === 'public-portal')));
 });

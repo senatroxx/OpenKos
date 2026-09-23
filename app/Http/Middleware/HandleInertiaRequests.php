@@ -104,6 +104,7 @@ class HandleInertiaRequests extends Middleware
                 'payment_gateway_config',
                 'branding_logo_path',
                 'branding_favicon_path',
+                'public_og_image_path',
             ])
             ->all();
 

@@ -19,7 +19,7 @@ use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Support\Facades\Route;
 
 Route::get('branding/{asset}', BrandingAssetController::class)
-    ->whereIn('asset', ['logo', 'favicon'])
+    ->whereIn('asset', ['logo', 'favicon', 'og-image'])
     ->name('branding.asset');
 
 Route::middleware(['auth'])->group(function () {
@@ -50,6 +50,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('role:owner')->group(function () {
         Route::get('settings/general', [GeneralController::class, 'edit'])->name('settings.general.edit');
         Route::patch('settings/general', [GeneralController::class, 'update'])->name('settings.general.update');
+        Route::redirect('settings/public-portal', '/public-portal/seo')->name('settings.public-portal.edit');
         Route::post('settings/general/branding/{asset}', [GeneralController::class, 'updateBranding'])
             ->whereIn('asset', ['logo', 'favicon'])
             ->name('settings.general.branding.update');

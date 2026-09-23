@@ -24,12 +24,18 @@ class BrandingAssetController extends Controller
             'fallback_mime' => 'image/x-icon',
             'mimes' => ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon'],
         ],
+        'og-image' => [
+            'setting' => 'public_og_image_path',
+            'fallback' => null,
+            'fallback_mime' => null,
+            'mimes' => ['image/jpeg', 'image/png', 'image/webp'],
+        ],
     ];
 
     public function __invoke(string $asset): BinaryFileResponse|StreamedResponse
     {
         $definition = self::ASSETS[$asset] ?? abort(404);
-        $fallback = public_path($definition['fallback']);
+        $fallback = $definition['fallback'] === null ? null : public_path($definition['fallback']);
 
         try {
             $disk = Storage::disk((string) config('filesystems.default', 'local'));
@@ -46,7 +52,7 @@ class BrandingAssetController extends Controller
             // Fall through to the bundled asset when custom storage is unavailable.
         }
 
-        abort_unless(is_file($fallback), 404);
+        abort_unless($fallback !== null && is_file($fallback), 404);
 
         return response()->file($fallback, [
             'Content-Type' => $definition['fallback_mime'],
