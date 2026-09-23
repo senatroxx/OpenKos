@@ -30,7 +30,7 @@ final class PublicPortalController extends Controller
         $hasSocialImage = $this->hasSocialImage();
         $homepageMetadata = $this->metadata->homepage(route('public.portal.index', absolute: false));
 
-        return Inertia::render('settings/public-portal', [
+        return Inertia::render('public-portal/seo', [
             'settings' => Setting::some([
                 'public_site_name',
                 'public_homepage_title',
@@ -43,6 +43,20 @@ final class PublicPortalController extends Controller
             ],
             'socialImageUrl' => $hasSocialImage ? $this->socialImageUrl() : null,
             'hasSocialImage' => $hasSocialImage,
+        ]);
+    }
+
+    public function overview(): Response
+    {
+        $homepageMetadata = $this->metadata->homepage(route('public.portal.index', absolute: false));
+
+        return Inertia::render('public-portal/overview', [
+            'resolved' => [
+                'siteName' => $homepageMetadata->siteName,
+                'homepageTitle' => $homepageMetadata->title,
+                'homepageDescription' => $homepageMetadata->description,
+            ],
+            'hasSocialImage' => $this->hasSocialImage(),
         ]);
     }
 

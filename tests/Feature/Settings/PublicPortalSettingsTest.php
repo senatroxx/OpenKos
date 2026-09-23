@@ -22,7 +22,7 @@ it('allows owners to configure public portal metadata without changing the admin
     Setting::set('site_name', 'Admin Name');
 
     $this->actingAs($owner)
-        ->patch(route('settings.public-portal.update'), [
+        ->patch(route('public-portal.seo.update'), [
             'public_site_name' => 'Public Name',
             'public_homepage_title' => 'Welcome to Public Name',
             'public_homepage_description' => 'A public description.',
@@ -41,6 +41,27 @@ it('allows owners to configure public portal metadata without changing the admin
             ->where('metadata.openGraph.title', 'Welcome to Public Name')
             ->where('metadata.twitter.description', 'A public description.')
             ->missing('setting.public_og_image_path'));
+});
+
+it('renders the public portal workspace overview with resolved identity', function () {
+    $owner = User::factory()->owner()->create();
+    Setting::set('site_name', 'General Name');
+
+    $this->actingAs($owner)
+        ->get(route('public-portal.overview'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('public-portal/overview')
+            ->where('resolved.siteName', 'General Name')
+            ->where('resolved.homepageTitle', 'Find your next place')
+            ->where('hasSocialImage', false));
+});
+
+it('redirects the old public portal settings page to the workspace', function () {
+    $owner = User::factory()->owner()->create();
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertRedirect(route('public-portal.seo'));
 });
 
 it('falls back through public name and homepage defaults when values are blank', function () {
@@ -70,7 +91,7 @@ it('exposes stored overrides separately from resolved settings previews', functi
     Setting::set('site_name', 'General Name');
 
     $this->actingAs($owner)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('settings.public_site_name', '')
             ->where('settings.public_homepage_title', '')
@@ -82,14 +103,14 @@ it('exposes stored overrides separately from resolved settings previews', functi
     Setting::set('site_name', 'Changed General Name');
 
     $this->actingAs($owner)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
         ->assertInertia(fn (Assert $page) => $page->where('resolved.siteName', 'Changed General Name'));
 
     Setting::set('public_homepage_title', 'Custom homepage title');
     Setting::set('public_homepage_description', 'Custom homepage description');
 
     $this->actingAs($owner)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('settings.public_homepage_title', 'Custom homepage title')
             ->where('settings.public_homepage_description', 'Custom homepage description')
@@ -97,7 +118,7 @@ it('exposes stored overrides separately from resolved settings previews', functi
             ->where('resolved.homepageDescription', 'Custom homepage description'));
 
     $this->actingAs($owner)
-        ->patch(route('settings.public-portal.update'), [
+        ->patch(route('public-portal.seo.update'), [
             'public_homepage_title' => '',
             'public_homepage_description' => '',
         ])
@@ -107,7 +128,7 @@ it('exposes stored overrides separately from resolved settings previews', functi
         ->and(Setting::get('public_homepage_description'))->toBe('');
 
     $this->actingAs($owner)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('settings.public_homepage_title', '')
             ->where('settings.public_homepage_description', '')
@@ -117,19 +138,19 @@ it('exposes stored overrides separately from resolved settings previews', functi
     Setting::set('public_site_name', 'Explicit Public Name');
 
     $this->actingAs($owner)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('settings.public_site_name', 'Explicit Public Name')
             ->where('resolved.siteName', 'Explicit Public Name'));
 
     $this->actingAs($owner)
-        ->patch(route('settings.public-portal.update'), ['public_site_name' => ''])
+        ->patch(route('public-portal.seo.update'), ['public_site_name' => ''])
         ->assertRedirect();
 
     expect(Setting::get('public_site_name'))->toBe('');
 
     $this->actingAs($owner)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('settings.public_site_name', '')
             ->where('resolved.siteName', 'Changed General Name'));
@@ -163,7 +184,7 @@ it('clears the social image without exposing its storage path', function () {
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
-        ->post(route('settings.public-portal.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update'), [
             'file' => UploadedFile::fake()->create('social.png', 100, 'image/png'),
         ])
         ->assertRedirect();
@@ -185,7 +206,7 @@ it('clears the social image without exposing its storage path', function () {
             ->missing('metadata.public_og_image_path'));
 
     $this->actingAs($owner)
-        ->delete(route('settings.public-portal.social-image.destroy'))
+        ->delete(route('public-portal.seo.social-image.destroy'))
         ->assertRedirect();
 
     Storage::disk('local')->assertMissing($path);
@@ -199,7 +220,7 @@ it('changes the social image URL when the configured file is replaced', function
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
-        ->post(route('settings.public-portal.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update'), [
             'file' => UploadedFile::fake()->create('first.png', 100, 'image/png'),
         ])
         ->assertRedirect();
@@ -207,7 +228,7 @@ it('changes the social image URL when the configured file is replaced', function
     $firstPath = Setting::get('public_og_image_path');
 
     $this->actingAs($owner)
-        ->post(route('settings.public-portal.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update'), [
             'file' => UploadedFile::fake()->create('second.png', 100, 'image/png'),
         ])
         ->assertRedirect();
@@ -227,7 +248,7 @@ it('validates social image uploads', function () {
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
-        ->post(route('settings.public-portal.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update'), [
             'file' => UploadedFile::fake()->create('social.pdf', 100, 'application/pdf'),
         ])
         ->assertInvalid('file');
@@ -237,6 +258,10 @@ it('forbids non-owners from public portal settings', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->get(route('settings.public-portal.edit'))
+        ->get(route('public-portal.seo'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->get(route('public-portal.overview'))
         ->assertForbidden();
 });

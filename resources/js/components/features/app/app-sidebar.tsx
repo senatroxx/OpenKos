@@ -45,6 +45,7 @@ import { dashboard as portalDashboard } from '@/routes/portal';
 import { index as portalBilling } from '@/routes/portal/billing';
 import { index as portalLease } from '@/routes/portal/lease';
 import properties from '@/routes/properties';
+import publicPortal from '@/routes/public-portal';
 import roles from '@/routes/roles';
 import amenities from '@/routes/settings/amenities';
 import expenseCategories from '@/routes/settings/expense-categories';
@@ -312,6 +313,15 @@ export function AppSidebar() {
                                               title: 'Tenants',
                                               href: tenants.index(),
                                               icon: Users,
+                                          },
+                                      ]
+                                    : []),
+                                ...(isOwner
+                                    ? [
+                                          {
+                                              title: 'Public Portal',
+                                              href: publicPortal.overview(),
+                                              icon: Building2,
                                           },
                                       ]
                                     : []),

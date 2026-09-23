@@ -10,6 +10,9 @@ it('keeps shared sidebar scroll surfaces intentional', function () {
     $general = file_get_contents(
         resource_path('js/pages/settings/general.tsx'),
     );
+    $appSidebar = file_get_contents(
+        resource_path('js/components/features/app/app-sidebar.tsx'),
+    );
 
     expect($layout)
         ->toContain('className="overflow-x-clip overflow-y-clip"')
@@ -25,4 +28,10 @@ it('keeps shared sidebar scroll surfaces intentional', function () {
     expect($general)->toContain(
         'grid max-h-72 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2',
     );
+
+    expect($appSidebar)
+        ->toContain("import publicPortal from '@/routes/public-portal';")
+        ->toContain("title: 'Public Portal'")
+        ->toContain('href: publicPortal.overview()')
+        ->not->toContain('settings/public-portal');
 });

@@ -25,6 +25,7 @@ use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\PublicListingMediaController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\Settings\PublicPortalController;
 use App\Http\Controllers\SignedPaymentController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantDocumentController;
@@ -104,6 +105,19 @@ Route::middleware(['auth', 'verified'])->prefix('portal')->name('portal.')->grou
         Route::get('{ticket}', [App\Http\Controllers\TenantPortal\MaintenanceTicketController::class, 'show'])->name('show');
     });
 });
+
+Route::middleware(['auth', 'verified', 'role:owner'])
+    ->prefix('public-portal')
+    ->name('public-portal.')
+    ->group(function () {
+        Route::get('/', [PublicPortalController::class, 'overview'])->name('overview');
+        Route::get('seo', [PublicPortalController::class, 'edit'])->name('seo');
+        Route::patch('seo', [PublicPortalController::class, 'update'])->name('seo.update');
+        Route::post('seo/social-image', [PublicPortalController::class, 'updateSocialImage'])
+            ->name('seo.social-image.update');
+        Route::delete('seo/social-image', [PublicPortalController::class, 'removeSocialImage'])
+            ->name('seo.social-image.destroy');
+    });
 
 Route::middleware(['auth', 'verified', 'permission:dashboard.view'])->group(function () {
     Route::prefix('dashboard')->group(function () {
