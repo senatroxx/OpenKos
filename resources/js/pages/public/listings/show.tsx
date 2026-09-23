@@ -19,6 +19,7 @@ import { index as publicIndex } from '@/routes/public/portal';
 import { show as unitTypeShow } from '@/routes/public/portal/unit-types';
 import type {
     PublicListing,
+    PublicPortalPropertyPageProps,
     PublicUnitType,
     PublicWholePropertyOffering,
 } from '@/types';
@@ -169,11 +170,8 @@ function WholePropertyOffering({
 
 export default function Show({
     listing,
-    canonicalUrl,
-}: {
-    listing: PublicListing;
-    canonicalUrl: string;
-}) {
+    metadata,
+}: PublicPortalPropertyPageProps) {
     const location = locationLabel(listing);
     const unitTypes = listing.unit_types ?? [];
     const inventory = listing.inventory;
@@ -182,10 +180,7 @@ export default function Show({
     return (
         <>
             <PublicListingHead
-                title={listing.name}
-                description={listing.description}
-                canonicalUrl={canonicalUrl}
-                imageUrl={listing.gallery[0]?.url}
+                metadata={metadata}
             />
 
             <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">

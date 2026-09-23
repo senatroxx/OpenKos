@@ -636,7 +636,7 @@ it('renders the public storefront at the root for guests and authenticated users
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('public/listings/index')
-                ->where('canonicalUrl', '/')
+                ->where('metadata.canonical', '/')
                 ->where('listings.0.slug', $property->public_slug)
                 ->missing('listings.0.id')
                 ->missing('listings.0.phone'));
@@ -672,19 +672,21 @@ it('keeps storefront metadata distinct from entity detail metadata', function ()
     $unitTypeDetail = file_get_contents(resource_path('js/pages/public/listings/unit-type.tsx'));
 
     expect($homepage)
-        ->toContain("title={t('OpenKOS — Find Your Next Place')}")
-        ->toContain("'Discover available properties and rental options that fit your needs.'")
+        ->toContain('metadata={metadata}')
         ->not->toContain("title={t('Available properties')}");
 
     expect($head)
+        ->toContain('PublicListingHeadProps')
+        ->toContain('metadata.openGraph')
+        ->toContain('metadata.twitter')
         ->toContain('head-key="og:title"')
         ->toContain('head-key="og:description"')
         ->toContain('head-key="twitter:title"')
         ->toContain('head-key="twitter:description"')
         ->toContain('head-key="canonical"');
 
-    expect($propertyDetail)->toContain('title={listing.name}');
-    expect($unitTypeDetail)->toContain('title={`${unitType.name} - ${listing.property.name}`}');
+    expect($propertyDetail)->toContain('metadata={metadata}');
+    expect($unitTypeDetail)->toContain('metadata={metadata}');
 });
 
 it('keeps listing recommendations non-blocking for a viable offering', function () {
@@ -934,7 +936,7 @@ it('renders public property and unit type pages from the safe listing projection
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('public/listings/show')
-            ->where('canonicalUrl', route('public.portal.show', ['property' => $property->public_slug], absolute: false))
+            ->where('metadata.canonical', route('public.portal.show', ['property' => $property->public_slug], absolute: false))
             ->where('listing.slug', $property->public_slug)
             ->where('listing.unit_types.0.slug', $unitType->public_slug)
             ->missing('listing.id')
@@ -950,7 +952,7 @@ it('renders public property and unit type pages from the safe listing projection
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('public/listings/unit-type')
-            ->where('canonicalUrl', route('public.portal.unit-types.show', [
+            ->where('metadata.canonical', route('public.portal.unit-types.show', [
                 'property' => $property->public_slug,
                 'unitType' => $unitType->public_slug,
             ], absolute: false))

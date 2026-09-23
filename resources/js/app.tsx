@@ -88,7 +88,19 @@ function resolveAppName(): string {
 const appName = resolveAppName();
 
 createInertiaApp({
-    title: (title) => {
+    title: (title, page) => {
+        if (
+            typeof page.props === 'object' &&
+            page.props !== null &&
+            'metadata' in page.props &&
+            typeof page.props.metadata === 'object' &&
+            page.props.metadata !== null &&
+            'title' in page.props.metadata &&
+            page.props.metadata.title === title
+        ) {
+            return title;
+        }
+
         if (!title) {
             return appName;
         }

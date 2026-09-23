@@ -15,6 +15,7 @@ class UpdateBranding
     private const SETTING_KEYS = [
         'logo' => 'branding_logo_path',
         'favicon' => 'branding_favicon_path',
+        'og-image' => 'public_og_image_path',
     ];
 
     public function __construct(
