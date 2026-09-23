@@ -6,6 +6,7 @@ use App\Business\PublicPortal\PublicPortalMetadataComposer;
 use App\Data\PublicPortal\PublicPortalMetadataData;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Storage;
+use League\Flysystem\FilesystemException;
 
 final class PublicPortalMetadataResolver
 {
@@ -118,7 +119,7 @@ final class PublicPortalMetadataResolver
                         'v' => sha1($configuredPath),
                     ]);
                 }
-            } catch (\Throwable) {
+            } catch (FilesystemException) {
                 // Fall through to the public listing image.
             }
         }

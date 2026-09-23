@@ -175,7 +175,7 @@ it('clears the social image without exposing its storage path', function () {
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
-        ->post(route('public-portal.seo.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update', ['asset' => 'og-image']), [
             'file' => UploadedFile::fake()->create('social.png', 100, 'image/png'),
         ])
         ->assertRedirect();
@@ -211,7 +211,7 @@ it('changes the social image URL when the configured file is replaced', function
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
-        ->post(route('public-portal.seo.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update', ['asset' => 'og-image']), [
             'file' => UploadedFile::fake()->create('first.png', 100, 'image/png'),
         ])
         ->assertRedirect();
@@ -219,7 +219,7 @@ it('changes the social image URL when the configured file is replaced', function
     $firstPath = Setting::get('public_og_image_path');
 
     $this->actingAs($owner)
-        ->post(route('public-portal.seo.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update', ['asset' => 'og-image']), [
             'file' => UploadedFile::fake()->create('second.png', 100, 'image/png'),
         ])
         ->assertRedirect();
@@ -239,7 +239,7 @@ it('validates social image uploads', function () {
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
-        ->post(route('public-portal.seo.social-image.update'), [
+        ->post(route('public-portal.seo.social-image.update', ['asset' => 'og-image']), [
             'file' => UploadedFile::fake()->create('social.pdf', 100, 'application/pdf'),
         ])
         ->assertInvalid('file');

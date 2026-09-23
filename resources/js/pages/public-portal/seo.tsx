@@ -253,7 +253,7 @@ export default function Seo({
 
 Seo.layout = {
     breadcrumbs: [
-        { title: 'Public Portal', href: publicPortal.overview().url },
+        { title: 'Public Portal', href: publicPortal.seo().url },
         { title: 'SEO & Sharing', href: publicPortal.seo().url },
     ],
 };
