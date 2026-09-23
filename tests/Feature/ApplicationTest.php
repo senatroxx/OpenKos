@@ -7,7 +7,9 @@ use App\Models\Application;
 use App\Models\Property;
 use App\Models\PropertyRate;
 use App\Models\Tenant;
+use App\Models\UnitType;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 
 function publicWholeProperty(): Property
 {
@@ -51,6 +53,14 @@ test('application target type accepts only the backed offering values', function
     expect(ApplicationTargetType::cases())->toHaveCount(2)
         ->and(ApplicationTargetType::WholeProperty->value)->toBe('whole_property')
         ->and(ApplicationTargetType::UnitType->value)->toBe('unit_type');
+});
+
+test('the database enforces application target column invariants', function () {
+    $application = Application::factory()->create();
+    $unitType = UnitType::factory()->for($application->property)->create();
+
+    expect(fn () => $application->update(['unit_type_id' => $unitType->id]))
+        ->toThrow(QueryException::class);
 });
 
 test('a prospective renter can complete their profile without becoming a tenant', function () {

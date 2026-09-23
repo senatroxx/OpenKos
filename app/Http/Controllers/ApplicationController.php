@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Applications\ConvertApplicationToTenant;
 use App\Actions\Applications\SubmitApplication;
 use App\Actions\Applications\TransitionApplication;
+use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
 use App\Http\Requests\Application\StoreApplicationRequest;
 use App\Http\Requests\Application\TransitionApplicationRequest;
@@ -90,7 +91,7 @@ final class ApplicationController extends Controller
 
     public function transition(TransitionApplicationRequest $request, Application $application, TransitionApplication $action): RedirectResponse
     {
-        if ($request->string('status')->value() === 'withdrawn') {
+        if ($request->status() === ApplicationStatus::Withdrawn) {
             $this->authorize('withdraw', $application);
         } else {
             $this->authorize('update', $application);

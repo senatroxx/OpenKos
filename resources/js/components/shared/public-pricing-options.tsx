@@ -1,6 +1,6 @@
 import { formatBillingOptionLabel, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
-import type { PublicStartingPrice } from '@/types';
+import type { PublicPricingOptionsProps, PublicStartingPrice } from '@/types';
 
 function priceGroups(
     prices: PublicStartingPrice[],
@@ -17,9 +17,7 @@ function priceGroups(
 
 export default function PublicPricingOptions({
     prices,
-}: {
-    prices: PublicStartingPrice[];
-}) {
+}: PublicPricingOptionsProps) {
     const groups = priceGroups(prices);
 
     return (

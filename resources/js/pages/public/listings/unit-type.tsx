@@ -17,14 +17,9 @@ import type {
     PublicRentalSummaryProps,
     PublicApplicationFormTarget,
     PublicUnitTypeAttributesProps,
-    PublicUnitTypePageProps,
-    PublicPortalMetadata,
+    PublicListingPageAuthProps,
+    PublicPortalUnitTypePageProps,
 } from '@/types';
-import type { Auth } from '@/types/auth';
-
-type UnitTypePageProps = PublicUnitTypePageProps & {
-    metadata: PublicPortalMetadata;
-};
 
 function displayNumber(value: number | string): string {
     return String(Number(value));
@@ -158,8 +153,8 @@ export default function UnitType({
     canonicalUrl,
     open_application: existingApplication,
     metadata,
-}: UnitTypePageProps) {
-    const { auth } = usePage<{ auth?: Auth }>().props;
+}: PublicPortalUnitTypePageProps) {
+    const { auth } = usePage<PublicListingPageAuthProps>().props;
     const [applicationFormVisible, setApplicationFormVisible] = useState(false);
     const unitType = listing.unit_type;
     const title =

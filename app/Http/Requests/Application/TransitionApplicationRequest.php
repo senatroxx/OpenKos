@@ -3,10 +3,12 @@
 namespace App\Http\Requests\Application;
 
 use App\Data\Application\TransitionApplicationData;
+use App\Enums\ApplicationStatus;
 use App\Enums\Permission;
 use App\Models\Application;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Enum;
 
 class TransitionApplicationRequest extends FormRequest
 {
@@ -30,7 +32,7 @@ class TransitionApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', 'in:new,reviewing,accepted,rejected,withdrawn'],
+            'status' => ['required', new Enum(ApplicationStatus::class)],
             'operator_notes' => ['nullable', 'string', 'max:10000'],
             'applicant_feedback' => ['nullable', 'string', 'max:5000'],
         ];
@@ -39,9 +41,14 @@ class TransitionApplicationRequest extends FormRequest
     public function toData(): TransitionApplicationData
     {
         return new TransitionApplicationData(
-            $this->string('status')->toString(),
+            $this->status(),
             $this->input('operator_notes'),
             $this->input('applicant_feedback'),
         );
+    }
+
+    public function status(): ApplicationStatus
+    {
+        return ApplicationStatus::from($this->string('status')->toString());
     }
 }

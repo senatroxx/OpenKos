@@ -29,17 +29,12 @@ import { index as publicIndex } from '@/routes/public/portal';
 import { show as unitTypeShow } from '@/routes/public/portal/unit-types';
 import type {
     PublicListing,
-    PublicUnitType,
     PublicApplicationFormTarget,
-    PublicPropertyPageProps,
-    PublicPortalMetadata,
+    PublicUnitTypeAttributesProps,
+    PublicListingPageAuthProps,
+    PublicPortalPropertyPageProps,
     PublicWholePropertyOfferingProps,
 } from '@/types';
-import type { Auth } from '@/types/auth';
-
-type PropertyPageProps = PublicPropertyPageProps & {
-    metadata: PublicPortalMetadata;
-};
 
 function locationLabel(listing: PublicListing): string {
     return [
@@ -51,7 +46,7 @@ function locationLabel(listing: PublicListing): string {
         .join(', ');
 }
 
-function UnitTypeDetails({ unitType }: { unitType: PublicUnitType }) {
+function UnitTypeDetails({ unitType }: PublicUnitTypeAttributesProps) {
     return (
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
             {unitType.bedrooms !== null && (
@@ -183,8 +178,8 @@ export default function Show({
     canonicalUrl,
     open_application: existingApplication,
     metadata,
-}: PropertyPageProps) {
-    const { auth } = usePage<{ auth?: Auth }>().props;
+}: PublicPortalPropertyPageProps) {
+    const { auth } = usePage<PublicListingPageAuthProps>().props;
     const [applicationFormVisible, setApplicationFormVisible] = useState(false);
     const location = locationLabel(listing);
     const unitTypes = listing.unit_types ?? [];

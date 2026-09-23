@@ -16,10 +16,7 @@ final class TransitionApplication
 
     public function execute(User $actor, Application $application, TransitionApplicationData $data): ApplicationResult
     {
-        $next = ApplicationStatus::tryFrom($data->status);
-        if ($next === null) {
-            return ApplicationResult::error(__('That application status is invalid.'));
-        }
+        $next = $data->status;
 
         return DB::transaction(function () use ($actor, $application, $data, $next): ApplicationResult {
             $locked = Application::query()->lockForUpdate()->findOrFail($application->id);

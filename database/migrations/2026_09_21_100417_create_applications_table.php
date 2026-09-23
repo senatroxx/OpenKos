@@ -18,7 +18,10 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->foreignId('property_id')->constrained()->restrictOnDelete();
             $table->foreignId('unit_type_id')->nullable()->constrained()->restrictOnDelete();
-            $table->string('target_type', 32);
+            $table->enum('target_type', array_map(
+                static fn (ApplicationTargetType $target): string => $target->value,
+                ApplicationTargetType::cases(),
+            ));
             $table->string('status', 32)->default('new');
             $table->string('applicant_name');
             $table->string('applicant_email');
@@ -38,9 +41,15 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        if (Schema::getConnection()->getDriverName() === 'pgsql') {
-            DB::statement("alter table applications add constraint applications_target_type_check check (target_type in ('".ApplicationTargetType::WholeProperty->value."', '".ApplicationTargetType::UnitType->value."'))");
+        $driver = Schema::getConnection()->getDriverName();
+
+        if (in_array($driver, ['pgsql', 'mysql'], true)) {
             DB::statement("alter table applications add constraint applications_target_columns_check check ((target_type = '".ApplicationTargetType::WholeProperty->value."' and unit_type_id is null) or (target_type = '".ApplicationTargetType::UnitType->value."' and unit_type_id is not null))");
+        }
+
+        if ($driver === 'sqlite') {
+            DB::statement("create trigger applications_target_columns_insert before insert on applications begin select raise(abort, 'Invalid application target columns') where (new.target_type = '".ApplicationTargetType::WholeProperty->value."' and new.unit_type_id is not null) or (new.target_type = '".ApplicationTargetType::UnitType->value."' and new.unit_type_id is null); end");
+            DB::statement("create trigger applications_target_columns_update before update of target_type, unit_type_id on applications begin select raise(abort, 'Invalid application target columns') where (new.target_type = '".ApplicationTargetType::WholeProperty->value."' and new.unit_type_id is not null) or (new.target_type = '".ApplicationTargetType::UnitType->value."' and new.unit_type_id is null); end");
         }
     }
 
@@ -49,6 +58,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (Schema::getConnection()->getDriverName() === 'sqlite') {
+            DB::statement('drop trigger if exists applications_target_columns_insert');
+            DB::statement('drop trigger if exists applications_target_columns_update');
+        }
+
         Schema::dropIfExists('applications');
     }
 };
