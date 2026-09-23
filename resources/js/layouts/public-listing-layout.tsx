@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 import AppLogo from '@/components/features/app/app-logo';
+import { ThemeToggleButton } from '@/components/shared';
 import { t } from '@/lib/i18n';
 import { login, register } from '@/routes';
 import { dashboard as portalDashboard } from '@/routes/portal';
@@ -28,6 +29,7 @@ export default function PublicListingLayout({ children }: PropsWithChildren) {
                         className="flex items-center gap-1 text-sm font-medium"
                         aria-label="Public navigation"
                     >
+                        <ThemeToggleButton />
                         <Link
                             href={auth?.user ? portalDashboard() : login({ query: { redirect: 'portal' } })}
                             className="rounded-md px-3 py-2 transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

@@ -11,8 +11,9 @@ final readonly class SubmitApplicationData
         public string $propertySlug,
         public ?string $unitTypeSlug,
         public ?string $intendedMoveInDate,
-        public ?string $intendedMoveInTimeframe,
-        public ?string $applicantPhone,
+        public ?string $rentalBillingUnit,
+        public ?int $rentalBillingInterval,
+        public ?string $rentalCurrency,
         public ?string $applicantMessage,
     ) {}
 }

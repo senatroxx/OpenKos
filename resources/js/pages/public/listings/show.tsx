@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     ArrowRight,
     Bath,
@@ -8,21 +8,33 @@ import {
     MapPin,
     Ruler,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import PublicApplicationForm from '@/components/features/tenant-portal/public-application-form';
+import { PublicPricingOptions } from '@/components/shared';
 import PublicListingGallery from '@/components/shared/public-listing-gallery';
 import PublicListingHead from '@/components/shared/public-listing-head';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AmenityIcon } from '@/lib/amenity-icons';
-import { formatBillingPeriod, formatPrice } from '@/lib/formatters';
+import {
+    formatBillingOptionLabel,
+    formatBillingPeriod,
+    formatPrice,
+} from '@/lib/formatters';
 import { t } from '@/lib/i18n';
-import { create as applicationCreate } from '@/routes/applications';
+import { login } from '@/routes';
+import { show as applicationShow } from '@/routes/applications';
+import { edit as profileEdit } from '@/routes/portal/profile';
 import { index as publicIndex } from '@/routes/public/portal';
 import { show as unitTypeShow } from '@/routes/public/portal/unit-types';
 import type {
     PublicListing,
     PublicUnitType,
-    PublicWholePropertyOffering,
+    PublicApplicationFormTarget,
+    PublicPropertyPageProps,
+    PublicWholePropertyOfferingProps,
 } from '@/types';
+import type { Auth } from '@/types/auth';
 
 function locationLabel(listing: PublicListing): string {
     return [
@@ -32,27 +44,6 @@ function locationLabel(listing: PublicListing): string {
     ]
         .filter(Boolean)
         .join(', ');
-}
-
-const billingUnitLabels: Record<string, string> = {
-    day: 'Daily',
-    week: 'Weekly',
-    month: 'Monthly',
-    year: 'Yearly',
-};
-
-function ratePeriodLabel({
-    billing_interval: interval,
-    billing_unit: unit,
-}: {
-    billing_interval: number;
-    billing_unit: string;
-}): string {
-    if (interval === 1) {
-        return t(billingUnitLabels[unit] ?? unit);
-    }
-
-    return `${t('Every')} ${interval} ${t(`${unit}s`)}`;
 }
 
 function UnitTypeDetails({ unitType }: { unitType: PublicUnitType }) {
@@ -82,11 +73,12 @@ function UnitTypeDetails({ unitType }: { unitType: PublicUnitType }) {
 
 function WholePropertyOffering({
     offering,
-    propertyId,
-}: {
-    offering: PublicWholePropertyOffering;
-    propertyId: string;
-}) {
+    existingApplication,
+    applyHref,
+    applyLabel,
+    onApply,
+    applicationForm,
+}: PublicWholePropertyOfferingProps) {
     return (
         <aside
             aria-labelledby="whole-property-heading"
@@ -119,7 +111,10 @@ function WholePropertyOffering({
                         )}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {ratePeriodLabel(offering.starting_price)}
+                        {formatBillingOptionLabel(
+                            offering.starting_price.billing_interval,
+                            offering.starting_price.billing_unit,
+                        )}
                     </p>
                 </div>
 
@@ -127,21 +122,7 @@ function WholePropertyOffering({
                     <h3 className="text-sm font-semibold">
                         {t('Pricing options')}
                     </h3>
-                    <dl className="divide-y divide-border/70 border-y border-border/70">
-                        {offering.rates.map((price) => (
-                            <div
-                                key={`${price.currency}-${price.billing_unit}-${price.billing_interval}`}
-                                className="flex items-center justify-between gap-4 py-3"
-                            >
-                                <dt className="text-sm text-muted-foreground">
-                                    {ratePeriodLabel(price)}
-                                </dt>
-                                <dd className="text-right text-sm font-semibold tabular-nums">
-                                    {formatPrice(price.amount, price.currency)}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
+                    <PublicPricingOptions prices={offering.rates} />
                 </div>
 
                 <div className="space-y-3 border-t pt-4">
@@ -165,17 +146,28 @@ function WholePropertyOffering({
                         )}
                     </p>
                 </div>
-                <Link
-                    href={applicationCreate({
-                        query: {
-                            target_type: 'whole_property',
-                            property_slug: propertyId,
-                        },
-                    })}
-                    className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                    {t('Apply for this property')}
-                </Link>
+                {existingApplication ? (
+                    <Link
+                        href={applicationShow(existingApplication.id)}
+                        className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        {t('View application')}
+                    </Link>
+                ) : (
+                    <Link
+                        href={applyHref}
+                        onClick={(event) => {
+                            if (applyHref === '#application-form') {
+                                event.preventDefault();
+                                onApply();
+                            }
+                        }}
+                        className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        {applyLabel}
+                    </Link>
+                )}
+                {applicationForm}
             </div>
         </aside>
     );
@@ -184,14 +176,29 @@ function WholePropertyOffering({
 export default function Show({
     listing,
     canonicalUrl,
-}: {
-    listing: PublicListing;
-    canonicalUrl: string;
-}) {
+    open_application: existingApplication,
+}: PublicPropertyPageProps) {
+    const { auth } = usePage<{ auth?: Auth }>().props;
+    const [applicationFormVisible, setApplicationFormVisible] = useState(false);
     const location = locationLabel(listing);
     const unitTypes = listing.unit_types ?? [];
     const inventory = listing.inventory;
     const wholePropertyOffering = listing.whole_property_offering;
+    const applicationTarget: PublicApplicationFormTarget = {
+        target_type: 'whole_property',
+        property_slug: listing.slug,
+        property_name: listing.name,
+        unit_type_slug: null,
+        unit_type_name: null,
+        rental_options: wholePropertyOffering?.rates ?? [],
+    };
+    const applicationReturnUrl = `${canonicalUrl}#application-form`;
+
+    useEffect(() => {
+        if (applicationFormVisible) {
+            document.getElementById('application-form')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [applicationFormVisible]);
 
     return (
         <>
@@ -263,7 +270,7 @@ export default function Show({
                         {listing.amenities.length > 0 && (
                             <section
                                 aria-labelledby="amenities-heading"
-                                className="space-y-4"
+                                className="space-y-4 rounded-xl border bg-card p-5 sm:p-6"
                             >
                                 <h2
                                     id="amenities-heading"
@@ -447,7 +454,22 @@ export default function Show({
                     {wholePropertyOffering && listing.rental_mode !== 'unit' ? (
                         <WholePropertyOffering
                             offering={wholePropertyOffering}
-                            propertyId={listing.slug}
+                            existingApplication={existingApplication}
+                            applyHref={!auth?.user
+                                ? login.url({ query: { redirect: applicationReturnUrl } })
+                                : auth.user.phone
+                                  ? '#application-form'
+                                  : profileEdit.url({ query: { return: applicationReturnUrl } })}
+                            applyLabel={auth?.user?.phone ? t('Apply for this property') : t('Complete your profile to apply')}
+                            onApply={() => setApplicationFormVisible(true)}
+                            applicationForm={
+                                auth?.user && applicationFormVisible ? (
+                                    <PublicApplicationForm
+                                        target={applicationTarget}
+                                        existingApplication={existingApplication}
+                                    />
+                                ) : undefined
+                            }
                         />
                     ) : (
                         <aside className="h-fit rounded-2xl border bg-card p-5 lg:sticky lg:top-6">

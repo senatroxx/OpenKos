@@ -18,6 +18,7 @@ class Application extends Model
         'user_id', 'property_id', 'unit_type_id', 'target_type', 'status',
         'applicant_name', 'applicant_email', 'applicant_phone',
         'intended_move_in_date', 'intended_move_in_timeframe', 'applicant_message',
+        'rental_billing_unit', 'rental_billing_interval', 'rental_currency', 'rental_amount',
         'operator_notes', 'applicant_feedback', 'open_application_key',
         'reviewed_by', 'reviewed_at', 'converted_tenant_id', 'converted_at',
     ];

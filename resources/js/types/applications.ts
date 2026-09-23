@@ -15,6 +15,10 @@ export type ApplicantApplication = {
     unit_type: { id: number; name: string; public_slug: string } | null;
     intended_move_in_date: string | null;
     intended_move_in_timeframe: string | null;
+    rental_billing_unit?: string | null;
+    rental_billing_interval?: number | null;
+    rental_currency?: string | null;
+    rental_amount?: string | null;
     applicant_message: string | null;
     applicant_feedback: string | null;
     converted_at: string | null;

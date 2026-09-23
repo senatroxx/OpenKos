@@ -1,7 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { DeleteUser } from '@/components/features';
-import { InputError } from '@/components/shared';
+import { InputError, PhoneInput } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -13,7 +12,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { t } from '@/lib/i18n';
-import { edit } from '@/routes/profile';
+import { update as portalProfileUpdate } from '@/routes/portal/profile';
+import { edit, update as profileUpdate } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { Auth } from '@/types';
 
@@ -24,22 +24,35 @@ type PageProps = {
 export default function Profile({
     mustVerifyEmail,
     status,
+    portalProfile = false,
+    profileReturn,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
+    portalProfile?: boolean;
+    profileReturn?: string | null;
 }) {
     const { auth } = usePage<PageProps>().props;
 
     const { data, setData, submit, processing, errors } = useForm({
         name: auth.user.name,
         email: auth.user.email,
+        phone: auth.user.phone ?? '',
+        id_card_number: auth.user.id_card_number ?? '',
+        emergency_contact_name: auth.user.emergency_contact_name ?? '',
+        emergency_contact_phone: auth.user.emergency_contact_phone ?? '',
     });
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        submit(ProfileController.update(), {
+        submit(
+            portalProfile
+                ? portalProfileUpdate({ query: profileReturn ? { return: profileReturn } : {} })
+                : profileUpdate(),
+            {
             preserveScroll: true,
-        });
+            },
+        );
     }
 
     return (
@@ -53,7 +66,7 @@ export default function Profile({
                     <CardHeader>
                         <CardTitle>{t('Profile')}</CardTitle>
                         <CardDescription>
-                            {t('Update your name and email address.')}
+                            {t('Update your name, email address, and phone number.')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -80,6 +93,72 @@ export default function Profile({
                             </div>
 
                             <div className="grid gap-2">
+                                <Label htmlFor="phone">{t('Phone')}</Label>
+                                <PhoneInput
+                                    value={data.phone}
+                                    onChange={(value) => setData('phone', value)}
+                                    placeholder={t('Phone number')}
+                                />
+                                <InputError className="mt-2" message={errors.phone} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="id_card_number">
+                                    {t('ID Card Number (KTP)')}
+                                </Label>
+                                <Input
+                                    id="id_card_number"
+                                    value={data.id_card_number}
+                                    onChange={(e) =>
+                                        setData('id_card_number', e.target.value)
+                                    }
+                                    placeholder={t('ID card number')}
+                                />
+                                <InputError
+                                    className="mt-2"
+                                    message={errors.id_card_number}
+                                />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="emergency_contact_name">
+                                    {t('Emergency Contact Name')}
+                                </Label>
+                                <Input
+                                    id="emergency_contact_name"
+                                    value={data.emergency_contact_name}
+                                    onChange={(e) =>
+                                        setData(
+                                            'emergency_contact_name',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder={t('Emergency contact name')}
+                                />
+                                <InputError
+                                    className="mt-2"
+                                    message={errors.emergency_contact_name}
+                                />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="emergency_contact_phone">
+                                    {t('Emergency Contact Phone')}
+                                </Label>
+                                <PhoneInput
+                                    value={data.emergency_contact_phone}
+                                    onChange={(value) =>
+                                        setData('emergency_contact_phone', value)
+                                    }
+                                    placeholder={t('Phone number')}
+                                />
+                                <InputError
+                                    className="mt-2"
+                                    message={errors.emergency_contact_phone}
+                                />
+                            </div>
+
+                            <div className="grid gap-2">
                                 <Label htmlFor="email">
                                     {t('Email address')}
                                 </Label>
@@ -92,6 +171,7 @@ export default function Profile({
                                     onChange={(e) =>
                                         setData('email', e.target.value)
                                     }
+                                    readOnly={portalProfile}
                                     required
                                     autoComplete="username"
                                     placeholder={t('Email address')}

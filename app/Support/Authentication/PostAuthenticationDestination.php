@@ -15,7 +15,13 @@ final class PostAuthenticationDestination
             return $intended;
         }
 
-        if (in_array($request->string('redirect')->value(), ['portal', 'account'], true)) {
+        $redirect = $request->string('redirect')->value();
+
+        if ($this->isAllowedPublicRedirect($redirect)) {
+            return $redirect;
+        }
+
+        if (in_array($redirect, ['portal', 'account'], true)) {
             return route('portal.dashboard', absolute: false);
         }
 
@@ -46,6 +52,16 @@ final class PostAuthenticationDestination
             || str_starts_with($path, '/portal/billing')
             || str_starts_with($path, '/portal/maintenance')
             || str_starts_with($path, '/portal/notifications');
+    }
+
+    private function isAllowedPublicRedirect(string $redirect): bool
+    {
+        $path = parse_url($redirect, PHP_URL_PATH);
+
+        return str_starts_with($redirect, '/')
+            && ! str_starts_with($redirect, '//')
+            && is_string($path)
+            && str_starts_with($path, '/listings/');
     }
 
     private function canUseStaffDashboard(User $user): bool

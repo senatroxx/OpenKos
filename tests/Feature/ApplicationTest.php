@@ -22,14 +22,18 @@ function publicWholeProperty(): Property
 }
 
 test('a verified user can submit one application for a published whole property', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['phone' => '+628123456789']);
     $property = publicWholeProperty();
+    $rate = PropertyRate::query()->where('property_id', $property->id)->firstOrFail();
 
     $this->actingAs($user)->post(route('applications.store'), [
         'target_type' => 'whole_property',
         'property_slug' => $property->public_slug,
+        'rental_billing_unit' => $rate->billing_unit->value,
+        'rental_billing_interval' => $rate->billing_interval,
+        'rental_currency' => $rate->currency,
         'applicant_message' => 'I would like to learn more.',
-    ])->assertRedirect(route('applications.index'));
+    ])->assertRedirect(route('applications.show', Application::first()));
 
     expect(Application::query()->count())->toBe(1)
         ->and(Application::first()->target_type)->toBe(ApplicationTargetType::WholeProperty)
@@ -37,7 +41,7 @@ test('a verified user can submit one application for a published whole property'
 });
 
 test('application target type accepts only the backed offering values', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['phone' => '+628123456789']);
 
     $this->actingAs($user)->post(route('applications.store'), [
         'target_type' => 'unknown',
@@ -49,10 +53,55 @@ test('application target type accepts only the backed offering values', function
         ->and(ApplicationTargetType::UnitType->value)->toBe('unit_type');
 });
 
-test('duplicate open applications are rejected but terminal applications allow reapplication', function () {
+test('a prospective renter can complete their profile without becoming a tenant', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('portal.profile.edit'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('portalProfile', true));
+
+    $this->actingAs($user)
+        ->patch(route('portal.profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => '+628123456789',
+        ])
+        ->assertRedirect();
+
+    expect($user->refresh()->phone)->toBe('+628123456789')
+        ->and(Tenant::query()->where('user_id', $user->id)->exists())->toBeFalse();
+});
+
+test('incomplete renter profiles cannot submit applications', function () {
     $user = User::factory()->create();
     $property = publicWholeProperty();
-    $payload = ['target_type' => 'whole_property', 'property_slug' => $property->public_slug];
+    $rate = PropertyRate::query()->where('property_id', $property->id)->firstOrFail();
+
+    $this->actingAs($user)
+        ->post(route('applications.store'), [
+            'target_type' => 'whole_property',
+            'property_slug' => $property->public_slug,
+            'rental_billing_unit' => $rate->billing_unit->value,
+            'rental_billing_interval' => $rate->billing_interval,
+            'rental_currency' => $rate->currency,
+        ])
+        ->assertSessionHasErrors('profile');
+
+    expect(Application::query()->count())->toBe(0);
+});
+
+test('duplicate open applications are rejected but terminal applications allow reapplication', function () {
+    $user = User::factory()->create(['phone' => '+628123456789']);
+    $property = publicWholeProperty();
+    $rate = PropertyRate::query()->where('property_id', $property->id)->firstOrFail();
+    $payload = [
+        'target_type' => 'whole_property',
+        'property_slug' => $property->public_slug,
+        'rental_billing_unit' => $rate->billing_unit->value,
+        'rental_billing_interval' => $rate->billing_interval,
+        'rental_currency' => $rate->currency,
+    ];
 
     $this->actingAs($user)->post(route('applications.store'), $payload)->assertRedirect();
     $this->actingAs($user)->post(route('applications.store'), $payload)->assertSessionHasErrors('application');

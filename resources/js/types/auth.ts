@@ -2,6 +2,10 @@ export type User = {
     id: number;
     name: string;
     email: string;
+    phone: string | null;
+    id_card_number: string | null;
+    emergency_contact_name: string | null;
+    emergency_contact_phone: string | null;
     avatar?: string;
     email_verified_at: string | null;
     is_active: boolean;

@@ -37,8 +37,11 @@ final class ConvertApplicationToTenant
 
             $tenant ??= Tenant::create([
                 'user_id' => $user->id,
-                'name' => $lockedApplication->applicant_name,
-                'phone' => $lockedApplication->applicant_phone,
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'id_card_number' => $user->id_card_number,
+                'emergency_contact_name' => $user->emergency_contact_name,
+                'emergency_contact_phone' => $user->emergency_contact_phone,
                 'is_active' => true,
             ]);
 

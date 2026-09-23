@@ -34,7 +34,7 @@ final class ApplicationController extends Controller
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(Request $request): Response|RedirectResponse
     {
         $this->authorize('create', Application::class);
         $targetType = ApplicationTargetType::tryFrom($request->string('target_type')->toString());
@@ -52,15 +52,12 @@ final class ApplicationController extends Controller
             404,
         );
 
-        return Inertia::render('applications/create', [
-            'target' => [
-                'target_type' => $targetType->value,
-                'property_slug' => $property->public_slug,
-                'property_name' => $property->name,
-                'unit_type_slug' => $unitType?->public_slug,
-                'unit_type_name' => $unitType?->name,
-            ],
-        ]);
+        return $unitType
+            ? to_route('public.portal.unit-types.show', [
+                'property' => $property->public_slug,
+                'unitType' => $unitType->public_slug,
+            ])
+            : to_route('public.portal.show', ['property' => $property->public_slug]);
     }
 
     public function show(Request $request, Application $application): Response
@@ -76,12 +73,19 @@ final class ApplicationController extends Controller
     public function store(StoreApplicationRequest $request, SubmitApplication $action): RedirectResponse
     {
         $this->authorize('create', Application::class);
+
+        if (! $request->user()->hasCompleteRenterProfile()) {
+            return back()->withErrors(['profile' => __('Complete your profile before applying.')]);
+        }
+
         $result = $action->execute($request->user(), $request->toData());
         if ($result->failed()) {
             return back()->withErrors(['application' => $result->error]);
         }
 
-        return to_route('applications.index')->with('status', __('Application submitted.'));
+        $application = $result->value;
+
+        return to_route('applications.show', $application)->with('status', __('Application submitted.'));
     }
 
     public function transition(TransitionApplicationRequest $request, Application $application, TransitionApplication $action): RedirectResponse
@@ -119,6 +123,10 @@ final class ApplicationController extends Controller
             'unit_type' => $application->unitType?->only(['id', 'name', 'public_slug']),
             'intended_move_in_date' => $application->intended_move_in_date?->toDateString(),
             'intended_move_in_timeframe' => $application->intended_move_in_timeframe,
+            'rental_billing_unit' => $application->rental_billing_unit,
+            'rental_billing_interval' => $application->rental_billing_interval,
+            'rental_currency' => $application->rental_currency,
+            'rental_amount' => $application->rental_amount,
             'applicant_message' => $application->applicant_message,
             'applicant_feedback' => $application->applicant_feedback,
             'converted_at' => $application->converted_at?->toIso8601String(),

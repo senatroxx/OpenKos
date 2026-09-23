@@ -30,8 +30,9 @@ class StoreApplicationRequest extends FormRequest
             'property_slug' => ['required', 'string', 'max:255'],
             'unit_type_slug' => ['nullable', 'string', 'max:255'],
             'intended_move_in_date' => ['nullable', 'date'],
-            'intended_move_in_timeframe' => ['nullable', 'string', 'max:100'],
-            'applicant_phone' => ['nullable', 'string', 'max:30'],
+            'rental_billing_unit' => ['required', 'string', 'in:day,week,month,year'],
+            'rental_billing_interval' => ['required', 'integer', 'min:1'],
+            'rental_currency' => ['required', 'string', 'max:3'],
             'applicant_message' => ['nullable', 'string', 'max:5000'],
         ];
     }
@@ -43,8 +44,9 @@ class StoreApplicationRequest extends FormRequest
             $this->string('property_slug')->toString(),
             $this->input('unit_type_slug'),
             $this->input('intended_move_in_date'),
-            $this->input('intended_move_in_timeframe'),
-            $this->input('applicant_phone'),
+            $this->input('rental_billing_unit'),
+            $this->integer('rental_billing_interval'),
+            $this->input('rental_currency'),
             $this->input('applicant_message'),
         );
     }

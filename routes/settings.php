@@ -23,6 +23,8 @@ Route::get('branding/{asset}', BrandingAssetController::class)
     ->name('branding.asset');
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('portal/profile', [ProfileController::class, 'edit'])->name('portal.profile.edit');
+    Route::patch('portal/profile', [ProfileController::class, 'update'])->name('portal.profile.update');
     Route::redirect('settings', '/settings/profile');
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import AppLogo from '@/components/features/app/app-logo';
 import { UserInfo } from '@/components/features/app/user-info';
 import { UserMenuContent } from '@/components/features/app/user-menu-content';
+import { ThemeToggleButton } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -26,6 +27,7 @@ import { index as billing } from '@/routes/portal/billing';
 import { index as leases } from '@/routes/portal/lease';
 import { index as maintenance } from '@/routes/portal/maintenance-tickets';
 import { index as notifications } from '@/routes/portal/notifications';
+import { edit as profile } from '@/routes/portal/profile';
 import type { Auth } from '@/types/auth';
 import type { AppLayoutProps } from '@/types/ui';
 
@@ -121,7 +123,10 @@ export default function TenantPortalLayout({ children }: AppLayoutProps) {
                                             className="w-56"
                                             align="start"
                                         >
-                                            <UserMenuContent user={auth.user} />
+                                            <UserMenuContent
+                                                user={auth.user}
+                                                profileHref={profile.url()}
+                                            />
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
@@ -133,31 +138,37 @@ export default function TenantPortalLayout({ children }: AppLayoutProps) {
                         <AppLogo />
                     </Link>
 
-                    {canUseStaffDashboard && (
-                        <Link
-                            href={staffDashboard()}
-                            className="ml-auto hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:inline-flex"
-                        >
-                            Staff Dashboard
-                        </Link>
-                    )}
-                    {auth.user && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    className={`${canUseStaffDashboard ? '' : 'ml-auto '}hidden h-10 max-w-64 gap-2 px-2 md:flex`}
-                                    aria-label="Open account menu"
-                                >
-                                    <UserInfo user={auth.user} />
-                                    <ChevronsUpDown className="size-4 text-muted-foreground" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end">
-                                <UserMenuContent user={auth.user} />
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+                    <div className="ml-auto flex items-center gap-2">
+                        {canUseStaffDashboard && (
+                            <Link
+                                href={staffDashboard()}
+                                className="hidden rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground sm:inline-flex"
+                            >
+                                Staff Dashboard
+                            </Link>
+                        )}
+                        <ThemeToggleButton />
+                        {auth.user && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        className="hidden h-10 max-w-64 gap-2 px-2 md:flex"
+                                        aria-label="Open account menu"
+                                    >
+                                        <UserInfo user={auth.user} />
+                                        <ChevronsUpDown className="size-4 text-muted-foreground" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56" align="end">
+                                    <UserMenuContent
+                                        user={auth.user}
+                                        profileHref={profile.url()}
+                                    />
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
                 </div>
             </header>
 

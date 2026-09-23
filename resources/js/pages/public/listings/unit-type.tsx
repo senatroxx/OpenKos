@@ -1,19 +1,25 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { ArrowLeft, Check } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import PublicApplicationForm from '@/components/features/tenant-portal/public-application-form';
+import { PublicPricingOptions } from '@/components/shared';
 import PublicListingGallery from '@/components/shared/public-listing-gallery';
 import PublicListingHead from '@/components/shared/public-listing-head';
 import { AmenityIcon } from '@/lib/amenity-icons';
-import { formatPrice } from '@/lib/formatters';
+import { formatBillingOptionLabel, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
-import { create as applicationCreate } from '@/routes/applications';
+import { login } from '@/routes';
+import { show as applicationShow } from '@/routes/applications';
+import { edit as profileEdit } from '@/routes/portal/profile';
 import { show as propertyShow } from '@/routes/public/portal';
 import type {
     PublicPricingOptionsProps,
     PublicRentalSummaryProps,
-    PublicStartingPrice,
+    PublicApplicationFormTarget,
     PublicUnitTypeAttributesProps,
     PublicUnitTypePageProps,
 } from '@/types';
+import type { Auth } from '@/types/auth';
 
 function displayNumber(value: number | string): string {
     return String(Number(value));
@@ -29,23 +35,6 @@ function bathroomLabel(value: string): string {
     return `${displayNumber(value)} ${count === 1 ? t('bathroom') : t('bathrooms')}`;
 }
 
-function billingLabel(price: PublicStartingPrice): string {
-    return price.billing_label.replace(/^\/\s*/, `${t('per')} `);
-}
-
-function priceGroups(
-    prices: PublicStartingPrice[],
-): Record<string, PublicStartingPrice[]> {
-    return prices.reduce<Record<string, PublicStartingPrice[]>>(
-        (groups, price) => {
-            (groups[price.currency] ??= []).push(price);
-
-            return groups;
-        },
-        {},
-    );
-}
-
 function UnitTypeAttributes({ unitType }: PublicUnitTypeAttributesProps) {
     const attributes = [
         unitType.bedrooms !== null ? bedroomLabel(unitType.bedrooms) : null,
@@ -57,10 +46,12 @@ function UnitTypeAttributes({ unitType }: PublicUnitTypeAttributesProps) {
     ].filter(Boolean);
 
     return (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            {attributes.map((attribute, index) => (
-                <span key={attribute} className="capitalize">
-                    {index > 0 && <span className="mr-2">·</span>}
+        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+            {attributes.map((attribute) => (
+                <span
+                    key={attribute}
+                    className="rounded-full border bg-muted/40 px-3 py-1 capitalize"
+                >
                     {attribute}
                 </span>
             ))}
@@ -69,45 +60,17 @@ function UnitTypeAttributes({ unitType }: PublicUnitTypeAttributesProps) {
 }
 
 function PricingOptions({ prices }: PublicPricingOptionsProps) {
-    const groups = priceGroups(prices);
-
-    if (prices.length === 0) {
-        return (
-            <p className="text-sm text-muted-foreground">
-                {t('Pricing is not available for this unit type yet.')}
-            </p>
-        );
-    }
-
-    return (
-        <div className="divide-y divide-border/70 border-y border-border/70">
-            {Object.entries(groups).map(([currency, currencyPrices]) => (
-                <div key={currency} className="py-4 first:pt-0 last:pb-0">
-                    <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                        {currency}
-                    </p>
-                    <dl className="space-y-2">
-                        {currencyPrices.map((price) => (
-                            <div
-                                key={`${price.currency}-${price.billing_unit}-${price.billing_interval}`}
-                                className="flex items-baseline justify-between gap-4 text-sm"
-                            >
-                                <dt className="text-muted-foreground">
-                                    {billingLabel(price)}
-                                </dt>
-                                <dd className="text-right font-semibold tabular-nums">
-                                    {formatPrice(price.amount, price.currency)}
-                                </dd>
-                            </div>
-                        ))}
-                    </dl>
-                </div>
-            ))}
-        </div>
-    );
+    return <PublicPricingOptions prices={prices} />;
 }
 
-function RentalSummary({ unitType, propertySlug }: PublicRentalSummaryProps) {
+function RentalSummary({
+    unitType,
+    existingApplication,
+    applyHref,
+    applyLabel,
+    onApply,
+    applicationForm,
+}: PublicRentalSummaryProps) {
     const startingPrice = unitType.starting_prices[0];
     const availableUnits = unitType.inventory.available_units;
     const hasAvailability = availableUnits > 0;
@@ -126,7 +89,10 @@ function RentalSummary({ unitType, propertySlug }: PublicRentalSummaryProps) {
                                 )}
                             </p>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                {billingLabel(startingPrice)}
+                                {formatBillingOptionLabel(
+                                    startingPrice.billing_interval,
+                                    startingPrice.billing_unit,
+                                )}
                             </p>
                         </>
                     ) : (
@@ -155,18 +121,28 @@ function RentalSummary({ unitType, propertySlug }: PublicRentalSummaryProps) {
                     </p>
                 </div>
 
-                <Link
-                    href={applicationCreate({
-                        query: {
-                            target_type: 'unit_type',
-                            property_slug: propertySlug,
-                            unit_type_slug: unitType.slug,
-                        },
-                    })}
-                    className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                    {t('Apply for this unit type')}
-                </Link>
+                {existingApplication ? (
+                    <Link
+                        href={applicationShow(existingApplication.id)}
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        {t('View application')}
+                    </Link>
+                ) : applyHref ? (
+                    <Link
+                        href={applyHref}
+                        onClick={(event) => {
+                            if (applyHref.includes('#application-form')) {
+                                event.preventDefault();
+                                onApply();
+                            }
+                        }}
+                        className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        {applyLabel}
+                    </Link>
+                ) : null}
+                {applicationForm}
             </div>
         </aside>
     );
@@ -175,13 +151,31 @@ function RentalSummary({ unitType, propertySlug }: PublicRentalSummaryProps) {
 export default function UnitType({
     listing,
     canonicalUrl,
+    open_application: existingApplication,
 }: PublicUnitTypePageProps) {
+    const { auth } = usePage<{ auth?: Auth }>().props;
+    const [applicationFormVisible, setApplicationFormVisible] = useState(false);
     const unitType = listing.unit_type;
     const title =
         unitType.bedrooms !== null &&
         !/^\d+(?:\.\d+)?\s*BD\b/i.test(unitType.name)
             ? `${displayNumber(unitType.bedrooms)}BD ${unitType.name}`
             : unitType.name;
+    const applicationTarget: PublicApplicationFormTarget = {
+        target_type: 'unit_type',
+        property_slug: listing.property.slug,
+        property_name: listing.property.name,
+        unit_type_slug: unitType.slug,
+        unit_type_name: unitType.name,
+        rental_options: unitType.starting_prices,
+    };
+    const applicationReturnUrl = `${canonicalUrl}#application-form`;
+
+    useEffect(() => {
+        if (applicationFormVisible) {
+            document.getElementById('application-form')?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [applicationFormVisible]);
 
     return (
         <>
@@ -192,7 +186,7 @@ export default function UnitType({
                 imageUrl={unitType.gallery[0]?.url}
             />
 
-            <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+            <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                 <nav aria-label="Breadcrumb" className="text-sm">
                     <Link
                         href={propertyShow({ property: listing.property.slug })}
@@ -203,25 +197,25 @@ export default function UnitType({
                     </Link>
                 </nav>
 
-                <header className="space-y-3">
+                <header>
                     <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">
                         {title}
                     </h1>
-                    <UnitTypeAttributes unitType={unitType} />
                 </header>
 
                 <PublicListingGallery items={unitType.gallery} />
+                <UnitTypeAttributes unitType={unitType} />
 
-                <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14">
-                    <div className="min-w-0 space-y-10">
+                <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-6">
+                    <div className="flex min-w-0 flex-col gap-6">
                         {unitType.description && (
                             <section
                                 aria-labelledby="about-heading"
-                                className="space-y-3"
+                                className="space-y-2"
                             >
                                 <h2
                                     id="about-heading"
-                                    className="text-2xl font-semibold"
+                                    className="text-xl font-semibold"
                                 >
                                     {t('About this unit type')}
                                 </h2>
@@ -234,19 +228,19 @@ export default function UnitType({
                         {unitType.amenities.length > 0 && (
                             <section
                                 aria-labelledby="amenities-heading"
-                                className="space-y-4"
+                                className="space-y-3 rounded-xl border bg-card p-4 sm:p-5"
                             >
                                 <h2
                                     id="amenities-heading"
-                                    className="text-2xl font-semibold"
+                                    className="text-xl font-semibold"
                                 >
                                     {t('Features and amenities')}
                                 </h2>
-                                <ul className="grid gap-x-8 gap-y-1 sm:grid-cols-2">
+                                <ul className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
                                     {unitType.amenities.map((amenity) => (
                                         <li
                                             key={amenity.name}
-                                            className="flex items-center gap-3 border-b border-border/60 py-3 text-sm"
+                                            className="flex items-center gap-3 border-b border-border/60 py-2.5 text-sm"
                                         >
                                             <AmenityIcon
                                                 icon={amenity.icon}
@@ -262,11 +256,11 @@ export default function UnitType({
 
                         <section
                             aria-labelledby="pricing-heading"
-                            className="space-y-4"
+                            className="space-y-3 rounded-xl border bg-card p-4 sm:p-5"
                         >
                             <h2
                                 id="pricing-heading"
-                                className="text-2xl font-semibold"
+                                className="text-xl font-semibold"
                             >
                                 {t('Pricing options')}
                             </h2>
@@ -276,7 +270,22 @@ export default function UnitType({
 
                     <RentalSummary
                         unitType={unitType}
-                        propertySlug={listing.property.slug}
+                        existingApplication={existingApplication}
+                        applyHref={!auth?.user
+                            ? login.url({ query: { redirect: applicationReturnUrl } })
+                            : auth.user.phone
+                              ? '#application-form'
+                              : profileEdit.url({ query: { return: applicationReturnUrl } })}
+                        applyLabel={auth?.user?.phone ? t('Apply for this unit type') : t('Complete your profile to apply')}
+                        onApply={() => setApplicationFormVisible(true)}
+                        applicationForm={
+                            auth?.user && applicationFormVisible ? (
+                                <PublicApplicationForm
+                                    target={applicationTarget}
+                                    existingApplication={existingApplication}
+                                />
+                            ) : undefined
+                        }
                     />
                 </div>
             </div>

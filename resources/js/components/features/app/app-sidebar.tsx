@@ -29,7 +29,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { t } from '@/lib/i18n';
 import { platformPageNavItems } from '@/lib/platform';
 import { dashboard } from '@/routes';
 import {
