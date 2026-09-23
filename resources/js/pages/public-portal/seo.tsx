@@ -33,7 +33,7 @@ export default function Seo({
         setImageError(undefined);
 
         router.post(
-            publicPortal.seo.socialImage.update.url(),
+            publicPortal.seo.socialImage.update.url({ asset: 'og-image' }),
             new FormData(event.currentTarget),
             {
                 forceFormData: true,

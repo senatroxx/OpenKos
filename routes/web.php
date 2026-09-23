@@ -113,7 +113,8 @@ Route::middleware(['auth', 'verified', 'role:owner'])
         Route::redirect('/', '/public-portal/seo')->name('overview');
         Route::get('seo', [PublicPortalController::class, 'edit'])->name('seo');
         Route::patch('seo', [PublicPortalController::class, 'update'])->name('seo.update');
-        Route::post('seo/social-image', [PublicPortalController::class, 'updateSocialImage'])
+        Route::post('seo/social-image/{asset}', [PublicPortalController::class, 'updateSocialImage'])
+            ->where('asset', 'og-image')
             ->name('seo.social-image.update');
         Route::delete('seo/social-image', [PublicPortalController::class, 'removeSocialImage'])
             ->name('seo.social-image.destroy');

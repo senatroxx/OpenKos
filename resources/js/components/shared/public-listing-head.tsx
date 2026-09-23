@@ -40,8 +40,12 @@ export default function PublicListingHead({
                 name="twitter:card"
                 content={metadata.twitter.card}
             />
-            <meta head-key="og:image" property="og:image" content={metadata.openGraph.image ?? ''} />
-            <meta head-key="twitter:image" name="twitter:image" content={metadata.twitter.image ?? ''} />
+            {metadata.openGraph.image && (
+                <>
+                    <meta head-key="og:image" property="og:image" content={metadata.openGraph.image} />
+                    <meta head-key="twitter:image" name="twitter:image" content={metadata.twitter.image ?? undefined} />
+                </>
+            )}
         </Head>
     );
 }
