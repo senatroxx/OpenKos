@@ -65,6 +65,76 @@ it('falls back to OpenKOS when the stored site name is blank', function () {
         ->assertInertia(fn (Assert $page) => $page->where('metadata.siteName', 'OpenKOS'));
 });
 
+it('exposes stored overrides separately from resolved settings previews', function () {
+    $owner = User::factory()->owner()->create();
+    Setting::set('site_name', 'General Name');
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.public_site_name', '')
+            ->where('settings.public_homepage_title', '')
+            ->where('settings.public_homepage_description', '')
+            ->where('resolved.siteName', 'General Name')
+            ->where('resolved.homepageTitle', 'Find your next place')
+            ->where('resolved.homepageDescription', 'Discover available properties and rental options that fit your needs.'));
+
+    Setting::set('site_name', 'Changed General Name');
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertInertia(fn (Assert $page) => $page->where('resolved.siteName', 'Changed General Name'));
+
+    Setting::set('public_homepage_title', 'Custom homepage title');
+    Setting::set('public_homepage_description', 'Custom homepage description');
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.public_homepage_title', 'Custom homepage title')
+            ->where('settings.public_homepage_description', 'Custom homepage description')
+            ->where('resolved.homepageTitle', 'Custom homepage title')
+            ->where('resolved.homepageDescription', 'Custom homepage description'));
+
+    $this->actingAs($owner)
+        ->patch(route('settings.public-portal.update'), [
+            'public_homepage_title' => '',
+            'public_homepage_description' => '',
+        ])
+        ->assertRedirect();
+
+    expect(Setting::get('public_homepage_title'))->toBe('')
+        ->and(Setting::get('public_homepage_description'))->toBe('');
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.public_homepage_title', '')
+            ->where('settings.public_homepage_description', '')
+            ->where('resolved.homepageTitle', 'Find your next place')
+            ->where('resolved.homepageDescription', 'Discover available properties and rental options that fit your needs.'));
+
+    Setting::set('public_site_name', 'Explicit Public Name');
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.public_site_name', 'Explicit Public Name')
+            ->where('resolved.siteName', 'Explicit Public Name'));
+
+    $this->actingAs($owner)
+        ->patch(route('settings.public-portal.update'), ['public_site_name' => ''])
+        ->assertRedirect();
+
+    expect(Setting::get('public_site_name'))->toBe('');
+
+    $this->actingAs($owner)
+        ->get(route('settings.public-portal.edit'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('settings.public_site_name', '')
+            ->where('resolved.siteName', 'Changed General Name'));
+});
+
 it('keeps entity metadata separate from homepage metadata', function () {
     Setting::set('site_name', 'Installation Name');
     Setting::set('public_site_name', 'Public Name');

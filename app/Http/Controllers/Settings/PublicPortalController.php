@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateBrandingRequest;
 use App\Http\Requests\Settings\UpdatePublicPortalRequest;
 use App\Models\Setting;
+use App\Services\PublicPortal\PublicPortalMetadataResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -21,11 +22,13 @@ final class PublicPortalController extends Controller
     public function __construct(
         private UpdateSettings $updateSettings,
         private UpdateBranding $updateBranding,
+        private PublicPortalMetadataResolver $metadata,
     ) {}
 
     public function edit(): Response
     {
         $hasSocialImage = $this->hasSocialImage();
+        $homepageMetadata = $this->metadata->homepage(route('public.portal.index', absolute: false));
 
         return Inertia::render('settings/public-portal', [
             'settings' => Setting::some([
@@ -33,6 +36,11 @@ final class PublicPortalController extends Controller
                 'public_homepage_title',
                 'public_homepage_description',
             ]),
+            'resolved' => [
+                'siteName' => $homepageMetadata->siteName,
+                'homepageTitle' => $homepageMetadata->title,
+                'homepageDescription' => $homepageMetadata->description,
+            ],
             'socialImageUrl' => $hasSocialImage ? $this->socialImageUrl() : null,
             'hasSocialImage' => $hasSocialImage,
         ]);

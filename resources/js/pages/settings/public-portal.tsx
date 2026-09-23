@@ -20,6 +20,7 @@ import type { PublicPortalSettingsPageProps } from '@/types';
 
 export default function PublicPortal({
     settings,
+    resolved,
     socialImageUrl,
     hasSocialImage,
 }: PublicPortalSettingsPageProps) {
@@ -81,13 +82,14 @@ export default function PublicPortal({
                             <Input
                                 id="public_site_name"
                                 value={form.data.public_site_name}
+                                placeholder={resolved.siteName}
                                 onChange={(event) =>
                                     form.setData('public_site_name', event.target.value)
                                 }
                                 maxLength={255}
                             />
                             <p className="text-sm text-muted-foreground">
-                                {t('This name is used on public pages and does not change the admin application name.')}
+                                {t('Leave blank to use “:name” from General settings. This does not change the admin application name.', { name: resolved.siteName })}
                             </p>
                             <InputError message={form.errors.public_site_name} />
                         </div>
@@ -99,12 +101,16 @@ export default function PublicPortal({
                             <Input
                                 id="public_homepage_title"
                                 value={form.data.public_homepage_title}
+                                placeholder={resolved.homepageTitle}
                                 onChange={(event) =>
                                     form.setData('public_homepage_title', event.target.value)
                                 }
                                 maxLength={255}
                             />
                             <InputError message={form.errors.public_homepage_title} />
+                            <p className="text-sm text-muted-foreground">
+                                {t('Leave blank to use the default title.')}
+                            </p>
                         </div>
 
                         <div className="grid gap-2">
@@ -114,6 +120,7 @@ export default function PublicPortal({
                             <Textarea
                                 id="public_homepage_description"
                                 value={form.data.public_homepage_description}
+                                placeholder={resolved.homepageDescription}
                                 onChange={(event) =>
                                     form.setData(
                                         'public_homepage_description',
@@ -124,6 +131,9 @@ export default function PublicPortal({
                                 rows={4}
                             />
                             <InputError message={form.errors.public_homepage_description} />
+                            <p className="text-sm text-muted-foreground">
+                                {t('Leave blank to use the default description.')}
+                            </p>
                         </div>
 
                         <Button disabled={form.processing}>{t('Save')}</Button>

@@ -28,6 +28,11 @@ export type PublicPortalSettingsPageProps = {
         public_homepage_title: string;
         public_homepage_description: string;
     };
+    resolved: {
+        siteName: string;
+        homepageTitle: string;
+        homepageDescription: string;
+    };
     socialImageUrl: string | null;
     hasSocialImage: boolean;
 };
