@@ -43,24 +43,15 @@ it('allows owners to configure public portal metadata without changing the admin
             ->missing('setting.public_og_image_path'));
 });
 
-it('renders the public portal workspace overview with resolved identity', function () {
-    $owner = User::factory()->owner()->create();
-    Setting::set('site_name', 'General Name');
-
-    $this->actingAs($owner)
-        ->get(route('public-portal.overview'))
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('public-portal/overview')
-            ->where('resolved.siteName', 'General Name')
-            ->where('resolved.homepageTitle', 'Find your next place')
-            ->where('hasSocialImage', false));
-});
-
 it('redirects the old public portal settings page to the workspace', function () {
     $owner = User::factory()->owner()->create();
 
     $this->actingAs($owner)
         ->get(route('settings.public-portal.edit'))
+        ->assertRedirect(route('public-portal.seo'));
+
+    $this->actingAs($owner)
+        ->get(route('public-portal.overview'))
         ->assertRedirect(route('public-portal.seo'));
 });
 
@@ -259,9 +250,5 @@ it('forbids non-owners from public portal settings', function () {
 
     $this->actingAs($user)
         ->get(route('public-portal.seo'))
-        ->assertForbidden();
-
-    $this->actingAs($user)
-        ->get(route('public-portal.overview'))
         ->assertForbidden();
 });

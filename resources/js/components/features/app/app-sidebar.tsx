@@ -9,6 +9,7 @@ import {
     ListChecks,
     Receipt,
     ReceiptText,
+    Settings,
     Shield,
     Sparkles,
     Tags,
@@ -320,8 +321,14 @@ export function AppSidebar() {
                                     ? [
                                           {
                                               title: 'Public Portal',
-                                              href: publicPortal.overview(),
                                               icon: Building2,
+                                              children: [
+                                                  {
+                                                      title: 'SEO & Sharing',
+                                                      href: publicPortal.seo(),
+                                                      icon: Settings,
+                                                  },
+                                              ],
                                           },
                                       ]
                                     : []),

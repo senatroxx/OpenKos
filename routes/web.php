@@ -110,7 +110,7 @@ Route::middleware(['auth', 'verified', 'role:owner'])
     ->prefix('public-portal')
     ->name('public-portal.')
     ->group(function () {
-        Route::get('/', [PublicPortalController::class, 'overview'])->name('overview');
+        Route::redirect('/', '/public-portal/seo')->name('overview');
         Route::get('seo', [PublicPortalController::class, 'edit'])->name('seo');
         Route::patch('seo', [PublicPortalController::class, 'update'])->name('seo.update');
         Route::post('seo/social-image', [PublicPortalController::class, 'updateSocialImage'])

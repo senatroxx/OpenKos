@@ -1,7 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
-import { PublicPortalWorkspaceLayout } from '@/components/features/public-portal/public-portal-workspace-layout';
 import { InputError } from '@/components/shared';
 import { Button } from '@/components/ui/button';
 import {
@@ -57,11 +56,11 @@ export default function Seo({
     }
 
     return (
-        <PublicPortalWorkspaceLayout resolved={resolved} activeTab="seo">
+        <div className="p-4">
             <div className="max-w-3xl space-y-6">
                 <div>
                     <h2 className="text-lg font-medium">
-                        {t('Public Portal')}
+                        {t('SEO & Sharing')}
                     </h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {t(
@@ -238,6 +237,13 @@ export default function Seo({
                     </CardContent>
                 </Card>
             </div>
-        </PublicPortalWorkspaceLayout>
+        </div>
     );
 }
+
+Seo.layout = {
+    breadcrumbs: [
+        { title: 'Public Portal', href: publicPortal.overview().url },
+        { title: 'SEO & Sharing', href: publicPortal.seo().url },
+    ],
+};

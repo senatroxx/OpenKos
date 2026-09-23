@@ -1,16 +1,9 @@
-import type { ReactNode } from 'react';
 import type { PublicListing, PublicUnitTypePage } from './listings';
 
 export type PublicPortalResolvedValues = {
     siteName: string;
     homepageTitle: string;
     homepageDescription: string;
-};
-
-export type PublicPortalWorkspaceLayoutProps = {
-    resolved: PublicPortalResolvedValues;
-    activeTab: 'overview' | 'seo';
-    children: ReactNode;
 };
 
 export type PublicPortalMetadata = {
@@ -43,11 +36,6 @@ export type PublicPortalSettingsPageProps = {
     };
     resolved: PublicPortalResolvedValues;
     socialImageUrl: string | null;
-    hasSocialImage: boolean;
-};
-
-export type PublicPortalOverviewPageProps = {
-    resolved: PublicPortalResolvedValues;
     hasSocialImage: boolean;
 };
 

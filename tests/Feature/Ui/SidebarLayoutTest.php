@@ -32,6 +32,7 @@ it('keeps shared sidebar scroll surfaces intentional', function () {
     expect($appSidebar)
         ->toContain("import publicPortal from '@/routes/public-portal';")
         ->toContain("title: 'Public Portal'")
-        ->toContain('href: publicPortal.overview()')
+        ->toContain("title: 'SEO & Sharing'")
+        ->toContain('href: publicPortal.seo()')
         ->not->toContain('settings/public-portal');
 });

@@ -46,20 +46,6 @@ final class PublicPortalController extends Controller
         ]);
     }
 
-    public function overview(): Response
-    {
-        $homepageMetadata = $this->metadata->homepage(route('public.portal.index', absolute: false));
-
-        return Inertia::render('public-portal/overview', [
-            'resolved' => [
-                'siteName' => $homepageMetadata->siteName,
-                'homepageTitle' => $homepageMetadata->title,
-                'homepageDescription' => $homepageMetadata->description,
-            ],
-            'hasSocialImage' => $this->hasSocialImage(),
-        ]);
-    }
-
     public function update(UpdatePublicPortalRequest $request): RedirectResponse
     {
         $this->updateSettings->execute($request->validated(), $request->user());
