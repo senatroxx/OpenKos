@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\Role;
+use App\Models\Application;
 use App\Models\Expense;
 use App\Models\Inspection;
 use App\Models\InspectionTemplate;
@@ -15,6 +16,7 @@ use App\Models\RecurringExpense;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitType;
+use App\Policies\ApplicationPolicy;
 use App\Policies\ExpensePolicy;
 use App\Policies\InspectionPolicy;
 use App\Policies\InspectionTemplatePolicy;
@@ -33,6 +35,7 @@ use Illuminate\Support\Facades\Gate;
 class AuthServiceProvider extends ServiceProvider
 {
     protected $policies = [
+        Application::class => ApplicationPolicy::class,
         Property::class => PropertyPolicy::class,
         Unit::class => UnitPolicy::class,
         UnitType::class => UnitTypePolicy::class,

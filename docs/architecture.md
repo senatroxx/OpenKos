@@ -138,7 +138,7 @@ Tenant
 
 User (identity — backs owner, staff, and tenant accounts)
   ├── Properties (pivot: property_user — owner/staff scope)
-  └── Roles / Permissions (owner / admin / staff; tenants are NOT a role — see [ADR-008](architecture/adr/008-tenant-identity.md))
+  └── Roles / Permissions (owner / admin / staff; tenants are NOT a role — see [ADR-011](architecture/adr/011-dual-persona-identity.md))
 
 ActivityLog (records user-triggered activity across entities)
 AuditLog (records setting changes and sensitive operations)
@@ -176,9 +176,9 @@ Reminders are scheduled by `SendRentRemindersCommand` (daily at 08:00), which ca
 
 **Authorization** uses Spatie Permission. A `Gate::before` in `AuthServiceProvider` fully bypasses all policy checks for users with the `owner` role. Non-owner users are checked against individual permissions and policies. Every model has a corresponding Policy class. Frontend permission checks reference a seeded `getAllPermissions()` list.
 
-### Tenant app access
+### Renter Portal access
 
-Tenants are domain records, not auth identities — but a tenant can be invited into the app to pay rent, file maintenance tickets, and view their lease. The Tenant↔User relationship is a 1:1 optional link via `tenants.user_id` (nullable, unique). `users.email` is the single source of truth for both authentication and notifications; the legacy `tenants.email` column was dropped (see [ADR-008](architecture/adr/008-tenant-identity.md)). The owner invites from the Tenant detail page; Fortify's password broker issues an activation token, delivered via `TenantInvitation` notification, and the tenant completes signup on a dedicated acceptance route. Tenant accounts are **not** a role — they are invisible on the Users page and managed entirely from the Tenant module.
+Tenants are domain records, not auth identities — but a tenant can be invited into the app to pay rent, file maintenance tickets, and view their lease. The Tenant↔User relationship is a 1:1 optional link via `tenants.user_id` (nullable, unique). `users.email` is the single source of truth for both authentication and notifications; the legacy `tenants.email` column was dropped (see [ADR-011](architecture/adr/011-dual-persona-identity.md)). The owner invites from the Tenant detail page; Fortify's password broker issues an activation token, delivered via `TenantInvitation` notification, and the tenant completes signup on a dedicated acceptance route. Tenant accounts are **not** a role. Applicant and Tenant capabilities are presented through the shared `/portal` workspace. Portal access does not require a Tenant relationship; Tenant-only capabilities remain separately authorized. Tenant-only users remain outside staff management, while staff-plus-Tenant users remain manageable through their staff roles and permissions.
 
 ### Permission Convention
 

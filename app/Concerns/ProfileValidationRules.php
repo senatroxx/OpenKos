@@ -13,11 +13,27 @@ trait ProfileValidationRules
      *
      * @return array<string, array<int, ValidationRule|array<mixed>|string>>
      */
-    protected function profileRules(?int $userId = null): array
+    protected function profileRules(?int $userId = null, bool $portalProfile = false): array
     {
         return [
             'name' => $this->nameRules(),
-            'email' => $this->emailRules($userId),
+            'email' => $portalProfile
+                ? ['required', 'string', 'email', 'max:255', Rule::in([$this->user()->email])]
+                : $this->emailRules($userId),
+            'phone' => [
+                $portalProfile ? 'required' : 'nullable',
+                'string',
+                'max:20',
+                'regex:/^\+[1-9]\d{6,14}$/',
+            ],
+            'id_card_number' => ['nullable', 'string', 'max:50'],
+            'emergency_contact_name' => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                'regex:/^\+[1-9]\d{6,14}$/',
+            ],
         ];
     }
 

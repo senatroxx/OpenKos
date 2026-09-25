@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export type PublicAmenity = {
     name: string;
     icon: string | null;
@@ -72,4 +74,61 @@ export type PublicUnitTypePage = {
         rental_mode: 'unit' | 'whole_property' | 'hybrid';
     };
     unit_type: PublicUnitType;
+};
+
+export type PublicPropertyPageProps = {
+    listing: PublicListing;
+    canonicalUrl: string;
+    open_application: PublicOpenApplication | null;
+};
+
+export type PublicWholePropertyOfferingProps = {
+    offering: PublicWholePropertyOffering;
+    existingApplication: PublicOpenApplication | null;
+    applyHref: string;
+    applyLabel: string;
+    onApply: () => void;
+    applicationForm?: ReactNode;
+};
+
+export type PublicUnitTypePageProps = {
+    listing: PublicUnitTypePage;
+    canonicalUrl: string;
+    open_application: PublicOpenApplication | null;
+};
+
+export type PublicOpenApplication = {
+    id: number;
+    status: 'new' | 'reviewing';
+};
+
+export type PublicApplicationFormTarget = {
+    target_type: 'whole_property' | 'unit_type';
+    property_slug: string;
+    property_name: string;
+    unit_type_slug: string | null;
+    unit_type_name: string | null;
+    rental_options: PublicStartingPrice[];
+};
+
+export type PublicApplicationFormProps = {
+    target: PublicApplicationFormTarget;
+    existingApplication?: PublicOpenApplication | null;
+};
+
+export type PublicUnitTypeAttributesProps = {
+    unitType: PublicUnitType;
+};
+
+export type PublicPricingOptionsProps = {
+    prices: PublicStartingPrice[];
+};
+
+export type PublicRentalSummaryProps = {
+    unitType: PublicUnitType;
+    existingApplication: PublicOpenApplication | null;
+    applyHref: string;
+    applyLabel: string;
+    onApply: () => void;
+    applicationForm?: ReactNode;
 };

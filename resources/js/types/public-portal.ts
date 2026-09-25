@@ -1,4 +1,9 @@
-import type { PublicListing, PublicUnitTypePage } from './listings';
+import type { Auth } from './auth';
+import type {
+    PublicListing,
+    PublicPropertyPageProps,
+    PublicUnitTypePageProps,
+} from './listings';
 
 export type PublicPortalResolvedValues = {
     siteName: string;
@@ -46,16 +51,18 @@ export type PublicPortalListingPageProps = {
     metadata: PublicPortalMetadata;
 };
 
-export type PublicPortalPropertyPageProps = {
-    listing: PublicListing;
+export type PublicPortalPropertyPageProps = PublicPropertyPageProps & {
     metadata: PublicPortalMetadata;
 };
 
-export type PublicPortalUnitTypePageProps = {
-    listing: PublicUnitTypePage;
+export type PublicPortalUnitTypePageProps = PublicUnitTypePageProps & {
     metadata: PublicPortalMetadata;
 };
 
 export type PublicListingHeadProps = {
     metadata: PublicPortalMetadata;
+};
+
+export type PublicListingPageAuthProps = {
+    auth?: Auth;
 };
