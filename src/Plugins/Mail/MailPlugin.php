@@ -18,7 +18,6 @@ class MailPlugin extends Plugin
             name: 'Mail Notifications',
             version: '1.0.0',
             description: 'Registers built-in SMTP and Log mail drivers.',
-            coreVersion: '^0.2',
         );
     }
 

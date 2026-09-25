@@ -55,7 +55,6 @@ final class MarketplaceClient
     /** @return array<string, mixed>|null */
     public function resolveVersion(
         string $pluginId,
-        string $coreVersion,
         string $platformVersion,
         string $phpVersion,
     ): ?array {
@@ -63,7 +62,6 @@ final class MarketplaceClient
             $data = $this->getJson(
                 'plugins/'.rawurlencode($this->pluginId($pluginId)).'/versions/resolve',
                 [
-                    'core_version' => $coreVersion,
                     'platform_version' => $platformVersion,
                     'php_version' => $phpVersion,
                 ],
@@ -350,12 +348,6 @@ final class MarketplaceClient
             throw new MarketplaceException('Marketplace returned malformed plugin version metadata.');
         }
 
-        $coreCompatibility = $data['compatibility']['core'] ?? $data['compatibility']['openkos'] ?? null;
-
-        if (! is_string($coreCompatibility) || trim($coreCompatibility) === '') {
-            throw new MarketplaceException('Marketplace returned malformed compatibility metadata.');
-        }
-
         foreach (['platform', 'php'] as $key) {
             if (! is_string($data['compatibility'][$key] ?? null) || trim($data['compatibility'][$key]) === '') {
                 throw new MarketplaceException('Marketplace returned malformed compatibility metadata.');
@@ -366,7 +358,6 @@ final class MarketplaceClient
             'version' => $data['version'],
             'entry_class' => $data['entry_class'],
             'compatibility' => [
-                'core' => $coreCompatibility,
                 'platform' => $data['compatibility']['platform'],
                 'php' => $data['compatibility']['php'],
             ],
@@ -410,23 +401,27 @@ final class MarketplaceClient
     /** @param array<string, mixed> $manifest @param array<string, mixed> $compatibility @return array<string, mixed> */
     private function validateManifest(array $manifest, string $pluginId, string $version, string $entryClass, array $compatibility): array
     {
-        foreach (['id', 'name', 'version', 'description', 'entry_class', 'core_version', 'php', 'dependencies'] as $key) {
+        foreach (['id', 'name', 'version', 'description', 'entry_class', 'php', 'dependencies'] as $key) {
             if (! array_key_exists($key, $manifest)) {
                 throw new MarketplaceException('Marketplace returned an incomplete plugin manifest.');
             }
         }
 
-        foreach (['id', 'name', 'version', 'description', 'entry_class', 'core_version', 'php'] as $key) {
+        foreach (['id', 'name', 'version', 'description', 'entry_class', 'php'] as $key) {
             if (! is_string($manifest[$key]) || ($key !== 'description' && trim($manifest[$key]) === '')) {
                 throw new MarketplaceException('Marketplace returned an invalid plugin manifest.');
             }
+        }
+
+        if (array_key_exists('core_version', $manifest)
+            && (! is_string($manifest['core_version']) || trim($manifest['core_version']) === '')) {
+            throw new MarketplaceException('Marketplace returned an invalid legacy plugin manifest.');
         }
 
         if (
             $manifest['id'] !== $pluginId
             || $manifest['version'] !== $version
             || $manifest['entry_class'] !== $entryClass
-            || $manifest['core_version'] !== $compatibility['core']
             || $manifest['php'] !== $compatibility['php']
         ) {
             throw new MarketplaceException('Marketplace version metadata does not match its manifest.');
@@ -438,7 +433,9 @@ final class MarketplaceClient
             'version' => $manifest['version'],
             'description' => $manifest['description'],
             'entry_class' => $manifest['entry_class'],
-            'core_version' => $manifest['core_version'],
+            ...(is_string($manifest['core_version'] ?? null)
+                ? ['core_version' => $manifest['core_version']]
+                : []),
             'php' => $manifest['php'],
             'dependencies' => $this->validateDependencies($manifest['dependencies']),
         ];

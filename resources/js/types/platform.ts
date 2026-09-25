@@ -33,7 +33,7 @@ export type PlatformPlugin = {
     version: string | null;
     description: string;
     entry_class: string | null;
-    core_version: string | null;
+    platform_constraint: string | null;
     php: string | null;
     dependencies: string[];
     provenance: 'marketplace' | 'manual' | null;
@@ -69,7 +69,6 @@ export type MarketplaceVersion = {
     version: string;
     entry_class: string;
     compatibility: {
-        core: string;
         platform: string;
         php: string;
     };
