@@ -26,6 +26,7 @@ use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\PublicListingMediaController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\Settings\PublicPortalController;
 use App\Http\Controllers\SignedPaymentController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\TenantDocumentController;

@@ -31,6 +31,8 @@ test('a verified user can submit one application for a published whole property'
     $this->actingAs($user)->post(route('applications.store'), [
         'target_type' => 'whole_property',
         'property_slug' => $property->public_slug,
+        'unit_type_slug' => '',
+        'intended_move_in_date' => '',
         'rental_billing_unit' => $rate->billing_unit->value,
         'rental_billing_interval' => $rate->billing_interval,
         'rental_currency' => $rate->currency,
