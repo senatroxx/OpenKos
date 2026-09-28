@@ -16,6 +16,7 @@ use App\Models\Unit;
 use App\Models\UnitRate;
 use App\Models\UnitTypeRate;
 use App\Repositories\OccupancyRepository;
+use App\Repositories\ReservationRepository;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\ReferenceAllocationRetry;
@@ -25,6 +26,7 @@ class CreateLease
     public function __construct(
         private OccupancyCalculator $occupancy,
         private OccupancyRepository $occupancyRepository,
+        private ReservationRepository $reservationRepository,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
@@ -32,15 +34,15 @@ class CreateLease
         private ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
-    public function execute(Unit|Property $target, CreateLeaseData $data): mixed
+    public function execute(Unit|Property $target, CreateLeaseData $data, ?int $exceptReservationId = null): mixed
     {
         if ($target instanceof Property) {
-            return $this->executeForProperty($target, $data);
+            return $this->executeForProperty($target, $data, $exceptReservationId);
         }
 
         $tenantIds = array_values(array_unique($data->tenantIds));
 
-        return $this->referenceAllocationRetry->run(function () use ($target, $data, $tenantIds) {
+        return $this->referenceAllocationRetry->run(function () use ($target, $data, $tenantIds, $exceptReservationId) {
             $property = Property::query()->lockForUpdate()->findOrFail($target->property_id);
             $unit = Unit::query()->lockForUpdate()->findOrFail($target->id);
 
@@ -54,6 +56,12 @@ class CreateLease
                     ->exists(),
                 422,
                 __('This property is already leased as a whole property.'),
+            );
+
+            abort_if(
+                $this->reservationRepository->hasReservationConflictForLease($unit, $data->endDate, $exceptReservationId),
+                422,
+                __('A confirmed whole-property reservation overlaps these lease dates.'),
             );
 
             $activeRates = $unit->activeRates()->lockForUpdate()->get();
@@ -92,6 +100,12 @@ class CreateLease
             abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('This unit is not available for lease.'));
 
             $existingLease = $unit->leases()->active()->lockForUpdate()->first();
+            abort_if(
+                $exceptReservationId !== null
+                    && $existingLease?->end_date?->lessThan($data->startDate),
+                422,
+                __('An active lease on this unit ends before the reservation starts. Close that lease before converting the reservation.'),
+            );
             $activeOccupantCount = $this->occupancyRepository->activeOccupantCount($unit);
             if ($existingLease) {
                 $this->ensureExistingLeaseTermsMatch($existingLease, $selectedRate, $data);
@@ -101,7 +115,13 @@ class CreateLease
 
                 $this->ensureTenantsDoNotHaveActiveLease($newTenantIds);
 
-                abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount, count($newTenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+                $reservedSlots = $this->reservationRepository->unitReservationCountOverlappingLease(
+                    $unit,
+                    $existingLease->end_date?->toDateString(),
+                    $exceptReservationId,
+                );
+
+                abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount + $reservedSlots, count($newTenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
                 foreach ($newTenantIds as $tenantId) {
                     $existingLease->tenants()->attach($tenantId, ['is_primary' => false]);
@@ -112,7 +132,8 @@ class CreateLease
                 return $existingLease;
             }
 
-            abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+            $reservedSlots = $this->reservationRepository->unitReservationCountOverlappingLease($unit, $data->endDate, $exceptReservationId);
+            abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount + $reservedSlots, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 
@@ -124,11 +145,11 @@ class CreateLease
         }, 'leases');
     }
 
-    private function executeForProperty(Property $property, CreateLeaseData $data): Lease
+    private function executeForProperty(Property $property, CreateLeaseData $data, ?int $exceptReservationId): Lease
     {
         $tenantIds = array_values(array_unique($data->tenantIds));
 
-        return $this->referenceAllocationRetry->run(function () use ($property, $data, $tenantIds): Lease {
+        return $this->referenceAllocationRetry->run(function () use ($property, $data, $tenantIds, $exceptReservationId): Lease {
             $property = Property::query()->lockForUpdate()->findOrFail($property->id);
 
             abort_unless($property->rental_mode->supportsWholePropertyRental(), 404);
@@ -139,6 +160,12 @@ class CreateLease
                     ->exists(),
                 422,
                 __('This property already has an active lease.'),
+            );
+
+            abort_if(
+                $this->reservationRepository->hasReservationConflictForLease($property, $data->endDate, $exceptReservationId),
+                422,
+                __('A confirmed reservation overlaps these lease dates.'),
             );
 
             $activeRates = $property->activePropertyRates()->lockForUpdate()->get();

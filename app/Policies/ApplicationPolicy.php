@@ -2,7 +2,9 @@
 
 namespace App\Policies;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\Permission;
+use App\Enums\ReservationStatus;
 use App\Models\Application;
 use App\Models\User;
 
@@ -30,6 +32,13 @@ class ApplicationPolicy
     public function create(User $user): bool
     {
         return true;
+    }
+
+    public function requestReservation(User $user, Application $application): bool
+    {
+        return $application->user_id === $user->id
+            && $application->status === ApplicationStatus::Accepted
+            && ! $application->reservations()->where('status', ReservationStatus::Converted->value)->exists();
     }
 
     /**

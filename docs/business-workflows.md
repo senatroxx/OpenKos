@@ -174,6 +174,9 @@ app/
 | Scheduled Reminders | Console Command                                      | `SendRentReminders` | —                   | —                     | `PaymentReminderScheduler`                           |
 | Invite Tenant       | `TenantController::invite()`                            | `InviteTenant`      | —                   | —                     | —                                                    |
 | Disable Tenant Access | `TenantController::disableAccess()`                   | `DisableTenantAccess` | —                 | —                     | —                                                    |
+| Request Reservation | `ReservationController::store()`                        | `RequestReservation` | `RequestReservationData` | —              | —                                                    |
+| Confirm Reservation | `ReservationController::confirm()`                      | `ConfirmReservation` | —                   | —                     | `ReservationRepository`                            |
+| Create Lease from Reservation | `ReservationController::createLease()`          | `CreateLeaseFromReservation` | `CreateLeaseData` | —               | shared `CreateLease` rules                         |
 
 `CreateLease` is the shared creation workflow for both targets. It locks the
 Property first, then the Unit when creating a Unit Lease, and applies the
@@ -181,6 +184,34 @@ authoritative active-target conflict rule before selecting rates and creating
 the Lease. Whole-property creation uses a PropertyRate and leaves `unit_id`
 null; Unit creation preserves UnitRate and capacity/co-tenancy behavior.
 Renewal uses the same target conflict rule and locking boundary.
+
+## Application, Reservation, and Lease Lifecycle (ADR-014)
+
+An accepted Application can request a Pending Reservation from the Tenant
+Portal. Pending requests claim no inventory. Operator confirmation selects a
+physical Unit for UnitType Applications or reserves the Property for a
+whole-property Application, after checking current occupancy and Reservation
+claims in the same Property-first transaction. A Unit Reservation consumes one
+occupant slot. Confirmed holds begin at confirmation, protect occupancy from
+the requested move-in date onward, and expire after the configured hold
+duration. If the selected Unit has an active Lease, its start date must match
+the Reservation move-in date so the existing Lease workflow can keep those
+occupants grouped together. Whole-property Reservations cannot be confirmed
+while any Lease on the Property remains status-active, even when its end date
+is before the requested move-in date.
+
+The operator explicitly starts Lease creation from a Confirmed Reservation.
+The shared CreateLease action applies pricing, capacity, invoice, and target
+conflict rules. Successful creation associates or creates the applicant's
+Tenant and converts the Reservation atomically. Pending and Confirmed requests
+can be cancelled, and Pending requests can be rejected. Cancelled, rejected, or
+expired Reservations allow another Reservation request from the same accepted
+Application. Converted Reservations do not.
+
+Reservation-versus-Lease checks consider the Reservation move-in date and
+Lease end date because a Reservation claim has no known end date. Ordinary
+Lease-versus-Lease behavior remains status-based as described by ADR-009.
+Reservation date handling does not change that existing Lease rule.
 
 ## Invoice-Centric Billing (ADR-007)
 

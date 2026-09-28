@@ -15,6 +15,7 @@ return [
     'supported_currencies' => ['default' => null, 'cast' => 'array'],
     'timezone' => ['default' => 'Asia/Jakarta', 'cast' => 'string'],
     'lease_id_prefix' => ['default' => 'LSX', 'cast' => 'string'],
+    'reservation_hold_hours' => ['default' => 48, 'cast' => 'integer'],
     'invoice_pdf_enabled' => ['default' => false, 'cast' => 'boolean'],
     'reminder_enabled' => ['default' => true, 'cast' => 'boolean'],
     'reminder_days_before' => ['default' => 3, 'cast' => 'integer'],

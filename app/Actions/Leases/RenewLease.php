@@ -5,6 +5,7 @@ namespace App\Actions\Leases;
 use App\Actions\Invoices\GenerateInvoices;
 use App\Business\Leases\LeaseFinancialChecker;
 use App\Business\Leases\LeaseStatusValidator;
+use App\Business\Leases\OccupancyCalculator;
 use App\Business\Leases\RenewalEligibilityChecker;
 use App\Data\Lease\RenewLeaseData;
 use App\Enums\LeaseStatus;
@@ -14,6 +15,7 @@ use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Repositories\ReservationRepository;
 use App\Results\Lease\RenewLeaseResult;
 use App\Services\Payments\MoneyConverter;
 use App\Services\ReferenceAllocationRetry;
@@ -26,6 +28,8 @@ class RenewLease
         private readonly LeaseStatusValidator $leaseStatusValidator,
         private readonly GenerateInvoices $generateInvoices,
         private readonly MoneyConverter $money,
+        private readonly OccupancyCalculator $occupancy,
+        private readonly ReservationRepository $reservations,
         private readonly ReferenceAllocationRetry $referenceAllocationRetry,
     ) {}
 
@@ -89,8 +93,19 @@ class RenewLease
                     : 'Property already has another active lease.');
             }
 
+            if ($this->reservations->hasReservationConflictForLease($unit ?? $property, $data->endDate->toDateString())) {
+                return RenewLeaseResult::error('A confirmed reservation overlaps the renewal dates.');
+            }
+
             if ($lockedLease->end_date === null || $data->endDate->lessThanOrEqualTo($lockedLease->end_date)) {
                 return RenewLeaseResult::error('The renewal end date must be after the current lease end date.');
+            }
+
+            if ($unit !== null) {
+                $reservedSlots = $this->reservations->unitReservationCountOverlappingLease($unit, $data->endDate->toDateString());
+                if (! $this->occupancy->canAccommodate($unit->capacity, $reservedSlots, $lockedLease->tenants()->count())) {
+                    return RenewLeaseResult::error('Unit capacity would be exceeded by confirmed reservations.');
+                }
             }
 
             try {

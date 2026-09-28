@@ -144,7 +144,7 @@ test('applicants can withdraw but cannot see operator notes', function () {
     expect($application->refresh()->status)->toBe(ApplicationStatus::Withdrawn);
 });
 
-test('accepted application conversion creates one tenant without a lease', function () {
+test('accepted application does not create a tenant before reservation lease creation', function () {
     $operator = User::factory()->owner()->create();
     $applicant = User::factory()->create();
     $application = Application::factory()->create([
@@ -152,11 +152,12 @@ test('accepted application conversion creates one tenant without a lease', funct
         'status' => ApplicationStatus::Accepted,
     ]);
 
-    $this->actingAs($operator)->post(route('applications.convert', $application))->assertRedirect();
-    $this->actingAs($operator)->post(route('applications.convert', $application))->assertRedirect();
+    $this->actingAs($operator)
+        ->post("/portal/applications/{$application->id}/convert")
+        ->assertNotFound();
 
-    expect(Tenant::query()->where('user_id', $applicant->id)->count())->toBe(1)
-        ->and($application->refresh()->converted_tenant_id)->not->toBeNull();
+    expect($application->refresh()->converted_tenant_id)->toBeNull()
+        ->and($application->converted_at)->toBeNull();
 });
 
 test('application transitions follow the centralized lifecycle', function () {

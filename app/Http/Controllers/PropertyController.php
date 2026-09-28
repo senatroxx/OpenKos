@@ -226,10 +226,10 @@ class PropertyController extends Controller
     {
         $this->authorize('delete', $property);
 
-        $hasActiveLease = DB::transaction(function () use ($property): bool {
+        $hasInventoryCommitment = DB::transaction(function () use ($property): bool {
             $lockedProperty = Property::withTrashed()->lockForUpdate()->findOrFail($property->id);
 
-            if ($lockedProperty->activeLeases()->exists()) {
+            if ($lockedProperty->activeLeases()->exists() || $lockedProperty->reservations()->holding()->exists()) {
                 return true;
             }
 
@@ -238,8 +238,8 @@ class PropertyController extends Controller
             return false;
         });
 
-        if ($hasActiveLease) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a property with active leases.')]);
+        if ($hasInventoryCommitment) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot archive a property with active leases or confirmed reservations.')]);
 
             return back();
         }

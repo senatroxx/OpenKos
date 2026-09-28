@@ -3,6 +3,7 @@
 namespace App\Actions\Units;
 
 use App\Models\Lease;
+use App\Models\Reservation;
 use App\Models\Unit;
 use App\Results\Unit\DeleteUnitResult;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,9 @@ final class DeleteUnit
         return DB::transaction(function () use ($unit): DeleteUnitResult {
             $lockedUnit = Unit::query()->lockForUpdate()->findOrFail($unit->id);
 
-            if (Lease::where('unit_id', $lockedUnit->id)->active()->exists()) {
+            if (Lease::where('unit_id', $lockedUnit->id)->active()->exists()
+                || Reservation::query()->holding()->where('unit_id', $lockedUnit->id)->exists()
+            ) {
                 return DeleteUnitResult::blocked();
             }
 

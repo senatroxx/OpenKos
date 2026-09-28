@@ -8,6 +8,8 @@ use Database\Factories\ApplicationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Application extends Model
 {
@@ -57,5 +59,15 @@ class Application extends Model
     public function convertedTenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'converted_tenant_id');
+    }
+
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function latestReservation(): HasOne
+    {
+        return $this->hasOne(Reservation::class)->latestOfMany();
     }
 }

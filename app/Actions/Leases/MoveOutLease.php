@@ -13,6 +13,7 @@ use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Repositories\OccupancyRepository;
+use App\Repositories\ReservationRepository;
 use App\Results\Lease\MoveOutLeaseResult;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
@@ -24,6 +25,7 @@ class MoveOutLease
     public function __construct(
         private OccupancyCalculator $occupancy,
         private OccupancyRepository $occupancyRepository,
+        private ReservationRepository $reservationRepository,
         private LeaseStatusValidator $leaseStatusValidator,
         private GenerateInvoices $generateInvoices,
         private MoneyConverter $money,
@@ -195,9 +197,18 @@ class MoveOutLease
             ? count(array_diff($incomingTenantIds, $existingLease->tenants()->pluck('tenants.id')->all()))
             : count($incomingTenantIds);
 
+        $targetEndDate = $existingLease?->end_date?->toDateString();
+        abort_if(
+            $this->reservationRepository->hasReservationConflictForLease($targetUnit, $targetEndDate),
+            422,
+            __('A confirmed whole-property reservation overlaps the transfer dates.'),
+        );
+
+        $reservedSlots = $this->reservationRepository->unitReservationCountOverlappingLease($targetUnit, $targetEndDate);
+
         if (! $this->occupancy->canAccommodate(
             $targetUnit->capacity,
-            $this->occupancyRepository->activeOccupantCount($targetUnit),
+            $this->occupancyRepository->activeOccupantCount($targetUnit) + $reservedSlots,
             $incomingCount,
         )) {
             abort(422, __('Unit capacity exceeded. Target unit can only hold :capacity occupants.', ['capacity' => $targetUnit->capacity]));

@@ -34,16 +34,20 @@ import {
 } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
 import properties from '@/routes/properties';
+import reservations from '@/routes/reservations';
 import type { EffectiveUnitRate, Property, Unit } from '@/types';
+import type { ReservationLeaseContext } from '@/types/applications';
 
 export default function AssignTenantSheet({
     unit,
     property,
+    reservation,
     open,
     onOpenChange,
 }: {
     unit?: Unit | null;
     property: Property;
+    reservation?: ReservationLeaseContext | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
@@ -55,7 +59,17 @@ export default function AssignTenantSheet({
     const [overridePrice, setOverridePrice] = useState(false);
     const dueDayInitialized = useRef(false);
 
+    const matchingReservationRate = unit?.effective_rates?.find(
+        (rate) =>
+            reservation !== null &&
+            reservation !== undefined &&
+            rate.billing_unit === reservation.rental.billing_unit &&
+            rate.billing_interval === reservation.rental.billing_interval &&
+            (rate.currency ?? setting.currency).toUpperCase() === reservation.rental.currency.toUpperCase() &&
+            rate.amount === reservation.rental.amount,
+    );
     const defaultRate =
+        matchingReservationRate ??
         unit?.effective_rates?.find(
             (rate) =>
                 (rate.currency ?? setting.currency).toUpperCase() ===
@@ -68,7 +82,10 @@ export default function AssignTenantSheet({
     const { data, setData, transform, submit, reset, processing, errors } =
         useForm({
             tenant_ids: [] as number[],
-            start_date: activeLease?.start_date ?? todayISO(),
+            start_date:
+                reservation?.move_in_date ??
+                activeLease?.start_date ??
+                todayISO(),
             unit_rate_id: activeLease || defaultRate?.source !== 'unit' ? null : (defaultRate?.id ?? null),
             unit_type_rate_id: activeLease || defaultRate?.source !== 'unit_type' ? null : (defaultRate?.id ?? null),
             rent_amount: activeLease
@@ -176,10 +193,12 @@ export default function AssignTenantSheet({
             return payload;
         });
         submit(
-            properties.units.leases.store({
-                property: property.slug,
-                unit: unit!.slug,
-            }),
+            reservation
+                ? reservations.lease.store({ reservation: reservation.id })
+                : properties.units.leases.store({
+                      property: property.slug,
+                      unit: unit!.slug,
+                  }),
             { onSuccess: () => handleOpenChange(false) },
         );
     }
@@ -239,14 +258,20 @@ export default function AssignTenantSheet({
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
                     <SheetTitle>
-                        {t(capacity > 1 ? 'Assign Tenants' : 'Assign Tenant')}
+                        {reservation
+                            ? t('Create lease')
+                            : t(capacity > 1 ? 'Assign Tenants' : 'Assign Tenant')}
                     </SheetTitle>
                     <SheetDescription>
-                        {t(
-                            capacity > 1
-                                ? 'Assign tenants to this unit'
-                                : 'Assign a tenant to this unit',
-                        )}{' '}
+                        {reservation
+                            ? t('Create a lease for :name from this reservation.', {
+                                  name: reservation.applicant.name,
+                              })
+                            : t(
+                                  capacity > 1
+                                      ? 'Assign tenants to this unit'
+                                      : 'Assign a tenant to this unit',
+                              )}{' '}
                         {unit?.name ?? t('this unit')}
                         {capacity > 1 && ` (${t('capacity')}: ${capacity})`}
                     </SheetDescription>
@@ -257,7 +282,7 @@ export default function AssignTenantSheet({
                     className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
                 >
                     <div className="space-y-6">
-                        <section>
+                        {!reservation && <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                 {t('Section 1 — Who')}
                             </h3>
@@ -323,7 +348,7 @@ export default function AssignTenantSheet({
 
                                 <InputError message={errors.tenant_ids} />
                             </div>
-                        </section>
+                        </section>}
 
                         <section>
                             <h3 className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -339,7 +364,7 @@ export default function AssignTenantSheet({
                                     type="date"
                                     value={data.start_date}
                                     onChange={handleStartDateChange}
-                                    disabled={activeLease != null}
+                                    disabled={activeLease != null || reservation != null}
                                     required
                                 />
                                 <InputError message={errors.start_date} />
@@ -683,11 +708,13 @@ export default function AssignTenantSheet({
                             {t('Cancel')}
                         </Button>
                         <Button disabled={processing}>
-                            {t(
-                                data.tenant_ids.length > 1
-                                    ? 'Assign Tenants'
-                                    : 'Assign Tenant',
-                            )}
+                            {reservation
+                                ? t('Create lease')
+                                : t(
+                                      data.tenant_ids.length > 1
+                                          ? 'Assign Tenants'
+                                          : 'Assign Tenant',
+                                  )}
                         </Button>
                     </div>
                 </form>

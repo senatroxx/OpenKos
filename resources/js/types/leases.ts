@@ -1,3 +1,4 @@
+import type { ReservationLeaseContext } from './applications';
 import type { MoneyAggregate } from './dashboard';
 import type { AvailableUnit, Lease, Property, Tenant } from './models';
 import type { PaginatedData, TableMeta } from './table';
@@ -47,6 +48,7 @@ export type WholePropertyLeaseFormData = {
 export type WholePropertyLeaseSheetProps = {
     property: Property;
     tenants: LeaseTenantOption[];
+    reservation?: ReservationLeaseContext | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 };

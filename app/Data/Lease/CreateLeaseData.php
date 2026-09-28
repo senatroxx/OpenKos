@@ -22,4 +22,27 @@ final readonly class CreateLeaseData
         public ?int $propertyRateId = null,
         public ?int $unitTypeRateId = null,
     ) {}
+
+    /** @param array<int, int> $tenantIds */
+    public function withTenantIds(array $tenantIds): self
+    {
+        return new self(
+            tenantIds: $tenantIds,
+            startDate: $this->startDate,
+            endDate: $this->endDate,
+            rentAmount: $this->rentAmount,
+            billingInterval: $this->billingInterval,
+            billingUnit: $this->billingUnit,
+            billingStrategy: $this->billingStrategy,
+            unitRateId: $this->unitRateId,
+            depositAmount: $this->depositAmount,
+            depositPaidAt: $this->depositPaidAt,
+            depositRefundAmount: $this->depositRefundAmount,
+            depositRefundedAt: $this->depositRefundedAt,
+            rentDueDay: $this->rentDueDay,
+            notes: $this->notes,
+            propertyRateId: $this->propertyRateId,
+            unitTypeRateId: $this->unitTypeRateId,
+        );
+    }
 }

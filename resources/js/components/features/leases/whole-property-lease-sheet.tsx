@@ -24,6 +24,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { formatPrice, todayISO } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import reservations from '@/routes/reservations';
 import type {
     WholePropertyLeaseFormData,
     WholePropertyLeaseSheetProps,
@@ -32,16 +33,26 @@ import type {
 export default function WholePropertyLeaseSheet({
     property,
     tenants,
+    reservation,
     open,
     onOpenChange,
 }: WholePropertyLeaseSheetProps) {
     const rates = property.active_property_rates ?? [];
-    const firstRate = rates[0];
+    const matchingReservationRate = rates.find(
+        (rate) =>
+            reservation !== null &&
+            reservation !== undefined &&
+            rate.billing_unit === reservation.rental.billing_unit &&
+            rate.billing_interval === reservation.rental.billing_interval &&
+            rate.currency.toUpperCase() === reservation.rental.currency.toUpperCase() &&
+            rate.amount === reservation.rental.amount,
+    );
+    const firstRate = matchingReservationRate ?? rates[0];
     const { data, setData, submit, reset, processing, errors } =
         useForm<WholePropertyLeaseFormData>({
             tenant_ids: [],
             property_rate_id: firstRate?.id ?? null,
-            start_date: todayISO(),
+            start_date: reservation?.move_in_date ?? todayISO(),
             end_date: '',
             rent_amount: firstRate?.amount ?? '',
             deposit_amount: '0',
@@ -54,12 +65,17 @@ export default function WholePropertyLeaseSheet({
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        submit(leases.storeForProperty({ property: property.slug }), {
-            onSuccess: () => {
-                reset();
-                onOpenChange(false);
+        submit(
+            reservation
+                ? reservations.lease.store({ reservation: reservation.id })
+                : leases.storeForProperty({ property: property.slug }),
+            {
+                onSuccess: () => {
+                    reset();
+                    onOpenChange(false);
+                },
             },
-        });
+        );
     }
 
     function toggleTenant(tenantId: number, checked: boolean) {
@@ -75,9 +91,15 @@ export default function WholePropertyLeaseSheet({
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="sm:max-w-lg">
                 <SheetHeader>
-                    <SheetTitle>{t('New whole-property lease')}</SheetTitle>
+                    <SheetTitle>
+                        {reservation ? t('Create lease') : t('New whole-property lease')}
+                    </SheetTitle>
                     <SheetDescription>
-                        {t('Lease the full property without assigning a unit.')}
+                        {reservation
+                            ? t('Create a lease for :name from this reservation.', {
+                                  name: reservation.applicant.name,
+                              })
+                            : t('Lease the full property without assigning a unit.')}
                     </SheetDescription>
                 </SheetHeader>
                 <form
@@ -85,7 +107,14 @@ export default function WholePropertyLeaseSheet({
                     className="flex flex-1 flex-col justify-between gap-6 overflow-y-auto px-4 pt-4 pb-6"
                 >
                     <div className="space-y-5">
-                        <div className="grid gap-2">
+                        {reservation ? (
+                            <div className="rounded-md border bg-muted/30 p-3 text-sm">
+                                <p className="font-medium">{reservation.applicant.name}</p>
+                                <p className="mt-1 text-muted-foreground">
+                                    {t('Move-in date')}: {reservation.move_in_date}
+                                </p>
+                            </div>
+                        ) : <div className="grid gap-2">
                             <Label>{t('Tenants')}</Label>
                             <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
                                 {tenants.map((tenant) => (
@@ -109,7 +138,7 @@ export default function WholePropertyLeaseSheet({
                                 ))}
                             </div>
                             <InputError message={errors.tenant_ids} />
-                        </div>
+                        </div>}
                         <div className="grid gap-2">
                             <Label>{t('Property rate')}</Label>
                             <Select
@@ -162,6 +191,7 @@ export default function WholePropertyLeaseSheet({
                                             event.target.value,
                                         )
                                     }
+                                    disabled={reservation != null}
                                     required
                                 />
                                 <InputError message={errors.start_date} />
