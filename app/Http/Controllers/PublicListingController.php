@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
+use App\Enums\ApplicationStatus;
+use App\Enums\ApplicationTargetType;
 use App\Enums\BillingUnit;
 use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
+use App\Models\Application;
 use App\Models\Media;
 use App\Models\Property;
 use App\Models\PropertyRate;
@@ -17,6 +20,7 @@ use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\PublicPortal\PublicPortalMetadataResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,7 +45,7 @@ final class PublicListingController extends Controller
         ]);
     }
 
-    public function pageShow(Property $property): Response
+    public function pageShow(Request $request, Property $property): Response
     {
         $listing = $this->propertyData($property);
 
@@ -50,15 +54,17 @@ final class PublicListingController extends Controller
             'metadata' => $this->metadata->property(
                 $listing['name'],
                 $listing['description'],
-                route('public.portal.show', [
-                    'property' => $property->public_slug,
-                ], absolute: false),
+                route('public.portal.show', ['property' => $property->public_slug], absolute: false),
                 $listing['gallery'][0]['url'] ?? null,
             )->toArray(),
+            'canonicalUrl' => route('public.portal.show', [
+                'property' => $property->public_slug,
+            ], absolute: false),
+            'open_application' => $this->openApplication($request, $property),
         ]);
     }
 
-    public function pageUnitType(Property $property, UnitType $unitType): Response
+    public function pageUnitType(Request $request, Property $property, UnitType $unitType): Response
     {
         $listing = $this->unitTypeData($property, $unitType);
 
@@ -74,7 +80,38 @@ final class PublicListingController extends Controller
                 ], absolute: false),
                 $listing['unit_type']['gallery'][0]['url'] ?? null,
             )->toArray(),
+            'canonicalUrl' => route('public.portal.unit-types.show', [
+                'property' => $property->public_slug,
+                'unitType' => $unitType->public_slug,
+            ], absolute: false),
+            'open_application' => $this->openApplication($request, $property, $unitType),
         ]);
+    }
+
+    /**
+     * @return array{id: int, status: string}|null
+     */
+    private function openApplication(Request $request, Property $property, ?UnitType $unitType = null): ?array
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return null;
+        }
+
+        $application = Application::query()
+            ->where('user_id', $user->id)
+            ->where('property_id', $property->id)
+            ->where('unit_type_id', $unitType?->id)
+            ->where('target_type', $unitType ? ApplicationTargetType::UnitType : ApplicationTargetType::WholeProperty)
+            ->whereIn('status', [ApplicationStatus::New, ApplicationStatus::Reviewing])
+            ->latest('id')
+            ->first();
+
+        return $application ? [
+            'id' => $application->id,
+            'status' => $application->status->value,
+        ] : null;
     }
 
     /**

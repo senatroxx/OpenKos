@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\TenantPortal;
 
 use App\Enums\PaymentStatus;
+use App\Models\Application;
 use App\Models\Invoice;
 use App\Models\Lease;
 use App\Models\Payment;
@@ -16,22 +17,36 @@ class DashboardController extends TenantPortalController
 {
     public function __invoke(Request $request): Response
     {
-        $tenant = $this->tenant($request);
-        $lease = $tenant->leases()
+        $tenant = $request->user()->tenant()->first();
+        $lease = $tenant?->leases()
             ->active()
             ->with(['property', 'unit'])
             ->latest('start_date')
             ->first();
+        $applications = Application::query()
+            ->where('user_id', $request->user()->id)
+            ->with(['property:id,name', 'unitType:id,name'])
+            ->latest()
+            ->limit(3)
+            ->get()
+            ->map(fn (Application $application): array => [
+                'id' => $application->id,
+                'status' => $application->status->value,
+                'property_name' => $application->property?->name,
+                'unit_type_name' => $application->unitType?->name,
+            ])
+            ->all();
 
         return Inertia::render('tenant-portal/dashboard', [
-            'tenant' => [
+            'tenant' => $tenant ? [
                 'id' => $tenant->id,
                 'name' => $tenant->name,
-            ],
+            ] : null,
             'lease' => $lease ? $this->dashboardLeasePayload($lease) : null,
             'nextAction' => $this->nextActionPayload($lease),
             'accountSummary' => $this->accountSummaryPayload($lease),
             'recentActivity' => $lease ? $this->recentActivityPayload($lease) : [],
+            'applications' => $applications,
         ]);
     }
 

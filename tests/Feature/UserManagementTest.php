@@ -25,15 +25,18 @@ test('owner can view users page and tenant users are excluded', function () {
     $admin = User::factory()->admin()->create(['name' => 'Admin User']);
     $tenantUser = User::factory()->create(['name' => 'Tenant User']);
     Tenant::factory()->create(['user_id' => $tenantUser->id]);
+    $staffTenant = User::factory()->staff()->create(['name' => 'Staff Tenant']);
+    Tenant::factory()->create(['user_id' => $staffTenant->id]);
 
     $this->from(route('users.index'))->actingAs($owner)
         ->get(route('users.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('users.data', 2)
+            ->has('users.data', 3)
             ->where('users.data.0.name', $admin->name)
             ->where('users.data.0.status', 'active')
             ->where('users.data.1.name', $owner->name)
+            ->where('users.data.2.name', $staffTenant->name)
         );
 });
 

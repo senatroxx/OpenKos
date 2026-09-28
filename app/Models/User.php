@@ -19,7 +19,7 @@ use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'is_active', 'invited_at', 'last_login_at'])]
+#[Fillable(['name', 'email', 'phone', 'id_card_number', 'emergency_contact_name', 'emergency_contact_phone', 'password', 'is_active', 'invited_at', 'last_login_at'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
@@ -79,6 +79,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function hasTenantProfile(): bool
     {
         return $this->tenant()->exists();
+    }
+
+    public function hasCompleteRenterProfile(): bool
+    {
+        return filled($this->name) && filled($this->email) && filled($this->phone);
     }
 
     public function canAccessProperty(Property|int $property): bool

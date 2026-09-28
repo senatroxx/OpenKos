@@ -1,18 +1,22 @@
 <?php
 
-test('registration screen returns 404', function () {
-    $response = $this->get('/register');
+use App\Models\Tenant;
+use App\Models\User;
 
-    $response->assertNotFound();
+test('registration screen can be rendered', function () {
+    $this->get(route('register'))->assertOk();
 });
 
-test('registration store returns 404', function () {
-    $response = $this->post('/register', [
+test('registration creates a user without a tenant', function () {
+    $this->post(route('register'), [
         'name' => 'Test User',
         'email' => 'test@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
-    ]);
+    ])->assertRedirect();
 
-    $response->assertNotFound();
+    $user = User::query()->where('email', 'test@example.com')->firstOrFail();
+
+    expect($user->tenant()->exists())->toBeFalse()
+        ->and(Tenant::query()->count())->toBe(0);
 });

@@ -1,4 +1,6 @@
 export type * from './auth';
+export type * from './portal';
+export type * from './applications';
 export type * from './dashboard';
 export type * from './models';
 export type * from './listings';

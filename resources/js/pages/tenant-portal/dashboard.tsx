@@ -6,85 +6,33 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDate, formatPrice } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
-import { dashboard } from '@/routes/portal';
+import { index as applicationsIndex, show as applicationShow } from '@/routes/applications';
+import { dashboard as portalDashboard } from '@/routes/portal';
 import { index as billingIndex } from '@/routes/portal/billing';
 import { payments as paymentHistory } from '@/routes/portal/billing/history';
 import { show as showInvoice } from '@/routes/portal/billing/invoices';
 import { show as showLease } from '@/routes/portal/lease';
-import type { MoneyAggregate } from '@/types';
-
-type Lease = {
-    id: number;
-    start_date: string;
-    end_date: string | null;
-    rent_amount: string;
-    currency: string;
-    status: string;
-    target_type: 'unit' | 'whole_property';
-    property: { name: string } | null;
-    unit: {
-        name: string;
-    } | null;
-};
-
-type PendingPayment = {
-    amount: string;
-    currency: string;
-    payment_date: string;
-};
-
-type NextAction =
-    | { type: 'no_active_stay' }
-    | { type: 'no_payment_required' }
-    | { type: 'payment_verification'; pending_payment: PendingPayment }
-    | {
-          type: 'payment_required';
-          invoice: {
-              id: number;
-              due_date: string;
-              display_status: string;
-              amount: string;
-              currency: string;
-          };
-          pending_payment: PendingPayment | null;
-      };
-
-type AccountSummary = {
-    outstanding_amounts: MoneyAggregate[];
-    payable_invoice_count: number;
-    pending_verification_count: number;
-    next_due_date: string | null;
-};
-
-type Activity = {
-    type:
-        | 'payment_submitted'
-        | 'payment_confirmed'
-        | 'payment_cancelled'
-        | 'invoice_issued'
-        | 'lease_started';
-    date: string;
-    amount: string | null;
-    currency: string;
-    reference: string | null;
-};
-
-type Props = {
-    lease: Lease | null;
-    nextAction: NextAction;
-    accountSummary: AccountSummary;
-    recentActivity: Activity[];
-};
+import { index as publicIndex } from '@/routes/public/portal';
+import type {
+    AccountActivity,
+    AccountApplicationSummary,
+    AccountDashboardProps,
+    AccountLease,
+    AccountNextAction,
+    AccountSummary,
+} from '@/types';
 
 export default function Dashboard({
     lease,
+    tenant,
     nextAction,
     accountSummary,
     recentActivity,
-}: Props) {
+    applications = [],
+}: AccountDashboardProps) {
     return (
         <>
-            <Head title={t('Tenant Portal')} />
+            <Head title={t('Dashboard')} />
 
             <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-5 p-4">
                 <div>
@@ -92,32 +40,86 @@ export default function Dashboard({
                         {t('Dashboard')}
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {t('Overview of your stay and billing.')}
+                        {tenant
+                            ? t('Overview of your stay and billing.')
+                            : t('Track your applications and rental journey.')}
                     </p>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-12">
-                    <CurrentPaymentCard
-                        nextAction={nextAction}
-                        className="lg:col-span-7"
-                    />
-                    <AccountSummaryCard
-                        summary={accountSummary}
-                        className="lg:col-span-5"
-                    />
-                    {lease && (
-                        <ActiveStayCard
-                            lease={lease}
-                            className="lg:order-4 lg:col-span-5"
+                {tenant ? (
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <>
+                            <CurrentPaymentCard
+                                nextAction={nextAction}
+                                className="lg:col-span-7"
+                            />
+                            <AccountSummaryCard
+                                summary={accountSummary}
+                                className="lg:col-span-5"
+                            />
+                        </>
+                        {lease && (
+                            <ActiveStayCard
+                                lease={lease}
+                                className="lg:order-4 lg:col-span-5"
+                            />
+                        )}
+                        <RecentActivityCard
+                            activity={recentActivity}
+                            className="lg:order-3 lg:col-span-7"
                         />
-                    )}
-                    <RecentActivityCard
-                        activity={recentActivity}
-                        className="lg:order-3 lg:col-span-7"
-                    />
-                </div>
+                    </div>
+                ) : (
+                    <ApplicantApplicationsCard applications={applications} />
+                )}
             </div>
         </>
+    );
+}
+
+function ApplicantApplicationsCard({
+    applications,
+}: {
+    applications: AccountApplicationSummary[];
+}) {
+    return (
+        <Card className="gap-4 py-5">
+            <CardHeader className="flex-row items-center justify-between gap-3 px-5 pb-0">
+                <CardTitle>{t('Applications')}</CardTitle>
+                <Button asChild size="sm" variant="ghost">
+                    <Link href={applicationsIndex()}>
+                        {t('View applications')}
+                        <ChevronRight />
+                    </Link>
+                </Button>
+            </CardHeader>
+            <CardContent className="space-y-3 px-5">
+                {applications.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                        {t('No active applications.')}
+                        <span className="mt-1 block">
+                            {t('Browse available properties and submit an application.')}
+                        </span>
+                        <Button asChild size="sm" variant="outline" className="mt-3">
+                            <Link href={publicIndex()}>{t('Browse properties')}</Link>
+                        </Button>
+                    </div>
+                ) : (
+                    applications.map((application) => (
+                        <Link
+                            key={application.id}
+                            href={applicationShow(application.id)}
+                            className="flex items-center justify-between gap-3 border-b py-2 last:border-0 last:pb-0"
+                        >
+                            <span className="min-w-0 truncate text-sm font-medium">
+                                {application.unit_type_name ?? application.property_name}
+                            </span>
+                            <StatusBadge domain="application" value={application.status} />
+                        </Link>
+                    ))
+                )}
+            </CardContent>
+        </Card>
     );
 }
 
@@ -125,7 +127,7 @@ function CurrentPaymentCard({
     nextAction,
     className,
 }: {
-    nextAction: NextAction;
+    nextAction: AccountNextAction;
     className: string;
 }) {
     if (nextAction.type === 'payment_required') {
@@ -297,7 +299,7 @@ function ActiveStayCard({
     lease,
     className,
 }: {
-    lease: Lease;
+    lease: AccountLease;
     className: string;
 }) {
     return (
@@ -333,7 +335,7 @@ function RecentActivityCard({
     activity,
     className,
 }: {
-    activity: Activity[];
+    activity: AccountActivity[];
     className: string;
 }) {
     return (
@@ -395,7 +397,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
     );
 }
 
-function activityLabel(type: Activity['type']): string {
+function activityLabel(type: AccountActivity['type']): string {
     return {
         payment_submitted: t('Payment submitted'),
         payment_confirmed: t('Payment confirmed'),
@@ -405,7 +407,7 @@ function activityLabel(type: Activity['type']): string {
     }[type];
 }
 
-function ActivityIcon({ type }: { type: Activity['type'] }) {
+function ActivityIcon({ type }: { type: AccountActivity['type'] }) {
     const Icon =
         type === 'invoice_issued'
             ? ReceiptText
@@ -416,7 +418,7 @@ function ActivityIcon({ type }: { type: Activity['type'] }) {
     return <Icon className="size-4" aria-hidden="true" />;
 }
 
-function activitySupport(item: Activity): string | null {
+function activitySupport(item: AccountActivity): string | null {
     const support = [
         item.amount && formatPrice(item.amount, item.currency),
         item.reference,
@@ -426,5 +428,5 @@ function activitySupport(item: Activity): string | null {
 }
 
 Dashboard.layout = {
-    breadcrumbs: [{ title: 'Tenant Portal', href: dashboard() }],
+    breadcrumbs: [{ title: 'Tenant Portal', href: portalDashboard() }],
 };

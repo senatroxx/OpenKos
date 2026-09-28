@@ -23,7 +23,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
-import { store as storeTicket } from '@/routes/portal/maintenance-tickets';
+import {
+    show as showTicket,
+    store as storeTicket,
+} from '@/routes/portal/maintenance-tickets';
 
 type Ticket = {
     id: number;
@@ -91,7 +94,7 @@ export default function MaintenanceTickets({ tickets, activeLease }: Props) {
                             {tickets.data.map((ticket) => (
                                 <Link
                                     key={ticket.id}
-                                    href={`/portal/maintenance-tickets/${ticket.id}`}
+                                    href={showTicket(ticket.id)}
                                 >
                                     <Card className="transition-colors hover:bg-accent/40">
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

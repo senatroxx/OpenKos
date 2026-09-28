@@ -176,6 +176,23 @@ export function formatBillingPeriod(interval: number, unit: string): string {
           });
 }
 
+export function formatBillingOptionLabel(interval: number, unit: string): string {
+    const labels: Record<string, string> = {
+        day: 'Daily',
+        week: 'Weekly',
+        month: 'Monthly',
+        year: 'Yearly',
+    };
+    const normalizedUnit = unit.toLowerCase();
+
+    return interval === 1
+        ? t(labels[normalizedUnit] ?? normalizedUnit)
+        : t('Every :count :unit', {
+              count: interval,
+              unit: t(`${normalizedUnit}s`),
+          });
+}
+
 export function formatSize(bytes: number): string {
     if (bytes < 1024) {
         return bytes + ' B';

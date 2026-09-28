@@ -6,6 +6,8 @@ export { default as Heading } from './heading';
 export { default as InputError } from './input-error';
 export { default as PasswordInput } from './password-input';
 export { default as PhoneInput } from './phone-input';
+export { default as PublicPricingOptions } from './public-pricing-options';
+export { default as ThemeToggleButton } from './theme-toggle-button';
 export { default as SearchableSelect } from './searchable-select';
 export { default as TextLink } from './text-link';
 export { MetricCard } from './metric-card';

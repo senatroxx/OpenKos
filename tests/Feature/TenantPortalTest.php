@@ -842,10 +842,13 @@ test('tenant sees their lease unit transfer history on the reference page', func
             ->where('lease.unit_histories.0.reason', 'maintenance'));
 });
 
-test('user without tenant profile cannot access portal', function () {
+test('user without tenant profile can access their account overview', function () {
     $this->actingAs(User::factory()->create())
         ->get(route('portal.dashboard'))
-        ->assertForbidden();
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tenant-portal/dashboard')
+            ->where('lease', null));
 });
 
 test('user without tenant profile cannot access portal billing', function () {
@@ -877,7 +880,7 @@ test('tenant without dashboard permission cannot access owner dashboard', functi
         ->assertForbidden();
 });
 
-test('tenant login redirects to portal dashboard', function () {
+test('tenant login redirects to account overview', function () {
     $user = User::factory()->create(['email' => 'tenant@example.com']);
     Tenant::factory()->withUser($user)->create();
 
@@ -885,4 +888,17 @@ test('tenant login redirects to portal dashboard', function () {
         'email' => 'tenant@example.com',
         'password' => 'password',
     ])->assertRedirect(route('portal.dashboard'));
+});
+
+test('portal entry redirects to the dashboard and legacy paths remain compatible', function () {
+    $user = User::factory()->create();
+    Tenant::factory()->withUser($user)->create();
+
+    $this->actingAs($user)
+        ->get('/portal')
+        ->assertRedirect('/portal/dashboard');
+
+    $this->actingAs($user)
+        ->get('/portal/lease')
+        ->assertRedirect('/portal/leases');
 });

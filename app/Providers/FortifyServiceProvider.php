@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Models\User;
+use App\Support\Authentication\PostAuthenticationDestination;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,6 +15,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
 use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\RegisterResponse;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,19 +27,26 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(LoginResponse::class, fn () => new class implements LoginResponse
+        $this->app->singleton(LoginResponse::class, fn ($app) => new class($app->make(PostAuthenticationDestination::class)) implements LoginResponse
         {
+            public function __construct(private PostAuthenticationDestination $destination) {}
+
             public function toResponse($request): Response
             {
                 if ($request->wantsJson()) {
                     return response()->json(['two_factor' => false]);
                 }
 
-                if ($request->user()->hasTenantProfile()) {
-                    return redirect()->route('portal.dashboard');
-                }
+                return redirect()->to($this->destination->resolve($request, $request->user()));
+            }
+        });
+        $this->app->singleton(RegisterResponse::class, fn ($app) => new class($app->make(PostAuthenticationDestination::class)) implements RegisterResponse
+        {
+            public function __construct(private PostAuthenticationDestination $destination) {}
 
-                return redirect()->intended(Fortify::redirects('login'));
+            public function toResponse($request): Response
+            {
+                return redirect()->to($this->destination->resolve($request, $request->user()));
             }
         });
     }
@@ -79,6 +88,12 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
             'canResetPassword' => Features::enabled(Features::resetPasswords()),
             'status' => $request->session()->get('status'),
+            'redirect' => $request->query('redirect'),
+        ]));
+
+        Fortify::registerView(fn (Request $request) => Inertia::render('auth/register', [
+            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'redirect' => $request->query('redirect'),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [

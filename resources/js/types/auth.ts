@@ -2,6 +2,10 @@ export type User = {
     id: number;
     name: string;
     email: string;
+    phone: string | null;
+    id_card_number: string | null;
+    emergency_contact_name: string | null;
+    emergency_contact_phone: string | null;
     avatar?: string;
     email_verified_at: string | null;
     is_active: boolean;
@@ -18,6 +22,16 @@ export type Auth = {
     role: string | null;
     roles: string[];
     permissions: string[];
+};
+
+export type LoginPageProps = {
+    status?: string;
+    canResetPassword: boolean;
+    redirect?: string;
+};
+
+export type RegisterPageProps = {
+    redirect?: string;
 };
 
 /* @chisel-passkeys */

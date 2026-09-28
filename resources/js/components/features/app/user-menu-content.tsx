@@ -1,5 +1,5 @@
 import { Link, router } from '@inertiajs/react';
-import { LogOut } from 'lucide-react';
+import { LogOut, UserRound } from 'lucide-react';
 import { UserInfo } from '@/components/features/app/user-info';
 import {
     DropdownMenuItem,
@@ -12,9 +12,10 @@ import type { User } from '@/types';
 
 type Props = {
     user: User;
+    profileHref?: string;
 };
 
-export function UserMenuContent({ user }: Props) {
+export function UserMenuContent({ user, profileHref }: Props) {
     const cleanup = useMobileNavigation();
 
     const handleLogout = () => {
@@ -29,6 +30,14 @@ export function UserMenuContent({ user }: Props) {
                     <UserInfo user={user} showEmail={true} />
                 </div>
             </DropdownMenuLabel>
+            {profileHref && (
+                <DropdownMenuItem asChild>
+                    <Link className="block w-full cursor-pointer" href={profileHref}>
+                        <UserRound className="mr-2" />
+                        Profile
+                    </Link>
+                </DropdownMenuItem>
+            )}
             <DropdownMenuItem asChild>
                 <Link
                     className="block w-full cursor-pointer"

@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 import { t } from '@/lib/i18n';
+import { index as maintenanceIndex } from '@/routes/portal/maintenance-tickets';
 
 type Ticket = {
     id: number;
@@ -37,7 +38,7 @@ export default function ShowTicket({ ticket }: Props) {
             <Head title={`${t('Ticket')} ${ticket.reference}`} />
 
             <Link
-                href="/portal/maintenance-tickets"
+                href={maintenanceIndex()}
                 className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
             >
                 <ChevronLeft className="size-3" />

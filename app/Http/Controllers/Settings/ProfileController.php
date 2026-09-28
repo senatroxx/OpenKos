@@ -22,6 +22,8 @@ class ProfileController extends Controller
         return Inertia::render('settings/profile', [
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
+            'portalProfile' => $request->routeIs('portal.profile.*'),
+            'profileReturn' => $this->safeReturnUrl($request->query('return')),
         ]);
     }
 
@@ -40,7 +42,9 @@ class ProfileController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
-        return back();
+        $return = $this->safeReturnUrl($request->query('return'));
+
+        return $return ? redirect($return) : back();
     }
 
     /**
@@ -58,5 +62,15 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/');
+    }
+
+    private function safeReturnUrl(mixed $return): ?string
+    {
+        return is_string($return)
+            && str_starts_with($return, '/')
+            && ! str_starts_with($return, '//')
+            && str_starts_with(parse_url($return, PHP_URL_PATH) ?: '', '/listings/')
+            ? $return
+            : null;
     }
 }

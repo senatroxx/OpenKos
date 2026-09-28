@@ -74,6 +74,49 @@ test('email verification status is unchanged when the email address is unchanged
     expect($user->refresh()->email_verified_at)->not->toBeNull();
 });
 
+test('portal profile email address cannot be changed', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->from(route('portal.profile.edit'))
+        ->patch(route('portal.profile.update'), [
+            'name' => $user->name,
+            'email' => 'changed@example.com',
+            'phone' => '+628123456789',
+        ])
+        ->assertSessionHasErrors('email')
+        ->assertRedirect(route('portal.profile.edit'));
+
+    expect($user->refresh()->email)->not->toBe('changed@example.com');
+});
+
+test('portal profile stores renter details', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patch(route('portal.profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => '+628123456789',
+            'id_card_number' => '3273010203040005',
+            'emergency_contact_name' => 'Siti Nurhaliza',
+            'emergency_contact_phone' => '+628987654321',
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($user->refresh()->only([
+        'phone',
+        'id_card_number',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+    ]))->toBe([
+        'phone' => '+628123456789',
+        'id_card_number' => '3273010203040005',
+        'emergency_contact_name' => 'Siti Nurhaliza',
+        'emergency_contact_phone' => '+628987654321',
+    ]);
+});
+
 test('user can delete their account', function () {
     $user = User::factory()->create();
 
