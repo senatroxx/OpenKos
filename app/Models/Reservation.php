@@ -69,6 +69,12 @@ class Reservation extends Model
         return $this->belongsTo(User::class, 'converted_by');
     }
 
+    public function isExpired(): bool
+    {
+        return $this->status === ReservationStatus::Confirmed
+            && ($this->expires_at === null || $this->expires_at->lessThanOrEqualTo(now()));
+    }
+
     public function scopeHolding(Builder $query): void
     {
         $table = $query->getModel()->getTable();

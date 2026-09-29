@@ -64,13 +64,7 @@ export default function ApplicationShow({
     const displayedReservationStatus = reservationExpired
         ? 'expired'
         : reservation?.status;
-    const canRequestReservation =
-        !operator &&
-        application.status === 'accepted' &&
-        application.converted_at === null &&
-        (reservation === null ||
-            reservationExpired ||
-            ['cancelled', 'rejected', 'expired'].includes(reservation.status));
+    const canRequestReservation = application.can_request_reservation;
     const leaseContext: ReservationLeaseContext | null =
         operator &&
         reservation &&
@@ -422,9 +416,9 @@ export default function ApplicationShow({
                                             {t('Create lease')}
                                         </Button>
                                     )}
-                                {['pending', 'confirmed'].includes(
-                                    reservation.status,
-                                ) && (
+                                {(reservation.status === 'pending' ||
+                                    (reservation.status === 'confirmed' &&
+                                        !reservationExpired)) && (
                                     <Button
                                         type="button"
                                         variant="outline"

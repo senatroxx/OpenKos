@@ -16,6 +16,7 @@ class CancelReservation
     {
         return DB::transaction(function () use ($actor, $reservation): Reservation {
             $reservation = Reservation::query()->lockForUpdate()->findOrFail($reservation->id);
+            abort_unless(! $reservation->isExpired(), 422, __('Expired reservations cannot be cancelled.'));
             abort_unless($this->transitions->canTransition($reservation->status, ReservationStatus::Cancelled), 422, __('Only pending or confirmed reservations can be cancelled.'));
 
             $reservation->update([

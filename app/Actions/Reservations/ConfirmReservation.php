@@ -28,13 +28,12 @@ class ConfirmReservation
     public function execute(User $operator, Reservation $reservation, ?int $unitId): Reservation
     {
         $applicationId = $reservation->application_id;
-        $propertyId = Application::query()->whereKey($applicationId)->value('property_id');
 
-        return DB::transaction(function () use ($operator, $reservation, $unitId, $applicationId, $propertyId): Reservation {
-            $property = Property::query()->lockForUpdate()->findOrFail($propertyId);
-            $unit = $unitId === null ? null : Unit::query()->lockForUpdate()->findOrFail($unitId);
-            $reservation = Reservation::query()->lockForUpdate()->findOrFail($reservation->id);
+        return DB::transaction(function () use ($operator, $reservation, $unitId, $applicationId): Reservation {
             $application = Application::query()->lockForUpdate()->findOrFail($applicationId);
+            $reservation = Reservation::query()->lockForUpdate()->findOrFail($reservation->id);
+            $property = Property::query()->lockForUpdate()->findOrFail($application->property_id);
+            $unit = $unitId === null ? null : Unit::query()->lockForUpdate()->findOrFail($unitId);
 
             abort_unless($application->status === ApplicationStatus::Accepted, 422, __('Only accepted applications can have a confirmed reservation.'));
             abort_if($application->converted_at !== null || $application->converted_tenant_id !== null, 422, __('This application has already been converted.'));

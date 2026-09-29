@@ -11,6 +11,10 @@ use App\Models\Reservation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * Reservation mutations lock Application → Reservation → Property → Unit,
+ * omitting records they do not need.
+ */
 class RequestReservation
 {
     public function __construct(private ReservationTransitionValidator $transitions) {}
@@ -29,22 +33,30 @@ class RequestReservation
                 __('This application has already been converted.'),
             );
 
-            $existing = $application->reservations()
+            $existingReservations = $application->reservations()
                 ->whereIn('status', [ReservationStatus::Pending->value, ReservationStatus::Confirmed->value])
                 ->orderByDesc('id')
                 ->lockForUpdate()
-                ->first();
+                ->get();
 
-            if ($existing?->status === ReservationStatus::Confirmed && ! $existing->expires_at?->isFuture()) {
+            $hasOpenReservation = $existingReservations->contains(
+                fn (Reservation $existing): bool => $existing->status === ReservationStatus::Pending
+                    || ($existing->status === ReservationStatus::Confirmed && ! $existing->isExpired()),
+            );
+
+            abort_if($hasOpenReservation, 422, __('This application already has an open reservation.'));
+
+            foreach ($existingReservations as $existing) {
+                if ($existing->status !== ReservationStatus::Confirmed || ! $existing->isExpired()) {
+                    continue;
+                }
+
                 abort_unless($this->transitions->canTransition($existing->status, ReservationStatus::Expired), 422, __('This reservation cannot be expired.'));
                 $existing->update([
                     'status' => ReservationStatus::Expired,
                     'expired_at' => now(),
                 ]);
-                $existing = null;
             }
-
-            abort_if($existing !== null, 422, __('This application already has an open reservation.'));
 
             return Reservation::query()->create([
                 'application_id' => $application->id,

@@ -76,7 +76,6 @@ export type ApplicantApplication = {
     rental_amount?: string | null;
     applicant_message: string | null;
     applicant_feedback: string | null;
-    converted_at: string | null;
     reservation?: ApplicationReservation | null;
     available_units?: ReservationUnit[];
 };
@@ -85,7 +84,6 @@ export type OperatorApplication = ApplicantApplication & {
     applicant: { name: string; email: string; phone: string | null };
     operator_notes: string | null;
     reviewed_at: string | null;
-    converted_tenant_id: number | null;
 };
 
 export type ApplicationTargetDetails = {
@@ -101,12 +99,16 @@ export type ApplicationsIndexProps = {
     operator: boolean;
 };
 
+export type ApplicationShowApplication = ApplicantApplication & {
+    can_request_reservation: boolean;
+};
+
 export type ApplicationCreateProps = {
     target: ApplicationTargetDetails;
 };
 
 export type ApplicationShowProps = {
-    application: ApplicantApplication | OperatorApplication;
+    application: ApplicationShowApplication | (OperatorApplication & { can_request_reservation: boolean });
     operator: boolean;
 };
 

@@ -26,17 +26,16 @@ class CreateLeaseFromReservation
 
     public function execute(User $operator, Reservation $reservation, CreateLeaseData $data): Lease
     {
-        $application = Application::query()->findOrFail($reservation->application_id);
-        $unitId = $reservation->unit_id;
+        $applicationId = $reservation->application_id;
 
-        return DB::transaction(function () use ($operator, $reservation, $data, $application, $unitId): Lease {
-            $property = Property::query()->lockForUpdate()->findOrFail($application->property_id);
-            $unit = $unitId === null ? null : Unit::query()->lockForUpdate()->findOrFail($unitId);
+        return DB::transaction(function () use ($operator, $reservation, $data, $applicationId): Lease {
+            $application = Application::query()->lockForUpdate()->findOrFail($applicationId);
             $reservation = Reservation::query()->lockForUpdate()->findOrFail($reservation->id);
-            $application = Application::query()->lockForUpdate()->findOrFail($reservation->application_id);
+            $property = Property::query()->lockForUpdate()->findOrFail($application->property_id);
+            $unit = $reservation->unit_id === null ? null : Unit::query()->lockForUpdate()->findOrFail($reservation->unit_id);
 
             abort_unless($this->transitions->canTransition($reservation->status, ReservationStatus::Converted), 422, __('Only confirmed reservations can create a lease.'));
-            abort_unless($reservation->expires_at?->isFuture(), 422, __('This reservation has expired.'));
+            abort_unless(! $reservation->isExpired(), 422, __('This reservation has expired.'));
             abort_unless($application->status === ApplicationStatus::Accepted, 422, __('Only accepted applications can create a lease.'));
 
             if ($application->target_type === ApplicationTargetType::WholeProperty) {
@@ -66,7 +65,11 @@ class CreateLeaseFromReservation
                 'is_active' => true,
             ]);
 
-            $lease = $this->createLease->execute($target, $data->withTenantIds([$tenant->id]), $reservation->id);
+            $lease = $this->createLease->execute(
+                $target,
+                $data->withStartDate($reservation->move_in_date->toDateString())->withTenantIds([$tenant->id]),
+                $reservation->id,
+            );
 
             $reservation->update([
                 'lease_id' => $lease->id,

@@ -7,6 +7,7 @@ use App\Enums\Permission;
 use App\Enums\ReservationStatus;
 use App\Models\Application;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 class ApplicationPolicy
 {
@@ -36,11 +37,21 @@ class ApplicationPolicy
 
     public function requestReservation(User $user, Application $application): bool
     {
-        return $application->user_id === $user->id
-            && $application->status === ApplicationStatus::Accepted
-            && $application->converted_at === null
-            && $application->converted_tenant_id === null
-            && ! $application->reservations()->where('status', ReservationStatus::Converted->value)->exists();
+        if ($application->user_id !== $user->id
+            || $application->status !== ApplicationStatus::Accepted
+            || $application->converted_at !== null
+            || $application->converted_tenant_id !== null) {
+            return false;
+        }
+
+        return ! $application->reservations()
+            ->where(function (Builder $query): void {
+                $query->whereIn('status', [ReservationStatus::Pending->value, ReservationStatus::Converted->value])
+                    ->orWhere(fn (Builder $query) => $query
+                        ->where('status', ReservationStatus::Confirmed->value)
+                        ->where('expires_at', '>', now()));
+            })
+            ->exists();
     }
 
     /**

@@ -26,7 +26,8 @@ class ReservationPolicy
     public function cancel(User $user, Reservation $reservation): bool
     {
         return ($this->operator($user) || $reservation->application()->where('user_id', $user->id)->exists())
-            && in_array($reservation->status, [ReservationStatus::Pending, ReservationStatus::Confirmed], true);
+            && ($reservation->status === ReservationStatus::Pending
+                || ($reservation->status === ReservationStatus::Confirmed && ! $reservation->isExpired()));
     }
 
     public function createLease(User $user, Reservation $reservation): bool

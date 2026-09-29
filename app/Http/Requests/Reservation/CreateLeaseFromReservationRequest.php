@@ -13,6 +13,16 @@ use Illuminate\Validation\Rule;
 
 class CreateLeaseFromReservationRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        /** @var Reservation $reservation */
+        $reservation = $this->route('reservation');
+
+        $this->merge([
+            'start_date' => $reservation->move_in_date->toDateString(),
+        ]);
+    }
+
     /**
      * Determine if the user is authorized to make this request.
      */

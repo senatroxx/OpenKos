@@ -1,7 +1,10 @@
 <?php
 
+use App\Actions\Reservations\CancelReservation;
 use App\Actions\Reservations\ConfirmReservation;
 use App\Actions\Reservations\FindAvailableReservationUnits;
+use App\Actions\Reservations\RequestReservation;
+use App\Data\Reservation\RequestReservationData;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
 use App\Enums\PropertyRentalMode;
@@ -93,6 +96,13 @@ test('legacy converted applications cannot request reservations', function (stri
     ]);
 
     $this->actingAs($applicant)
+        ->get(route('applications.show', $application))
+        ->assertInertia(fn ($page) => $page
+            ->where('application.can_request_reservation', false)
+            ->missing('application.converted_at')
+            ->missing('application.converted_tenant_id'));
+
+    $this->actingAs($applicant)
         ->post(route('applications.reservations.store', $application), ['move_in_date' => now()->addWeek()->toDateString()])
         ->assertForbidden();
 
@@ -101,6 +111,43 @@ test('legacy converted applications cannot request reservations', function (stri
     'converted timestamp' => 'converted_at',
     'converted tenant' => 'converted_tenant_id',
 ]);
+
+test('a stale applicant retry cannot create another reservation after confirmation', function () {
+    $applicant = User::factory()->create();
+    $operator = User::factory()->owner()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $application = acceptedUnitApplication($property, $unitType, $applicant);
+    $moveInDate = now()->addWeek()->toDateString();
+
+    $this->actingAs($applicant)
+        ->post(route('applications.reservations.store', $application), ['move_in_date' => $moveInDate])
+        ->assertRedirect();
+
+    $reservation = $application->latestReservation()->firstOrFail();
+
+    $this->actingAs($operator)
+        ->patch(route('reservations.confirm', $reservation), ['unit_id' => $unit->id])
+        ->assertRedirect();
+
+    $this->actingAs($applicant)
+        ->get(route('applications.show', $application))
+        ->assertInertia(fn ($page) => $page->where('application.can_request_reservation', false));
+
+    $this->actingAs($applicant)
+        ->post(route('applications.reservations.store', $application), ['move_in_date' => $moveInDate])
+        ->assertForbidden();
+
+    expect(fn () => app(RequestReservation::class)->execute(
+        $applicant,
+        $application,
+        new RequestReservationData($moveInDate),
+    ))->toThrow(HttpException::class, 'This application already has an open reservation.');
+
+    expect($application->reservations()->count())->toBe(1)
+        ->and($reservation->refresh()->status)->toBe(ReservationStatus::Confirmed);
+});
 
 test('unit confirmation rejects a different active lease start date', function () {
     $operator = User::factory()->owner()->create();
@@ -515,6 +562,56 @@ test('creating a lease from a confirmed reservation creates the tenant and conve
         ->and($lease->unit_id)->toBe($unit->id);
 });
 
+test('lease conversion derives its start date from the confirmed reservation', function () {
+    $operator = User::factory()->owner()->create();
+    $applicant = User::factory()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $application = acceptedUnitApplication($property, $unitType, $applicant);
+    $moveInDate = now()->addWeek()->toDateString();
+    $reservation = Reservation::factory()->confirmed()->create([
+        'application_id' => $application->id,
+        'unit_id' => $unit->id,
+        'move_in_date' => $moveInDate,
+    ]);
+
+    $this->actingAs($operator)
+        ->post(route('reservations.lease.store', $reservation), [
+            'start_date' => now()->addDays(2)->toDateString(),
+        ])
+        ->assertRedirect();
+
+    expect(Lease::query()->findOrFail($reservation->fresh()->lease_id)->start_date->toDateString())
+        ->toBe($moveInDate);
+});
+
+test('lease conversion validates its end date against the reservation move-in date', function () {
+    $operator = User::factory()->owner()->create();
+    $applicant = User::factory()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    $application = acceptedUnitApplication($property, $unitType, $applicant);
+    $moveInDate = now()->addWeek()->toDateString();
+    $reservation = Reservation::factory()->confirmed()->create([
+        'application_id' => $application->id,
+        'unit_id' => $unit->id,
+        'move_in_date' => $moveInDate,
+    ]);
+
+    $this->actingAs($operator)
+        ->post(route('reservations.lease.store', $reservation), [
+            'start_date' => now()->subWeek()->toDateString(),
+            'end_date' => now()->addDays(2)->toDateString(),
+        ])
+        ->assertRedirect()
+        ->assertSessionHasErrors('end_date');
+
+    expect($reservation->refresh()->status)->toBe(ReservationStatus::Confirmed)
+        ->and(Tenant::query()->where('user_id', $applicant->id)->exists())->toBeFalse();
+});
+
 test('multiple reservations with the same unit lease start date can convert to one shared lease', function () {
     $operator = User::factory()->owner()->create();
     $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
@@ -615,12 +712,56 @@ test('the scheduled expiry command releases due confirmed holds', function () {
         'application_id' => acceptedUnitApplication($property, $unitType)->id,
         'expires_at' => now()->addHour(),
     ]);
-
     Artisan::call('reservations:expire');
 
     expect($expired->refresh()->status)->toBe(ReservationStatus::Expired)
         ->and($expired->expired_at)->not->toBeNull()
         ->and($active->refresh()->status)->toBe(ReservationStatus::Confirmed);
+});
+
+test('expired confirmed reservations cannot be cancelled before scheduled expiry', function () {
+    $applicant = User::factory()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create([
+        'unit_type_id' => $unitType->id,
+        'capacity' => 1,
+    ]);
+    $application = acceptedUnitApplication($property, $unitType, $applicant);
+    $moveInDate = now()->addWeek()->toDateString();
+    $reservation = Reservation::factory()->confirmed()->create([
+        'application_id' => $application->id,
+        'unit_id' => $unit->id,
+        'move_in_date' => $moveInDate,
+        'expires_at' => now()->subMinute(),
+    ]);
+    $candidateApplication = acceptedUnitApplication($property, $unitType);
+    $unitIsAvailable = fn (): bool => app(FindAvailableReservationUnits::class)
+        ->execute($candidateApplication, $moveInDate)
+        ->contains(fn (Unit $candidate): bool => $candidate->id === $unit->id);
+
+    expect($reservation->isExpired())->toBeTrue()
+        ->and($unitIsAvailable())->toBeTrue();
+
+    $this->actingAs($applicant)
+        ->get(route('applications.show', $application))
+        ->assertInertia(fn ($page) => $page
+            ->where('application.reservation.is_expired', true)
+            ->where('application.can_request_reservation', true));
+
+    $this->actingAs($applicant)
+        ->patch(route('reservations.cancel', $reservation))
+        ->assertForbidden();
+
+    expect(fn () => app(CancelReservation::class)->execute($applicant, $reservation))
+        ->toThrow(HttpException::class, 'Expired reservations cannot be cancelled.')
+        ->and($unitIsAvailable())->toBeTrue();
+
+    Artisan::call('reservations:expire');
+
+    expect($reservation->refresh()->status)->toBe(ReservationStatus::Expired)
+        ->and($reservation->expired_at)->not->toBeNull()
+        ->and($unitIsAvailable())->toBeTrue();
 });
 
 test('applicants may cancel pending and confirmed reservations and reclaim the same application', function () {

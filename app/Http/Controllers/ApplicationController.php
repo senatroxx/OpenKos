@@ -75,6 +75,9 @@ final class ApplicationController extends Controller
         ]);
 
         $reservation = $application->latestReservation;
+        $canRequestReservation = ! $operator
+            && $request->user()->id === $application->user_id
+            && $request->user()->can('requestReservation', $application);
         $availableUnits = $operator
             && $reservation?->status === ReservationStatus::Pending
             && $application->target_type === ApplicationTargetType::UnitType
@@ -85,6 +88,7 @@ final class ApplicationController extends Controller
         return Inertia::render('applications/show', [
             'application' => [
                 ...$this->projection($application, $request->user()->id === $application->user_id),
+                'can_request_reservation' => $canRequestReservation,
                 'property' => $application->property === null ? null : [
                     ...$application->property->only(['id', 'name', 'public_slug', 'slug']),
                     'active_property_rates' => $application->property->activePropertyRates->map(fn ($rate): array => $rate->only([
@@ -96,7 +100,7 @@ final class ApplicationController extends Controller
                     'status' => $reservation->status->value,
                     'move_in_date' => $reservation->move_in_date->toDateString(),
                     'expires_at' => $reservation->expires_at?->toIso8601String(),
-                    'is_expired' => $reservation->status->value === 'confirmed' && $reservation->expires_at?->isPast() === true,
+                    'is_expired' => $reservation->isExpired(),
                     'unit' => $reservation->unit === null ? null : $this->unitProjection($reservation->unit, $operator),
                 ],
                 'available_units' => $availableUnits->map(fn (Unit $unit): array => $this->unitProjection($unit))->values(),
@@ -154,7 +158,6 @@ final class ApplicationController extends Controller
             'rental_amount' => $application->rental_amount,
             'applicant_message' => $application->applicant_message,
             'applicant_feedback' => $application->applicant_feedback,
-            'converted_at' => $application->converted_at?->toIso8601String(),
         ];
     }
 
@@ -175,7 +178,6 @@ final class ApplicationController extends Controller
             ],
             'operator_notes' => $application->operator_notes,
             'reviewed_at' => $application->reviewed_at?->toIso8601String(),
-            'converted_tenant_id' => $application->converted_tenant_id,
         ];
     }
 
