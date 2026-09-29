@@ -2,9 +2,12 @@
 
 namespace App\Actions\Reservations;
 
+use App\Business\Leases\OccupancyCalculator;
+use App\Business\Reservations\ReservationTransitionValidator;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
 use App\Enums\ReservationStatus;
+use App\Enums\UnitStatus;
 use App\Models\Application;
 use App\Models\Property;
 use App\Models\Reservation;
@@ -16,7 +19,11 @@ use Illuminate\Support\Facades\DB;
 
 class ConfirmReservation
 {
-    public function __construct(private ReservationRepository $reservations) {}
+    public function __construct(
+        private ReservationRepository $reservations,
+        private OccupancyCalculator $occupancy,
+        private ReservationTransitionValidator $transitions,
+    ) {}
 
     public function execute(User $operator, Reservation $reservation, ?int $unitId): Reservation
     {
@@ -31,7 +38,7 @@ class ConfirmReservation
 
             abort_unless($application->status === ApplicationStatus::Accepted, 422, __('Only accepted applications can have a confirmed reservation.'));
             abort_if($application->converted_at !== null || $application->converted_tenant_id !== null, 422, __('This application has already been converted.'));
-            abort_unless($reservation->status === ReservationStatus::Pending, 422, __('Only pending reservations can be confirmed.'));
+            abort_unless($this->transitions->canTransition($reservation->status, ReservationStatus::Confirmed), 422, __('Only pending reservations can be confirmed.'));
 
             if ($application->target_type === ApplicationTargetType::WholeProperty) {
                 abort_if($unit !== null, 422, __('Whole-property reservations do not select a unit.'));
@@ -41,7 +48,12 @@ class ConfirmReservation
                     422,
                     __('Close all active leases on this property before confirming a whole-property reservation.'),
                 );
-                abort_unless($this->reservations->propertyHasCapacityForReservation($property, $reservation->move_in_date->toDateString()), 422, __('The property is no longer available for these dates.'));
+                abort_if(
+                    $this->reservations->hasLeaseConflictForReservation($property, $reservation->move_in_date->toDateString())
+                        || $this->reservations->hasAnyReservationForProperty($property),
+                    422,
+                    __('The property is no longer available for these dates.'),
+                );
             } else {
                 abort_unless($property->rental_mode->supportsUnitInventory(), 422, __('This property no longer supports unit rentals.'));
                 abort_unless($unit !== null, 422, __('Select a unit to confirm this reservation.'));
@@ -55,7 +67,20 @@ class ConfirmReservation
                     422,
                     __('The selected unit has an active lease with a different start date.'),
                 );
-                abort_unless($this->reservations->unitHasCapacityForReservation($unit, $reservation->move_in_date->toDateString()), 422, __('The selected unit has no remaining capacity for these dates.'));
+                abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('The selected unit has no remaining capacity for these dates.'));
+                abort_if(
+                    $this->reservations->hasLeaseConflictForReservation($unit, $reservation->move_in_date->toDateString())
+                        || $this->reservations->hasWholePropertyReservation($property),
+                    422,
+                    __('The selected unit has no remaining capacity for these dates.'),
+                );
+
+                $occupancy = $this->reservations->unitReservationOccupancy($unit, $reservation->move_in_date->toDateString());
+                abort_unless(
+                    $this->occupancy->canAccommodate($unit->capacity, $occupancy['occupied_slots'], 1, $occupancy['reserved_slots']),
+                    422,
+                    __('The selected unit has no remaining capacity for these dates.'),
+                );
             }
 
             $holdHours = max(1, (int) Setting::get('reservation_hold_hours'));

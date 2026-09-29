@@ -121,7 +121,7 @@ class CreateLease
                     $exceptReservationId,
                 );
 
-                abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount + $reservedSlots, count($newTenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+                abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount, count($newTenantIds), $reservedSlots), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
                 foreach ($newTenantIds as $tenantId) {
                     $existingLease->tenants()->attach($tenantId, ['is_primary' => false]);
@@ -133,7 +133,7 @@ class CreateLease
             }
 
             $reservedSlots = $this->reservationRepository->unitReservationCountOverlappingLease($unit, $data->endDate, $exceptReservationId);
-            abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount + $reservedSlots, count($tenantIds)), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
+            abort_if(! $this->occupancy->canAccommodate($unit->capacity, $activeOccupantCount, count($tenantIds), $reservedSlots), 422, __('Unit capacity exceeded. Unit can only hold :capacity occupants.', ['capacity' => $unit->capacity]));
 
             $this->ensureTenantsDoNotHaveActiveLease($tenantIds);
 

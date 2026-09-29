@@ -2,8 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\ReservationStatus;
-use App\Models\Reservation;
+use App\Actions\Reservations\ExpireReservations as ExpireReservationsAction;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
@@ -12,18 +11,9 @@ use Illuminate\Console\Command;
 #[Description('Expire confirmed reservations after their hold deadline.')]
 class ExpireReservations extends Command
 {
-    public function handle(): int
+    public function handle(ExpireReservationsAction $action): int
     {
-        $expiredAt = now();
-
-        $count = Reservation::query()
-            ->where('status', ReservationStatus::Confirmed->value)
-            ->where('expires_at', '<=', $expiredAt)
-            ->update([
-                'status' => ReservationStatus::Expired->value,
-                'expired_at' => $expiredAt,
-                'updated_at' => $expiredAt,
-            ]);
+        $count = $action->execute();
 
         $this->info("Expired {$count} reservations.");
 

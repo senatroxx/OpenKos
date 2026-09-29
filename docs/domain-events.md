@@ -15,7 +15,7 @@
 
 | Event                      | Payload                                                               | Dispatched from                                                                                           |
 | -------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds, ?int $actorId`                      | `LeaseController::store`, `LeaseController::storeForProperty`                                             |
+| `Lease\LeaseCreated`       | `Lease $lease, array $tenantIds, ?int $actorId`                      | `LeaseController::store`, `LeaseController::storeForProperty`, `ReservationController::createLease`        |
 | `Lease\LeaseStatusChanged` | `Lease $lease, LeaseStatus $from, LeaseStatus $to, ?int $actorId`    | `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::renew`, `LeaseController::destroy` |
 
 **Payload: `LeaseCreated`**
@@ -64,7 +64,7 @@ The package-level plugin event is `OpenKOS\Core\Events\PaymentRecorded` with `in
 
 | Event                    | Payload                                                           | Dispatched from                                                                                                                                                                        |
 | ------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Unit\UnitStatusChanged` | `Unit $unit, UnitStatus $from, UnitStatus $to, ?int $actorId`     | `LeaseController::store`, `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::destroy`, `MaintenanceTicketController::store`, `MaintenanceTicketController::update` |
+| `Unit\UnitStatusChanged` | `Unit $unit, UnitStatus $from, UnitStatus $to, ?int $actorId`     | `LeaseController::store`, `LeaseController::moveOut`, `LeaseController::move`, `LeaseController::destroy`, `MaintenanceTicketController::store`, `MaintenanceTicketController::update`, `ReservationController::createLease` |
 
 **Payload: `UnitStatusChanged`**
 

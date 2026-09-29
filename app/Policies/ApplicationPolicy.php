@@ -38,6 +38,8 @@ class ApplicationPolicy
     {
         return $application->user_id === $user->id
             && $application->status === ApplicationStatus::Accepted
+            && $application->converted_at === null
+            && $application->converted_tenant_id === null
             && ! $application->reservations()->where('status', ReservationStatus::Converted->value)->exists();
     }
 

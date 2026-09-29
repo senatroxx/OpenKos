@@ -175,7 +175,7 @@ app/
 | Invite Tenant       | `TenantController::invite()`                            | `InviteTenant`      | —                   | —                     | —                                                    |
 | Disable Tenant Access | `TenantController::disableAccess()`                   | `DisableTenantAccess` | —                 | —                     | —                                                    |
 | Request Reservation | `ReservationController::store()`                        | `RequestReservation` | `RequestReservationData` | —              | —                                                    |
-| Confirm Reservation | `ReservationController::confirm()`                      | `ConfirmReservation` | —                   | —                     | `ReservationRepository`                            |
+| Confirm Reservation | `ReservationController::confirm()`                      | `ConfirmReservation` | —                   | —                     | `OccupancyCalculator`, `ReservationTransitionValidator` |
 | Create Lease from Reservation | `ReservationController::createLease()`          | `CreateLeaseFromReservation` | `CreateLeaseData` | —               | shared `CreateLease` rules                         |
 
 `CreateLease` is the shared creation workflow for both targets. It locks the
@@ -184,6 +184,15 @@ authoritative active-target conflict rule before selecting rates and creating
 the Lease. Whole-property creation uses a PropertyRate and leaves `unit_id`
 null; Unit creation preserves UnitRate and capacity/co-tenancy behavior.
 Renewal uses the same target conflict rule and locking boundary.
+
+Reservation Actions retrieve lease/reservation conflicts and Unit occupant and
+hold counts from `ReservationRepository`. `ConfirmReservation` passes those
+counts to `OccupancyCalculator` and status changes to
+`ReservationTransitionValidator` before persisting the hold. The Unit picker
+uses `FindAvailableReservationUnits`, which gets candidate Units and counts from
+the Repository, then filters candidates through the same `OccupancyCalculator`.
+The Repository only loads and counts persistence data; it does not decide
+whether Unit capacity is available.
 
 ## Application, Reservation, and Lease Lifecycle (ADR-014)
 

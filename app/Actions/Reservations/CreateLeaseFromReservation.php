@@ -3,6 +3,7 @@
 namespace App\Actions\Reservations;
 
 use App\Actions\Leases\CreateLease as CreateLeaseAction;
+use App\Business\Reservations\ReservationTransitionValidator;
 use App\Data\Lease\CreateLeaseData;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
@@ -18,7 +19,10 @@ use Illuminate\Support\Facades\DB;
 
 class CreateLeaseFromReservation
 {
-    public function __construct(private CreateLeaseAction $createLease) {}
+    public function __construct(
+        private CreateLeaseAction $createLease,
+        private ReservationTransitionValidator $transitions,
+    ) {}
 
     public function execute(User $operator, Reservation $reservation, CreateLeaseData $data): Lease
     {
@@ -31,7 +35,7 @@ class CreateLeaseFromReservation
             $reservation = Reservation::query()->lockForUpdate()->findOrFail($reservation->id);
             $application = Application::query()->lockForUpdate()->findOrFail($reservation->application_id);
 
-            abort_unless($reservation->status === ReservationStatus::Confirmed, 422, __('Only confirmed reservations can create a lease.'));
+            abort_unless($this->transitions->canTransition($reservation->status, ReservationStatus::Converted), 422, __('Only confirmed reservations can create a lease.'));
             abort_unless($reservation->expires_at?->isFuture(), 422, __('This reservation has expired.'));
             abort_unless($application->status === ApplicationStatus::Accepted, 422, __('Only accepted applications can create a lease.'));
 

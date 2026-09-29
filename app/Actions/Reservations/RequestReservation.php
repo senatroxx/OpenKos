@@ -2,6 +2,7 @@
 
 namespace App\Actions\Reservations;
 
+use App\Business\Reservations\ReservationTransitionValidator;
 use App\Data\Reservation\RequestReservationData;
 use App\Enums\ApplicationStatus;
 use App\Enums\ReservationStatus;
@@ -12,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class RequestReservation
 {
+    public function __construct(private ReservationTransitionValidator $transitions) {}
+
     public function execute(User $applicant, Application $application, RequestReservationData $data): Reservation
     {
         return DB::transaction(function () use ($applicant, $application, $data): Reservation {
@@ -19,6 +22,7 @@ class RequestReservation
 
             abort_unless($application->user_id === $applicant->id, 403);
             abort_unless($application->status === ApplicationStatus::Accepted, 422, __('Only accepted applications can request a reservation.'));
+            abort_if($application->converted_at !== null || $application->converted_tenant_id !== null, 422, __('This application has already been converted.'));
             abort_if(
                 $application->reservations()->where('status', ReservationStatus::Converted->value)->exists(),
                 422,
@@ -32,6 +36,7 @@ class RequestReservation
                 ->first();
 
             if ($existing?->status === ReservationStatus::Confirmed && ! $existing->expires_at?->isFuture()) {
+                abort_unless($this->transitions->canTransition($existing->status, ReservationStatus::Expired), 422, __('This reservation cannot be expired.'));
                 $existing->update([
                     'status' => ReservationStatus::Expired,
                     'expired_at' => now(),

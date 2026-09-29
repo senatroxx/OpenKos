@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Reservations\FindAvailableReservationUnits;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
 use App\Enums\PropertyRentalMode;
@@ -69,8 +70,28 @@ test('only accepted applicants can request a pending reservation and pending req
     expect($reservation->status)->toBe(ReservationStatus::Pending)
         ->and($reservation->unit_id)->toBeNull()
         ->and($reservation->expires_at)->toBeNull()
-        ->and(app(ReservationRepository::class)->unitHasCapacityForReservation($unit, $reservation->move_in_date->toDateString()))->toBeTrue();
+        ->and(app(FindAvailableReservationUnits::class)->execute($application, $reservation->move_in_date->toDateString())->pluck('id')->all())->toContain($unit->id);
 });
+
+test('legacy converted applications cannot request reservations', function (string $conversionField) {
+    $applicant = User::factory()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $application = acceptedUnitApplication($property, $unitType, $applicant);
+    $tenant = Tenant::factory()->create(['user_id' => $applicant->id]);
+    $application->update([
+        $conversionField => $conversionField === 'converted_at' ? now() : $tenant->id,
+    ]);
+
+    $this->actingAs($applicant)
+        ->post(route('applications.reservations.store', $application), ['move_in_date' => now()->addWeek()->toDateString()])
+        ->assertForbidden();
+
+    expect($application->reservations()->exists())->toBeFalse();
+})->with([
+    'converted timestamp' => 'converted_at',
+    'converted tenant' => 'converted_tenant_id',
+]);
 
 test('unit confirmation rejects a different active lease start date', function () {
     $operator = User::factory()->owner()->create();
@@ -94,8 +115,8 @@ test('unit confirmation rejects a different active lease start date', function (
         'move_in_date' => $moveInDate,
     ]);
 
-    expect(app(ReservationRepository::class)
-        ->availableUnitsFor($application, $moveInDate)
+    expect(app(FindAvailableReservationUnits::class)
+        ->execute($application, $moveInDate)
         ->pluck('id')
         ->all())->toBe([]);
 
@@ -189,6 +210,37 @@ test('unit reservations may share a unit while its remaining capacity permits', 
     }
 
     expect(Reservation::query()->where('unit_id', $unit->id)->where('status', ReservationStatus::Confirmed->value)->count())->toBe(2);
+});
+
+test('available Unit selection uses shared capacity rules and ignores expired holds before scheduled expiry', function () {
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create([
+        'unit_type_id' => $unitType->id,
+        'capacity' => 2,
+    ]);
+    $moveInDate = now()->addWeek()->toDateString();
+    Lease::factory()->create([
+        'unit_id' => $unit->id,
+        'property_id' => $property->id,
+        'start_date' => $moveInDate,
+        'end_date' => null,
+    ]);
+    $confirmedReservation = Reservation::factory()->confirmed()->create([
+        'application_id' => acceptedUnitApplication($property, $unitType)->id,
+        'unit_id' => $unit->id,
+        'move_in_date' => $moveInDate,
+        'expires_at' => now()->addHour(),
+    ]);
+    $application = acceptedUnitApplication($property, $unitType);
+    $availableUnits = app(FindAvailableReservationUnits::class);
+
+    expect($availableUnits->execute($application, $moveInDate)->pluck('id')->all())->toBe([]);
+
+    $confirmedReservation->update(['expires_at' => now()->subMinute()]);
+
+    expect($availableUnits->execute($application, $moveInDate)->pluck('id')->all())->toContain($unit->id)
+        ->and($confirmedReservation->refresh()->status)->toBe(ReservationStatus::Confirmed);
 });
 
 test('whole-property confirmation blocks active leases even when their dates do not overlap', function () {

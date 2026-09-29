@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Applications\SubmitApplication;
 use App\Actions\Applications\TransitionApplication;
+use App\Actions\Reservations\FindAvailableReservationUnits;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
 use App\Http\Requests\Application\StoreApplicationRequest;
@@ -12,7 +13,6 @@ use App\Models\Application;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\UnitType;
-use App\Repositories\ReservationRepository;
 use App\Services\Pricing\EffectiveUnitRateResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +63,7 @@ final class ApplicationController extends Controller
             : to_route('public.portal.show', ['property' => $property->public_slug]);
     }
 
-    public function show(Request $request, Application $application): Response
+    public function show(Request $request, Application $application, FindAvailableReservationUnits $findAvailableReservationUnits): Response
     {
         $this->authorize('view', $application);
         $operator = $request->user()->isOwner() || $request->user()->can('tenants.view');
@@ -78,7 +78,7 @@ final class ApplicationController extends Controller
             && $reservation?->status->value === 'pending'
             && $application->target_type === ApplicationTargetType::UnitType
             && $application->property?->rental_mode->supportsUnitInventory()
-            ? app(ReservationRepository::class)->availableUnitsFor($application, $reservation->move_in_date->toDateString())->loadMissing(['activeRates', 'unitType.activeRates'])
+            ? $findAvailableReservationUnits->execute($application, $reservation->move_in_date->toDateString())->loadMissing(['activeRates', 'unitType.activeRates'])
             : collect();
 
         return Inertia::render('applications/show', [

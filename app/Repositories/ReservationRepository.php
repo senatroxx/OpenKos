@@ -2,12 +2,14 @@
 
 namespace App\Repositories;
 
+use App\Enums\ReservationStatus;
 use App\Enums\UnitStatus;
 use App\Models\Application;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\Reservation;
 use App\Models\Unit;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
@@ -54,28 +56,13 @@ class ReservationRepository
         return Reservation::query()->holding()->forProperty($property)->exists();
     }
 
-    public function unitHasCapacityForReservation(Unit $unit, string $moveInDate): bool
+    /** @return array{occupied_slots: int, reserved_slots: int} */
+    public function unitReservationOccupancy(Unit $unit, string $moveInDate): array
     {
-        if (in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true)) {
-            return false;
-        }
-
-        if ($this->unitHasIncompatibleActiveLeaseStart($unit, $moveInDate)
-            || $this->hasLeaseConflictForReservation($unit, $moveInDate)
-            || $this->hasWholePropertyReservation($unit->property_id)) {
-            return false;
-        }
-
-        $activeOccupants = $this->occupancy->activeOccupantCountAtDate($unit, $moveInDate);
-        $reservedSlots = $this->unitReservationCountOverlappingLease($unit, null);
-
-        return $activeOccupants + $reservedSlots < $unit->capacity;
-    }
-
-    public function propertyHasCapacityForReservation(Property $property, string $moveInDate): bool
-    {
-        return ! $this->hasLeaseConflictForReservation($property, $moveInDate)
-            && ! $this->hasAnyReservationForProperty($property);
+        return [
+            'occupied_slots' => $this->occupancy->activeOccupantCountAtDate($unit, $moveInDate),
+            'reserved_slots' => $this->unitReservationCountOverlappingLease($unit, null),
+        ];
     }
 
     public function hasReservationConflictForLease(Property|Unit $target, ?string $leaseEndDate, ?int $exceptReservationId = null): bool
@@ -103,8 +90,19 @@ class ReservationRepository
             ->count();
     }
 
+    /** @return Collection<int, Reservation> */
+    public function confirmedReservationsExpiredBy(CarbonInterface $expiresAt): Collection
+    {
+        return Reservation::query()
+            ->where('status', ReservationStatus::Confirmed->value)
+            ->where('expires_at', '<=', $expiresAt)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+    }
+
     /** @return Collection<int, Unit> */
-    public function availableUnitsFor(Application $application, string $moveInDate): Collection
+    public function unitCandidatesForReservation(Application $application, string $moveInDate): Collection
     {
         if ($application->unit_type_id === null) {
             return collect();
@@ -142,8 +140,6 @@ class ReservationRepository
             ->selectSub($occupiedSlots, 'occupied_slots')
             ->selectSub($reservedSlots, 'reserved_slots')
             ->orderBy('name')
-            ->get()
-            ->filter(fn (Unit $unit): bool => (int) $unit->occupied_slots + (int) $unit->reserved_slots < $unit->capacity)
-            ->values();
+            ->get();
     }
 }
