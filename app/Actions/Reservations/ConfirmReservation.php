@@ -67,7 +67,7 @@ class ConfirmReservation
                     422,
                     __('The selected unit has an active lease with a different start date.'),
                 );
-                abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('The selected unit has no remaining capacity for these dates.'));
+                abort_if(in_array($unit->status, [UnitStatus::Maintenance, UnitStatus::Unavailable], true), 422, __('The selected unit is not available for reservation.'));
                 abort_if(
                     $this->reservations->hasLeaseConflictForReservation($unit, $reservation->move_in_date->toDateString())
                         || $this->reservations->hasWholePropertyReservation($property),

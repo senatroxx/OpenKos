@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Reservations\ConfirmReservation;
 use App\Actions\Reservations\FindAvailableReservationUnits;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
@@ -20,6 +21,7 @@ use App\Repositories\ReservationRepository;
 use Database\Seeders\RegionAndCitySeeder;
 use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Support\Facades\Artisan;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses()->beforeEach(function () {
     $this->seed(RoleAndPermissionSeeder::class);
@@ -149,6 +151,25 @@ test('unit reservation confirmation fails if the property stops supporting unit 
     $this->actingAs($operator)
         ->patch(route('reservations.confirm', $reservation), ['unit_id' => $unit->id])
         ->assertUnprocessable();
+
+    expect($reservation->refresh()->status)->toBe(ReservationStatus::Pending);
+});
+
+test('unit reservation confirmation explains unavailable unit status', function () {
+    $operator = User::factory()->owner()->create();
+    $property = Property::factory()->create(['rental_mode' => PropertyRentalMode::Unit]);
+    $unitType = UnitType::factory()->for($property)->create();
+    $unit = Unit::factory()->for($property)->create([
+        'unit_type_id' => $unitType->id,
+        'status' => UnitStatus::Maintenance,
+    ]);
+    $reservation = Reservation::factory()->create([
+        'application_id' => acceptedUnitApplication($property, $unitType)->id,
+        'move_in_date' => now()->addWeek()->toDateString(),
+    ]);
+
+    expect(fn () => app(ConfirmReservation::class)->execute($operator, $reservation, $unit->id))
+        ->toThrow(HttpException::class, 'The selected unit is not available for reservation.');
 
     expect($reservation->refresh()->status)->toBe(ReservationStatus::Pending);
 });
