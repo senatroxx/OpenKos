@@ -7,6 +7,7 @@ use App\Actions\Applications\TransitionApplication;
 use App\Actions\Reservations\FindAvailableReservationUnits;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
+use App\Enums\ReservationStatus;
 use App\Http\Requests\Application\StoreApplicationRequest;
 use App\Http\Requests\Application\TransitionApplicationRequest;
 use App\Models\Application;
@@ -75,7 +76,7 @@ final class ApplicationController extends Controller
 
         $reservation = $application->latestReservation;
         $availableUnits = $operator
-            && $reservation?->status->value === 'pending'
+            && $reservation?->status === ReservationStatus::Pending
             && $application->target_type === ApplicationTargetType::UnitType
             && $application->property?->rental_mode->supportsUnitInventory()
             ? $findAvailableReservationUnits->execute($application, $reservation->move_in_date->toDateString())->loadMissing(['activeRates', 'unitType.activeRates'])

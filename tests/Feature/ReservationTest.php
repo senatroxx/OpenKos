@@ -71,6 +71,13 @@ test('only accepted applicants can request a pending reservation and pending req
         ->and($reservation->unit_id)->toBeNull()
         ->and($reservation->expires_at)->toBeNull()
         ->and(app(FindAvailableReservationUnits::class)->execute($application, $reservation->move_in_date->toDateString())->pluck('id')->all())->toContain($unit->id);
+
+    $operator = User::factory()->owner()->create();
+
+    $this->actingAs($operator)->get(route('applications.show', $application))
+        ->assertInertia(fn ($page) => $page
+            ->where('application.reservation.status', ReservationStatus::Pending->value)
+            ->where('application.available_units.0.id', $unit->id));
 });
 
 test('legacy converted applications cannot request reservations', function (string $conversionField) {
