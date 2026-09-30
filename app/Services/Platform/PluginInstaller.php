@@ -26,7 +26,7 @@ final class PluginInstaller
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     platform_constraint: string|null,
      *     php: string,
      *     dependencies: array<int, string>
      * }
@@ -144,7 +144,7 @@ final class PluginInstaller
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     platform_constraint: string|null,
      *     php: string,
      *     dependencies: array<int, string>
      * }
@@ -396,7 +396,6 @@ final class PluginInstaller
             'version' => $metadata['version'] ?? null,
             'description' => $metadata['description'] ?? null,
             'entry_class' => $metadata['entry_class'] ?? null,
-            'core_version' => $metadata['core_version'] ?? null,
             'php' => $metadata['php'] ?? null,
             'dependencies' => $metadata['dependencies'] ?? null,
             'platform_constraint' => $metadata['platform_constraint'] ?? null,
@@ -407,7 +406,6 @@ final class PluginInstaller
             'version' => $manifest['version'] ?? null,
             'description' => $manifest['description'] ?? null,
             'entry_class' => $manifest['entry_class'] ?? null,
-            'core_version' => $manifest['core_version'] ?? null,
             'php' => $manifest['php'] ?? null,
             'dependencies' => $manifest['dependencies'] ?? null,
             'platform_constraint' => $expected['platform_constraint'] ?? null,
@@ -416,7 +414,6 @@ final class PluginInstaller
         if (
             $actual !== $expectedManifest
             || ($expected['entry_class'] ?? null) !== $actual['entry_class']
-            || ($expected['core_version'] ?? null) !== $actual['core_version']
             || ($expected['php'] ?? null) !== $actual['php']
             || ($expected['dependencies'] ?? null) !== $actual['dependencies']
         ) {

@@ -3,7 +3,6 @@
 namespace App\Services\Platform;
 
 use OpenKOS\Platform\Plugin\Plugin;
-use OpenKOS\Platform\Plugin\PluginLoader;
 use Throwable;
 
 final class RuntimePluginGraphValidator
@@ -67,26 +66,6 @@ final class RuntimePluginGraphValidator
                 continue;
             }
 
-            try {
-                if (! (new PluginLoader)->satisfies(
-                    (string) config('platform.version', '0.2.0'),
-                    (string) ($metadata['core_version'] ?? '*'),
-                )) {
-                    $this->addIssue(
-                        $issues,
-                        $id,
-                        'incompatible',
-                        "Runtime plugin [{$id}] is incompatible with the current OpenKOS version.",
-                    );
-                }
-            } catch (Throwable) {
-                $this->addIssue(
-                    $issues,
-                    $id,
-                    'incompatible',
-                    "Runtime plugin [{$id}] declares an invalid OpenKOS version constraint.",
-                );
-            }
         }
 
         foreach ($entryClasses as $entryClass => $ids) {

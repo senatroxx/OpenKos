@@ -18,9 +18,10 @@ final class RuntimePluginArtifactValidator
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     core_version?: string,
      *     php: string,
-     *     dependencies: array<int, string>
+     *     dependencies: array<int, string>,
+     *     platform_constraint: string
      * }
      */
     public function validate(string $directory, ?string $expectedId = null): array
@@ -35,7 +36,10 @@ final class RuntimePluginArtifactValidator
         $composer = $this->readJsonFile($directory.'/composer.json', 'composer.json');
         $lock = $this->readJsonFile($directory.'/composer.lock', 'composer.lock');
 
-        $metadata = $this->validateManifest($manifest);
+        $metadata = [
+            ...$this->validateManifest($manifest),
+            'platform_constraint' => $this->platformConstraint($composer),
+        ];
 
         if ($expectedId !== null && $metadata['id'] !== $expectedId) {
             throw new InvalidArgumentException(
@@ -99,7 +103,7 @@ final class RuntimePluginArtifactValidator
             $pluginManifest->name !== $metadata['name'] ||
             $pluginManifest->version !== $metadata['version'] ||
             $pluginManifest->description !== $metadata['description'] ||
-            $pluginManifest->coreVersion !== $metadata['core_version'] ||
+            (isset($metadata['core_version']) && $pluginManifest->coreVersion !== $metadata['core_version']) ||
             $pluginManifest->dependencies !== $metadata['dependencies']
         ) {
             throw new InvalidArgumentException(
@@ -119,10 +123,10 @@ final class RuntimePluginArtifactValidator
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     core_version?: string,
      *     php: string,
      *     dependencies: array<int, string>,
-     *     platform_constraint: string|null
+     *     platform_constraint: string
      * }
      */
     public function inspectStaticMetadata(string $directory, ?string $expectedId = null): array
@@ -160,11 +164,9 @@ final class RuntimePluginArtifactValidator
             throw new InvalidArgumentException('Runtime plugin artifact must include vendor/autoload.php.');
         }
 
-        $platformConstraint = data_get($composer, 'require.openkos/platform');
-
         return [
             ...$metadata,
-            'platform_constraint' => is_string($platformConstraint) ? $platformConstraint : null,
+            'platform_constraint' => $this->platformConstraint($composer),
         ];
     }
 
@@ -175,9 +177,10 @@ final class RuntimePluginArtifactValidator
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     core_version?: string,
      *     php: string,
-     *     dependencies: array<int, string>
+     *     dependencies: array<int, string>,
+     *     platform_constraint: string
      * }
      */
     public function validateInFreshProcess(string $directory, ?string $expectedId = null): array
@@ -221,12 +224,25 @@ final class RuntimePluginArtifactValidator
          *     version: string,
          *     description: string,
          *     entry_class: class-string<Plugin>,
-         *     core_version: string,
+         *     core_version?: string,
          *     php: string,
-         *     dependencies: array<int, string>
+         *     dependencies: array<int, string>,
+         *     platform_constraint: string
          * } $metadata
          */
         return $metadata;
+    }
+
+    /** @param array<string, mixed> $composer */
+    private function platformConstraint(array $composer): string
+    {
+        $constraint = data_get($composer, 'require.openkos/platform');
+
+        if (! is_string($constraint) || trim($constraint) === '') {
+            throw new InvalidArgumentException('Runtime plugin Composer requirements must declare openkos/platform.');
+        }
+
+        return $constraint;
     }
 
     /**
@@ -237,14 +253,14 @@ final class RuntimePluginArtifactValidator
      *     version: string,
      *     description: string,
      *     entry_class: class-string<Plugin>,
-     *     core_version: string,
+     *     core_version?: string,
      *     php: string,
      *     dependencies: array<int, string>
      * }
      */
     private function validateManifest(array $manifest): array
     {
-        $required = ['id', 'name', 'version', 'entry_class', 'core_version', 'php', 'dependencies'];
+        $required = ['id', 'name', 'version', 'entry_class', 'php', 'dependencies'];
 
         foreach ($required as $key) {
             if (! array_key_exists($key, $manifest)) {
@@ -252,10 +268,15 @@ final class RuntimePluginArtifactValidator
             }
         }
 
-        foreach (['id', 'name', 'version', 'entry_class', 'core_version', 'php'] as $key) {
+        foreach (['id', 'name', 'version', 'entry_class', 'php'] as $key) {
             if (! is_string($manifest[$key]) || trim($manifest[$key]) === '') {
                 throw new InvalidArgumentException("Runtime plugin manifest field [{$key}] must be a non-empty string.");
             }
+        }
+
+        $coreVersion = $manifest['core_version'] ?? null;
+        if ($coreVersion !== null && (! is_string($coreVersion) || trim($coreVersion) === '')) {
+            throw new InvalidArgumentException('Runtime plugin legacy compatibility metadata is invalid.');
         }
 
         if (preg_match('/^(?:[A-Za-z_][A-Za-z0-9_]*\\\\)*[A-Za-z_][A-Za-z0-9_]*$/', $manifest['entry_class']) !== 1) {
@@ -282,7 +303,7 @@ final class RuntimePluginArtifactValidator
          *     version: string,
          *     description?: string,
          *     entry_class: class-string<Plugin>,
-         *     core_version: string,
+         *     core_version?: string,
          *     php: string,
          *     dependencies: array<int, string>
          * } $manifest
@@ -293,7 +314,7 @@ final class RuntimePluginArtifactValidator
             'version' => $manifest['version'],
             'description' => is_string($manifest['description'] ?? '') ? $manifest['description'] : '',
             'entry_class' => $manifest['entry_class'],
-            'core_version' => $manifest['core_version'],
+            ...($coreVersion !== null ? ['core_version' => $coreVersion] : []),
             'php' => $manifest['php'],
             'dependencies' => array_values($manifest['dependencies']),
         ];
