@@ -58,6 +58,8 @@ export default function ApplicationShow({
     const rejectionForm = useForm<Record<string, never>>({});
     const cancellationForm = useForm<Record<string, never>>({});
     const [leaseSheetOpen, setLeaseSheetOpen] = useState(false);
+    const reservationId =
+        reservation === null ? null : reservation.id;
     const reservationExpired =
         reservation?.status === 'confirmed' &&
         reservation.is_expired;
@@ -85,16 +87,19 @@ export default function ApplicationShow({
                   },
               }
             : null;
-    const leaseUnit: Unit | null = reservation?.unit
-        ? {
-              ...reservation.unit,
-              floor: null,
-              description: null,
-              size_sqm: null,
-              occupied_count: 0,
-              notes: null,
-          }
-        : null;
+    const leaseUnit: Unit | null =
+        reservation === null
+            ? null
+            : reservation.unit === null
+              ? null
+              : {
+                    ...reservation.unit,
+                    floor: null,
+                    description: null,
+                    size_sqm: null,
+                    occupied_count: 0,
+                    notes: null,
+                };
 
     function submitTransition(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -120,19 +125,32 @@ export default function ApplicationShow({
 
     function submitConfirmation(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        confirmationForm.submit(reservations.confirm(reservation!.id), {
+
+        if (reservationId === null) {
+            return;
+        }
+
+        confirmationForm.submit(reservations.confirm(reservationId), {
             preserveScroll: true,
         });
     }
 
     function rejectReservation() {
-        rejectionForm.submit(reservations.reject(reservation!.id), {
+        if (reservationId === null) {
+            return;
+        }
+
+        rejectionForm.submit(reservations.reject(reservationId), {
             preserveScroll: true,
         });
     }
 
     function cancelReservation() {
-        cancellationForm.submit(reservations.cancel(reservation!.id), {
+        if (reservationId === null) {
+            return;
+        }
+
+        cancellationForm.submit(reservations.cancel(reservationId), {
             preserveScroll: true,
         });
     }
