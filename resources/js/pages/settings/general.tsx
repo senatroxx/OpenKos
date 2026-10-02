@@ -48,6 +48,7 @@ export default function General({
         supported_currencies: string[];
         timezone: string;
         lease_id_prefix: string;
+        reservation_hold_hours: number;
         invoice_id_prefix: string;
         invoice_pdf_enabled: boolean;
     };
@@ -136,6 +137,10 @@ export default function General({
     const referenceForm = useForm({
         lease_id_prefix: settings.lease_id_prefix,
         invoice_id_prefix: settings.invoice_id_prefix,
+    });
+
+    const reservationForm = useForm({
+        reservation_hold_hours: Number(settings.reservation_hold_hours),
     });
 
     const invoicePdfForm = useForm({
@@ -304,6 +309,50 @@ export default function General({
 
             <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
                 <div className="space-y-6">
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            reservationForm.submit(updateGeneral());
+                        }}
+                    >
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>{t('Reservation holds')}</CardTitle>
+                                <CardDescription>
+                                    {t('Inventory holds begin when a reservation is confirmed.')}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid max-w-xs gap-2">
+                                    <Label htmlFor="reservation_hold_hours">
+                                        {t('Hold duration in hours')}
+                                    </Label>
+                                    <Input
+                                        id="reservation_hold_hours"
+                                        name="reservation_hold_hours"
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={reservationForm.data.reservation_hold_hours}
+                                        onChange={(event) =>
+                                            reservationForm.setData(
+                                                'reservation_hold_hours',
+                                                Number(event.target.value),
+                                            )
+                                        }
+                                        required
+                                    />
+                                    <InputError
+                                        message={reservationForm.errors.reservation_hold_hours}
+                                    />
+                                </div>
+                                <Button disabled={reservationForm.processing}>
+                                    {t('Save')}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </form>
+
                     <form
                         onSubmit={(e) => {
                             e.preventDefault();

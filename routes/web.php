@@ -25,6 +25,7 @@ use App\Http\Controllers\PropertyUnitTypeController;
 use App\Http\Controllers\PublicListingController;
 use App\Http\Controllers\PublicListingMediaController;
 use App\Http\Controllers\RecurringExpenseController;
+use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\Settings\PublicPortalController;
 use App\Http\Controllers\SignedPaymentController;
@@ -63,7 +64,16 @@ Route::middleware(['auth', 'verified'])->prefix('portal/applications')->name('ap
     Route::get('{application}', [ApplicationController::class, 'show'])->name('show');
     Route::post('/', [ApplicationController::class, 'store'])->middleware('throttle:10,1')->name('store');
     Route::patch('{application}/status', [ApplicationController::class, 'transition'])->name('transition');
-    Route::post('{application}/convert', [ApplicationController::class, 'convert'])->name('convert');
+    Route::post('{application}/reservations', [ReservationController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('reservations.store');
+});
+
+Route::middleware(['auth', 'verified'])->prefix('portal/reservations')->name('reservations.')->group(function () {
+    Route::patch('{reservation}/confirm', [ReservationController::class, 'confirm'])->name('confirm');
+    Route::patch('{reservation}/reject', [ReservationController::class, 'reject'])->name('reject');
+    Route::patch('{reservation}/cancel', [ReservationController::class, 'cancel'])->name('cancel');
+    Route::post('{reservation}/lease', [ReservationController::class, 'createLease'])->name('lease.store');
 });
 
 Route::middleware(['auth', 'verified'])->prefix('applications')->group(function () {

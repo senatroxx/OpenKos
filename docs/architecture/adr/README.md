@@ -19,6 +19,7 @@ Architectural decisions with real trade-offs are recorded here as ADRs, so futur
 | [011](011-dual-persona-identity.md)      | Dual-Persona User Identity | Accepted |
 | [012](012-unified-customer-account.md)   | Unified Customer Account Surface | Superseded by ADR-013 |
 | [013](013-tenant-portal-renter-surface.md) | Tenant Portal as Renter Surface | Accepted |
+| [014](014-application-reservation-lease-lifecycle.md) | Application, Reservation, and Lease Lifecycle | Accepted (amends ADR-013 conversion timing only) |
 
 Future ADR candidates: the Activity Log vs Audit Log split (`activity_logs` written by `RecordActivitySubscriber` from domain events; `audit_logs` written directly by actions like `UpdateSettings`) is a decision worth recording once it stabilizes.
 
@@ -31,6 +32,6 @@ Future ADR candidates: the Activity Log vs Audit Log split (`activity_logs` writ
 
 **When to write one:** the change picks between real alternatives with lasting consequences (a boundary, a storage model, a dependency, a protocol). Routine implementation choices already covered by [docs/architecture.md](../../architecture.md) don't need one.
 
-**Changing a decision:** don't edit an accepted ADR's decision. Write a new ADR that supersedes it, set the old one's status to `Superseded by ADR-NNN`, and update the index.
+**Changing a decision:** don't edit an accepted ADR's decision. Write a new ADR. If all of its decisions are replaced, set its status to `Superseded by ADR-NNN`. If only one decision changes, name that scope in the new ADR, keep the original accepted for its remaining decisions, and add an amendment reference to the original ADR and this index.
 
-Statuses: `Proposed` → `Accepted` → (`Deprecated` | `Superseded by ADR-NNN`).
+Statuses: `Proposed` → `Accepted` → (`Deprecated` | `Superseded by ADR-NNN`). An accepted ADR may be partially amended while its other decisions remain accepted.

@@ -3,6 +3,7 @@
 **Status:** Accepted  
 **Date:** 2026-09-23  
 **Supersedes:** ADR-012
+**Amended by:** ADR-014, for the Application-to-Tenant conversion timing only
 
 ## Context
 

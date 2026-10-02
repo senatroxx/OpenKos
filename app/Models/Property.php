@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -192,11 +193,25 @@ class Property extends Model
             return __('A property with active unit leases cannot change to Whole property.');
         }
 
+        if ($requestedMode === PropertyRentalMode::WholeProperty
+            && $this->rental_mode->supportsUnitInventory()
+            && $this->reservations()->holding()->whereNotNull('unit_id')->exists()
+        ) {
+            return __('Cancel or expire confirmed unit reservations before changing to Whole property.');
+        }
+
         if ($requestedMode === PropertyRentalMode::Unit
             && $this->rental_mode->supportsWholePropertyRental()
             && $this->hasActiveWholePropertyLease()
         ) {
             return __('A property with an active whole-property lease cannot change to Unit inventory.');
+        }
+
+        if ($requestedMode === PropertyRentalMode::Unit
+            && $this->rental_mode->supportsWholePropertyRental()
+            && $this->reservations()->holding()->whereNull('unit_id')->exists()
+        ) {
+            return __('Cancel or expire confirmed whole-property reservations before changing to Unit inventory.');
         }
 
         return null;
@@ -262,6 +277,11 @@ class Property extends Model
     public function leases(): HasMany
     {
         return $this->hasMany(Lease::class);
+    }
+
+    public function reservations(): HasManyThrough
+    {
+        return $this->hasManyThrough(Reservation::class, Application::class);
     }
 
     public function activeLeases(): HasMany

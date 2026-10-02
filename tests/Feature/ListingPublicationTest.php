@@ -2,13 +2,18 @@
 
 use App\Enums\AmenityIcon;
 use App\Enums\AmenityScope;
+use App\Enums\ApplicationStatus;
+use App\Enums\ApplicationTargetType;
 use App\Enums\PropertyRentalMode;
 use App\Models\Amenity;
+use App\Models\Application;
 use App\Models\Lease;
 use App\Models\Property;
 use App\Models\PropertyRate;
+use App\Models\Reservation;
 use App\Models\Unit;
 use App\Models\UnitType;
+use App\Models\UnitTypeRate;
 use App\Models\User;
 use App\Services\Listings\PublicSlugAllocator;
 use App\Services\Media\MediaManager;
@@ -518,6 +523,46 @@ it('exposes hybrid offerings independently', function () {
 
     $this->get(route('public.portal.show', $property->public_slug))
         ->assertNotFound();
+});
+
+it('uses confirmed reservation move-in dates for public inventory availability', function () {
+    $property = Property::factory()->create([
+        'rental_mode' => PropertyRentalMode::Hybrid,
+        'public_slug' => 'reservation-hybrid-house',
+        'is_published' => true,
+    ]);
+    $unitType = UnitType::factory()->for($property)->create([
+        'public_slug' => 'studio',
+        'is_published' => true,
+    ]);
+    Unit::factory()->for($property)->create(['unit_type_id' => $unitType->id]);
+    UnitTypeRate::factory()->for($unitType)->create();
+    PropertyRate::factory()->for($property)->create();
+    $application = Application::factory()->create([
+        'property_id' => $property->id,
+        'unit_type_id' => $unitType->id,
+        'target_type' => ApplicationTargetType::UnitType,
+        'status' => ApplicationStatus::Accepted,
+    ]);
+    $reservation = Reservation::factory()->confirmed()->create([
+        'application_id' => $application->id,
+        'unit_id' => $property->units()->firstOrFail()->id,
+        'move_in_date' => today()->toDateString(),
+    ]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.unit_types.0.inventory.available_units', 0)
+            ->where('listing.whole_property_offering.availability', 'unavailable'));
+
+    $reservation->update(['move_in_date' => today()->addDay()->toDateString()]);
+
+    $this->get(route('public.portal.show', $property->public_slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('listing.unit_types.0.inventory.available_units', 1)
+            ->where('listing.whole_property_offering.availability', 'available_for_inquiry'));
 });
 
 it('omits non-viable unit metadata from a hybrid whole-property-only listing', function () {

@@ -174,6 +174,9 @@ app/
 | Scheduled Reminders | Console Command                                      | `SendRentReminders` | —                   | —                     | `PaymentReminderScheduler`                           |
 | Invite Tenant       | `TenantController::invite()`                            | `InviteTenant`      | —                   | —                     | —                                                    |
 | Disable Tenant Access | `TenantController::disableAccess()`                   | `DisableTenantAccess` | —                 | —                     | —                                                    |
+| Request Reservation | `ReservationController::store()`                        | `RequestReservation` | `RequestReservationData` | —              | —                                                    |
+| Confirm Reservation | `ReservationController::confirm()`                      | `ConfirmReservation` | —                   | —                     | `OccupancyCalculator`, `ReservationTransitionValidator` |
+| Create Lease from Reservation | `ReservationController::createLease()`          | `CreateLeaseFromReservation` | `CreateLeaseData` | —               | shared `CreateLease` rules                         |
 
 `CreateLease` is the shared creation workflow for both targets. It locks the
 Property first, then the Unit when creating a Unit Lease, and applies the
@@ -181,6 +184,49 @@ authoritative active-target conflict rule before selecting rates and creating
 the Lease. Whole-property creation uses a PropertyRate and leaves `unit_id`
 null; Unit creation preserves UnitRate and capacity/co-tenancy behavior.
 Renewal uses the same target conflict rule and locking boundary.
+
+Reservation write transactions lock records in the canonical order
+Application → Reservation → Property → Unit, omitting records the workflow does
+not need. Request, confirmation, and conversion therefore cannot reverse the
+Application/Reservation pair; confirmation and conversion preserve Property →
+Unit ordering for inventory. Reservation Actions retrieve lease/reservation
+conflicts and Unit occupant and hold counts from `ReservationRepository`.
+`ConfirmReservation` passes those counts to `OccupancyCalculator` and status
+changes to `ReservationTransitionValidator` before persisting the hold. The Unit
+picker uses `FindAvailableReservationUnits`, which gets candidate Units and
+counts from the Repository, then filters candidates through the same
+`OccupancyCalculator`. The Repository only loads and counts persistence data;
+it does not decide whether Unit capacity is available.
+
+## Application, Reservation, and Lease Lifecycle (ADR-014)
+
+An accepted Application can request a Pending Reservation from the Tenant
+Portal. Pending requests claim no inventory. Operator confirmation selects a
+physical Unit for UnitType Applications or reserves the Property for a
+whole-property Application, after checking current occupancy and Reservation
+claims in the same Application → Reservation → Property → Unit transaction. A
+Unit Reservation consumes one occupant slot. Confirmed holds begin at
+confirmation, protect occupancy from the requested move-in date onward, and
+expire after the configured hold duration. If the selected Unit has an active
+Lease, its start date must match the Reservation move-in date so the existing
+Lease workflow can keep those occupants grouped together. Whole-property
+Reservations cannot be confirmed while any Lease on the Property remains
+status-active, even when its end date is before the requested move-in date.
+
+The operator explicitly starts Lease creation from a Confirmed Reservation.
+The shared CreateLease action applies pricing, capacity, invoice, and target
+conflict rules. Successful creation associates or creates the applicant's
+Tenant and converts the Reservation atomically. Pending Reservations can be
+cancelled, and Pending requests can be rejected. Confirmed Reservations can be
+cancelled only before `expires_at`; after that timestamp they are effectively
+expired and cannot be cancelled, even before the expiry Action persists the
+status. Cancelled, rejected, or expired Reservations allow another Reservation
+request from the same accepted Application. Converted Reservations do not.
+
+Reservation-versus-Lease checks consider the Reservation move-in date and
+Lease end date because a Reservation claim has no known end date. Ordinary
+Lease-versus-Lease behavior remains status-based as described by ADR-009.
+Reservation date handling does not change that existing Lease rule.
 
 ## Invoice-Centric Billing (ADR-007)
 

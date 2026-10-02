@@ -37,6 +37,7 @@ class GeneralController extends Controller
             'currency',
             'timezone',
             'lease_id_prefix',
+            'reservation_hold_hours',
             'invoice_id_prefix',
             'invoice_pdf_enabled',
         ]);
@@ -98,6 +99,7 @@ class GeneralController extends Controller
             'supported_currencies.*' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/', 'distinct:strict', Rule::in(array_keys(app(MoneyConverter::class)->scales()))],
             'timezone' => ['sometimes', 'required', 'string', Rule::in(timezone_identifiers_list())],
             'lease_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
+            'reservation_hold_hours' => ['sometimes', 'required', 'integer', 'min:1'],
             'invoice_id_prefix' => ['sometimes', 'required', 'string', 'max:10', 'regex:/^[A-Z]+$/'],
             'invoice_pdf_enabled' => ['sometimes', 'boolean'],
         ]);

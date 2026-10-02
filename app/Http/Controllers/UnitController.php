@@ -7,6 +7,7 @@ use App\Actions\Units\CreateUnit;
 use App\Actions\Units\DeleteUnit;
 use App\Data\Unit\BulkAssignUnitTypeData;
 use App\Enums\MaintenanceStatus;
+use App\Enums\UnitStatus;
 use App\Http\Requests\Unit\BulkAssignUnitTypeRequest;
 use App\Http\Requests\Unit\StoreUnitRequest;
 use App\Http\Requests\Unit\UpdateUnitRequest;
@@ -15,6 +16,7 @@ use App\Models\Property;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\UnitType;
+use App\Repositories\OccupancyRepository;
 use App\Services\Payments\MoneyConverter;
 use App\Services\Pricing\EffectiveUnitRateResolver;
 use App\Services\Settings\InstallationCurrencySettings;
@@ -283,8 +285,12 @@ class UnitController extends Controller
         return back();
     }
 
-    public function update(UpdateUnitRequest $request, Property $property, Unit $unit): RedirectResponse
-    {
+    public function update(
+        UpdateUnitRequest $request,
+        Property $property,
+        Unit $unit,
+        OccupancyRepository $occupancy,
+    ): RedirectResponse {
         $this->authorize('update', $unit);
 
         $validated = $request->validated();
@@ -294,13 +300,40 @@ class UnitController extends Controller
         unset($validated['rates']);
 
         try {
-            DB::transaction(function () use ($unit, $validated, $rates, $request, $expectedUpdatedAt): void {
+            DB::transaction(function () use ($unit, $validated, $rates, $request, $expectedUpdatedAt, $occupancy): void {
                 $lockedUnit = Unit::query()->lockForUpdate()->findOrFail($unit->id);
 
                 if (! $lockedUnit->updated_at?->equalTo($expectedUpdatedAt)) {
                     throw ValidationException::withMessages([
                         'updated_at' => __('This unit changed while you were editing it. Refresh and try again.'),
                     ]);
+                }
+
+                $heldSlots = $lockedUnit->reservations()->holding()->count();
+                if ($heldSlots > 0) {
+                    if (array_key_exists('unit_type_id', $validated)
+                        && ($validated['unit_type_id'] === null ? null : (int) $validated['unit_type_id']) !== $lockedUnit->unit_type_id
+                    ) {
+                        throw ValidationException::withMessages([
+                            'unit_type_id' => __('Cancel or expire confirmed reservations before changing this unit type.'),
+                        ]);
+                    }
+
+                    if (isset($validated['status'])
+                        && in_array($validated['status'], [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value], true)
+                    ) {
+                        throw ValidationException::withMessages([
+                            'status' => __('Cancel or expire confirmed reservations before making this unit unavailable.'),
+                        ]);
+                    }
+
+                    if ((int) $validated['capacity'] < $lockedUnit->capacity
+                        && (int) $validated['capacity'] < $occupancy->activeOccupantCount($lockedUnit) + $heldSlots
+                    ) {
+                        throw ValidationException::withMessages([
+                            'capacity' => __('Unit capacity cannot be lower than its current occupants and confirmed reservations.'),
+                        ]);
+                    }
                 }
 
                 $this->assertNewRateCurrenciesSupported($rates);
@@ -393,7 +426,7 @@ class UnitController extends Controller
         $result = $action->execute($unit);
 
         if ($result->failed()) {
-            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot delete a unit with active leases.')]);
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Cannot delete a unit with active leases or confirmed reservations.')]);
 
             return back();
         }

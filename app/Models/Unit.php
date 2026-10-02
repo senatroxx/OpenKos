@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Concerns\Auditable;
 use App\Concerns\SerializesDatesWithTimezone;
+use App\Enums\ReservationStatus;
 use App\Enums\UnitStatus;
 use App\Services\Payments\MoneyConverter;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,7 +14,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -81,6 +81,11 @@ class Unit extends Model
         return $this->hasMany(Lease::class);
     }
 
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
     public function rates(): HasMany
     {
         return $this->hasMany(UnitRate::class);
@@ -124,20 +129,32 @@ class Unit extends Model
 
     public function scopeAvailableForAssignment(Builder $query): void
     {
+        $now = now();
+        $today = $now->toDateString();
+        $activeOccupants = DB::table('lease_tenant')
+            ->join('leases', 'leases.id', '=', 'lease_tenant.lease_id')
+            ->selectRaw('COUNT(*)')
+            ->whereColumn('leases.unit_id', 'units.id')
+            ->whereIn('leases.id', Lease::query()->active()->select('id'));
+        $reservedSlots = DB::table('reservations')
+            ->selectRaw('COUNT(*)')
+            ->whereColumn('unit_id', 'units.id')
+            ->where('status', ReservationStatus::Confirmed->value)
+            ->where('expires_at', '>', $now)
+            ->whereDate('move_in_date', '<=', $today);
+
         $query->whereNull('deleted_at')
             ->whereNotIn('status', [UnitStatus::Maintenance->value, UnitStatus::Unavailable->value])
             ->whereDoesntHave('property', fn (Builder $q) => $q->whereHas('activeWholePropertyLeases'))
-            ->where(function (Builder $q) {
-                $q->whereDoesntHave('leases', fn (Builder $q) => $q->active())
-                    ->orWhere('capacity', '>', function (QueryBuilder $q): void {
-                        $q->from('lease_tenant')
-                            ->selectRaw('COALESCE(COUNT(*), 0)')
-                            ->whereIn('lease_id', Lease::query()
-                                ->active()
-                                ->whereColumn('unit_id', 'units.id')
-                                ->select('id'));
-                    });
-            });
+            ->whereDoesntHave('property', fn (Builder $q) => $q->whereHas('reservations', fn (Builder $reservations) => $reservations
+                ->where('reservations.status', ReservationStatus::Confirmed->value)
+                ->where('reservations.expires_at', '>', $now)
+                ->whereNull('reservations.unit_id')
+                ->whereDate('reservations.move_in_date', '<=', $today)))
+            ->whereRaw(
+                "units.capacity > ({$activeOccupants->toSql()}) + ({$reservedSlots->toSql()})",
+                [...$activeOccupants->getBindings(), ...$reservedSlots->getBindings()],
+            );
     }
 
     public function scopeEligibleForPublicOffering(Builder $query): void

@@ -21,6 +21,11 @@ Schedule::command('payments:reconcile')
     ->everyFiveMinutes()
     ->withoutOverlapping(15);
 
+Schedule::command('reservations:expire')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(15)
+    ->onOneServer();
+
 Schedule::command('rent:send-reminders')
     ->dailyAt('08:00')
     ->withoutOverlapping(60);

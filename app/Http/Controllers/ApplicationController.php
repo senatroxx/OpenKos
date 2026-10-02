@@ -2,16 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Applications\ConvertApplicationToTenant;
 use App\Actions\Applications\SubmitApplication;
 use App\Actions\Applications\TransitionApplication;
+use App\Actions\Reservations\FindAvailableReservationUnits;
 use App\Enums\ApplicationStatus;
 use App\Enums\ApplicationTargetType;
+use App\Enums\ReservationStatus;
 use App\Http\Requests\Application\StoreApplicationRequest;
 use App\Http\Requests\Application\TransitionApplicationRequest;
 use App\Models\Application;
 use App\Models\Property;
+use App\Models\Unit;
 use App\Models\UnitType;
+use App\Services\Pricing\EffectiveUnitRateResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -61,13 +64,48 @@ final class ApplicationController extends Controller
             : to_route('public.portal.show', ['property' => $property->public_slug]);
     }
 
-    public function show(Request $request, Application $application): Response
+    public function show(Request $request, Application $application, FindAvailableReservationUnits $findAvailableReservationUnits): Response
     {
         $this->authorize('view', $application);
+        $operator = $request->user()->isOwner() || $request->user()->can('tenants.view');
+        $application->loadMissing([
+            'property.activePropertyRates',
+            'latestReservation.unit.activeRates',
+            'latestReservation.unit.unitType.activeRates',
+        ]);
+
+        $reservation = $application->latestReservation;
+        $canRequestReservation = ! $operator
+            && $request->user()->id === $application->user_id
+            && $request->user()->can('requestReservation', $application);
+        $availableUnits = $operator
+            && $reservation?->status === ReservationStatus::Pending
+            && $application->target_type === ApplicationTargetType::UnitType
+            && $application->property?->rental_mode->supportsUnitInventory()
+            ? $findAvailableReservationUnits->execute($application, $reservation->move_in_date->toDateString())->loadMissing(['activeRates', 'unitType.activeRates'])
+            : collect();
 
         return Inertia::render('applications/show', [
-            'application' => $this->projection($application, $request->user()->id === $application->user_id),
-            'operator' => $request->user()->isOwner() || $request->user()->can('tenants.view'),
+            'application' => [
+                ...$this->projection($application, $request->user()->id === $application->user_id),
+                'can_request_reservation' => $canRequestReservation,
+                'property' => $application->property === null ? null : [
+                    ...$application->property->only(['id', 'name', 'public_slug', 'slug']),
+                    'active_property_rates' => $application->property->activePropertyRates->map(fn ($rate): array => $rate->only([
+                        'id', 'billing_interval', 'billing_unit', 'amount', 'currency',
+                    ]))->values(),
+                ],
+                'reservation' => $reservation === null ? null : [
+                    'id' => $reservation->id,
+                    'status' => $reservation->status->value,
+                    'move_in_date' => $reservation->move_in_date->toDateString(),
+                    'expires_at' => $reservation->expires_at?->toIso8601String(),
+                    'is_expired' => $reservation->isExpired(),
+                    'unit' => $reservation->unit === null ? null : $this->unitProjection($reservation->unit, $operator),
+                ],
+                'available_units' => $availableUnits->map(fn (Unit $unit): array => $this->unitProjection($unit))->values(),
+            ],
+            'operator' => $operator,
         ]);
     }
 
@@ -103,16 +141,6 @@ final class ApplicationController extends Controller
             : back()->with('status', __('Application updated.'));
     }
 
-    public function convert(Request $request, Application $application, ConvertApplicationToTenant $action): RedirectResponse
-    {
-        $this->authorize('update', $application);
-        $result = $action->execute($request->user(), $application);
-
-        return $result->failed()
-            ? back()->withErrors(['application' => $result->error])
-            : back()->with('status', __('Application converted to a Tenant.'));
-    }
-
     /** @return array<string, mixed> */
     private function applicantProjection(Application $application): array
     {
@@ -130,7 +158,6 @@ final class ApplicationController extends Controller
             'rental_amount' => $application->rental_amount,
             'applicant_message' => $application->applicant_message,
             'applicant_feedback' => $application->applicant_feedback,
-            'converted_at' => $application->converted_at?->toIso8601String(),
         ];
     }
 
@@ -151,7 +178,25 @@ final class ApplicationController extends Controller
             ],
             'operator_notes' => $application->operator_notes,
             'reviewed_at' => $application->reviewed_at?->toIso8601String(),
-            'converted_tenant_id' => $application->converted_tenant_id,
         ];
+    }
+
+    /** @return array<string, mixed> */
+    private function unitProjection(Unit $unit, bool $includeLease = false): array
+    {
+        $unit->loadMissing([
+            'activeRates',
+            'unitType.activeRates',
+            ...($includeLease ? ['leases' => fn ($query) => $query->active()] : []),
+        ]);
+        $unit->setAttribute('effective_rates', app(EffectiveUnitRateResolver::class)->resolve($unit)->map(fn (array $item): array => [
+            ...$item['rate']->toArray(),
+            'source' => $item['source'],
+        ])->values());
+
+        return $unit->only([
+            'id', 'name', 'slug', 'capacity', 'property_id', 'unit_type_id', 'status', 'effective_rates',
+            ...($includeLease ? ['leases'] : []),
+        ]);
     }
 }
