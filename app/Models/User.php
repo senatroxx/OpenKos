@@ -66,6 +66,16 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasRole(Role::Owner->value);
     }
 
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(Role::Admin->value);
+    }
+
+    public function isManager(): bool
+    {
+        return $this->hasRole(Role::Manager->value);
+    }
+
     public function tenant(): HasOne
     {
         return $this->hasOne(Tenant::class);
@@ -74,6 +84,13 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function properties(): BelongsToMany
     {
         return $this->belongsToMany(Property::class)->withTimestamps();
+    }
+
+    public function assignedProperties(): BelongsToMany
+    {
+        return $this->belongsToMany(Property::class, 'property_manager_assignments')
+            ->withPivot(['is_active', 'notes', 'assigned_by'])
+            ->withTimestamps();
     }
 
     public function hasTenantProfile(): bool
@@ -88,12 +105,26 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
     public function canAccessProperty(Property|int $property): bool
     {
-        if ($this->isOwner()) {
+        if ($this->isOwner() || $this->isAdmin()) {
             return true;
         }
 
         $propertyId = $property instanceof Property ? $property->id : $property;
 
         return $this->properties()->whereKey($propertyId)->exists();
+    }
+
+    public function canManageProperty(Property|int $property): bool
+    {
+        if ($this->isOwner() || $this->isAdmin()) {
+            return true;
+        }
+
+        $propertyId = $property instanceof Property ? $property->id : $property;
+
+        return $this->assignedProperties()
+            ->whereKey($propertyId)
+            ->wherePivot('is_active', true)
+            ->exists();
     }
 }

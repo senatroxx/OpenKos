@@ -36,6 +36,7 @@ final class PermissionRoleReconciler
         }
 
         $this->syncOwner();
+        $this->syncRecommendedRoles();
 
         foreach (RecommendedRoles::all() as $definition) {
             $transferPermissions = array_values(array_intersect(
@@ -81,6 +82,30 @@ final class PermissionRoleReconciler
                 fn (Permission $permission): string => $permission->value,
                 Permission::forRole(RoleEnum::Owner),
             ));
+        }
+    }
+
+    private function syncRecommendedRoles(): void
+    {
+        foreach (RecommendedRoles::all() as $definition) {
+            $role = Role::query()
+                ->where('name', $definition['name'])
+                ->where('guard_name', 'web')
+                ->first();
+
+            if ($role === null) {
+                $role = Role::create([
+                    'name' => $definition['name'],
+                    'guard_name' => 'web',
+                    'label' => $definition['label'],
+                    'description' => $definition['description'],
+                    'color' => $definition['color'],
+                    'is_system' => false,
+                    'is_active' => true,
+                ]);
+            }
+
+            $role->syncPermissions($definition['permissions']);
         }
     }
 }

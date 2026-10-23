@@ -9,21 +9,21 @@ class PropertyPolicy
 {
     public function view(User $user, Property $property): bool
     {
-        return $user->properties->contains($property);
+        return $user->canAccessProperty($property);
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->isOwner() || $user->isAdmin() || $user->properties()->exists();
     }
 
     public function update(User $user, Property $property): bool
     {
-        return $user->properties->contains($property);
+        return $user->canAccessProperty($property);
     }
 
     public function delete(User $user, Property $property): bool
     {
-        return $user->properties->contains($property);
+        return $user->canAccessProperty($property);
     }
 }

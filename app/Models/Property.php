@@ -259,6 +259,18 @@ class Property extends Model
         return $this->belongsToMany(User::class)->withTimestamps();
     }
 
+    public function managers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'property_manager_assignments')
+            ->withPivot(['is_active', 'notes', 'assigned_by'])
+            ->withTimestamps();
+    }
+
+    public function activeManagers(): BelongsToMany
+    {
+        return $this->managers()->wherePivot('is_active', true);
+    }
+
     public function leases(): HasMany
     {
         return $this->hasMany(Lease::class);
