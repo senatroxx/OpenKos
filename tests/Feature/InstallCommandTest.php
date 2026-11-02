@@ -49,6 +49,23 @@ test('install command stores other country defaults', function () {
     expect(Setting::get('timezone'))->toBe('UTC');
 });
 
+test('install command rejects an invalid owner email and asks again', function () {
+    $this->artisan('app:install')
+        ->expectsQuestion('What is the name of this installation?', 'OpenKOS')
+        ->expectsQuestion('What country is this installation for?', 'ID')
+        ->expectsQuestion('What is the application URL?', 'http://localhost')
+        ->expectsQuestion('What timezone should be used?', 'Asia/Jakarta')
+        ->expectsQuestion('What is the owner\'s name?', 'Test Owner')
+        ->expectsQuestion('What is the owner\'s email address?', 'bukan-email')
+        ->expectsOutput('Please enter a valid email address.')
+        ->expectsQuestion('What is the owner\'s email address?', 'owner@example.com')
+        ->expectsQuestion('Choose a password for the owner account', 'password123')
+        ->expectsQuestion('Confirm the password', 'password123')
+        ->assertSuccessful();
+
+    expect(User::first()->email)->toBe('owner@example.com');
+});
+
 test('install command fails when users already exist', function () {
     User::factory()->create();
 
