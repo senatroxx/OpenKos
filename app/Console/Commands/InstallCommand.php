@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 use Spatie\Permission\Models\Role as SpatieRole;
 
 class InstallCommand extends Command
@@ -54,7 +55,14 @@ class InstallCommand extends Command
 
         $name = $this->ask('What is the owner\'s name?');
 
-        $email = $this->ask('What is the owner\'s email address?');
+        do {
+            $email = $this->ask('What is the owner\'s email address?');
+            $emailValidator = Validator::make(['email' => $email], ['email' => ['required', 'email']]);
+
+            if ($emailValidator->fails()) {
+                $this->error('Please enter a valid email address.');
+            }
+        } while ($emailValidator->fails());
 
         do {
             $password = $this->secret('Choose a password for the owner account');
